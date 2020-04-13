@@ -1,6 +1,6 @@
 workspace(name = "com_google_kmstools")
 
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_file")
 
 http_archive(
     name = "com_github_gflags_gflags",  # 2020-03-18
@@ -30,3 +30,23 @@ http_archive(
     url = "https://github.com/google/googletest/archive/e3f0319d89f4cbf32993de595d984183b1a9fc57.zip",
 )
 
+http_file(
+    name = "pkcs11_h_v240",  # 2016-05-13
+    downloaded_file_path = "pkcs11.h",
+    sha256 = "8bb7aa1aeaa328b6a39913070d6f3d2bdeb9f2c92baf27f714fbb4cbefdf4054",
+    urls = ["http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/errata01/os/include/pkcs11-v2.40/pkcs11.h"],
+)
+
+http_file(
+    name = "pkcs11f_h_v240",  # 2016-05-13
+    downloaded_file_path = "pkcs11f.h",
+    sha256 = "a85adad038bfc9dad9c71377f3ed3b049ba2ac9b3f37198a372f211d210c6057",
+    urls = ["http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/errata01/os/include/pkcs11-v2.40/pkcs11f.h"],
+)
+
+http_file(
+    name = "pkcs11t_h_v240",  # 2016-05-13
+    downloaded_file_path = "pkcs11t.h",
+    sha256 = "5b58736b6d23f12b4d9492cd24b06b9d11056c3153afc4e89b1fe564749e71a2",
+    urls = ["http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/errata01/os/include/pkcs11-v2.40/pkcs11t.h"],
+)
