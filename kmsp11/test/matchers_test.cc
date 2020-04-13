@@ -1,5 +1,6 @@
 #include "kmsp11/test/matchers.h"
 
+#include "absl/strings/string_view.h"
 #include "gmock/gmock.h"
 #include "kmsp11/util/status_or.h"
 
@@ -14,6 +15,11 @@ TEST(MatchesStdRegexTest, MatchesSmokeTest) {
 
 TEST(MatchesStdRegexTest, NotMatchesSmokeTest) {
   EXPECT_THAT("foobar_1_2_3@@#baz", Not(MatchesStdRegex("^for.*$")));
+}
+
+TEST(MatchesStdRegexTest, StringView) {
+  std::string value("abcde");
+  EXPECT_THAT(absl::string_view(value), MatchesStdRegex("a\\w+e"));
 }
 
 TEST(IsOkTest, OkStatus) { EXPECT_THAT(absl::OkStatus(), IsOk()); }

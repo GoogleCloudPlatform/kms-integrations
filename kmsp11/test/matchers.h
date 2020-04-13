@@ -21,7 +21,7 @@ MATCHER_P(MatchesStdRegex, pattern,
           absl::StrFormat("%s regex '%s'",
                           (negation ? "doesn't match" : "matches"),
                           testing::PrintToString(pattern))) {
-  return std::regex_match(arg, std::regex(pattern));
+  return std::regex_match(std::string(arg), std::regex(pattern));
 }
 
 // Tests that the supplied status has the expected status code.

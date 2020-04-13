@@ -1,5 +1,6 @@
 workspace(name = "com_google_kmstools")
 
+# Direct Dependencies
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_file")
 
 http_archive(
@@ -30,6 +31,13 @@ http_archive(
     url = "https://github.com/google/googletest/archive/e3f0319d89f4cbf32993de595d984183b1a9fc57.zip",
 )
 
+http_archive(
+    name = "com_google_protobuf",  # v3.11.4 / 2020-02-14
+    sha256 = "c5fd8f99f0d30c6f9f050bf008e021ccc70d7645ac1f64679c6038e07583b2f3",
+    strip_prefix = "protobuf-d0bfd5221182da1a7cc280f3337b5e41a89539cf",
+    url = "https://github.com/protocolbuffers/protobuf/archive/d0bfd5221182da1a7cc280f3337b5e41a89539cf.zip",
+)
+
 http_file(
     name = "pkcs11_h_v240",  # 2016-05-13
     downloaded_file_path = "pkcs11.h",
@@ -50,3 +58,10 @@ http_file(
     sha256 = "5b58736b6d23f12b4d9492cd24b06b9d11056c3153afc4e89b1fe564749e71a2",
     urls = ["http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/errata01/os/include/pkcs11-v2.40/pkcs11t.h"],
 )
+
+# Transitive Dependencies
+
+## Protobuf
+load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
+
+protobuf_deps()
