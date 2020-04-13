@@ -1,4 +1,4 @@
-load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 
 package(default_visibility = ["//kmsp11:__subpackages__"])
 
@@ -27,4 +27,27 @@ cc_library(
     name = "cryptoki_headers",
     hdrs = ["cryptoki.h"],
     deps = [":cryptoki_raw_headers"],
+)
+
+cc_library(
+    name = "provider",
+    srcs = ["provider.cc"],
+    hdrs = ["provider.h"],
+    deps = [
+        ":cryptoki_headers",
+        "//kmsp11/util:status_macros",
+        "//kmsp11/util:status_or",
+        "//kmsp11/util:string_utils",
+    ],
+)
+
+cc_test(
+    name = "provider_test",
+    size = "small",
+    srcs = ["provider_test.cc"],
+    deps = [
+        ":provider",
+        "//kmsp11/test",
+        "@com_google_googletest//:gtest_main",
+    ],
 )
