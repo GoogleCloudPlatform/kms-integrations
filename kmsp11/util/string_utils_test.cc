@@ -3,7 +3,7 @@
 #include "absl/strings/str_cat.h"
 #include "absl/types/span.h"
 #include "gmock/gmock.h"
-#include "kmsp11/test/matchers.h"
+#include "kmsp11/test/test_status_macros.h"
 
 namespace kmsp11 {
 namespace {

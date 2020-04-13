@@ -1,7 +1,7 @@
 #include "kmsp11/test/matchers.h"
 
 #include "gmock/gmock.h"
-#include "gtest/gtest-spi.h"
+#include "kmsp11/util/status_or.h"
 
 namespace kmsp11 {
 namespace {
@@ -18,12 +18,22 @@ TEST(MatchesStdRegexTest, NotMatchesSmokeTest) {
 
 TEST(IsOkTest, OkStatus) { EXPECT_THAT(absl::OkStatus(), IsOk()); }
 
+TEST(IsOkTest, OkStatusOr) { EXPECT_THAT(StatusOr<int>(3), IsOk()); }
+
 TEST(IsOkTest, NotOkStatus) {
   EXPECT_THAT(absl::AbortedError("aborted"), Not(IsOk()));
 }
 
+TEST(IsOkTest, NotOkStatusOr) {
+  EXPECT_THAT(StatusOr<int>(absl::AbortedError("aborted")), Not(IsOk()));
+}
+
 TEST(StatusIsTest, OkStatus) {
   EXPECT_THAT(absl::OkStatus(), StatusIs(absl::StatusCode::kOk));
+}
+
+TEST(StatusIsTest, OkStatusOr) {
+  EXPECT_THAT(StatusOr<int>(3), StatusIs(absl::StatusCode::kOk));
 }
 
 TEST(StatusIsTest, NotOkStatus) {
@@ -31,16 +41,9 @@ TEST(StatusIsTest, NotOkStatus) {
               StatusIs(absl::StatusCode::kAborted));
 }
 
-TEST(ExpectOkTest, OkStatus) { EXPECT_OK(absl::OkStatus()); }
-
-TEST(ExpectOkTest, NotOkStatus) {
-  EXPECT_NONFATAL_FAILURE(EXPECT_OK(absl::UnknownError("foo")), "UNKNOWN: foo");
-}
-
-TEST(AssertOkTest, OkStatus) { ASSERT_OK(absl::OkStatus()); }
-
-TEST(AssertOkTest, NotOkStatus) {
-  EXPECT_FATAL_FAILURE(ASSERT_OK(absl::NotFoundError("foo")), "NOT_FOUND: foo");
+TEST(StatusIsTest, NotOkStatusOr) {
+  EXPECT_THAT(StatusOr<int>(absl::CancelledError("cancelled")),
+              StatusIs(absl::StatusCode::kCancelled));
 }
 
 }  // namespace

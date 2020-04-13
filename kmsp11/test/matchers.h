@@ -6,6 +6,8 @@
 #include "absl/status/status.h"
 #include "absl/strings/str_format.h"
 #include "gmock/gmock.h"
+#include "kmsp11/util/status_or.h"
+#include "kmsp11/util/status_utils.h"
 
 namespace kmsp11 {
 
@@ -26,17 +28,13 @@ MATCHER_P(MatchesStdRegex, pattern,
 MATCHER_P(StatusIs, status_code,
           absl::StrFormat("status is %s%s", (negation ? "not " : ""),
                           testing::PrintToString(status_code))) {
-  return arg.code() == status_code;
+  return ToStatus(arg).code() == status_code;
 }
 
 // Tests that the supplied status is OK.
 MATCHER(IsOk, absl::StrFormat("status is %sOK", negation ? "not " : "")) {
-  return arg.ok();
+  return ToStatus(arg).ok();
 }
-
-// Macros for testing the results of functions that return absl::Status.
-#define EXPECT_OK(expr) EXPECT_THAT((expr), ::kmsp11::IsOk());
-#define ASSERT_OK(expr) ASSERT_THAT((expr), ::kmsp11::IsOk());
 
 }  // namespace kmsp11
 

@@ -22,6 +22,27 @@ cc_test(
 )
 
 cc_library(
+    name = "status_macros",
+    hdrs = ["status_macros.h"],
+    deps = [
+        ":status_or",
+        "@com_google_absl//absl/status",
+    ],
+)
+
+cc_test(
+    name = "status_macros_test",
+    size = "small",
+    srcs = ["status_macros_test.cc"],
+    deps = [
+        ":status_macros",
+        ":status_or",
+        "//kmsp11/test",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
     name = "status_or",
     hdrs = ["status_or.h"],
     deps = [
@@ -42,6 +63,15 @@ cc_test(
 )
 
 cc_library(
+    name = "status_utils",
+    hdrs = ["status_utils.h"],
+    deps = [
+        ":status_or",
+        "@com_google_absl//absl/status",
+    ],
+)
+
+cc_library(
     name = "string_utils",
     srcs = ["string_utils.cc"],
     hdrs = ["string_utils.h"],
@@ -57,7 +87,7 @@ cc_test(
     srcs = ["string_utils_test.cc"],
     deps = [
         ":string_utils",
-        "//kmsp11/test:matchers",
+        "//kmsp11/test",
         "@com_google_absl//absl/types:span",
         "@com_google_googletest//:gtest_main",
     ],
