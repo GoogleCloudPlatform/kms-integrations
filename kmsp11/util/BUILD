@@ -3,6 +3,25 @@ load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 package(default_visibility = ["//kmsp11:__subpackages__"])
 
 cc_library(
+    name = "source_location",
+    hdrs = ["source_location.h"],
+    deps = [
+        "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_test(
+    name = "source_location_test",
+    size = "small",
+    srcs = ["source_location_test.cc"],
+    deps = [
+        ":source_location",
+        "//kmsp11/test:matchers",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
     name = "status_or",
     hdrs = ["status_or.h"],
     deps = [

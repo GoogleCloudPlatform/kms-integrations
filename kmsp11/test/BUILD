@@ -7,6 +7,7 @@ cc_library(
     testonly = 1,
     hdrs = ["matchers.h"],
     deps = [
+        "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings:str_format",
         "@com_google_googletest//:gtest",
     ],
