@@ -3,6 +3,20 @@ workspace(name = "com_google_kmstools")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
+    name = "com_github_gflags_gflags",  # 2020-03-18
+    sha256 = "68e26a487038a842da3ef2ddd1f886dad656e9efaf1a3d49e87d1d3a9fa3a8eb",
+    strip_prefix = "gflags-addd749114fab4f24b7ea1e0f2f837584389e52c",
+    url = "https://github.com/gflags/gflags/archive/addd749114fab4f24b7ea1e0f2f837584389e52c.tar.gz",
+)
+
+http_archive(
+    name = "com_github_google_glog",  # 2020-02-16
+    sha256 = "6fc352c434018b11ad312cd3b56be3597b4c6b88480f7bd4e18b3a3b2cf961aa",
+    strip_prefix = "glog-3ba8976592274bc1f907c402ce22558011d6fc5e",
+    url = "https://github.com/google/glog/archive/3ba8976592274bc1f907c402ce22558011d6fc5e.tar.gz",
+)
+
+http_archive(
     name = "com_google_absl",  # 2020-04-07
     sha256 = "2ad95ee8fe9ee5aef55d8a9b59dfbd9c66056364a98dc3076ff3b32698b7bbe8",
     strip_prefix = "abseil-cpp-1112609635037a32435de7aa70a9188dcb591458",
