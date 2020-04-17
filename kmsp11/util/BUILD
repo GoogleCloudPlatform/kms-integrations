@@ -146,6 +146,7 @@ cc_library(
     srcs = ["string_utils.cc"],
     hdrs = ["string_utils.h"],
     deps = [
+        ":errors",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings",
     ],

@@ -40,7 +40,7 @@ CK_RV GetCkRv(const absl::Status& status) {
     // It doesn't really make sense to return an error status from a function
     // that is itself processing an error status. Log a warning instead.
     LOG(WARNING) << "status payload of type " << kTypeUrl << " with payload '"
-                 << absl::HexStringToBytes(payload)
+                 << absl::BytesToHexString(payload)
                  << "' could not be parsed as a StatusDetails";
   }
 

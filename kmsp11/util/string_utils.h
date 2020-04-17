@@ -1,6 +1,8 @@
 #ifndef KMSP11_UTIL_STRING_UTILS_H_
 #define KMSP11_UTIL_STRING_UTILS_H_
 
+#include <cstdint>
+
 #include "absl/status/status.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
