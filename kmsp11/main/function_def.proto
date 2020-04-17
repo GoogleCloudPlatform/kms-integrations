@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package kmsp11;
+option go_package = ".;kmsp11";
+
+message CkFuncList {
+  repeated CkFunc functions = 1;
+}
+
+message CkFunc {
+  string name = 1;
+  repeated CkArg args = 2;
+}
+
+message CkArg {
+  string datatype = 1;
+  string name = 2;
+}

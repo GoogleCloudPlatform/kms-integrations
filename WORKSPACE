@@ -4,6 +4,15 @@ workspace(name = "com_google_kmstools")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_file")
 
 http_archive(
+    name = "bazel_gazelle",  # v0.20.0 / 2020-02-06
+    sha256 = "d8c45ee70ec39a57e7a05e5027c32b1576cc7f16d9dd37135b0eddde45cf1b10",
+    urls = [
+        "https://storage.googleapis.com/bazel-mirror/github.com/bazelbuild/bazel-gazelle/releases/download/v0.20.0/bazel-gazelle-v0.20.0.tar.gz",
+        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.20.0/bazel-gazelle-v0.20.0.tar.gz",
+    ],
+)
+
+http_archive(
     name = "com_github_gflags_gflags",  # 2020-03-18
     sha256 = "68e26a487038a842da3ef2ddd1f886dad656e9efaf1a3d49e87d1d3a9fa3a8eb",
     strip_prefix = "gflags-addd749114fab4f24b7ea1e0f2f837584389e52c",
@@ -38,6 +47,15 @@ http_archive(
     url = "https://github.com/protocolbuffers/protobuf/archive/d0bfd5221182da1a7cc280f3337b5e41a89539cf.zip",
 )
 
+http_archive(
+    name = "io_bazel_rules_go",  # v0.22.4 / 2020-04-14
+    sha256 = "7b9bbe3ea1fccb46dcfa6c3f3e29ba7ec740d8733370e21cdc8937467b4a4349",
+    urls = [
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.22.4/rules_go-v0.22.4.tar.gz",
+        "https://github.com/bazelbuild/rules_go/releases/download/v0.22.4/rules_go-v0.22.4.tar.gz",
+    ],
+)
+
 http_file(
     name = "pkcs11_h_v240",  # 2016-05-13
     downloaded_file_path = "pkcs11.h",
@@ -61,7 +79,30 @@ http_file(
 
 # Transitive Dependencies
 
+## Golang
+load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
+
+go_rules_dependencies()
+
+go_register_toolchains()
+
 ## Protobuf
 load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
 
 protobuf_deps()
+
+## Gazelle (go + bazel)
+
+load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")  #, "go_repository")
+
+gazelle_dependencies()
+
+load("@bazel_gazelle//:deps.bzl", "go_repository")
+
+# Golang repositories
+
+go_repository(
+    name = "com_github_google_go_cmp",  # v0.4.0 / 2019-12-16
+    commit = "5a6f75716e1203a923a78c9efb94089d857df0f6",
+    importpath = "github.com/google/go-cmp",
+)

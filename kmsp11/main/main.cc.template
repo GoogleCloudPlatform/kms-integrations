@@ -1,0 +1,32 @@
+#include "kmsp11/cryptoki.h"
+#include "kmsp11/main/bridge.h"
+#include "kmsp11/util/status_utils.h"
+
+{{/* Iterate over all the functions. */ -}}
+{{range .Functions}}
+
+{{- /* Declare the function. */ -}}
+CK_RV {{.Name}} (
+
+{{- /* Declare the function args by iterating over them. */ -}}
+{{- range $index, $arg := .Args -}}
+{{if $index}},{{end}}
+    {{$arg.Datatype}} {{$arg.Name -}}
+{{- end -}}) {
+
+{{- /* Invoke the bridge function (without the 'C_' prefix). */}}
+  absl::Status status = kmsp11::{{slice .Name 2 }}(
+
+{{- /* Iterate over the args to forward them to the bridge. */ -}}
+{{- range $index, $arg := .Args -}}
+{{if $index}},{{end}}
+      {{$arg.Name -}}
+{{- end -}}
+);
+
+{{- /* Convert the retrieved status into a CK_RV. */}}
+{{- /* TODO(bdhess): Log the returned status if it's an error. */}}
+  return kmsp11::GetCkRv(status);
+}
+
+{{end}}
