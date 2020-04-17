@@ -29,6 +29,7 @@ cc_test(
     srcs = ["matchers_test.cc"],
     deps = [
         ":matchers",
+        "//kmsp11:cryptoki_headers",
         "@com_google_absl//absl/status",
         "@com_google_googletest//:gtest_main",
     ],

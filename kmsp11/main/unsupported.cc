@@ -7,22 +7,6 @@
 
 namespace kmsp11 {
 
-absl::Status Initialize(void* initArgs) {
-  return UnsupportedError(SOURCE_LOCATION);
-}
-
-absl::Status Finalize(void* reserved) {
-  return UnsupportedError(SOURCE_LOCATION);
-}
-
-absl::Status GetInfo(CK_INFO* info) {
-  return UnsupportedError(SOURCE_LOCATION);
-}
-
-absl::Status GetFunctionList(CK_FUNCTION_LIST** ppFunctionList) {
-  return UnsupportedError(SOURCE_LOCATION);
-}
-
 absl::Status GetSlotList(CK_BBOOL tokenPresent, CK_SLOT_ID_PTR pSlotList,
                          CK_ULONG_PTR pulCount) {
   return UnsupportedError(SOURCE_LOCATION);

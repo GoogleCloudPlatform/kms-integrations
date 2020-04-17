@@ -31,6 +31,13 @@ MATCHER_P(StatusIs, status_code,
   return ToStatus(arg).code() == status_code;
 }
 
+// Tests that the supplied status has the expected CK_RV.
+MATCHER_P(StatusRvIs, ck_rv,
+          absl::StrFormat("status ck_rv is %s%#x", (negation ? "not " : ""),
+                          ck_rv)) {
+  return GetCkRv(ToStatus(arg)) == ck_rv;
+}
+
 // Tests that the supplied status is OK.
 MATCHER(IsOk, absl::StrFormat("status is %sOK", negation ? "not " : "")) {
   return ToStatus(arg).ok();

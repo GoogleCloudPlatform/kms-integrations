@@ -1,7 +1,7 @@
 load(":function_def_template.bzl", "function_def_template")
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
 load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
-load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
 load("@rules_proto//proto:defs.bzl", "proto_library")
 
 package(default_visibility = ["//kmsp11:__subpackages__"])
@@ -11,14 +11,32 @@ package(default_visibility = ["//kmsp11:__subpackages__"])
 cc_library(
     name = "bridge",
     srcs = [
+        "bridge.cc",
         "main.cc",
         "unsupported.cc",
     ],
-    hdrs = ["bridge.h"],
+    hdrs = [
+        "bridge.h",
+        "function_list.h",
+    ],
+    linkstatic = 1,
     deps = [
         "//kmsp11:cryptoki_headers",
+        "//kmsp11:provider",
         "//kmsp11/util:errors",
         "@com_google_absl//absl/status",
+    ],
+    alwayslink = 1,
+)
+
+cc_test(
+    name = "bridge_test",
+    size = "small",
+    srcs = ["bridge_test.cc"],
+    deps = [
+        ":bridge",
+        "//kmsp11/test",
+        "@com_google_googletest//:gtest_main",
     ],
 )
 
@@ -84,6 +102,12 @@ genrule(
     \"$(location :function_def_builder)\" \
         --pkcs11f_path \"$(SRCS)\" > \"$(@)\"""",
     tools = [":function_def_builder"],
+)
+
+function_def_template(
+    name = "function_list",
+    src = "function_list.h.template",
+    out = "function_list.h",
 )
 
 function_def_template(

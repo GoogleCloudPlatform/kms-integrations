@@ -2,6 +2,7 @@
 
 #include "absl/strings/string_view.h"
 #include "gmock/gmock.h"
+#include "kmsp11/cryptoki.h"
 #include "kmsp11/util/status_or.h"
 
 namespace kmsp11 {
@@ -50,6 +51,35 @@ TEST(StatusIsTest, NotOkStatus) {
 TEST(StatusIsTest, NotOkStatusOr) {
   EXPECT_THAT(StatusOr<int>(absl::CancelledError("cancelled")),
               StatusIs(absl::StatusCode::kCancelled));
+}
+
+TEST(StatusRvIsTest, OkStatus) {
+  EXPECT_THAT(absl::OkStatus(), StatusRvIs(CKR_OK));
+}
+
+TEST(StatusRvIsTest, OkStatusOr) {
+  EXPECT_THAT(StatusOr<int>(3), StatusRvIs(CKR_OK));
+}
+
+TEST(StatusIsTest, DefaultNotOkStatus) {
+  EXPECT_THAT(absl::AbortedError("aborted"), StatusRvIs(kDefaultErrorCkRv));
+}
+
+TEST(StatusIsTest, DefaultNotOkStatusOr) {
+  EXPECT_THAT(StatusOr<int>(absl::CancelledError("cancelled")),
+              StatusRvIs(kDefaultErrorCkRv));
+}
+
+TEST(StatusIsTest, CustomNotOkStatus) {
+  absl::Status status = absl::AbortedError("aborted");
+  SetErrorRv(status, CKR_DEVICE_ERROR);
+  EXPECT_THAT(status, StatusRvIs(CKR_DEVICE_ERROR));
+}
+
+TEST(StatusIsTest, CustomNotOkStatusOr) {
+  absl::Status s = absl::CancelledError("cancelled");
+  SetErrorRv(s, CKR_HOST_MEMORY);
+  EXPECT_THAT(StatusOr<int>(s), StatusRvIs(CKR_HOST_MEMORY));
 }
 
 }  // namespace

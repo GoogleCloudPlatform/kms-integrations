@@ -15,10 +15,26 @@ ABSL_MUST_USE_RESULT absl::Status NewError(
     absl::StatusCode code, absl::string_view msg, CK_RV ck_rv,
     const SourceLocation& source_location);
 
+// Creates a new InvalidArgument error with the provided CK_RV.
+ABSL_MUST_USE_RESULT inline absl::Status NewInvalidArgumentError(
+    absl::string_view msg, CK_RV ck_rv, const SourceLocation& source_location) {
+  return NewError(absl::StatusCode::kInvalidArgument, msg, ck_rv,
+                  source_location);
+}
+
+// Creates a new FailedPrecondition error with a return value of
+// CKR_CRYPTOKI_NOT_INITIALIZED.
+ABSL_MUST_USE_RESULT inline absl::Status NotInitializedError(
+    const SourceLocation& source_location) {
+  return NewError(absl::StatusCode::kFailedPrecondition,
+                  "the library is not initialized",
+                  CKR_CRYPTOKI_NOT_INITIALIZED, SOURCE_LOCATION);
+}
+
 // Creates a new error with status code unimplemented and return value of
 // CKR_FUNCTION_NOT_SUPPORTED.
 inline ABSL_MUST_USE_RESULT absl::Status UnsupportedError(
-    SourceLocation source_location) {
+    const SourceLocation& source_location) {
   return NewError(absl::StatusCode::kUnimplemented,
                   "the function is not supported", CKR_FUNCTION_NOT_SUPPORTED,
                   source_location);
