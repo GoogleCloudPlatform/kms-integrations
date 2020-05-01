@@ -3,6 +3,7 @@
 #include "absl/strings/string_view.h"
 #include "gmock/gmock.h"
 #include "kmsp11/cryptoki.h"
+#include "kmsp11/test/test_message.pb.h"
 #include "kmsp11/util/status_or.h"
 
 namespace kmsp11 {
@@ -80,6 +81,26 @@ TEST(StatusIsTest, CustomNotOkStatusOr) {
   absl::Status s = absl::CancelledError("cancelled");
   SetErrorRv(s, CKR_HOST_MEMORY);
   EXPECT_THAT(StatusOr<int>(s), StatusRvIs(CKR_HOST_MEMORY));
+}
+
+TEST(EqualsProtoTest, Equals) {
+  TestMessage m1;
+  m1.set_string_value("foo");
+
+  TestMessage m2;
+  m2.set_string_value("foo");
+
+  EXPECT_THAT(m1, EqualsProto(m2));
+}
+
+TEST(EqualsProtoTest, NotEquals) {
+  TestMessage m1;
+  m1.set_string_value("foo");
+
+  TestMessage m2;
+  m2.set_string_value("bar");
+
+  EXPECT_THAT(m1, Not(EqualsProto(m2)));
 }
 
 }  // namespace

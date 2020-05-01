@@ -1,4 +1,5 @@
-load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_proto_library", "cc_test")
+load("@rules_proto//proto:defs.bzl", "proto_library")
 
 package(default_visibility = ["//kmsp11:__subpackages__"])
 
@@ -7,6 +8,7 @@ cc_library(
     testonly = 1,
     deps = [
         ":matchers",
+        ":proto_parser",
         ":test_status_macros",
     ],
 )
@@ -29,10 +31,45 @@ cc_test(
     srcs = ["matchers_test.cc"],
     deps = [
         ":matchers",
+        ":test_message_cc_proto",
         "//kmsp11:cryptoki_headers",
         "@com_google_absl//absl/status",
         "@com_google_googletest//:gtest_main",
     ],
+)
+
+cc_library(
+    name = "proto_parser",
+    testonly = 1,
+    hdrs = ["proto_parser.h"],
+    deps = [
+        "@com_google_googletest//:gtest",
+        "@com_google_protobuf//:protobuf_lite",
+    ],
+)
+
+cc_test(
+    name = "proto_parser_test",
+    size = "small",
+    srcs = ["proto_parser_test.cc"],
+    deps = [
+        ":matchers",
+        ":proto_parser",
+        ":test_message_cc_proto",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_proto_library(
+    name = "test_message_cc_proto",
+    testonly = 1,
+    deps = [":test_message_proto"],
+)
+
+proto_library(
+    name = "test_message_proto",
+    testonly = 1,
+    srcs = ["test_message.proto"],
 )
 
 cc_library(

@@ -6,6 +6,7 @@
 #include "absl/status/status.h"
 #include "absl/strings/str_format.h"
 #include "gmock/gmock.h"
+#include "google/protobuf/util/message_differencer.h"
 #include "kmsp11/util/status_or.h"
 #include "kmsp11/util/status_utils.h"
 
@@ -41,6 +42,12 @@ MATCHER_P(StatusRvIs, ck_rv,
 // Tests that the supplied status is OK.
 MATCHER(IsOk, absl::StrFormat("status is %sOK", negation ? "not " : "")) {
   return ToStatus(arg).ok();
+}
+
+// Tests that the supplied protocol buffer message is equal.
+MATCHER_P(EqualsProto, proto,
+          absl::StrFormat("proto %s", negation ? "does not equal" : "equals")) {
+  return google::protobuf::util::MessageDifferencer::Equals(arg, proto);
 }
 
 }  // namespace kmsp11
