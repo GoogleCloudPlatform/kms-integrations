@@ -16,7 +16,7 @@ using ::testing::Le;
 class InfoTest : public testing::Test {
  protected:
   inline void SetUp() override {
-    ASSERT_OK_AND_ASSIGN(Provider provider, Provider::New());
+    ASSERT_OK_AND_ASSIGN(Provider provider, Provider::New(LibraryConfig()));
     info_ = provider.info();
   }
 

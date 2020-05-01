@@ -23,6 +23,7 @@ cc_library(
     deps = [
         "//kmsp11:cryptoki_headers",
         "//kmsp11:provider",
+        "//kmsp11/config",
         "//kmsp11/util:errors",
         "@com_google_absl//absl/status",
     ],
@@ -36,6 +37,8 @@ cc_test(
     deps = [
         ":bridge",
         "//kmsp11/test",
+        "//kmsp11/util:cleanup",
+        "//kmsp11/util:platform",
         "@com_google_googletest//:gtest_main",
     ],
 )

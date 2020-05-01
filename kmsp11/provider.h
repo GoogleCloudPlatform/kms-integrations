@@ -1,6 +1,7 @@
 #ifndef KMSP11_PROVIDER_H_
 #define KMSP11_PROVIDER_H_
 
+#include "kmsp11/config/config.pb.h"
 #include "kmsp11/cryptoki.h"
 #include "kmsp11/util/status_or.h"
 
@@ -12,7 +13,7 @@ namespace kmsp11 {
 // See go/kms-pkcs11-model
 class Provider {
  public:
-  static StatusOr<Provider> New();
+  static StatusOr<Provider> New(LibraryConfig config);
 
   const CK_INFO& info() { return info_; }
 

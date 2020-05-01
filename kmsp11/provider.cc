@@ -22,7 +22,7 @@ StatusOr<CK_INFO> NewCkInfo() {
   return info;
 }
 
-StatusOr<Provider> Provider::New() {
+StatusOr<Provider> Provider::New(LibraryConfig config) {
   ASSIGN_OR_RETURN(CK_INFO info, NewCkInfo());
   return Provider(info);
 }
