@@ -11,6 +11,13 @@ namespace {
 using ::testing::ElementsAre;
 using ::testing::HasSubstr;
 
+TEST(ProtoyamlTest, ParseEmpty) {
+  YAML::Node node = YAML::Load("");
+  Scalars result;
+  EXPECT_OK(YamlToProto(node, &result));
+  EXPECT_THAT(result, EqualsProto(Scalars()));
+}
+
 TEST(ProtoyamlTest, ParseString) {
   YAML::Node node = YAML::Load("string_field: foo");
   Scalars result;

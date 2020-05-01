@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package kmsp11;
+
+message LibraryConfig {
+  // Required. The list of tokens to expose in this library.
+  repeated TokenConfig tokens = 1;
+}
+
+message TokenConfig {
+  // Required. The Cloud KMS KeyRing associated with this token.
+  // For example, projects/foo/locations/global/keyRings/bar
+  string key_ring = 1;
+
+  // Optional. The label to assign to this token in the PKCS #11
+  // CK_TOKEN_INFO structure.
+  string label = 2;
+}

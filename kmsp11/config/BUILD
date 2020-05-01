@@ -4,6 +4,39 @@ load("@rules_proto//proto:defs.bzl", "proto_library")
 package(default_visibility = ["//kmsp11:__subpackages__"])
 
 cc_library(
+    name = "config",
+    srcs = ["config.cc"],
+    hdrs = ["config.h"],
+    deps = [
+        ":config_cc_proto",
+        ":protoyaml",
+        "//kmsp11/util:errors",
+    ],
+)
+
+cc_test(
+    name = "config_test",
+    srcs = ["config_test.cc"],
+    deps = [
+        ":config",
+        "//kmsp11/test",
+        "//kmsp11/util:cleanup",
+        "//kmsp11/util:platform",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_proto_library(
+    name = "config_cc_proto",
+    deps = [":config_proto"],
+)
+
+proto_library(
+    name = "config_proto",
+    srcs = ["config.proto"],
+)
+
+cc_library(
     name = "protoyaml",
     srcs = ["protoyaml.cc"],
     hdrs = ["protoyaml.h"],

@@ -4,6 +4,20 @@ load("@rules_proto//proto:defs.bzl", "proto_library")
 package(default_visibility = ["//kmsp11:__subpackages__"])
 
 cc_library(
+    name = "cleanup",
+    hdrs = ["cleanup.h"],
+)
+
+cc_test(
+    name = "cleanup_test",
+    srcs = ["cleanup_test.cc"],
+    deps = [
+        ":cleanup",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
     name = "errors",
     srcs = ["errors.cc"],
     hdrs = ["errors.h"],
@@ -23,6 +37,15 @@ cc_test(
         "//kmsp11/test:matchers",
         "@com_google_googletest//:gtest_main",
     ],
+)
+
+cc_library(
+    name = "platform",
+    srcs = select({
+        "//:windows": ["platform_win.cc"],
+        "//conditions:default": ["platform_posix.cc"],
+    }),
+    hdrs = ["platform.h"],
 )
 
 cc_library(

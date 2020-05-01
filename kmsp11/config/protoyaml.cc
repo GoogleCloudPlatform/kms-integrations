@@ -128,6 +128,9 @@ absl::Status SetField(Message* dest, const FieldDescriptor* field,
 
 absl::Status YamlToProto(const YAML::Node& node,
                          google::protobuf::Message* message) {
+  if (node.IsNull()) {
+    return absl::OkStatus();
+  }
   if (!node.IsMap()) {
     return YamlError("expected a YAML map", node.Mark(), SOURCE_LOCATION);
   }
