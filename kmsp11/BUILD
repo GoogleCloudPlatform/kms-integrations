@@ -52,3 +52,27 @@ cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "token",
+    srcs = ["token.cc"],
+    hdrs = ["token.h"],
+    deps = [
+        ":cryptoki_headers",
+        "//kmsp11/config:config_cc_proto",
+        "//kmsp11/util:status_macros",
+        "//kmsp11/util:status_or",
+        "//kmsp11/util:string_utils",
+    ],
+)
+
+cc_test(
+    name = "token_test",
+    size = "small",
+    srcs = ["token_test.cc"],
+    deps = [
+        ":token",
+        "//kmsp11/test",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
