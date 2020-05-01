@@ -54,6 +54,8 @@ StatusOr<CK_TOKEN_INFO> NewTokenInfo(absl::string_view token_label) {
 StatusOr<std::unique_ptr<Token>> Token::New(TokenConfig tokenConfig) {
   ASSIGN_OR_RETURN(CK_SLOT_INFO slot_info, NewSlotInfo());
   ASSIGN_OR_RETURN(CK_TOKEN_INFO token_info, NewTokenInfo(tokenConfig.label()));
+
+  // using `new` to invoke a private constructor
   return std::unique_ptr<Token>(new Token(slot_info, token_info));
 }
 

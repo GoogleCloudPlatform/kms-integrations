@@ -35,7 +35,9 @@ cc_library(
     hdrs = ["provider.h"],
     deps = [
         ":cryptoki_headers",
+        ":token",
         "//kmsp11/config:config_cc_proto",
+        "//kmsp11/util:errors",
         "//kmsp11/util:status_macros",
         "//kmsp11/util:status_or",
         "//kmsp11/util:string_utils",

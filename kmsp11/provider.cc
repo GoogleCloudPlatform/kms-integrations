@@ -24,8 +24,25 @@ StatusOr<CK_INFO> NewCkInfo() {
 
 StatusOr<std::unique_ptr<Provider>> Provider::New(LibraryConfig config) {
   ASSIGN_OR_RETURN(CK_INFO info, NewCkInfo());
+
+  std::vector<std::unique_ptr<Token>> tokens;
+  tokens.reserve(config.tokens_size());
+  for (const TokenConfig& tokenConfig : config.tokens()) {
+    ASSIGN_OR_RETURN(std::unique_ptr<Token> token, Token::New(tokenConfig));
+    tokens.emplace_back(std::move(token));
+  }
+
   // using `new` to invoke a private constructor
-  return std::unique_ptr<Provider>(new Provider(info));
+  return std::unique_ptr<Provider>(new Provider(info, std::move(tokens)));
+}
+
+StatusOr<const Token*> Provider::TokenAt(CK_SLOT_ID slot_id) {
+  if (slot_id >= tokens_.size()) {
+    return NewError(absl::StatusCode::kNotFound,
+                    absl::StrFormat("slot with ID %d does not exist", slot_id),
+                    CKR_SLOT_ID_INVALID, SOURCE_LOCATION);
+  }
+  return tokens_[slot_id].get();
 }
 
 }  // namespace kmsp11

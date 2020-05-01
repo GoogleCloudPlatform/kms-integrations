@@ -2,6 +2,7 @@
 
 #include "gmock/gmock.h"
 #include "kmsp11/test/matchers.h"
+#include "kmsp11/test/proto_parser.h"
 #include "kmsp11/test/test_status_macros.h"
 #include "kmsp11/util/string_utils.h"
 
@@ -49,6 +50,29 @@ TEST_F(InfoTest, LibraryVersionIsSet) {
   EXPECT_THAT(info_.libraryVersion,
               AllOf(Field("major", &CK_VERSION::major, Le(10)),
                     Field("minor", &CK_VERSION::minor, Le(100))));
+}
+
+TEST(ProviderTest, ConfiguredTokens) {
+  LibraryConfig config = ParseTestProto(R"(
+    tokens {
+      label: "foo"
+    }
+    tokens {
+      label: "bar"
+    }
+  )");
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Provider> provider,
+                       Provider::New(config));
+
+  EXPECT_EQ(provider->token_count(), 2);
+
+  ASSERT_OK_AND_ASSIGN(const Token* token0, provider->TokenAt(0));
+  EXPECT_THAT(StrFromBytes(token0->token_info().label),
+              MatchesStdRegex("foo[ ]+"));
+
+  ASSERT_OK_AND_ASSIGN(const Token* token1, provider->TokenAt(1));
+  EXPECT_THAT(StrFromBytes(token1->token_info().label),
+              MatchesStdRegex("bar[ ]+"));
 }
 
 }  // namespace

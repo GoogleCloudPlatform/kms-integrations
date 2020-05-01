@@ -7,19 +7,6 @@
 
 namespace kmsp11 {
 
-absl::Status GetSlotList(CK_BBOOL tokenPresent, CK_SLOT_ID_PTR pSlotList,
-                         CK_ULONG_PTR pulCount) {
-  return UnsupportedError(SOURCE_LOCATION);
-}
-
-absl::Status GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
-  return UnsupportedError(SOURCE_LOCATION);
-}
-
-absl::Status GetTokenInfo(CK_SLOT_ID slotID, CK_TOKEN_INFO_PTR pInfo) {
-  return UnsupportedError(SOURCE_LOCATION);
-}
-
 absl::Status GetMechanismList(CK_SLOT_ID slotID,
                               CK_MECHANISM_TYPE_PTR pMechanismList,
                               CK_ULONG_PTR pulCount) {

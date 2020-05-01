@@ -47,6 +47,14 @@ ABSL_MUST_USE_RESULT inline absl::Status NotInitializedError(
                   CKR_CRYPTOKI_NOT_INITIALIZED, SOURCE_LOCATION);
 }
 
+// Creates a new error with status code OutOfRange and return value of
+// CKR_BUFFER_TOO_SMALL.
+inline ABSL_MUST_USE_RESULT absl::Status OutOfRangeError(
+    absl::string_view msg, const SourceLocation& source_location) {
+  return NewError(absl::StatusCode::kOutOfRange, msg, CKR_BUFFER_TOO_SMALL,
+                  source_location);
+}
+
 // Creates a new error with status code unimplemented and return value of
 // CKR_FUNCTION_NOT_SUPPORTED.
 inline ABSL_MUST_USE_RESULT absl::Status UnsupportedError(
