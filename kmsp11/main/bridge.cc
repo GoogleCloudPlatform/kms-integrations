@@ -10,19 +10,19 @@
 namespace kmsp11 {
 
 static CK_FUNCTION_LIST function_list = NewFunctionList();
-static absl::optional<Provider> provider;
+static std::unique_ptr<Provider> provider;
 
 StatusOr<Provider*> GetProvider() {
-  if (!provider.has_value()) {
+  if (!provider) {
     return NotInitializedError(SOURCE_LOCATION);
   }
-  return &provider.value();
+  return provider.get();
 }
 
 // Initialize the library.
 // http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc235002322
 absl::Status Initialize(CK_VOID_PTR pInitArgs) {
-  if (provider.has_value()) {
+  if (provider) {
     return NewError(absl::StatusCode::kFailedPrecondition,
                     "the library is already initialized",
                     CKR_CRYPTOKI_ALREADY_INITIALIZED, SOURCE_LOCATION);
@@ -48,19 +48,23 @@ absl::Status Initialize(CK_VOID_PTR pInitArgs) {
 
 // Shut down the library.
 // http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc383864872
-absl::Status Finalize(CK_VOID_PTR reserved) {
-  if (!provider.has_value()) {
+absl::Status Finalize(CK_VOID_PTR pReserved) {
+  if (!provider) {
     return NotInitializedError(SOURCE_LOCATION);
   }
-  provider = absl::nullopt;
+  provider = nullptr;
   return absl::OkStatus();
 }
 
 // Get basic information about the library.
 // http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc235002324
-absl::Status GetInfo(CK_INFO_PTR info) {
-  ASSIGN_OR_RETURN(Provider * provider, GetProvider());
-  *info = provider->info();
+absl::Status GetInfo(CK_INFO_PTR pInfo) {
+  ASSIGN_OR_RETURN(const Provider* provider, GetProvider());
+  if (!pInfo) {
+    return NullArgumentError("pInfo", SOURCE_LOCATION);
+  }
+
+  *pInfo = provider->info();
   return absl::OkStatus();
 }
 
@@ -69,6 +73,9 @@ absl::Status GetInfo(CK_INFO_PTR info) {
 absl::Status GetFunctionList(CK_FUNCTION_LIST_PTR_PTR ppFunctionList) {
   // Note that GetFunctionList is the only Cryptoki function that may be called
   // before the library is initialized.
+  if (!ppFunctionList) {
+    return NullArgumentError("ppFunctionList", SOURCE_LOCATION);
+  }
   *ppFunctionList = &function_list;
   return absl::OkStatus();
 }

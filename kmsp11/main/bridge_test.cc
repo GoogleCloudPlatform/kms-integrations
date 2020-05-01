@@ -31,10 +31,10 @@ TEST_F(BridgeTest, InitializeFromArgs) {
 
 TEST_F(BridgeTest, InitializeFailsOnSecondCall) {
   EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
   EXPECT_THAT(Initialize(&init_args_),
               StatusRvIs(CKR_CRYPTOKI_ALREADY_INITIALIZED));
-  // Finalize so that other tests see an uninitialized state
-  EXPECT_OK(Finalize(nullptr));
 }
 
 TEST_F(BridgeTest, InitializeFromEnvironment) {
@@ -82,6 +82,13 @@ TEST_F(BridgeTest, GetInfoFailsWithoutInitialize) {
   EXPECT_THAT(GetInfo(nullptr), StatusRvIs(CKR_CRYPTOKI_NOT_INITIALIZED));
 }
 
+TEST_F(BridgeTest, GetInfoFailsNullPtr) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  EXPECT_THAT(GetInfo(nullptr), StatusRvIs(CKR_ARGUMENTS_BAD));
+}
+
 TEST_F(BridgeTest, GetFunctionListSuccess) {
   CK_FUNCTION_LIST* function_list;
   EXPECT_OK(GetFunctionList(&function_list));
@@ -90,10 +97,15 @@ TEST_F(BridgeTest, GetFunctionListSuccess) {
 TEST_F(BridgeTest, FunctionListValidPointers) {
   CK_FUNCTION_LIST* f;
   EXPECT_OK(GetFunctionList(&f));
+
   EXPECT_EQ(f->C_Initialize(&init_args_), CKR_OK);
   CK_INFO info;
   EXPECT_EQ(f->C_GetInfo(&info), CKR_OK);
   EXPECT_EQ(f->C_Finalize(nullptr), CKR_OK);
+}
+
+TEST_F(BridgeTest, GetFunctionListFailsNullPtr) {
+  EXPECT_THAT(GetFunctionList(nullptr), StatusRvIs(CKR_ARGUMENTS_BAD));
 }
 
 }  // namespace

@@ -13,13 +13,13 @@ namespace kmsp11 {
 // See go/kms-pkcs11-model
 class Provider {
  public:
-  static StatusOr<Provider> New(LibraryConfig config);
+  static StatusOr<std::unique_ptr<Provider>> New(LibraryConfig config);
 
-  const CK_INFO& info() { return info_; }
+  const CK_INFO& info() const { return info_; }
 
  private:
   Provider(CK_INFO info) : info_(info) {}
-  CK_INFO info_;
+  const CK_INFO info_;
 };
 
 }  // namespace kmsp11

@@ -22,9 +22,10 @@ StatusOr<CK_INFO> NewCkInfo() {
   return info;
 }
 
-StatusOr<Provider> Provider::New(LibraryConfig config) {
+StatusOr<std::unique_ptr<Provider>> Provider::New(LibraryConfig config) {
   ASSIGN_OR_RETURN(CK_INFO info, NewCkInfo());
-  return Provider(info);
+  // using `new` to invoke a private constructor
+  return std::unique_ptr<Provider>(new Provider(info));
 }
 
 }  // namespace kmsp11

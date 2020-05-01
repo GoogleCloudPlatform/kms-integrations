@@ -30,6 +30,14 @@ ABSL_MUST_USE_RESULT inline absl::Status NewInvalidArgumentError(
                   source_location);
 }
 
+// Creates a new InvalidArgument error with rv = CKR_ARGUMENTS_BAD.
+ABSL_MUST_USE_RESULT inline absl::Status NullArgumentError(
+    absl::string_view arg_name, const SourceLocation& source_location) {
+  return NewInvalidArgumentError(
+      absl::StrFormat("argument %s was unexpectedly null", arg_name),
+      CKR_ARGUMENTS_BAD, source_location);
+}
+
 // Creates a new FailedPrecondition error with a return value of
 // CKR_CRYPTOKI_NOT_INITIALIZED.
 ABSL_MUST_USE_RESULT inline absl::Status NotInitializedError(
