@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package kmsp11;
+
+message Scalars {
+  string string_field = 1;
+  int32 int_field = 2;
+  bool bool_field = 3;
+}
+
+message RepeatedString {
+  repeated string strings = 1;
+}
+
+message NestedScalars {
+  string root_field = 1;
+  Scalars scalars = 2;
+}
+
+message RepeatedScalars {
+  string root_field = 1;
+  repeated Scalars scalars = 2;
+}

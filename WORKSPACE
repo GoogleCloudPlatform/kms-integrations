@@ -27,6 +27,13 @@ http_archive(
 )
 
 http_archive(
+    name = "com_github_jbeder_yaml_cpp",  # 2020-04-29
+    sha256 = "736326d88059b5ebe77cb1d3825ade55c8708898817e067a05931444a7843faa",
+    strip_prefix = "yaml-cpp-9fb51534877d16597cfd94c18890d87af0879d65",
+    url = "https://github.com/jbeder/yaml-cpp/archive/9fb51534877d16597cfd94c18890d87af0879d65.tar.gz",
+)
+
+http_archive(
     name = "com_google_absl",  # 2020-04-07
     sha256 = "2ad95ee8fe9ee5aef55d8a9b59dfbd9c66056364a98dc3076ff3b32698b7bbe8",
     strip_prefix = "abseil-cpp-1112609635037a32435de7aa70a9188dcb591458",

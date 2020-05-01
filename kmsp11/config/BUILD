@@ -1,0 +1,41 @@
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_proto_library", "cc_test")
+load("@rules_proto//proto:defs.bzl", "proto_library")
+
+package(default_visibility = ["//kmsp11:__subpackages__"])
+
+cc_library(
+    name = "protoyaml",
+    srcs = ["protoyaml.cc"],
+    hdrs = ["protoyaml.h"],
+    deps = [
+        "//kmsp11/util:errors",
+        "//kmsp11/util:status_macros",
+        "//kmsp11/util:status_or",
+        "@com_github_jbeder_yaml_cpp//:yaml-cpp",
+        "@com_google_absl//absl/container:flat_hash_set",
+    ],
+)
+
+cc_test(
+    name = "protoyaml_test",
+    size = "small",
+    srcs = ["protoyaml_test.cc"],
+    deps = [
+        ":protoyaml",
+        ":protoyaml_test_cc_proto",
+        "//kmsp11/test",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_proto_library(
+    name = "protoyaml_test_cc_proto",
+    testonly = 1,
+    deps = [":protoyaml_test_proto"],
+)
+
+proto_library(
+    name = "protoyaml_test_proto",
+    testonly = 1,
+    srcs = ["protoyaml_test.proto"],
+)

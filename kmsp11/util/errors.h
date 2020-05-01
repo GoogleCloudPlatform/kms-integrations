@@ -15,6 +15,14 @@ ABSL_MUST_USE_RESULT absl::Status NewError(
     absl::StatusCode code, absl::string_view msg, CK_RV ck_rv,
     const SourceLocation& source_location);
 
+// Creates a new Internal error with a return value of
+// CKR_GENERAL_ERROR.
+ABSL_MUST_USE_RESULT inline absl::Status NewInternalError(
+    absl::string_view msg, const SourceLocation& source_location) {
+  return NewError(absl::StatusCode::kInternal, msg, CKR_GENERAL_ERROR,
+                  SOURCE_LOCATION);
+}
+
 // Creates a new InvalidArgument error with the provided CK_RV.
 ABSL_MUST_USE_RESULT inline absl::Status NewInvalidArgumentError(
     absl::string_view msg, CK_RV ck_rv, const SourceLocation& source_location) {
