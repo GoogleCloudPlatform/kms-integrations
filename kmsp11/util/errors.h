@@ -15,6 +15,13 @@ ABSL_MUST_USE_RESULT absl::Status NewError(
     absl::StatusCode code, absl::string_view msg, CK_RV ck_rv,
     const SourceLocation& source_location);
 
+// Creates a new FailedPrecondition error with the provided CK_RV.
+ABSL_MUST_USE_RESULT inline absl::Status FailedPreconditionError(
+    absl::string_view msg, CK_RV ck_rv, const SourceLocation& source_location) {
+  return NewError(absl::StatusCode::kFailedPrecondition, msg, ck_rv,
+                  source_location);
+}
+
 // Creates a new Internal error with a return value of
 // CKR_GENERAL_ERROR.
 ABSL_MUST_USE_RESULT inline absl::Status NewInternalError(

@@ -35,9 +35,11 @@ cc_library(
     hdrs = ["provider.h"],
     deps = [
         ":cryptoki_headers",
+        ":session",
         ":token",
         "//kmsp11/config:config_cc_proto",
         "//kmsp11/util:errors",
+        "//kmsp11/util:handle_map",
         "//kmsp11/util:status_macros",
         "//kmsp11/util:status_or",
         "//kmsp11/util:string_utils",
@@ -56,6 +58,12 @@ cc_test(
 )
 
 cc_library(
+    name = "session",
+    hdrs = ["session.h"],
+    deps = [":token"],
+)
+
+cc_library(
     name = "token",
     srcs = ["token.cc"],
     hdrs = ["token.h"],
@@ -65,6 +73,7 @@ cc_library(
         "//kmsp11/util:status_macros",
         "//kmsp11/util:status_or",
         "//kmsp11/util:string_utils",
+        "@com_google_absl//absl/synchronization",
     ],
 )
 

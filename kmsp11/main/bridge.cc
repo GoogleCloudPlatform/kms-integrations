@@ -19,7 +19,7 @@ StatusOr<Provider*> GetProvider() {
   return provider.get();
 }
 
-StatusOr<const Token*> GetToken(CK_SLOT_ID slot_id) {
+StatusOr<Token*> GetToken(CK_SLOT_ID slot_id) {
   ASSIGN_OR_RETURN(Provider * provider, GetProvider());
   return provider->TokenAt(slot_id);
 }
@@ -28,9 +28,9 @@ StatusOr<const Token*> GetToken(CK_SLOT_ID slot_id) {
 // http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc235002322
 absl::Status Initialize(CK_VOID_PTR pInitArgs) {
   if (provider) {
-    return NewError(absl::StatusCode::kFailedPrecondition,
-                    "the library is already initialized",
-                    CKR_CRYPTOKI_ALREADY_INITIALIZED, SOURCE_LOCATION);
+    return FailedPreconditionError("the library is already initialized",
+                                   CKR_CRYPTOKI_ALREADY_INITIALIZED,
+                                   SOURCE_LOCATION);
   }
 
   auto* init_args = static_cast<CK_C_INITIALIZE_ARGS*>(pInitArgs);

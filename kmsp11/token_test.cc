@@ -16,12 +16,12 @@ using ::testing::Le;
 class TokenTest : public testing::Test {
  protected:
   inline void SetUp() override {
-    ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
-                         Token::New(TokenConfig()));
-    slot_info_ = token->slot_info();
-    token_info_ = token->token_info();
+    ASSERT_OK_AND_ASSIGN(token_, Token::New(0, TokenConfig()));
+    slot_info_ = token_->slot_info();
+    token_info_ = token_->token_info();
   }
 
+  std::unique_ptr<Token> token_;
   CK_SLOT_INFO slot_info_;
   CK_TOKEN_INFO token_info_;
 };
@@ -62,7 +62,7 @@ TEST_F(TokenTest, TokenInfoLabelExplicitValue) {
   TokenConfig config;
   config.set_label("foo bar");
 
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token, Token::New(config));
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token, Token::New(0, config));
   EXPECT_EQ(StrFromBytes(token->token_info().label),
             // Note the space-padding to get to 32 characters
             "foo bar                         ");
@@ -131,6 +131,52 @@ TEST_F(TokenTest, TokenInfoFirmwareVersionIsZero) {
 
 TEST_F(TokenTest, UtcTimeIsSet) {
   EXPECT_EQ(StrFromBytes(token_info_.utcTime), "0000000000000000");
+}
+
+TEST_F(TokenTest, InfoContainsSlotId) {
+  EXPECT_EQ(token_->session_info().slotID, 0);
+}
+
+TEST_F(TokenTest, DefaultStateRoPublicSession) {
+  EXPECT_EQ(token_->session_info().state, CKS_RO_PUBLIC_SESSION);
+}
+
+TEST_F(TokenTest, SessionFlagsSerial) {
+  EXPECT_EQ(token_->session_info().flags & CKF_SERIAL_SESSION,
+            CKF_SERIAL_SESSION);
+}
+
+TEST_F(TokenTest, SessionErrorIsZero) {
+  EXPECT_EQ(token_->session_info().ulDeviceError, 0);
+}
+
+TEST_F(TokenTest, LoginAsUserSuccess) {
+  EXPECT_OK(token_->Login(CKU_USER));
+  EXPECT_EQ(token_->session_info().state, CKS_RO_USER_FUNCTIONS);
+}
+
+TEST_F(TokenTest, LoginAsUserFailsOnRelogin) {
+  EXPECT_OK(token_->Login(CKU_USER));
+  EXPECT_THAT(token_->Login(CKU_USER), StatusRvIs(CKR_USER_ALREADY_LOGGED_IN));
+}
+
+TEST_F(TokenTest, LoginAsSOFails) {
+  EXPECT_THAT(token_->Login(CKU_SO), StatusRvIs(CKR_PIN_LOCKED));
+}
+
+TEST_F(TokenTest, LoginAsContextSpecificFails) {
+  EXPECT_THAT(token_->Login(CKU_CONTEXT_SPECIFIC),
+              StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
+}
+
+TEST_F(TokenTest, LoginLogoutSucceeds) {
+  EXPECT_OK(token_->Login(CKU_USER));
+  EXPECT_OK(token_->Logout());
+  EXPECT_EQ(token_->session_info().state, CKS_RO_PUBLIC_SESSION);
+}
+
+TEST_F(TokenTest, LogoutWithoutLoginFails) {
+  EXPECT_THAT(token_->Logout(), StatusRvIs(CKR_USER_NOT_LOGGED_IN));
 }
 
 }  // namespace

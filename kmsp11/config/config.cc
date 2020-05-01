@@ -12,8 +12,7 @@ namespace kmsp11 {
 StatusOr<LibraryConfig> LoadConfigFromEnvironment() {
   char* env_value = std::getenv(kConfigEnvVariable);
   if (!env_value) {
-    return NewError(
-        absl::StatusCode::kFailedPrecondition,
+    return FailedPreconditionError(
         absl::StrFormat(
             "cannot load configuration: environment variable %s is not set",
             kConfigEnvVariable),

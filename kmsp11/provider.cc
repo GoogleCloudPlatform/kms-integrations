@@ -28,7 +28,8 @@ StatusOr<std::unique_ptr<Provider>> Provider::New(LibraryConfig config) {
   std::vector<std::unique_ptr<Token>> tokens;
   tokens.reserve(config.tokens_size());
   for (const TokenConfig& tokenConfig : config.tokens()) {
-    ASSIGN_OR_RETURN(std::unique_ptr<Token> token, Token::New(tokenConfig));
+    ASSIGN_OR_RETURN(std::unique_ptr<Token> token,
+                     Token::New(tokens.size(), tokenConfig));
     tokens.emplace_back(std::move(token));
   }
 
@@ -36,13 +37,27 @@ StatusOr<std::unique_ptr<Provider>> Provider::New(LibraryConfig config) {
   return std::unique_ptr<Provider>(new Provider(info, std::move(tokens)));
 }
 
-StatusOr<const Token*> Provider::TokenAt(CK_SLOT_ID slot_id) {
+StatusOr<Token*> Provider::TokenAt(CK_SLOT_ID slot_id) {
   if (slot_id >= tokens_.size()) {
     return NewError(absl::StatusCode::kNotFound,
                     absl::StrFormat("slot with ID %d does not exist", slot_id),
                     CKR_SLOT_ID_INVALID, SOURCE_LOCATION);
   }
   return tokens_[slot_id].get();
+}
+
+StatusOr<CK_SESSION_HANDLE> Provider::OpenSession(CK_SLOT_ID slot_id) {
+  ASSIGN_OR_RETURN(Token * token, TokenAt(slot_id));
+  return sessions_.Add(Session(token));
+}
+
+StatusOr<std::shared_ptr<Session>> Provider::GetSession(
+    CK_SESSION_HANDLE session_handle) {
+  return sessions_.Get(session_handle);
+}
+
+absl::Status Provider::CloseSession(CK_SESSION_HANDLE session_handle) {
+  return sessions_.Remove(session_handle);
 }
 
 }  // namespace kmsp11
