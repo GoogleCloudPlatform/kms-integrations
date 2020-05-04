@@ -21,7 +21,7 @@ export RESULTS_DIR=${KOKORO_ARTIFACTS_DIR}/results
 mkdir ${RESULTS_DIR}
 
 # Add the latest version of Bazel to the PATH
-use_bazel.sh latest
+use_bazel.sh 3.1.0
 
 # Prerequisites for test log upload
 brew update --quiet
