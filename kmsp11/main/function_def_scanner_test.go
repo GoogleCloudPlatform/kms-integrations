@@ -6,6 +6,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/google/go-cmp/cmp"
+	"google.golang.org/protobuf/testing/protocmp"
 )
 
 const getInfoSrc = `
@@ -37,7 +38,7 @@ func TestParseGetInfo(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if diff := cmp.Diff(want, got); diff != "" {
+	if diff := cmp.Diff(want, got, protocmp.Transform()); diff != "" {
 		t.Errorf("ParseFunctions() mismatch (-want +got):\n%s", diff)
 	}
 }
@@ -81,7 +82,7 @@ func TestParseDecryptInit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if diff := cmp.Diff(want, got); diff != "" {
+	if diff := cmp.Diff(want, got, protocmp.Transform()); diff != "" {
 		t.Errorf("ParseFunctions() mismatch (-want +got):\n%s", diff)
 	}
 }
@@ -97,7 +98,7 @@ func TestParseInfoAndDecryptInit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if diff := cmp.Diff(want, got); diff != "" {
+	if diff := cmp.Diff(want, got, protocmp.Transform()); diff != "" {
 		t.Errorf("ParseFunctions() mismatch (-want +got):\n%s", diff)
 	}
 }
