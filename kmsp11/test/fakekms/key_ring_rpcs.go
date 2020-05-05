@@ -10,8 +10,10 @@ import (
 
 // CreateKeyRing fakes a Cloud KMS API function.
 func (f *fakeKMS) CreateKeyRing(ctx context.Context, req *kmspb.CreateKeyRingRequest) (*kmspb.KeyRing, error) {
-	// TODO(bdhess): whitelist "parent" and "key_ring_id"
 	// TODO(bdhess): revisit handling of output-only fields (http://g/api-discuss/vUowIGKPFT4)
+	if err := whitelist("parent", "key_ring_id").check(req); err != nil {
+		return nil, err
+	}
 
 	parent, err := parseLocationName(req.Parent)
 	if err != nil {
@@ -36,7 +38,9 @@ func (f *fakeKMS) CreateKeyRing(ctx context.Context, req *kmspb.CreateKeyRingReq
 
 // GetKeyRing fakes a Cloud KMS API function.
 func (f *fakeKMS) GetKeyRing(ctx context.Context, req *kmspb.GetKeyRingRequest) (*kmspb.KeyRing, error) {
-	// TODO(bdhess): whitelist "name"
+	if err := whitelist("name").check(req); err != nil {
+		return nil, err
+	}
 
 	name, err := parseKeyRingName(req.Name)
 	if err != nil {
