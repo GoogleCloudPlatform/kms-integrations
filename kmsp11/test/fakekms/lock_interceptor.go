@@ -20,7 +20,7 @@ func newLockInterceptor(mux *sync.RWMutex) grpc.UnaryServerInterceptor {
 
 		var locker sync.Locker
 		switch method {
-		case "GetKeyRing":
+		case "GetKeyRing", "ListKeyRings":
 			locker = mux.RLocker()
 		case "CreateKeyRing":
 			locker = mux

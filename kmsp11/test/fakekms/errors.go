@@ -23,6 +23,11 @@ func errMalformedName(resourceType, invalidName string) error {
 	return status.Errorf(codes.InvalidArgument, "invalid %s name: %s", resourceType, invalidName)
 }
 
+func errMaxPageSize(resultCount int) error {
+	return errUnimplemented("no pagination in fakekms: result count %d exceeds max page size (%d)",
+		resultCount, maxPageSize)
+}
+
 func errNotFound(name fmt.Stringer) error {
 	return status.Errorf(codes.NotFound, "not found: %s", name)
 }

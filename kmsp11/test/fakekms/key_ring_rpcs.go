@@ -2,6 +2,7 @@ package fakekms
 
 import (
 	"context"
+	"sort"
 
 	"github.com/golang/protobuf/ptypes"
 
@@ -52,4 +53,36 @@ func (f *fakeKMS) GetKeyRing(ctx context.Context, req *kmspb.GetKeyRingRequest) 
 		return nil, errNotFound(name)
 	}
 	return kr.pb, nil
+}
+
+// ListKeyRings fakes a Cloud KMS API function.
+func (f *fakeKMS) ListKeyRings(ctx context.Context, req *kmspb.ListKeyRingsRequest) (*kmspb.ListKeyRingsResponse, error) {
+	if err := whitelist("parent").check(req); err != nil {
+		return nil, err
+	}
+
+	parent, err := parseLocationName(req.Parent)
+	if err != nil {
+		return nil, err
+	}
+
+	r := make([]*kmspb.KeyRing, 0, len(f.keyRings))
+	for name, kr := range f.keyRings {
+		if name.locationName == parent {
+			r = append(r, kr.pb)
+		}
+	}
+
+	if len(r) > maxPageSize {
+		return nil, errMaxPageSize(len(r))
+	}
+
+	sort.Slice(r, func(i, j int) bool {
+		return r[i].Name < r[j].Name
+	})
+
+	return &kmspb.ListKeyRingsResponse{
+		KeyRings:  r,
+		TotalSize: int32(len(r)),
+	}, nil
 }

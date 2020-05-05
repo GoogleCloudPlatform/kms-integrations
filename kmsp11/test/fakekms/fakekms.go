@@ -11,6 +11,10 @@ import (
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 )
 
+// maxPageSize is the maximum number of elements that will be returned in
+// a single paged result of a list request.
+const maxPageSize = 1000
+
 // fakeKMS implements a fake of the Cloud KMS API.
 type fakeKMS struct {
 	kmspb.UnimplementedKeyManagementServiceServer
