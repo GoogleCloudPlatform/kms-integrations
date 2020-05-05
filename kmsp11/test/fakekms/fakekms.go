@@ -4,6 +4,7 @@ package fakekms
 
 import (
 	"net"
+	"sync"
 
 	"google.golang.org/grpc"
 
@@ -14,6 +15,10 @@ import (
 type fakeKMS struct {
 	kmspb.UnimplementedKeyManagementServiceServer
 	keyRings map[keyRingName]*keyRing
+
+	// Protects keyRings. For guarding object use within RPCs, the lock is held
+	// in the lock interceptor rather than directly in the RPC function.
+	mux sync.RWMutex
 }
 
 // keyRing models a Key Ring in Cloud KMS.
@@ -39,8 +44,8 @@ func NewServer() (*Server, error) {
 		return nil, err
 	}
 
-	s := grpc.NewServer() // TODO(bdhess): make the server threadsafe ¯\_(ツ)_/¯
 	f := &fakeKMS{keyRings: make(map[keyRingName]*keyRing)}
+	s := grpc.NewServer(grpc.ChainUnaryInterceptor(newLockInterceptor(&f.mux)))
 	kmspb.RegisterKeyManagementServiceServer(s, f)
 
 	go s.Serve(lis)

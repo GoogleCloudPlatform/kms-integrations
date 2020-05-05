@@ -11,6 +11,10 @@ func errAlreadyExists(name fmt.Stringer) error {
 	return status.Errorf(codes.AlreadyExists, "already exists: %s", name)
 }
 
+func errInternal(format string, a ...interface{}) error {
+	return status.Errorf(codes.Internal, format, a...)
+}
+
 func errInvalidArgument(format string, a ...interface{}) error {
 	return status.Errorf(codes.InvalidArgument, format, a...)
 }
@@ -21,4 +25,8 @@ func errMalformedName(resourceType, invalidName string) error {
 
 func errNotFound(name fmt.Stringer) error {
 	return status.Errorf(codes.NotFound, "not found: %s", name)
+}
+
+func errUnimplemented(format string, a ...interface{}) error {
+	return status.Errorf(codes.Unimplemented, format, a...)
 }
