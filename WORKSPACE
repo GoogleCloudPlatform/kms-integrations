@@ -100,16 +100,11 @@ protobuf_deps()
 
 ## Gazelle (go + bazel)
 
-load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")  #, "go_repository")
+load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
 
 gazelle_dependencies()
 
-load("@bazel_gazelle//:deps.bzl", "go_repository")
+load("//:go.bzl", "go_repositories")
 
-# Golang repositories
-
-go_repository(
-    name = "com_github_google_go_cmp",  # v0.4.0 / 2019-12-16
-    commit = "5a6f75716e1203a923a78c9efb94089d857df0f6",
-    importpath = "github.com/google/go-cmp",
-)
+# gazelle:repository_macro go.bzl%go_repositories
+go_repositories()
