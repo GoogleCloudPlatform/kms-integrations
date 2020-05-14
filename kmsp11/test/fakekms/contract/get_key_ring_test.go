@@ -3,12 +3,12 @@ package contract
 import (
 	"context"
 	"fmt"
+	"oss-tools/kmsp11/test/fakekms/testutil"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/testing/protocmp"
 
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 )
@@ -18,7 +18,7 @@ func TestGetKeyRingEqualsCreated(t *testing.T) {
 
 	want, err := client.CreateKeyRing(ctx, &kmspb.CreateKeyRingRequest{
 		Parent:    location,
-		KeyRingId: randomID(t),
+		KeyRingId: testutil.RandomID(t),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -31,7 +31,7 @@ func TestGetKeyRingEqualsCreated(t *testing.T) {
 		t.Error(err)
 	}
 
-	if diff := cmp.Diff(want, got, protocmp.Transform()); diff != "" {
+	if diff := cmp.Diff(want, got, testutil.ProtoDiffOpts()...); diff != "" {
 		t.Errorf("proto mismatch (-want +got): %s", diff)
 	}
 }
@@ -51,7 +51,7 @@ func TestGetKeyRingNotFound(t *testing.T) {
 	ctx := context.Background()
 
 	_, err := client.GetKeyRing(ctx, &kmspb.GetKeyRingRequest{
-		Name: fmt.Sprintf("%s/keyRings/%s", location, randomID(t)),
+		Name: fmt.Sprintf("%s/keyRings/%s", location, testutil.RandomID(t)),
 	})
 	if status.Code(err) != codes.NotFound {
 		t.Errorf("err=%v, want code=NotFound", err)

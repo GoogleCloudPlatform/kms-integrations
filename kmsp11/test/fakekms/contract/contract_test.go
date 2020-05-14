@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc"
 
@@ -82,13 +81,4 @@ func testFakeKMS(m *testing.M) {
 	defer client.Close()
 
 	os.Exit(m.Run())
-}
-
-func randomID(t *testing.T) string {
-	t.Helper()
-	id, err := uuid.NewRandom()
-	if err != nil {
-		t.Fatal(err)
-	}
-	return id.String()
 }

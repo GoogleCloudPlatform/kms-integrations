@@ -3,21 +3,22 @@ package contract
 import (
 	"context"
 	"fmt"
+	"oss-tools/kmsp11/test/fakekms/testutil"
 	"testing"
-	"time"
 
 	"github.com/golang/protobuf/ptypes"
+	"github.com/google/go-cmp/cmp"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 )
 
-func TestCreatedKeyRingNamePattern(t *testing.T) {
+func TestCreateKeyRing(t *testing.T) {
 	ctx := context.Background()
-	keyRingID := randomID(t)
+	keyRingID := testutil.RandomID(t)
 
-	kr, err := client.CreateKeyRing(ctx, &kmspb.CreateKeyRingRequest{
+	got, err := client.CreateKeyRing(ctx, &kmspb.CreateKeyRingRequest{
 		Parent:    location,
 		KeyRingId: keyRingID,
 	})
@@ -25,32 +26,13 @@ func TestCreatedKeyRingNamePattern(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := fmt.Sprintf("%s/keyRings/%s", location, keyRingID)
-	if kr.Name != want {
-		t.Errorf("kr.Name=%s, want %s", kr.Name, want)
-	}
-}
-
-func TestCreatedKeyRingCreateTimestamp(t *testing.T) {
-	ctx := context.Background()
-
-	kr, err := client.CreateKeyRing(ctx, &kmspb.CreateKeyRingRequest{
-		Parent:    location,
-		KeyRingId: randomID(t),
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	ts, err := ptypes.Timestamp(kr.CreateTime)
-	if err != nil {
-		t.Fatal(err)
+	want := &kmspb.KeyRing{
+		Name:       fmt.Sprintf("%s/keyRings/%s", location, keyRingID),
+		CreateTime: ptypes.TimestampNow(),
 	}
 
-	// allow for up to two minutes of clock skew
-	min := time.Now().Add(-2 * time.Minute)
-	max := min.Add(4 * time.Minute)
-	if min.After(ts) || max.Before(ts) {
-		t.Errorf("kr.CreateTimestamp=%s, want between %s and %s", ts, min, max)
+	if diff := cmp.Diff(want, got, testutil.ProtoDiffOpts()...); diff != "" {
+		t.Errorf("unexpected diff (-want +got): %s", diff)
 	}
 }
 
@@ -83,7 +65,7 @@ func TestCreateKeyRingDuplicateName(t *testing.T) {
 
 	req := &kmspb.CreateKeyRingRequest{
 		Parent:    location,
-		KeyRingId: randomID(t),
+		KeyRingId: testutil.RandomID(t),
 	}
 
 	if _, err := client.CreateKeyRing(ctx, req); err != nil {
