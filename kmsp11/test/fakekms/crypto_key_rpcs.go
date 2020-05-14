@@ -2,6 +2,7 @@ package fakekms
 
 import (
 	"context"
+	"sort"
 
 	"github.com/golang/protobuf/ptypes"
 
@@ -73,4 +74,93 @@ func (f *fakeKMS) CreateCryptoKey(ctx context.Context, req *kmspb.CreateCryptoKe
 	}
 	kr.keys[name] = &cryptoKey{pb: pb}
 	return pb, nil
+}
+
+// GetCryptoKey fakes a Cloud KMS API function.
+func (f *fakeKMS) GetCryptoKey(ctx context.Context, req *kmspb.GetCryptoKeyRequest) (*kmspb.CryptoKey, error) {
+	if err := whitelist("name").check(req); err != nil {
+		return nil, err
+	}
+
+	name, err := parseCryptoKeyName(req.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	ck, err := f.cryptoKey(name)
+	if err != nil {
+		return nil, err
+	}
+
+	return ck.pb, nil
+}
+
+// ListCryptoKeys fakes a Cloud KMS API function.
+func (f *fakeKMS) ListCryptoKeys(ctx context.Context, req *kmspb.ListCryptoKeysRequest) (*kmspb.ListCryptoKeysResponse, error) {
+	if err := whitelist("parent").check(req); err != nil {
+		return nil, err
+	}
+
+	parent, err := parseKeyRingName(req.Parent)
+	if err != nil {
+		return nil, err
+	}
+
+	kr, ok := f.keyRings[parent]
+	if !ok {
+		return nil, errNotFound(parent)
+	}
+
+	r := make([]*kmspb.CryptoKey, 0, len(kr.keys))
+	for _, ck := range kr.keys {
+		r = append(r, ck.pb)
+	}
+
+	if len(r) > maxPageSize {
+		return nil, errMaxPageSize(len(r))
+	}
+
+	sort.Slice(r, func(i, j int) bool {
+		return r[i].Name < r[j].Name
+	})
+
+	return &kmspb.ListCryptoKeysResponse{
+		CryptoKeys: r,
+		TotalSize:  int32(len(r)),
+	}, nil
+}
+
+// UpdateCryptoKey fakes a Cloud KMS API function.
+func (f *fakeKMS) UpdateCryptoKey(ctx context.Context, req *kmspb.UpdateCryptoKeyRequest) (*kmspb.CryptoKey, error) {
+	if err := whitelist("crypto_key", "update_mask").check(req); err != nil {
+		return nil, err
+	}
+
+	if len(req.UpdateMask.GetPaths()) == 0 {
+		return nil, errInvalidArgument("no fields selected for update")
+	}
+
+	name, err := parseCryptoKeyName(req.CryptoKey.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	ck, err := f.cryptoKey(name)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, p := range req.UpdateMask.Paths {
+		switch p {
+		case "version_template.algorithm":
+			if err := validateAlgorithm(req.CryptoKey.VersionTemplate.Algorithm, ck.pb.Purpose); err != nil {
+				return nil, err
+			}
+			ck.pb.VersionTemplate.Algorithm = req.CryptoKey.VersionTemplate.Algorithm
+		default:
+			return nil, errInvalidArgument("unsupported update path: %s", p)
+		}
+	}
+
+	return ck.pb, nil
 }

@@ -36,6 +36,18 @@ type cryptoKey struct {
 	pb *kmspb.CryptoKey
 }
 
+func (f *fakeKMS) cryptoKey(name cryptoKeyName) (*cryptoKey, error) {
+	kr, ok := f.keyRings[name.keyRingName]
+	if !ok {
+		return nil, errNotFound(name)
+	}
+	ck, ok := kr.keys[name]
+	if !ok {
+		return nil, errNotFound(name)
+	}
+	return ck, nil
+}
+
 // Server wraps a local gRPC server that serves KMS requests.
 type Server struct {
 	Addr       net.Addr
