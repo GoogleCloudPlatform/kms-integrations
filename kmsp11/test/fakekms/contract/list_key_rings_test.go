@@ -2,8 +2,9 @@ package contract
 
 import (
 	"context"
-	"oss-tools/kmsp11/test/fakekms/testutil"
 	"testing"
+
+	"oss-tools/kmsp11/test/fakekms/testutil"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

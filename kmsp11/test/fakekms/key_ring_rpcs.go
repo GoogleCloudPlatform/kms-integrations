@@ -33,7 +33,10 @@ func (f *fakeKMS) CreateKeyRing(ctx context.Context, req *kmspb.CreateKeyRingReq
 		Name:       name.String(),
 		CreateTime: ptypes.TimestampNow(),
 	}
-	f.keyRings[name] = &keyRing{pb: pb}
+	f.keyRings[name] = &keyRing{
+		pb:   pb,
+		keys: make(map[cryptoKeyName]*cryptoKey),
+	}
 	return pb, nil
 }
 

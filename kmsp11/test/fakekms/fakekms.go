@@ -25,9 +25,15 @@ type fakeKMS struct {
 	mux sync.RWMutex
 }
 
-// keyRing models a Key Ring in Cloud KMS.
+// keyRing models a KeyRing in Cloud KMS.
 type keyRing struct {
-	pb *kmspb.KeyRing
+	pb   *kmspb.KeyRing
+	keys map[cryptoKeyName]*cryptoKey
+}
+
+// cryptoKey models a CryptoKey in Cloud KMS.
+type cryptoKey struct {
+	pb *kmspb.CryptoKey
 }
 
 // Server wraps a local gRPC server that serves KMS requests.

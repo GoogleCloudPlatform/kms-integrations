@@ -8,9 +8,10 @@ import (
 const idPattern = "[a-zA-Z0-9_-]{1,63}"
 
 var (
-	idRegexp       = regexp.MustCompile(fmt.Sprintf("^%s$", idPattern))
-	locationRegexp = regexp.MustCompile("^projects/([^/]+)/locations/([^/]+)$")
-	keyRingRegexp  = regexp.MustCompile(fmt.Sprintf("^(.*)/keyRings/(%s)$", idPattern))
+	idRegexp        = regexp.MustCompile(fmt.Sprintf("^%s$", idPattern))
+	locationRegexp  = regexp.MustCompile("^projects/([^/]+)/locations/([^/]+)$")
+	keyRingRegexp   = regexp.MustCompile(fmt.Sprintf("^(.*)/keyRings/(%s)$", idPattern))
+	cryptoKeyRegexp = regexp.MustCompile(fmt.Sprintf("^(.*)/cryptoKeys/(%s)$", idPattern))
 )
 
 // checkID returns InvalidArgument if the provided ID does not comply with the KMS
@@ -65,4 +66,26 @@ func (n keyRingName) KeyRing() string {
 
 func (n keyRingName) String() string {
 	return n.KeyRing()
+}
+
+type cryptoKeyName struct {
+	keyRingName
+	CryptoKeyID string
+}
+
+func parseCryptoKeyName(name string) (cryptoKeyName, error) {
+	if m := cryptoKeyRegexp.FindStringSubmatch(name); m != nil {
+		if kr, err := parseKeyRingName(m[1]); err == nil {
+			return cryptoKeyName{keyRingName: kr, CryptoKeyID: m[2]}, nil
+		}
+	}
+	return cryptoKeyName{}, errMalformedName("crypto key", name)
+}
+
+func (n cryptoKeyName) CryptoKey() string {
+	return fmt.Sprintf("%s/cryptoKeys/%s", n.KeyRing(), n.CryptoKeyID)
+}
+
+func (n cryptoKeyName) String() string {
+	return n.CryptoKey()
 }

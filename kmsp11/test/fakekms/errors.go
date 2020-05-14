@@ -32,6 +32,10 @@ func errNotFound(name fmt.Stringer) error {
 	return status.Errorf(codes.NotFound, "not found: %s", name)
 }
 
+func errRequiredField(fieldName string) error {
+	return status.Errorf(codes.InvalidArgument, "field %q is required", fieldName)
+}
+
 func errUnimplemented(format string, a ...interface{}) error {
 	return status.Errorf(codes.Unimplemented, format, a...)
 }

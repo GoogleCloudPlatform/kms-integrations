@@ -3,8 +3,9 @@ package contract
 import (
 	"context"
 	"fmt"
-	"oss-tools/kmsp11/test/fakekms/testutil"
 	"testing"
+
+	"oss-tools/kmsp11/test/fakekms/testutil"
 
 	"github.com/golang/protobuf/ptypes"
 	"github.com/google/go-cmp/cmp"
