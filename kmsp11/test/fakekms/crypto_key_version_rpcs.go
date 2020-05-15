@@ -12,7 +12,7 @@ import (
 
 // CreateCryptoKeyVersionVersion fakes a Cloud KMS API function.
 func (f *fakeKMS) CreateCryptoKeyVersion(ctx context.Context, req *kmspb.CreateCryptoKeyVersionRequest) (*kmspb.CryptoKeyVersion, error) {
-	if err := whitelist("parent").check(req); err != nil {
+	if err := allowlist("parent").check(req); err != nil {
 		return nil, err
 	}
 
@@ -67,7 +67,7 @@ func (f *fakeKMS) CreateCryptoKeyVersion(ctx context.Context, req *kmspb.CreateC
 
 // GetCryptoKeyVersion fakes a Cloud KMS API function.
 func (f *fakeKMS) GetCryptoKeyVersion(ctx context.Context, req *kmspb.GetCryptoKeyVersionRequest) (*kmspb.CryptoKeyVersion, error) {
-	if err := whitelist("name").check(req); err != nil {
+	if err := allowlist("name").check(req); err != nil {
 		return nil, err
 	}
 
@@ -86,7 +86,7 @@ func (f *fakeKMS) GetCryptoKeyVersion(ctx context.Context, req *kmspb.GetCryptoK
 
 // ListCryptoKeyVersions fakes a Cloud KMS API function.
 func (f *fakeKMS) ListCryptoKeyVersions(ctx context.Context, req *kmspb.ListCryptoKeyVersionsRequest) (*kmspb.ListCryptoKeyVersionsResponse, error) {
-	if err := whitelist("parent").check(req); err != nil {
+	if err := allowlist("parent").check(req); err != nil {
 		return nil, err
 	}
 
@@ -121,7 +121,7 @@ func (f *fakeKMS) ListCryptoKeyVersions(ctx context.Context, req *kmspb.ListCryp
 
 // UpdateCryptoKeyVersion fakes a Cloud KMS API function.
 func (f *fakeKMS) UpdateCryptoKeyVersion(ctx context.Context, req *kmspb.UpdateCryptoKeyVersionRequest) (*kmspb.CryptoKeyVersion, error) {
-	if err := whitelist("crypto_key_version", "update_mask").check(req); err != nil {
+	if err := allowlist("crypto_key_version", "update_mask").check(req); err != nil {
 		return nil, err
 	}
 

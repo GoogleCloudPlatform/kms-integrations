@@ -5,21 +5,21 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-type protoWhitelister map[string]struct{}
+type protoAllowlister map[string]struct{}
 
-func whitelist(paths ...string) protoWhitelister {
-	p := make(protoWhitelister)
+func allowlist(paths ...string) protoAllowlister {
+	p := make(protoAllowlister)
 	for _, path := range paths {
 		p[path] = struct{}{}
 	}
 	return p
 }
 
-func (w protoWhitelister) check(msg proto.GeneratedMessage) error {
-	return w.checkInternal("", proto.MessageV2(msg).ProtoReflect())
+func (a protoAllowlister) check(msg proto.GeneratedMessage) error {
+	return a.checkInternal("", proto.MessageV2(msg).ProtoReflect())
 }
 
-func (w protoWhitelister) checkInternal(prefix string, msg protoreflect.Message) (err error) {
+func (a protoAllowlister) checkInternal(prefix string, msg protoreflect.Message) (err error) {
 	if len(msg.GetUnknown()) > 0 {
 		return errUnimplemented("message contains unknown fields")
 	}
@@ -31,17 +31,17 @@ func (w protoWhitelister) checkInternal(prefix string, msg protoreflect.Message)
 		path := prefix + string(fd.Name())
 
 		if fd.Kind() == protoreflect.MessageKind { // if we have a nested message
-			if _, ok := w[path]; ok {
-				return true // the entire message is whitelisted; keep going
+			if _, ok := a[path]; ok {
+				return true // the entire message is allowed; keep going
 			}
 
 			// otherwise check the nested message recursively
-			err = w.checkInternal(path, v.Message())
+			err = a.checkInternal(path, v.Message())
 			return err == nil // keep going if no error
 		}
 
-		// ensure the path is whitelisted
-		_, ok := w[path]
+		// ensure the path is allowed
+		_, ok := a[path]
 		if !ok {
 			err = errUnimplemented("field not supported: %s", path)
 		}
