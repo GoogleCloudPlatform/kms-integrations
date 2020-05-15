@@ -2,6 +2,7 @@ package fakekms
 
 import (
 	"context"
+	"sort"
 	"strconv"
 
 	"github.com/golang/protobuf/ptypes"
@@ -78,6 +79,79 @@ func (f *fakeKMS) GetCryptoKeyVersion(ctx context.Context, req *kmspb.GetCryptoK
 	ckv, err := f.cryptoKeyVersion(name)
 	if err != nil {
 		return nil, err
+	}
+
+	return ckv.pb, nil
+}
+
+// ListCryptoKeyVersions fakes a Cloud KMS API function.
+func (f *fakeKMS) ListCryptoKeyVersions(ctx context.Context, req *kmspb.ListCryptoKeyVersionsRequest) (*kmspb.ListCryptoKeyVersionsResponse, error) {
+	if err := whitelist("parent").check(req); err != nil {
+		return nil, err
+	}
+
+	parent, err := parseCryptoKeyName(req.Parent)
+	if err != nil {
+		return nil, err
+	}
+
+	ck, err := f.cryptoKey(parent)
+	if err != nil {
+		return nil, err
+	}
+
+	r := make([]*kmspb.CryptoKeyVersion, 0, len(ck.versions))
+	for _, ckv := range ck.versions {
+		r = append(r, ckv.pb)
+	}
+
+	if len(r) > maxPageSize {
+		return nil, errMaxPageSize(len(r))
+	}
+
+	sort.Slice(r, func(i, j int) bool {
+		return r[i].Name < r[j].Name
+	})
+
+	return &kmspb.ListCryptoKeyVersionsResponse{
+		CryptoKeyVersions: r,
+		TotalSize:         int32(len(r)),
+	}, nil
+}
+
+// UpdateCryptoKeyVersion fakes a Cloud KMS API function.
+func (f *fakeKMS) UpdateCryptoKeyVersion(ctx context.Context, req *kmspb.UpdateCryptoKeyVersionRequest) (*kmspb.CryptoKeyVersion, error) {
+	if err := whitelist("crypto_key_version", "update_mask").check(req); err != nil {
+		return nil, err
+	}
+
+	if len(req.UpdateMask.GetPaths()) == 0 {
+		return nil, errInvalidArgument("no fields selected for update")
+	}
+
+	name, err := parseCryptoKeyVersionName(req.CryptoKeyVersion.GetName())
+	if err != nil {
+		return nil, err
+	}
+
+	ckv, err := f.cryptoKeyVersion(name)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, p := range req.UpdateMask.Paths {
+		switch p {
+		case "state":
+			switch req.CryptoKeyVersion.State {
+			case kmspb.CryptoKeyVersion_ENABLED, kmspb.CryptoKeyVersion_DISABLED:
+				ckv.pb.State = req.CryptoKeyVersion.State
+			default:
+				return nil, errInvalidArgument("unsupported state in update call: %s",
+					nameForValue(kmspb.CryptoKeyVersion_CryptoKeyVersionState_name, int32(req.CryptoKeyVersion.State)))
+			}
+		default:
+			return nil, errInvalidArgument("unsupported update path: %s", p)
+		}
 	}
 
 	return ckv.pb, nil
