@@ -15,40 +15,17 @@ import (
 
 func TestListCryptoKeyVersions(t *testing.T) {
 	ctx := context.Background()
-
-	kr, err := client.CreateKeyRing(ctx, &kmspb.CreateKeyRingRequest{
-		Parent:    location,
-		KeyRingId: testutil.RandomID(t),
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	ck, err := client.CreateCryptoKey(ctx, &kmspb.CreateCryptoKeyRequest{
-		Parent:      kr.Name,
-		CryptoKeyId: "cryptokey",
+	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
+	ck := client.CreateTestCK(ctx, t, &kmspb.CreateCryptoKeyRequest{
+		Parent: kr.Name,
 		CryptoKey: &kmspb.CryptoKey{
 			Purpose: kmspb.CryptoKey_ENCRYPT_DECRYPT,
 		},
 		SkipInitialVersionCreation: true,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 
-	ckv1, err := client.CreateCryptoKeyVersion(ctx, &kmspb.CreateCryptoKeyVersionRequest{
-		Parent: ck.Name,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	ckv2, err := client.CreateCryptoKeyVersion(ctx, &kmspb.CreateCryptoKeyVersionRequest{
-		Parent: ck.Name,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	ckv1 := client.CreateTestCKVAndWait(ctx, t, &kmspb.CreateCryptoKeyVersionRequest{Parent: ck.Name})
+	ckv2 := client.CreateTestCKVAndWait(ctx, t, &kmspb.CreateCryptoKeyVersionRequest{Parent: ck.Name})
 
 	iter := client.ListCryptoKeyVersions(ctx, &kmspb.ListCryptoKeyVersionsRequest{Parent: ck.Name})
 

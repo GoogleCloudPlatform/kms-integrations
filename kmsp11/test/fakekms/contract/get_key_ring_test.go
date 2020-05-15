@@ -16,14 +16,7 @@ import (
 
 func TestGetKeyRingEqualsCreated(t *testing.T) {
 	ctx := context.Background()
-
-	want, err := client.CreateKeyRing(ctx, &kmspb.CreateKeyRingRequest{
-		Parent:    location,
-		KeyRingId: testutil.RandomID(t),
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	want := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
 
 	got, err := client.GetKeyRing(ctx, &kmspb.GetKeyRingRequest{
 		Name: want.Name,
@@ -44,7 +37,7 @@ func TestGetKeyRingMalformedName(t *testing.T) {
 		Name: "malformed name",
 	})
 	if status.Code(err) != codes.InvalidArgument {
-		t.Errorf("err=%v, want code=InvalidArgument", err)
+		t.Errorf("err=%v, want code=%s", err, codes.InvalidArgument)
 	}
 }
 
@@ -55,6 +48,6 @@ func TestGetKeyRingNotFound(t *testing.T) {
 		Name: fmt.Sprintf("%s/keyRings/%s", location, testutil.RandomID(t)),
 	})
 	if status.Code(err) != codes.NotFound {
-		t.Errorf("err=%v, want code=NotFound", err)
+		t.Errorf("err=%v, want code=%s", err, codes.NotFound)
 	}
 }

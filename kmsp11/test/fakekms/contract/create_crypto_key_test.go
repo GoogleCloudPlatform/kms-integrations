@@ -17,14 +17,7 @@ import (
 
 func TestCreateCryptoKeyDefaults(t *testing.T) {
 	ctx := context.Background()
-
-	kr, err := client.CreateKeyRing(ctx, &kmspb.CreateKeyRingRequest{
-		Parent:    location,
-		KeyRingId: testutil.RandomID(t),
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
 
 	got, err := client.CreateCryptoKey(ctx, &kmspb.CreateCryptoKeyRequest{
 		Parent:      kr.Name,
@@ -62,14 +55,7 @@ func TestCreateCryptoKeyDefaults(t *testing.T) {
 
 func TestCreateCryptoKeyAlgorithms(t *testing.T) {
 	ctx := context.Background()
-
-	kr, err := client.CreateKeyRing(ctx, &kmspb.CreateKeyRingRequest{
-		Parent:    location,
-		KeyRingId: testutil.RandomID(t),
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
 
 	var cases = []struct {
 		Name            string
@@ -169,22 +155,15 @@ func TestCreateCryptoKeyMalformedParent(t *testing.T) {
 		SkipInitialVersionCreation: true,
 	})
 	if status.Code(err) != codes.InvalidArgument {
-		t.Errorf("err=%v, want code=InvalidArgument", err)
+		t.Errorf("err=%v, want code=%s", err, codes.InvalidArgument)
 	}
 }
 
 func TestCreateCryptoKeyMalformedID(t *testing.T) {
 	ctx := context.Background()
+	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
 
-	kr, err := client.CreateKeyRing(ctx, &kmspb.CreateKeyRingRequest{
-		Parent:    location,
-		KeyRingId: testutil.RandomID(t),
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	_, err = client.CreateCryptoKey(ctx, &kmspb.CreateCryptoKeyRequest{
+	_, err := client.CreateCryptoKey(ctx, &kmspb.CreateCryptoKeyRequest{
 		Parent:      kr.Name,
 		CryptoKeyId: "&bar",
 		CryptoKey: &kmspb.CryptoKey{
@@ -193,20 +172,13 @@ func TestCreateCryptoKeyMalformedID(t *testing.T) {
 		SkipInitialVersionCreation: true,
 	})
 	if status.Code(err) != codes.InvalidArgument {
-		t.Errorf("err=%v, want code=InvalidArgument", err)
+		t.Errorf("err=%v, want code=%s", err, codes.InvalidArgument)
 	}
 }
 
 func TestCreateCryptoKeyDuplicateName(t *testing.T) {
 	ctx := context.Background()
-
-	kr, err := client.CreateKeyRing(ctx, &kmspb.CreateKeyRingRequest{
-		Parent:    location,
-		KeyRingId: testutil.RandomID(t),
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
 
 	req := &kmspb.CreateCryptoKeyRequest{
 		Parent:      kr.Name,
@@ -222,20 +194,13 @@ func TestCreateCryptoKeyDuplicateName(t *testing.T) {
 	}
 
 	if _, err := client.CreateCryptoKey(ctx, req); status.Code(err) != codes.AlreadyExists {
-		t.Errorf("err=%v, want code=AlreadyExists", err)
+		t.Errorf("err=%v, want code=%s", err, codes.AlreadyExists)
 	}
 }
 
 func TestCreateCryptoKeyMissingAlgorithm(t *testing.T) {
 	ctx := context.Background()
-
-	kr, err := client.CreateKeyRing(ctx, &kmspb.CreateKeyRingRequest{
-		Parent:    location,
-		KeyRingId: testutil.RandomID(t),
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
 
 	// ASYMMETRIC_SIGN and ASYMMETRIC_DECRYPT must have algorithm supplied
 	purposes := []kmspb.CryptoKey_CryptoKeyPurpose{
@@ -243,7 +208,7 @@ func TestCreateCryptoKeyMissingAlgorithm(t *testing.T) {
 	}
 
 	for _, p := range purposes {
-		_, err = client.CreateCryptoKey(ctx, &kmspb.CreateCryptoKeyRequest{
+		_, err := client.CreateCryptoKey(ctx, &kmspb.CreateCryptoKeyRequest{
 			Parent:      kr.Name,
 			CryptoKeyId: testutil.RandomID(t),
 			CryptoKey: &kmspb.CryptoKey{
@@ -252,7 +217,7 @@ func TestCreateCryptoKeyMissingAlgorithm(t *testing.T) {
 			SkipInitialVersionCreation: true,
 		})
 		if status.Code(err) != codes.InvalidArgument {
-			t.Errorf("err=%v, want code=InvalidArgument", err)
+			t.Errorf("err=%v, want code=%s", err, codes.InvalidArgument)
 		}
 	}
 }

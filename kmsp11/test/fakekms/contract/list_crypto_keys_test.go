@@ -16,37 +16,23 @@ import (
 func TestListCryptoKeysSorted(t *testing.T) {
 	ctx := context.Background()
 
-	kr, err := client.CreateKeyRing(ctx, &kmspb.CreateKeyRingRequest{
-		Parent:    location,
-		KeyRingId: testutil.RandomID(t),
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
 
-	ckb, err := client.CreateCryptoKey(ctx, &kmspb.CreateCryptoKeyRequest{
+	ckb := client.CreateTestCK(ctx, t, &kmspb.CreateCryptoKeyRequest{
 		Parent:      kr.Name,
 		CryptoKeyId: "key-b",
 		CryptoKey: &kmspb.CryptoKey{
 			Purpose: kmspb.CryptoKey_ENCRYPT_DECRYPT,
 		},
-		SkipInitialVersionCreation: true,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 
-	cka, err := client.CreateCryptoKey(ctx, &kmspb.CreateCryptoKeyRequest{
+	cka := client.CreateTestCK(ctx, t, &kmspb.CreateCryptoKeyRequest{
 		Parent:      kr.Name,
 		CryptoKeyId: "key-a",
 		CryptoKey: &kmspb.CryptoKey{
 			Purpose: kmspb.CryptoKey_ENCRYPT_DECRYPT,
 		},
-		SkipInitialVersionCreation: true,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	iter := client.ListCryptoKeys(ctx, &kmspb.ListCryptoKeysRequest{Parent: kr.Name})
 
@@ -74,6 +60,6 @@ func TestListCryptoKeysMalformedParent(t *testing.T) {
 		Parent: "locations/foo",
 	})
 	if _, err := iter.Next(); status.Code(err) != codes.InvalidArgument {
-		t.Errorf("err=%v, want code=InvalidArgument", err)
+		t.Errorf("err=%v, want code=%s", err, codes.InvalidArgument)
 	}
 }

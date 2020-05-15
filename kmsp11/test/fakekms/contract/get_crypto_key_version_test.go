@@ -15,28 +15,16 @@ import (
 
 func TestGetCryptoKeyVersionEqualsCreated(t *testing.T) {
 	ctx := context.Background()
-
-	kr, err := client.CreateKeyRing(ctx, &kmspb.CreateKeyRingRequest{
-		Parent:    location,
-		KeyRingId: testutil.RandomID(t),
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	ck, err := client.CreateCryptoKey(ctx, &kmspb.CreateCryptoKeyRequest{
-		Parent:      kr.Name,
-		CryptoKeyId: "foo",
+	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
+	ck := client.CreateTestCK(ctx, t, &kmspb.CreateCryptoKeyRequest{
+		Parent: kr.Name,
 		CryptoKey: &kmspb.CryptoKey{
 			Purpose: kmspb.CryptoKey_ENCRYPT_DECRYPT,
 		},
 		SkipInitialVersionCreation: true,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 
-	want, err := client.CreateCryptoKeyVersion(ctx, &kmspb.CreateCryptoKeyVersionRequest{
+	want := client.CreateTestCKVAndWait(ctx, t, &kmspb.CreateCryptoKeyVersionRequest{
 		Parent: ck.Name,
 	})
 
@@ -44,7 +32,7 @@ func TestGetCryptoKeyVersionEqualsCreated(t *testing.T) {
 		Name: want.Name,
 	})
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
 	if diff := cmp.Diff(want, got, testutil.ProtoDiffOpts()...); diff != "" {
@@ -65,16 +53,9 @@ func TestGetCryptoKeyVersionMalformedName(t *testing.T) {
 
 func TestGetCryptoKeyVersionNotFound(t *testing.T) {
 	ctx := context.Background()
+	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
 
-	kr, err := client.CreateKeyRing(ctx, &kmspb.CreateKeyRingRequest{
-		Parent:    location,
-		KeyRingId: testutil.RandomID(t),
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	_, err = client.GetCryptoKeyVersion(ctx, &kmspb.GetCryptoKeyVersionRequest{
+	_, err := client.GetCryptoKeyVersion(ctx, &kmspb.GetCryptoKeyVersionRequest{
 		Name: kr.Name + "/cryptoKeys/foo/cryptoKeyVersions/1",
 	})
 	if status.Code(err) != codes.NotFound {

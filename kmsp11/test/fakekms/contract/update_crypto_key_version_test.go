@@ -16,25 +16,13 @@ import (
 
 func TestUpdateCryptoKeyVersionDisableEnable(t *testing.T) {
 	ctx := context.Background()
-
-	kr, err := client.CreateKeyRing(ctx, &kmspb.CreateKeyRingRequest{
-		Parent:    location,
-		KeyRingId: testutil.RandomID(t),
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	ck, err := client.CreateCryptoKey(ctx, &kmspb.CreateCryptoKeyRequest{
-		Parent:      kr.Name,
-		CryptoKeyId: "foo",
+	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
+	ck := client.CreateTestCK(ctx, t, &kmspb.CreateCryptoKeyRequest{
+		Parent: kr.Name,
 		CryptoKey: &kmspb.CryptoKey{
 			Purpose: kmspb.CryptoKey_ENCRYPT_DECRYPT,
 		},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	// ensure that enabled => disabled is permitted
 	ck.Primary.State = kmspb.CryptoKeyVersion_DISABLED
@@ -78,35 +66,18 @@ func TestUpdateCryptoKeyVersionDisableEnable(t *testing.T) {
 
 func TestUpdateCryptoKeyVersionNoFields(t *testing.T) {
 	ctx := context.Background()
-
-	kr, err := client.CreateKeyRing(ctx, &kmspb.CreateKeyRingRequest{
-		Parent:    location,
-		KeyRingId: testutil.RandomID(t),
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	ck, err := client.CreateCryptoKey(ctx, &kmspb.CreateCryptoKeyRequest{
-		Parent:      kr.Name,
-		CryptoKeyId: "foo",
+	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
+	ck := client.CreateTestCK(ctx, t, &kmspb.CreateCryptoKeyRequest{
+		Parent: kr.Name,
 		CryptoKey: &kmspb.CryptoKey{
 			Purpose: kmspb.CryptoKey_ENCRYPT_DECRYPT,
 		},
-		SkipInitialVersionCreation: true,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	ckv, err := client.CreateCryptoKeyVersion(ctx, &kmspb.CreateCryptoKeyVersionRequest{
+	ckv := client.CreateTestCKVAndWait(ctx, t, &kmspb.CreateCryptoKeyVersionRequest{
 		Parent: ck.Name,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 
-	_, err = client.UpdateCryptoKeyVersion(ctx, &kmspb.UpdateCryptoKeyVersionRequest{
+	_, err := client.UpdateCryptoKeyVersion(ctx, &kmspb.UpdateCryptoKeyVersionRequest{
 		CryptoKeyVersion: ckv,
 	})
 	if status.Code(err) != codes.InvalidArgument {
@@ -116,37 +87,20 @@ func TestUpdateCryptoKeyVersionNoFields(t *testing.T) {
 
 func TestUpdateCryptoKeyVersionUnsupportedState(t *testing.T) {
 	ctx := context.Background()
-
-	kr, err := client.CreateKeyRing(ctx, &kmspb.CreateKeyRingRequest{
-		Parent:    location,
-		KeyRingId: testutil.RandomID(t),
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	ck, err := client.CreateCryptoKey(ctx, &kmspb.CreateCryptoKeyRequest{
-		Parent:      kr.Name,
-		CryptoKeyId: "foo",
+	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
+	ck := client.CreateTestCK(ctx, t, &kmspb.CreateCryptoKeyRequest{
+		Parent: kr.Name,
 		CryptoKey: &kmspb.CryptoKey{
 			Purpose: kmspb.CryptoKey_ENCRYPT_DECRYPT,
 		},
-		SkipInitialVersionCreation: true,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	ckv, err := client.CreateCryptoKeyVersion(ctx, &kmspb.CreateCryptoKeyVersionRequest{
+	ckv := client.CreateTestCKVAndWait(ctx, t, &kmspb.CreateCryptoKeyVersionRequest{
 		Parent: ck.Name,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	ckv.State = kmspb.CryptoKeyVersion_PENDING_IMPORT
 
-	_, err = client.UpdateCryptoKeyVersion(ctx, &kmspb.UpdateCryptoKeyVersionRequest{
+	_, err := client.UpdateCryptoKeyVersion(ctx, &kmspb.UpdateCryptoKeyVersionRequest{
 		CryptoKeyVersion: ckv,
 		UpdateMask: &fmpb.FieldMask{
 			Paths: []string{"state"},
@@ -159,37 +113,20 @@ func TestUpdateCryptoKeyVersionUnsupportedState(t *testing.T) {
 
 func TestUpdateCryptoKeyVersionUnsupportedField(t *testing.T) {
 	ctx := context.Background()
-
-	kr, err := client.CreateKeyRing(ctx, &kmspb.CreateKeyRingRequest{
-		Parent:    location,
-		KeyRingId: testutil.RandomID(t),
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	ck, err := client.CreateCryptoKey(ctx, &kmspb.CreateCryptoKeyRequest{
-		Parent:      kr.Name,
-		CryptoKeyId: "foo",
+	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
+	ck := client.CreateTestCK(ctx, t, &kmspb.CreateCryptoKeyRequest{
+		Parent: kr.Name,
 		CryptoKey: &kmspb.CryptoKey{
 			Purpose: kmspb.CryptoKey_ENCRYPT_DECRYPT,
 		},
-		SkipInitialVersionCreation: true,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	ckv, err := client.CreateCryptoKeyVersion(ctx, &kmspb.CreateCryptoKeyVersionRequest{
+	ckv := client.CreateTestCKVAndWait(ctx, t, &kmspb.CreateCryptoKeyVersionRequest{
 		Parent: ck.Name,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	ckv.Name = "updated"
 
-	_, err = client.UpdateCryptoKeyVersion(ctx, &kmspb.UpdateCryptoKeyVersionRequest{
+	_, err := client.UpdateCryptoKeyVersion(ctx, &kmspb.UpdateCryptoKeyVersionRequest{
 		CryptoKeyVersion: ckv,
 		UpdateMask: &fmpb.FieldMask{
 			Paths: []string{"name"},

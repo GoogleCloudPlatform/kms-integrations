@@ -21,25 +21,14 @@ import (
 func TestCreateCryptoKeyVersionSequential(t *testing.T) {
 	ctx := context.Background()
 
-	kr, err := client.CreateKeyRing(ctx, &kmspb.CreateKeyRingRequest{
-		Parent:    location,
-		KeyRingId: testutil.RandomID(t),
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	ck, err := client.CreateCryptoKey(ctx, &kmspb.CreateCryptoKeyRequest{
-		Parent:      kr.Name,
-		CryptoKeyId: "encrypt",
+	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
+	ck := client.CreateTestCK(ctx, t, &kmspb.CreateCryptoKeyRequest{
+		Parent: kr.Name,
 		CryptoKey: &kmspb.CryptoKey{
 			Purpose: kmspb.CryptoKey_ENCRYPT_DECRYPT,
 		},
 		SkipInitialVersionCreation: true,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	req := &kmspb.CreateCryptoKeyVersionRequest{Parent: ck.Name}
 
@@ -76,14 +65,7 @@ func TestCreateCryptoKeyVersionSequential(t *testing.T) {
 
 func TestCreateCryptoKeyVersionAsync(t *testing.T) {
 	ctx := context.Background()
-
-	kr, err := client.CreateKeyRing(ctx, &kmspb.CreateKeyRingRequest{
-		Parent:    location,
-		KeyRingId: testutil.RandomID(t),
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
 
 	var cases = []struct {
 		Name            string
@@ -131,9 +113,8 @@ func TestCreateCryptoKeyVersionAsync(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			ck, err := client.CreateCryptoKey(ctx, &kmspb.CreateCryptoKeyRequest{
-				Parent:      kr.Name,
-				CryptoKeyId: testutil.RandomID(t),
+			ck := client.CreateTestCK(ctx, t, &kmspb.CreateCryptoKeyRequest{
+				Parent: kr.Name,
 				CryptoKey: &kmspb.CryptoKey{
 					Purpose: c.Purpose,
 					VersionTemplate: &kmspb.CryptoKeyVersionTemplate{
@@ -143,9 +124,6 @@ func TestCreateCryptoKeyVersionAsync(t *testing.T) {
 				},
 				SkipInitialVersionCreation: true,
 			})
-			if err != nil {
-				t.Fatal(err)
-			}
 
 			got, err := client.CreateCryptoKeyVersion(ctx, &kmspb.CreateCryptoKeyVersionRequest{
 				Parent: ck.Name,
