@@ -72,7 +72,12 @@ func (f *fakeKMS) CreateCryptoKey(ctx context.Context, req *kmspb.CreateCryptoKe
 			Algorithm:       alg,
 		},
 	}
-	kr.keys[name] = &cryptoKey{pb: pb}
+
+	kr.keys[name] = &cryptoKey{
+		pb:       pb,
+		versions: make(map[cryptoKeyVersionName]*cryptoKeyVersion),
+	}
+
 	return pb, nil
 }
 

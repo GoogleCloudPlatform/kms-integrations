@@ -33,7 +33,8 @@ type keyRing struct {
 
 // cryptoKey models a CryptoKey in Cloud KMS.
 type cryptoKey struct {
-	pb *kmspb.CryptoKey
+	pb       *kmspb.CryptoKey
+	versions map[cryptoKeyVersionName]*cryptoKeyVersion
 }
 
 func (f *fakeKMS) cryptoKey(name cryptoKeyName) (*cryptoKey, error) {
@@ -46,6 +47,27 @@ func (f *fakeKMS) cryptoKey(name cryptoKeyName) (*cryptoKey, error) {
 		return nil, errNotFound(name)
 	}
 	return ck, nil
+}
+
+// cryptoKeyVersion models a CryptoKeyVersion in Cloud KMS.
+type cryptoKeyVersion struct {
+	pb *kmspb.CryptoKeyVersion
+}
+
+func (f *fakeKMS) cryptoKeyVersion(name cryptoKeyVersionName) (*cryptoKeyVersion, error) {
+	kr, ok := f.keyRings[name.keyRingName]
+	if !ok {
+		return nil, errNotFound(name)
+	}
+	ck, ok := kr.keys[name.cryptoKeyName]
+	if !ok {
+		return nil, errNotFound(name)
+	}
+	ckv, ok := ck.versions[name]
+	if !ok {
+		return nil, errNotFound(name)
+	}
+	return ckv, nil
 }
 
 // Server wraps a local gRPC server that serves KMS requests.

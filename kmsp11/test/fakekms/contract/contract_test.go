@@ -20,13 +20,16 @@ import (
 
 // variables used by test cases
 var (
-	client   *kms.KeyManagementClient
-	location string
+	client            *kms.KeyManagementClient
+	location          string
+	asyncPollInterval time.Duration
 )
 
 func TestMain(m *testing.M) {
 	flag.StringVar(&location, "location", "projects/fakekms-testing/locations/us-east1",
 		"the project and location to use for testing")
+	flag.DurationVar(&asyncPollInterval, "async_poll_interval", time.Millisecond,
+		"the duration to sleep between Get requests when waiting on asynchronous events")
 	realKMS := flag.Bool("realkms", false,
 		"true if tests should be run against real KMS instead of fakekms")
 	credsFilePath := flag.String("credentials_file", "",

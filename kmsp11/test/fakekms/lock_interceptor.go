@@ -20,9 +20,9 @@ func newLockInterceptor(mux *sync.RWMutex) grpc.UnaryServerInterceptor {
 
 		var locker sync.Locker
 		switch method {
-		case "GetCryptoKey", "GetKeyRing", "ListCryptoKeys", "ListKeyRings":
+		case "GetCryptoKey", "GetCryptoKeyVersion", "GetKeyRing", "ListCryptoKeys", "ListKeyRings":
 			locker = mux.RLocker()
-		case "CreateCryptoKey", "CreateKeyRing", "UpdateCryptoKey":
+		case "CreateCryptoKey", "CreateCryptoKeyVersion", "CreateKeyRing", "UpdateCryptoKey":
 			locker = mux
 		default:
 			return nil, errUnimplemented("unsupported method: %s", info.FullMethod)
