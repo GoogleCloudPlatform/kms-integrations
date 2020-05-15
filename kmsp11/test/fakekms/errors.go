@@ -11,6 +11,10 @@ func errAlreadyExists(name fmt.Stringer) error {
 	return status.Errorf(codes.AlreadyExists, "already exists: %s", name)
 }
 
+func errFailedPrecondition(format string, a ...interface{}) error {
+	return status.Errorf(codes.FailedPrecondition, format, a...)
+}
+
 func errInternal(format string, a ...interface{}) error {
 	return status.Errorf(codes.Internal, format, a...)
 }

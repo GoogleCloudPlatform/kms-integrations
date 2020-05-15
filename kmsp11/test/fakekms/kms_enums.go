@@ -1,7 +1,9 @@
 package fakekms
 
 import (
+	"crypto"
 	"crypto/elliptic"
+	"crypto/rsa"
 	"fmt"
 
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
@@ -11,6 +13,7 @@ import (
 type algDef struct {
 	Purpose    kmspb.CryptoKey_CryptoKeyPurpose
 	KeyFactory keyFactory
+	Opts       interface{}
 }
 
 func (a algDef) Asymmetric() bool {
@@ -34,18 +37,22 @@ var algorithms = map[kmspb.CryptoKeyVersion_CryptoKeyVersionAlgorithm]algDef{
 	kmspb.CryptoKeyVersion_RSA_DECRYPT_OAEP_2048_SHA256: {
 		Purpose:    kmspb.CryptoKey_ASYMMETRIC_DECRYPT,
 		KeyFactory: rsaKeyFactory(2048),
+		Opts:       &rsa.OAEPOptions{Hash: crypto.SHA256},
 	},
 	kmspb.CryptoKeyVersion_RSA_DECRYPT_OAEP_3072_SHA256: {
 		Purpose:    kmspb.CryptoKey_ASYMMETRIC_DECRYPT,
 		KeyFactory: rsaKeyFactory(3072),
+		Opts:       &rsa.OAEPOptions{Hash: crypto.SHA256},
 	},
 	kmspb.CryptoKeyVersion_RSA_DECRYPT_OAEP_4096_SHA256: {
 		Purpose:    kmspb.CryptoKey_ASYMMETRIC_DECRYPT,
 		KeyFactory: rsaKeyFactory(4096),
+		Opts:       &rsa.OAEPOptions{Hash: crypto.SHA256},
 	},
 	kmspb.CryptoKeyVersion_RSA_DECRYPT_OAEP_4096_SHA512: {
 		Purpose:    kmspb.CryptoKey_ASYMMETRIC_DECRYPT,
 		KeyFactory: rsaKeyFactory(4096),
+		Opts:       &rsa.OAEPOptions{Hash: crypto.SHA512},
 	},
 
 	// ASYMMETRIC_SIGN
