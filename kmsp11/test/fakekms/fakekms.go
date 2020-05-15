@@ -51,7 +51,8 @@ func (f *fakeKMS) cryptoKey(name cryptoKeyName) (*cryptoKey, error) {
 
 // cryptoKeyVersion models a CryptoKeyVersion in Cloud KMS.
 type cryptoKeyVersion struct {
-	pb *kmspb.CryptoKeyVersion
+	pb          *kmspb.CryptoKeyVersion
+	keyMaterial interface{}
 }
 
 func (f *fakeKMS) cryptoKeyVersion(name cryptoKeyVersionName) (*cryptoKeyVersion, error) {

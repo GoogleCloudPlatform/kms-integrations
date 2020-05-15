@@ -31,41 +31,48 @@ func TestUpdateCryptoKeyVersionDisableEnable(t *testing.T) {
 		CryptoKey: &kmspb.CryptoKey{
 			Purpose: kmspb.CryptoKey_ENCRYPT_DECRYPT,
 		},
-		SkipInitialVersionCreation: true,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	ckv, err := client.CreateCryptoKeyVersion(ctx, &kmspb.CreateCryptoKeyVersionRequest{
-		Parent: ck.Name,
+	// ensure that enabled => disabled is permitted
+	ck.Primary.State = kmspb.CryptoKeyVersion_DISABLED
+	gotVersion, err := client.UpdateCryptoKeyVersion(ctx, &kmspb.UpdateCryptoKeyVersionRequest{
+		CryptoKeyVersion: ck.Primary,
+		UpdateMask: &fmpb.FieldMask{
+			Paths: []string{"state"},
+		},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	ckv.State = kmspb.CryptoKeyVersion_DISABLED
-
-	got, err := client.UpdateCryptoKeyVersion(ctx, &kmspb.UpdateCryptoKeyVersionRequest{
-		CryptoKeyVersion: ckv,
-		UpdateMask: &fmpb.FieldMask{
-			Paths: []string{"state"},
-		},
-	})
-	if diff := cmp.Diff(ckv, got, testutil.ProtoDiffOpts()...); diff != "" {
-		t.Errorf("proto mismatch on disable RPC (-want +got): %s", diff)
+	if diff := cmp.Diff(ck.Primary, gotVersion, testutil.ProtoDiffOpts()...); diff != "" {
+		t.Errorf("ckv proto mismatch on disable RPC (-want +got): %s", diff)
 	}
 
-	ckv.State = kmspb.CryptoKeyVersion_ENABLED
+	// ensure that `primary` in GetCryptoKey is updated too
+	gotKey, err := client.GetCryptoKey(ctx, &kmspb.GetCryptoKeyRequest{Name: ck.Name})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := cmp.Diff(ck, gotKey, testutil.ProtoDiffOpts()...); diff != "" {
+		t.Errorf("ck proto mismatch after disable RPC (-want +got): %s", diff)
+	}
 
-	got, err = client.UpdateCryptoKeyVersion(ctx, &kmspb.UpdateCryptoKeyVersionRequest{
-		CryptoKeyVersion: ckv,
+	// ensure that disabled => enabled is permitted
+	ck.Primary.State = kmspb.CryptoKeyVersion_ENABLED
+	gotVersion, err = client.UpdateCryptoKeyVersion(ctx, &kmspb.UpdateCryptoKeyVersionRequest{
+		CryptoKeyVersion: ck.Primary,
 		UpdateMask: &fmpb.FieldMask{
 			Paths: []string{"state"},
 		},
 	})
-	if diff := cmp.Diff(ckv, got, testutil.ProtoDiffOpts()...); diff != "" {
-		t.Errorf("proto mismatch on enable RPC (-want +got): %s", diff)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := cmp.Diff(ck.Primary, gotVersion, testutil.ProtoDiffOpts()...); diff != "" {
+		t.Errorf("ckv proto mismatch on enable RPC (-want +got): %s", diff)
 	}
 }
 

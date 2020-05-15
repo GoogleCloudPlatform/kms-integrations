@@ -32,7 +32,6 @@ func TestCreateCryptoKeyDefaults(t *testing.T) {
 		CryptoKey: &kmspb.CryptoKey{
 			Purpose: kmspb.CryptoKey_ENCRYPT_DECRYPT,
 		},
-		SkipInitialVersionCreation: true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -45,6 +44,14 @@ func TestCreateCryptoKeyDefaults(t *testing.T) {
 		VersionTemplate: &kmspb.CryptoKeyVersionTemplate{
 			ProtectionLevel: kmspb.ProtectionLevel_SOFTWARE,
 			Algorithm:       kmspb.CryptoKeyVersion_GOOGLE_SYMMETRIC_ENCRYPTION,
+		},
+		Primary: &kmspb.CryptoKeyVersion{
+			Name:            kr.Name + "/cryptoKeys/encrypt/cryptoKeyVersions/1",
+			CreateTime:      ptypes.TimestampNow(),
+			GenerateTime:    ptypes.TimestampNow(),
+			Algorithm:       kmspb.CryptoKeyVersion_GOOGLE_SYMMETRIC_ENCRYPTION,
+			ProtectionLevel: kmspb.ProtectionLevel_SOFTWARE,
+			State:           kmspb.CryptoKeyVersion_ENABLED,
 		},
 	}
 

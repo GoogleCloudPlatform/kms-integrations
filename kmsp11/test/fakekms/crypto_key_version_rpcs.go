@@ -26,6 +26,13 @@ func (f *fakeKMS) CreateCryptoKeyVersion(ctx context.Context, req *kmspb.CreateC
 		return nil, err
 	}
 
+	return f.createVersion(ck), nil
+}
+
+// createVersion adds a new version to the provided cryptoKey and returns its proto.
+// Callers must already be holding f.mux (normally via the locking interceptor).
+func (f *fakeKMS) createVersion(ck *cryptoKey) *kmspb.CryptoKeyVersion {
+	ckName, _ := parseCryptoKeyName(ck.pb.Name)
 	name := cryptoKeyVersionName{
 		cryptoKeyName:      ckName,
 		CryptoKeyVersionID: strconv.Itoa(len(ck.versions) + 1),
@@ -38,11 +45,15 @@ func (f *fakeKMS) CreateCryptoKeyVersion(ctx context.Context, req *kmspb.CreateC
 		ProtectionLevel: ck.pb.VersionTemplate.ProtectionLevel,
 	}
 
-	switch ck.pb.Purpose {
-	case kmspb.CryptoKey_ASYMMETRIC_DECRYPT, kmspb.CryptoKey_ASYMMETRIC_SIGN:
+	ckv := &cryptoKeyVersion{pb: pb}
+	def, _ := algorithmDef(pb.Algorithm)
+
+	if def.Asymmetric() {
 		// async generation
 		pb.State = kmspb.CryptoKeyVersion_PENDING_GENERATION
 		go func() {
+			k := def.KeyFactory.Generate() // no need to wait on the lock for this
+
 			// Our lock interceptor ensures that f.mux is held whenever an RPC is in
 			// flight. This goroutine won't be able to acquire f.mux until after the
 			// CreateCryptoKeyVersion RPC completes. Since all RPCs acquire f.mux, we
@@ -51,18 +62,19 @@ func (f *fakeKMS) CreateCryptoKeyVersion(ctx context.Context, req *kmspb.CreateC
 			f.mux.Lock()
 			defer f.mux.Unlock()
 
+			ckv.keyMaterial = k
 			pb.State = kmspb.CryptoKeyVersion_ENABLED
 			pb.GenerateTime = ptypes.TimestampNow()
 		}()
-
-	default:
+	} else {
 		// sync generation
-		pb.State = kmspb.CryptoKeyVersion_ENABLED
+		ckv.keyMaterial = def.KeyFactory.Generate()
 		pb.GenerateTime = pb.CreateTime
+		pb.State = kmspb.CryptoKeyVersion_ENABLED
 	}
 
-	ck.versions[name] = &cryptoKeyVersion{pb: pb}
-	return pb, nil
+	ck.versions[name] = ckv
+	return pb
 }
 
 // GetCryptoKeyVersion fakes a Cloud KMS API function.
