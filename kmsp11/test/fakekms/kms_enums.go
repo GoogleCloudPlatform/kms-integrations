@@ -59,44 +59,54 @@ var algorithms = map[kmspb.CryptoKeyVersion_CryptoKeyVersionAlgorithm]algDef{
 	kmspb.CryptoKeyVersion_EC_SIGN_P256_SHA256: {
 		Purpose:    kmspb.CryptoKey_ASYMMETRIC_SIGN,
 		KeyFactory: &ecKeyFactory{elliptic.P256()},
+		Opts:       crypto.SHA256,
 	},
 	kmspb.CryptoKeyVersion_EC_SIGN_P384_SHA384: {
 		Purpose:    kmspb.CryptoKey_ASYMMETRIC_SIGN,
 		KeyFactory: &ecKeyFactory{elliptic.P384()},
+		Opts:       crypto.SHA384,
 	},
 
 	kmspb.CryptoKeyVersion_RSA_SIGN_PKCS1_2048_SHA256: {
 		Purpose:    kmspb.CryptoKey_ASYMMETRIC_SIGN,
 		KeyFactory: rsaKeyFactory(2048),
+		Opts:       crypto.SHA256,
 	},
 	kmspb.CryptoKeyVersion_RSA_SIGN_PKCS1_3072_SHA256: {
 		Purpose:    kmspb.CryptoKey_ASYMMETRIC_SIGN,
 		KeyFactory: rsaKeyFactory(3072),
+		Opts:       crypto.SHA256,
 	},
 	kmspb.CryptoKeyVersion_RSA_SIGN_PKCS1_4096_SHA256: {
 		Purpose:    kmspb.CryptoKey_ASYMMETRIC_SIGN,
 		KeyFactory: rsaKeyFactory(4096),
+		Opts:       crypto.SHA256,
 	},
 	kmspb.CryptoKeyVersion_RSA_SIGN_PKCS1_4096_SHA512: {
 		Purpose:    kmspb.CryptoKey_ASYMMETRIC_SIGN,
 		KeyFactory: rsaKeyFactory(4096),
+		Opts:       crypto.SHA512,
 	},
 
 	kmspb.CryptoKeyVersion_RSA_SIGN_PSS_2048_SHA256: {
 		Purpose:    kmspb.CryptoKey_ASYMMETRIC_SIGN,
 		KeyFactory: rsaKeyFactory(2048),
+		Opts:       &rsa.PSSOptions{Hash: crypto.SHA256, SaltLength: rsa.PSSSaltLengthEqualsHash},
 	},
 	kmspb.CryptoKeyVersion_RSA_SIGN_PSS_3072_SHA256: {
 		Purpose:    kmspb.CryptoKey_ASYMMETRIC_SIGN,
 		KeyFactory: rsaKeyFactory(3072),
+		Opts:       &rsa.PSSOptions{Hash: crypto.SHA256, SaltLength: rsa.PSSSaltLengthEqualsHash},
 	},
 	kmspb.CryptoKeyVersion_RSA_SIGN_PSS_4096_SHA256: {
 		Purpose:    kmspb.CryptoKey_ASYMMETRIC_SIGN,
 		KeyFactory: rsaKeyFactory(4096),
+		Opts:       &rsa.PSSOptions{Hash: crypto.SHA256, SaltLength: rsa.PSSSaltLengthEqualsHash},
 	},
 	kmspb.CryptoKeyVersion_RSA_SIGN_PSS_4096_SHA512: {
 		Purpose:    kmspb.CryptoKey_ASYMMETRIC_SIGN,
 		KeyFactory: rsaKeyFactory(4096),
+		Opts:       &rsa.PSSOptions{Hash: crypto.SHA512, SaltLength: rsa.PSSSaltLengthEqualsHash},
 	},
 }
 
