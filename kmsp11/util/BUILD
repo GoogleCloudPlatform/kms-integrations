@@ -40,6 +40,28 @@ cc_test(
 )
 
 cc_library(
+    name = "handle_map",
+    hdrs = ["handle_map.h"],
+    deps = [
+        ":errors",
+        ":status_or",
+        "//kmsp11:cryptoki_headers",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/random",
+    ],
+)
+
+cc_test(
+    name = "handle_map_test",
+    srcs = ["handle_map_test.cc"],
+    deps = [
+        ":handle_map",
+        "//kmsp11/test",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
     name = "platform",
     srcs = select({
         "//:windows": ["platform_win.cc"],
