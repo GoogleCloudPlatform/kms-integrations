@@ -196,5 +196,233 @@ TEST_F(BridgeTest, GetTokenInfoFailsInvalidSlotId) {
   EXPECT_THAT(GetTokenInfo(2, nullptr), StatusRvIs(CKR_SLOT_ID_INVALID));
 }
 
+TEST_F(BridgeTest, OpenSession) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE handle;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &handle));
+  EXPECT_NE(handle, CK_INVALID_HANDLE);
+}
+
+TEST_F(BridgeTest, OpenSessionFailsNotInitialized) {
+  CK_SESSION_HANDLE handle;
+  EXPECT_THAT(OpenSession(0, 0, nullptr, nullptr, &handle),
+              StatusRvIs(CKR_CRYPTOKI_NOT_INITIALIZED));
+}
+
+TEST_F(BridgeTest, OpenSessionFailsInvalidSlotId) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE handle;
+  EXPECT_THAT(OpenSession(2, CKF_SERIAL_SESSION, nullptr, nullptr, &handle),
+              StatusRvIs(CKR_SLOT_ID_INVALID));
+}
+
+TEST_F(BridgeTest, OpenSessionFailsNotSerial) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE handle;
+  EXPECT_THAT(OpenSession(0, 0, nullptr, nullptr, &handle),
+              StatusRvIs(CKR_SESSION_PARALLEL_NOT_SUPPORTED));
+}
+
+TEST_F(BridgeTest, OpenSessionFailsReadWrite) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE handle;
+  EXPECT_THAT(OpenSession(0, CKF_SERIAL_SESSION | CKF_RW_SESSION, nullptr,
+                          nullptr, &handle),
+              StatusRvIs(CKR_TOKEN_WRITE_PROTECTED));
+}
+
+TEST_F(BridgeTest, CloseSessionSuccess) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE handle;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &handle));
+  EXPECT_OK(CloseSession(handle));
+}
+
+TEST_F(BridgeTest, CloseSessionFailsNotInitialized) {
+  EXPECT_THAT(CloseSession(0), StatusRvIs(CKR_CRYPTOKI_NOT_INITIALIZED));
+}
+
+TEST_F(BridgeTest, CloseSessionFailsInvalidHandle) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE handle;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &handle));
+  EXPECT_THAT(CloseSession(0), StatusRvIs(CKR_SESSION_HANDLE_INVALID));
+}
+
+TEST_F(BridgeTest, CloseSessionFailsAlreadyClosed) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE handle;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &handle));
+  EXPECT_OK(CloseSession(handle));
+
+  EXPECT_THAT(CloseSession(handle), StatusRvIs(CKR_SESSION_HANDLE_INVALID));
+}
+
+TEST_F(BridgeTest, GetSessionInfoSuccess) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE handle;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &handle));
+
+  CK_SESSION_INFO info;
+  EXPECT_OK(GetSessionInfo(handle, &info));
+
+  // Sanity check for any piece of information
+  EXPECT_EQ(info.state, CKS_RO_PUBLIC_SESSION);
+}
+
+TEST_F(BridgeTest, GetSessionInfoFailsNotInitialized) {
+  CK_SESSION_INFO info;
+  EXPECT_THAT(GetSessionInfo(0, &info),
+              StatusRvIs(CKR_CRYPTOKI_NOT_INITIALIZED));
+}
+
+TEST_F(BridgeTest, GetSessionInfoFailsInvalidHandle) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_INFO info;
+  EXPECT_THAT(GetSessionInfo(0, &info), StatusRvIs(CKR_SESSION_HANDLE_INVALID));
+}
+
+TEST_F(BridgeTest, LoginSuccess) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE handle;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &handle));
+
+  EXPECT_OK(Login(handle, CKU_USER, nullptr, 0));
+
+  CK_SESSION_INFO info;
+  EXPECT_OK(GetSessionInfo(handle, &info));
+  EXPECT_EQ(info.state, CKS_RO_USER_FUNCTIONS);
+}
+
+TEST_F(BridgeTest, LoginAppliesToAllSessions) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE handle1;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &handle1));
+
+  CK_SESSION_HANDLE handle2;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &handle2));
+
+  EXPECT_OK(Login(handle2, CKU_USER, nullptr, 0));
+
+  EXPECT_THAT(Login(handle1, CKU_USER, nullptr, 0),
+              StatusRvIs(CKR_USER_ALREADY_LOGGED_IN));
+  CK_SESSION_INFO info;
+  EXPECT_OK(GetSessionInfo(handle1, &info));
+  EXPECT_EQ(info.state, CKS_RO_USER_FUNCTIONS);
+}
+
+TEST_F(BridgeTest, LoginFailsNotInitialized) {
+  EXPECT_THAT(Login(0, CKU_USER, nullptr, 0),
+              StatusRvIs(CKR_CRYPTOKI_NOT_INITIALIZED));
+}
+
+TEST_F(BridgeTest, LoginFailsInvalidHandle) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  EXPECT_THAT(Login(0, CKU_USER, nullptr, 0),
+              StatusRvIs(CKR_SESSION_HANDLE_INVALID));
+}
+
+TEST_F(BridgeTest, LoginFailsUserSo) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE handle;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &handle));
+
+  EXPECT_THAT(Login(handle, CKU_SO, nullptr, 0), StatusRvIs(CKR_PIN_LOCKED));
+}
+
+TEST_F(BridgeTest, LogoutSuccess) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE handle;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &handle));
+
+  EXPECT_OK(Login(handle, CKU_USER, nullptr, 0));
+  EXPECT_OK(Logout(handle));
+
+  CK_SESSION_INFO info;
+  EXPECT_OK(GetSessionInfo(handle, &info));
+  EXPECT_EQ(info.state, CKS_RO_PUBLIC_SESSION);
+}
+
+TEST_F(BridgeTest, LogoutAppliesToAllSessions) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE handle1;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &handle1));
+
+  CK_SESSION_HANDLE handle2;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &handle2));
+
+  EXPECT_OK(Login(handle2, CKU_USER, nullptr, 0));
+  EXPECT_OK(Logout(handle1));
+
+  EXPECT_THAT(Logout(handle2), StatusRvIs(CKR_USER_NOT_LOGGED_IN));
+  CK_SESSION_INFO info;
+  EXPECT_OK(GetSessionInfo(handle2, &info));
+  EXPECT_EQ(info.state, CKS_RO_PUBLIC_SESSION);
+}
+
+TEST_F(BridgeTest, LogoutFailsNotInitialized) {
+  EXPECT_THAT(Logout(0), StatusRvIs(CKR_CRYPTOKI_NOT_INITIALIZED));
+}
+
+TEST_F(BridgeTest, LogoutFailsInvalidHandle) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  EXPECT_THAT(Logout(0), StatusRvIs(CKR_SESSION_HANDLE_INVALID));
+}
+
+TEST_F(BridgeTest, LogoutFailsNotLoggedIn) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE handle;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &handle));
+
+  EXPECT_THAT(Logout(handle), StatusRvIs(CKR_USER_NOT_LOGGED_IN));
+}
+
+TEST_F(BridgeTest, LogoutFailsSecondCall) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE handle;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &handle));
+
+  EXPECT_OK(Login(handle, CKU_USER, nullptr, 0));
+  EXPECT_OK(Logout(handle));
+
+  EXPECT_THAT(Logout(handle), StatusRvIs(CKR_USER_NOT_LOGGED_IN));
+}
+
 }  // namespace
 }  // namespace kmsp11

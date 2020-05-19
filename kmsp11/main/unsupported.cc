@@ -18,30 +18,6 @@ absl::Status GetMechanismInfo(CK_SLOT_ID slotID, CK_MECHANISM_TYPE type,
   return UnsupportedError(SOURCE_LOCATION);
 }
 
-absl::Status OpenSession(CK_SLOT_ID slotID, CK_FLAGS flags,
-                         CK_VOID_PTR pApplication, CK_NOTIFY notify,
-                         CK_SESSION_HANDLE_PTR phSession) {
-  return UnsupportedError(SOURCE_LOCATION);
-}
-
-absl::Status CloseSession(CK_SESSION_HANDLE hSession) {
-  return UnsupportedError(SOURCE_LOCATION);
-}
-
-absl::Status GetSessionInfo(CK_SESSION_HANDLE hSession,
-                            CK_SESSION_INFO_PTR pInfo) {
-  return UnsupportedError(SOURCE_LOCATION);
-}
-
-absl::Status Login(CK_SESSION_HANDLE hSession, CK_USER_TYPE userType,
-                   CK_UTF8CHAR_PTR pPin, CK_ULONG ulPinLen) {
-  return UnsupportedError(SOURCE_LOCATION);
-}
-
-absl::Status Logout(CK_SESSION_HANDLE hSession) {
-  return UnsupportedError(SOURCE_LOCATION);
-}
-
 absl::Status GetAttributeValue(CK_SESSION_HANDLE hSession,
                                CK_OBJECT_HANDLE hObject,
                                CK_ATTRIBUTE_PTR pTemplate, CK_ULONG ulCount) {

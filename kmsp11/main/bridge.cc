@@ -141,4 +141,66 @@ absl::Status GetTokenInfo(CK_SLOT_ID slotID, CK_TOKEN_INFO_PTR pInfo) {
   return absl::OkStatus();
 }
 
+// Open a session between an application and a token in a particular slot.
+// http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc235002337
+// Note that `pApplication` and `notify` are always ignored in our library,
+// which does not support notifications.
+absl::Status OpenSession(CK_SLOT_ID slotID, CK_FLAGS flags,
+                         CK_VOID_PTR pApplication, CK_NOTIFY notify,
+                         CK_SESSION_HANDLE_PTR phSession) {
+  ASSIGN_OR_RETURN(Provider * provider, GetProvider());
+
+  if ((flags & CKF_SERIAL_SESSION) != CKF_SERIAL_SESSION) {
+    return NewError(absl::StatusCode::kInvalidArgument,
+                    "parallel sessions are not supported",
+                    CKR_SESSION_PARALLEL_NOT_SUPPORTED, SOURCE_LOCATION);
+  }
+  if ((flags & CKF_RW_SESSION) == CKF_RW_SESSION) {
+    return NewError(absl::StatusCode::kInvalidArgument,
+                    "this library does not support read-write sessions",
+                    CKR_TOKEN_WRITE_PROTECTED, SOURCE_LOCATION);
+  }
+
+  ASSIGN_OR_RETURN(*phSession, provider->OpenSession(slotID));
+  return absl::OkStatus();
+}
+
+// Close a session between an application and a token.
+// http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc383864884
+absl::Status CloseSession(CK_SESSION_HANDLE hSession) {
+  ASSIGN_OR_RETURN(Provider * provider, GetProvider());
+  return provider->CloseSession(hSession);
+}
+
+// Get information about a session.
+// http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc235002340
+absl::Status GetSessionInfo(CK_SESSION_HANDLE hSession,
+                            CK_SESSION_INFO_PTR pInfo) {
+  ASSIGN_OR_RETURN(Provider * provider, GetProvider());
+  ASSIGN_OR_RETURN(std::shared_ptr<Session> session,
+                   provider->GetSession(hSession));
+  *pInfo = session->token()->session_info();
+  return absl::OkStatus();
+}
+
+// Log a user into a token.
+// http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc235002343
+// Note that pPin and ulPinLen are always ignored in this library.
+absl::Status Login(CK_SESSION_HANDLE hSession, CK_USER_TYPE userType,
+                   CK_UTF8CHAR_PTR pPin, CK_ULONG ulPinLen) {
+  ASSIGN_OR_RETURN(Provider * provider, GetProvider());
+  ASSIGN_OR_RETURN(std::shared_ptr<Session> session,
+                   provider->GetSession(hSession));
+  return session->token()->Login(userType);
+}
+
+// Log a user out from a token.
+// http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc235002344
+absl::Status Logout(CK_SESSION_HANDLE hSession) {
+  ASSIGN_OR_RETURN(Provider * provider, GetProvider());
+  ASSIGN_OR_RETURN(std::shared_ptr<Session> session,
+                   provider->GetSession(hSession));
+  return session->token()->Logout();
+}
+
 }  // namespace kmsp11
