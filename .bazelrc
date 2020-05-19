@@ -1,0 +1,26 @@
+# Display rc options when building
+build --announce_rc
+# Enable build:{linux,mac,windows} directives in the rc file
+build --enable_platform_specific_config
+
+# C++ Version (note that MSVC doesn't need a directive like this)
+build:linux --cxxopt=-std=c++11
+build:macos --cxxopt=-std=c++11
+
+# Linux-specific options
+# Position-independent code
+build:linux --copt=-fPIC
+
+# macOS-specific options
+# Ensure compatibility with all macOS versions that still get security updates.
+build:macos --copt=-mmacosx-version-min=10.13
+# Workaround for build issue: https://github.com/bazelbuild/bazel/issues/4341
+build:macos --copt=-DGRPC_BAZEL_BUILD
+
+# Windows-specific options
+# Prevent glog symbols from being exported with `__declspec(dllexport)`
+build:windows --cxxopt=/DGOOGLE_GLOG_DLL_DECL=
+
+# Import from .bazelrc.local if it exists. Keep this at the end of the file so
+# that local options can override options that are declared in this file.
+try-import %workspace%/.bazelrc.local
