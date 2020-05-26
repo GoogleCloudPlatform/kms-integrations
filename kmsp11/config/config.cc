@@ -4,6 +4,7 @@
 
 #include "kmsp11/config/protoyaml.h"
 #include "kmsp11/util/errors.h"
+#include "kmsp11/util/platform.h"
 #include "kmsp11/util/status_macros.h"
 #include "yaml-cpp/yaml.h"
 
@@ -38,6 +39,13 @@ StatusOr<LibraryConfig> LoadConfigFromFile(const std::string& config_path) {
   ASSIGN_OR_RETURN(YAML::Node node, ParseYamlFile(config_path));
   LibraryConfig config;
   RETURN_IF_ERROR(YamlToProto(node, &config));
+
+  // Checking permissions after we loaded the file, which is weird, but not
+  // harmful. This allows better/more specific error messages on
+  // missing/malformed file paths, and ought to be replaced for beta. (See
+  // b/157499181).
+  RETURN_IF_ERROR(EnsureWriteProtected(config_path.c_str()));
+
   return config;
 }
 

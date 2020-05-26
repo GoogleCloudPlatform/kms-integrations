@@ -121,6 +121,10 @@ cc_library(
         "//conditions:default": ["platform_posix.cc"],
     }),
     hdrs = ["platform.h"],
+    deps = [
+        ":errors",
+        "@com_google_absl//absl/status",
+    ],
 )
 
 cc_library(

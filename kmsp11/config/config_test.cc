@@ -127,5 +127,23 @@ tokens:
   EXPECT_THAT(result.status().message(), HasSubstr("bad file"));
 }
 
+TEST_F(ConfigFileTest, LoadConfigFileBadPermissions) {
+#ifdef _WIN32
+  GTEST_SKIP() << "file permissions checks are not yet supported on windows";
+#endif
+
+  std::ofstream(config_path_) << R"(---
+tokens:
+  - key_ring: projects/foo/locations/global/keyRings/bar
+    label: bar
+)";
+  EXPECT_OK(SetMode(config_path_.c_str(), 0777));
+
+  StatusOr<LibraryConfig> result = LoadConfigFromFile(config_path_);
+  EXPECT_THAT(result.status(), StatusIs(absl::StatusCode::kFailedPrecondition));
+  EXPECT_THAT(result.status().message(),
+              HasSubstr("excessive write permissions"));
+}
+
 }  // namespace
 }  // namespace kmsp11

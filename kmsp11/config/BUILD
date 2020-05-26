@@ -11,6 +11,7 @@ cc_library(
         ":config_cc_proto",
         ":protoyaml",
         "//kmsp11/util:errors",
+        "//kmsp11/util:platform",
     ],
 )
 
