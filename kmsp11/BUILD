@@ -2,6 +2,31 @@ load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 
 package(default_visibility = ["//kmsp11:__subpackages__"])
 
+cc_library(
+    name = "algorithm_details",
+    srcs = ["algorithm_details.cc"],
+    hdrs = ["algorithm_details.h"],
+    deps = [
+        ":cryptoki_headers",
+        "//kmsp11/util:errors",
+        "//kmsp11/util:status_or",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/container:flat_hash_set",
+        "@com_google_googleapis//google/cloud/kms/v1:kms_cc_proto",
+    ],
+)
+
+cc_test(
+    name = "algorithm_details_test",
+    size = "small",
+    srcs = ["algorithm_details_test.cc"],
+    deps = [
+        ":algorithm_details",
+        "//kmsp11/test",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
 genrule(
     name = "cryptoki_raw_header_files",
     srcs = [
