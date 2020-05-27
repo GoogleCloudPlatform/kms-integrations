@@ -11,13 +11,13 @@ namespace kmsp11 {
 //
 // Required to populate the attribute CKA_EC_PARAMS:
 // http://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/errata01/os/pkcs11-curr-v2.40-errata01-os-complete.html#_Toc468937842
-StatusOr<std::string> MarshalEcParametersDer(EC_KEY* key);
+StatusOr<std::string> MarshalEcParametersDer(const EC_KEY* key);
 
 // Marshals the provided EC public key in DER format.
 //
 // Required to populate the attribute CKA_EC_POINT:
 // http://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/errata01/os/pkcs11-curr-v2.40-errata01-os-complete.html#_Toc416960012
-StatusOr<std::string> MarshalEcPointDer(EC_KEY* key);
+StatusOr<std::string> MarshalEcPointDer(const EC_KEY* key);
 
 // Marshals a public key to X.509 SubjectPublicKeyInfo DER format.
 //

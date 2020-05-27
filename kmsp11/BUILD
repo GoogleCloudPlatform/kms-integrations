@@ -81,6 +81,33 @@ cc_library(
 )
 
 cc_library(
+    name = "object",
+    srcs = ["object.cc"],
+    hdrs = ["object.h"],
+    deps = [
+        ":algorithm_details",
+        ":attribute_map",
+        ":cryptoki_headers",
+        "//kmsp11/util:crypto_utils",
+        "//kmsp11/util:status_macros",
+        "@com_google_absl//absl/strings",
+        "@com_google_googleapis//google/cloud/kms/v1:kms_cc_proto",
+    ],
+)
+
+cc_test(
+    name = "object_test",
+    size = "small",
+    srcs = ["object_test.cc"],
+    deps = [
+        ":object",
+        "//kmsp11/test",
+        "//kmsp11/util:crypto_utils",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
     name = "provider",
     srcs = ["provider.cc"],
     hdrs = ["provider.h"],

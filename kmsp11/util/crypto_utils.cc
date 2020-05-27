@@ -10,7 +10,7 @@
 
 namespace kmsp11 {
 
-StatusOr<std::string> MarshalEcParametersDer(EC_KEY* key) {
+StatusOr<std::string> MarshalEcParametersDer(const EC_KEY* key) {
   CBB cbb;
   CBB_zero(&cbb);
 
@@ -30,7 +30,7 @@ StatusOr<std::string> MarshalEcParametersDer(EC_KEY* key) {
   return result;
 }
 
-StatusOr<std::string> MarshalEcPointDer(EC_KEY* key) {
+StatusOr<std::string> MarshalEcPointDer(const EC_KEY* key) {
   bssl::UniquePtr<BN_CTX> bn_ctx(BN_CTX_new());
   CBB cbb;
   CBB_zero(&cbb);

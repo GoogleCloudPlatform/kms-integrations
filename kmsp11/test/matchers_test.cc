@@ -9,6 +9,9 @@
 namespace kmsp11 {
 namespace {
 
+using ::testing::AllOf;
+using ::testing::Gt;
+using ::testing::Lt;
 using ::testing::Not;
 
 TEST(MatchesStdRegexTest, MatchesSmokeTest) {
@@ -101,6 +104,26 @@ TEST(EqualsProtoTest, NotEquals) {
   m2.set_string_value("bar");
 
   EXPECT_THAT(m1, Not(EqualsProto(m2)));
+}
+
+TEST(IsOkAndHoldsTest, MatchesValue) {
+  StatusOr<int> s(3);
+  EXPECT_THAT(s, IsOkAndHolds(3));
+}
+
+TEST(IsOkAndHoldsTest, MatchesMatcher) {
+  StatusOr<int> s(3);
+  EXPECT_THAT(s, IsOkAndHolds(AllOf(Gt(2), Lt(5))));
+}
+
+TEST(IsOkAndHoldsTest, DoesNotMatch) {
+  StatusOr<int> s(3);
+  EXPECT_THAT(s, Not(IsOkAndHolds(4)));
+}
+
+TEST(IsOkAndHoldsTest, IsNotOk) {
+  StatusOr<int> s(absl::AbortedError("aborted"));
+  EXPECT_THAT(s, Not(IsOkAndHolds(3)));
 }
 
 }  // namespace
