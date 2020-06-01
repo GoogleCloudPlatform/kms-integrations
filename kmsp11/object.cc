@@ -133,6 +133,33 @@ absl::Status AddEcPrivateKeyAttributes(AttributeMap* attrs,
   return absl::OkStatus();
 }
 
+absl::Status AddRsaPublicKeyAttributes(AttributeMap* attrs,
+                                       const RSA* public_key) {
+  // 2.1.2 RSA public key objects
+  attrs->PutBigNum(CKA_MODULUS, RSA_get0_n(public_key));
+  attrs->PutULong(CKA_MODULUS_BITS, RSA_bits(public_key));
+  attrs->PutBigNum(CKA_PUBLIC_EXPONENT, RSA_get0_e(public_key));
+  return absl::OkStatus();
+}
+
+absl::Status AddRsaPrivateKeyAttributes(AttributeMap* attrs,
+                                        const RSA* public_key) {
+  // 2.1.3 RSA private key objects
+  attrs->PutBigNum(CKA_MODULUS, RSA_get0_n(public_key));
+  attrs->PutULong(CKA_MODULUS_BITS, RSA_bits(public_key));
+  attrs->PutSensitive(CKA_PRIVATE_EXPONENT);
+  attrs->PutSensitive(CKA_PRIME_1);
+  attrs->PutSensitive(CKA_PRIME_2);
+  attrs->PutSensitive(CKA_EXPONENT_1);
+  attrs->PutSensitive(CKA_EXPONENT_2);
+  attrs->PutSensitive(CKA_COEFFICIENT);
+
+  // Not required by the spec, but some implementations seem to expect it.
+  attrs->PutBigNum(CKA_PUBLIC_EXPONENT, RSA_get0_e(public_key));
+
+  return absl::OkStatus();
+}
+
 }  // namespace
 
 StatusOr<KeyPair> Object::NewKeyPair(
@@ -158,6 +185,12 @@ StatusOr<KeyPair> Object::NewKeyPair(
       const EC_KEY* ec_public_key = EVP_PKEY_get0_EC_KEY(public_key);
       RETURN_IF_ERROR(AddEcPublicKeyAttributes(&pub_attrs, ec_public_key));
       RETURN_IF_ERROR(AddEcPrivateKeyAttributes(&prv_attrs, ec_public_key));
+      break;
+    }
+    case EVP_PKEY_RSA: {
+      const RSA* rsa_public_key = EVP_PKEY_get0_RSA(public_key);
+      RETURN_IF_ERROR(AddRsaPublicKeyAttributes(&pub_attrs, rsa_public_key));
+      RETURN_IF_ERROR(AddRsaPrivateKeyAttributes(&prv_attrs, rsa_public_key));
       break;
     }
     default:
