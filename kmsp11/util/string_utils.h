@@ -5,7 +5,9 @@
 
 #include "absl/status/status.h"
 #include "absl/strings/string_view.h"
+#include "absl/time/time.h"
 #include "absl/types/span.h"
+#include "openssl/bn.h"
 
 namespace kmsp11 {
 
@@ -27,6 +29,31 @@ inline std::string StrFromBytes(absl::Span<const uint8_t> data) {
 // http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/errata01/os/pkcs11-base-v2.40-errata01-os-complete.html#_Toc235002241
 absl::Status CryptokiStrCopy(absl::string_view src, absl::Span<uint8_t> dest,
                              char pad_char = ' ');
+
+// Marshals an OpenSSL BIGNUM into the string format expected by Cryptoki.
+// http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Ref457115175
+std::string MarshalBigNum(const BIGNUM* value);
+
+// Marshals a boolean into the string format expected by Cryptoki. This is
+// equivalent to a simple CK_CHAR conversion of 0x00 (false) or 0x01 (true).
+// http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#CK_BYTE
+std::string MarshalBool(bool value);
+
+// Marshals a date into the string format expected by Cryptoki.
+// http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc323024069
+std::string MarshalDate(absl::Time value);
+
+// Marshals an unsigned long int into the string format expected by Cryptoki.
+// Note that this is platform-dependent, and is equivalent to a simple char*
+// conversion of a CK_ULONG.
+// http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc441755771
+std::string MarshalULong(unsigned long int value);
+
+// Marshals a span of unsigned long ints into the string format expected by
+// Cryptoki. Note that this is platform-dependent, and is equivalent to a simple
+// char* conversion of a CK_ULONG*.
+// http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc225305959
+std::string MarshalULongList(absl::Span<const unsigned long int> value);
 
 }  // namespace kmsp11
 

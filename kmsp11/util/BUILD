@@ -169,8 +169,11 @@ cc_library(
     hdrs = ["string_utils.h"],
     deps = [
         ":errors",
+        "@boringssl//:crypto",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/time",
+        "@com_google_absl//absl/types:span",
     ],
 )
 
@@ -181,7 +184,6 @@ cc_test(
     deps = [
         ":string_utils",
         "//kmsp11/test",
-        "@com_google_absl//absl/types:span",
         "@com_google_googletest//:gtest_main",
     ],
 )
