@@ -41,6 +41,13 @@ http_archive(
 )
 
 http_archive(
+    name = "com_github_googleapis_google_cloud_cpp",  # 2020-05-26
+    sha256 = "34caa64a89786248356c8289f4cdb7fd638fbcebf67cb80c02e3f999555fc9d1",
+    strip_prefix = "google-cloud-cpp-56c57f2a4547cf57b614913015359bd33b4b5fa6",
+    url = "https://github.com/googleapis/google-cloud-cpp/archive/56c57f2a4547cf57b614913015359bd33b4b5fa6.tar.gz",
+)
+
+http_archive(
     name = "com_google_googletest",  # 2020-04-03
     sha256 = "363089f62b375e6a73b7149015e7fe92e50d124ab4e95ba062774c496d96f2fc",
     strip_prefix = "googletest-e3f0319d89f4cbf32993de595d984183b1a9fc57",
@@ -85,6 +92,25 @@ http_file(
 )
 
 # Transitive Dependencies
+
+## Google Cloud CPP
+load("@com_github_googleapis_google_cloud_cpp//bazel:google_cloud_cpp_deps.bzl", "google_cloud_cpp_deps")
+
+google_cloud_cpp_deps()
+
+load("@com_google_googleapis//:repository_rules.bzl", "switched_rules_by_language")
+
+switched_rules_by_language(
+    name = "com_google_googleapis_imports",
+    cc = True,  # C++ support is only "Partially implemented", roll our own.
+    grpc = True,
+)
+
+# gRPC
+
+load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
+
+grpc_deps()
 
 ## Golang
 load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
