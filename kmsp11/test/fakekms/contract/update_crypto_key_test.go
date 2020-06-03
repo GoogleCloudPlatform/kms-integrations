@@ -16,29 +16,16 @@ import (
 
 func TestUpdateCryptoKeyAlgorithm(t *testing.T) {
 	ctx := context.Background()
-
-	kr, err := client.CreateKeyRing(ctx, &kmspb.CreateKeyRingRequest{
-		Parent:    location,
-		KeyRingId: testutil.RandomID(t),
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	ck, err := client.CreateCryptoKey(ctx, &kmspb.CreateCryptoKeyRequest{
-		Parent:      kr.Name,
-		CryptoKeyId: "foo",
+	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
+	ck := client.CreateTestCK(ctx, t, &kmspb.CreateCryptoKeyRequest{
+		Parent: kr.Name,
 		CryptoKey: &kmspb.CryptoKey{
 			Purpose: kmspb.CryptoKey_ASYMMETRIC_SIGN,
 			VersionTemplate: &kmspb.CryptoKeyVersionTemplate{
-				Algorithm: kmspb.CryptoKeyVersion_RSA_SIGN_PSS_3072_SHA256,
+				Algorithm: kmspb.CryptoKeyVersion_RSA_SIGN_PSS_2048_SHA256,
 			},
 		},
-		SkipInitialVersionCreation: true,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	ck.VersionTemplate.Algorithm = kmspb.CryptoKeyVersion_EC_SIGN_P256_SHA256
 
@@ -59,103 +46,64 @@ func TestUpdateCryptoKeyAlgorithm(t *testing.T) {
 
 func TestUpdateCryptoKeyNoFields(t *testing.T) {
 	ctx := context.Background()
-
-	kr, err := client.CreateKeyRing(ctx, &kmspb.CreateKeyRingRequest{
-		Parent:    location,
-		KeyRingId: testutil.RandomID(t),
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	ck, err := client.CreateCryptoKey(ctx, &kmspb.CreateCryptoKeyRequest{
-		Parent:      kr.Name,
-		CryptoKeyId: "foo",
+	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
+	ck := client.CreateTestCK(ctx, t, &kmspb.CreateCryptoKeyRequest{
+		Parent: kr.Name,
 		CryptoKey: &kmspb.CryptoKey{
 			Purpose: kmspb.CryptoKey_ENCRYPT_DECRYPT,
 		},
-		SkipInitialVersionCreation: true,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 
-	_, err = client.UpdateCryptoKey(ctx, &kmspb.UpdateCryptoKeyRequest{
+	_, err := client.UpdateCryptoKey(ctx, &kmspb.UpdateCryptoKeyRequest{
 		CryptoKey: ck,
 	})
 	if status.Code(err) != codes.InvalidArgument {
-		t.Errorf("err=%v, want code=InvalidArgument", err)
+		t.Errorf("err=%v, want code=%s", err, codes.InvalidArgument)
 	}
 }
 
 func TestUpdateCryptoKeyIncompatibleAlgorithm(t *testing.T) {
 	ctx := context.Background()
-
-	kr, err := client.CreateKeyRing(ctx, &kmspb.CreateKeyRingRequest{
-		Parent:    location,
-		KeyRingId: testutil.RandomID(t),
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	ck, err := client.CreateCryptoKey(ctx, &kmspb.CreateCryptoKeyRequest{
-		Parent:      kr.Name,
-		CryptoKeyId: "foo",
+	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
+	ck := client.CreateTestCK(ctx, t, &kmspb.CreateCryptoKeyRequest{
+		Parent: kr.Name,
 		CryptoKey: &kmspb.CryptoKey{
 			Purpose: kmspb.CryptoKey_ENCRYPT_DECRYPT,
 		},
-		SkipInitialVersionCreation: true,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	ck.VersionTemplate.Algorithm = kmspb.CryptoKeyVersion_EC_SIGN_P256_SHA256
 
-	_, err = client.UpdateCryptoKey(ctx, &kmspb.UpdateCryptoKeyRequest{
+	_, err := client.UpdateCryptoKey(ctx, &kmspb.UpdateCryptoKeyRequest{
 		CryptoKey: ck,
 		UpdateMask: &fmpb.FieldMask{
 			Paths: []string{"version_template.algorithm"},
 		},
 	})
 	if status.Code(err) != codes.InvalidArgument {
-		t.Errorf("err=%v, want code=InvalidArgument", err)
+		t.Errorf("err=%v, want code=%s", err, codes.InvalidArgument)
 	}
 }
 
 func TestUpdateCryptoKeyUnsupportedField(t *testing.T) {
 	ctx := context.Background()
-
-	kr, err := client.CreateKeyRing(ctx, &kmspb.CreateKeyRingRequest{
-		Parent:    location,
-		KeyRingId: testutil.RandomID(t),
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	ck, err := client.CreateCryptoKey(ctx, &kmspb.CreateCryptoKeyRequest{
-		Parent:      kr.Name,
-		CryptoKeyId: "foo",
+	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
+	ck := client.CreateTestCK(ctx, t, &kmspb.CreateCryptoKeyRequest{
+		Parent: kr.Name,
 		CryptoKey: &kmspb.CryptoKey{
 			Purpose: kmspb.CryptoKey_ENCRYPT_DECRYPT,
 		},
-		SkipInitialVersionCreation: true,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	ck.Name = "updated"
 
-	_, err = client.UpdateCryptoKey(ctx, &kmspb.UpdateCryptoKeyRequest{
+	_, err := client.UpdateCryptoKey(ctx, &kmspb.UpdateCryptoKeyRequest{
 		CryptoKey: ck,
 		UpdateMask: &fmpb.FieldMask{
 			Paths: []string{"name"},
 		},
 	})
 	if status.Code(err) != codes.InvalidArgument {
-		t.Errorf("err=%v, want code=InvalidArgument", err)
+		t.Errorf("err=%v, want code=%s", err, codes.InvalidArgument)
 	}
 }

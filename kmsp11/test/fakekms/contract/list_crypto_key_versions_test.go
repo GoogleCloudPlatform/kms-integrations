@@ -13,34 +13,27 @@ import (
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 )
 
-func TestListCryptoKeysSorted(t *testing.T) {
+func TestListCryptoKeyVersions(t *testing.T) {
 	ctx := context.Background()
-
 	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
-
-	ckb := client.CreateTestCK(ctx, t, &kmspb.CreateCryptoKeyRequest{
-		Parent:      kr.Name,
-		CryptoKeyId: "key-b",
+	ck := client.CreateTestCK(ctx, t, &kmspb.CreateCryptoKeyRequest{
+		Parent: kr.Name,
 		CryptoKey: &kmspb.CryptoKey{
 			Purpose: kmspb.CryptoKey_ENCRYPT_DECRYPT,
 		},
+		SkipInitialVersionCreation: true,
 	})
 
-	cka := client.CreateTestCK(ctx, t, &kmspb.CreateCryptoKeyRequest{
-		Parent:      kr.Name,
-		CryptoKeyId: "key-a",
-		CryptoKey: &kmspb.CryptoKey{
-			Purpose: kmspb.CryptoKey_ENCRYPT_DECRYPT,
-		},
-	})
+	ckv1 := client.CreateTestCKVAndWait(ctx, t, &kmspb.CreateCryptoKeyVersionRequest{Parent: ck.Name})
+	ckv2 := client.CreateTestCKVAndWait(ctx, t, &kmspb.CreateCryptoKeyVersionRequest{Parent: ck.Name})
 
-	iter := client.ListCryptoKeys(ctx, &kmspb.ListCryptoKeysRequest{Parent: kr.Name})
+	iter := client.ListCryptoKeyVersions(ctx, &kmspb.ListCryptoKeyVersionsRequest{Parent: ck.Name})
 
 	r1, err := iter.Next()
 	if err != nil {
 		t.Fatalf("first call to iter.Next() resulted in error=%v, want nil", err)
 	}
-	if diff := cmp.Diff(cka, r1, testutil.ProtoDiffOpts()...); diff != "" {
+	if diff := cmp.Diff(ckv1, r1, testutil.ProtoDiffOpts()...); diff != "" {
 		t.Errorf("first element mismatch (-want +got): %s", diff)
 	}
 
@@ -48,15 +41,15 @@ func TestListCryptoKeysSorted(t *testing.T) {
 	if err != nil {
 		t.Fatalf("second call to iter.Next() resulted in error=%v, want nil", err)
 	}
-	if diff := cmp.Diff(ckb, r2, testutil.ProtoDiffOpts()...); diff != "" {
+	if diff := cmp.Diff(ckv2, r2, testutil.ProtoDiffOpts()...); diff != "" {
 		t.Errorf("second element mismatch (-want +got): %s", diff)
 	}
 }
 
-func TestListCryptoKeysMalformedParent(t *testing.T) {
+func TestListCryptoKeyVersionsMalformedParent(t *testing.T) {
 	ctx := context.Background()
 
-	iter := client.ListCryptoKeys(ctx, &kmspb.ListCryptoKeysRequest{
+	iter := client.ListCryptoKeyVersions(ctx, &kmspb.ListCryptoKeyVersionsRequest{
 		Parent: "locations/foo",
 	})
 	if _, err := iter.Next(); status.Code(err) != codes.InvalidArgument {

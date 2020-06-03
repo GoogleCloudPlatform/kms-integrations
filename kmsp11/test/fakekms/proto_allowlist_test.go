@@ -11,7 +11,7 @@ import (
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 )
 
-func TestWhitelistScalars(t *testing.T) {
+func TestAllowlistScalars(t *testing.T) {
 	var cases = []struct {
 		Message proto.GeneratedMessage
 		Path    string
@@ -56,20 +56,20 @@ func TestWhitelistScalars(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.Path, func(t *testing.T) {
-			if err := whitelist(c.Path).check(c.Message); err != nil {
-				t.Errorf("unexpected whitelist failure: %v", err)
+			if err := allowlist(c.Path).check(c.Message); err != nil {
+				t.Errorf("unexpected allowlist failure: %v", err)
 			}
 
-			err := whitelist().check(c.Message)
+			err := allowlist().check(c.Message)
 			st, _ := status.FromError(err)
 			if st.Code() != codes.Unimplemented {
-				t.Errorf("expected UNIMPLEMENTED for unwhitelisted field %s, got %v", c.Path, err)
+				t.Errorf("expected UNIMPLEMENTED for unallowed field %s, got %v", c.Path, err)
 			}
 		})
 	}
 }
 
-func TestWhitelistSuccessMultipleFields(t *testing.T) {
+func TestAllowlistSuccessMultipleFields(t *testing.T) {
 	req := &kmspb.CreateCryptoKeyRequest{
 		Parent: "bar",
 		CryptoKey: &kmspb.CryptoKey{
@@ -79,32 +79,32 @@ func TestWhitelistSuccessMultipleFields(t *testing.T) {
 
 	var cases = []struct {
 		Name      string
-		Whitelist protoWhitelister
+		Allowlist protoAllowlister
 	}{
 		{
 			Name:      "ExactFields",
-			Whitelist: whitelist("parent", "crypto_key.purpose"),
+			Allowlist: allowlist("parent", "crypto_key.purpose"),
 		},
 		{
 			Name:      "ExtraField",
-			Whitelist: whitelist("parent", "crypto_key_id", "crypto_key.purpose"),
+			Allowlist: allowlist("parent", "crypto_key_id", "crypto_key.purpose"),
 		},
 		{
 			Name:      "NestedMessage",
-			Whitelist: whitelist("parent", "crypto_key"),
+			Allowlist: allowlist("parent", "crypto_key"),
 		},
 	}
 
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			if err := c.Whitelist.check(req); err != nil {
+			if err := c.Allowlist.check(req); err != nil {
 				t.Fatalf("expected success, got %v", err)
 			}
 		})
 	}
 }
 
-func TestWhitelistFailureMultipleFields(t *testing.T) {
+func TestAllowlistFailureMultipleFields(t *testing.T) {
 	req := &kmspb.CreateCryptoKeyRequest{
 		Parent: "bar",
 		CryptoKey: &kmspb.CryptoKey{
@@ -114,21 +114,21 @@ func TestWhitelistFailureMultipleFields(t *testing.T) {
 
 	var cases = []struct {
 		Name      string
-		Whitelist protoWhitelister
+		Allowlist protoAllowlister
 	}{
 		{
 			Name:      "MissingPurpose",
-			Whitelist: whitelist("parent"),
+			Allowlist: allowlist("parent"),
 		},
 		{
 			Name:      "MissingParent",
-			Whitelist: whitelist("crypto_key.purpose"),
+			Allowlist: allowlist("crypto_key.purpose"),
 		},
 	}
 
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			err := c.Whitelist.check(req)
+			err := c.Allowlist.check(req)
 			st, _ := status.FromError(err)
 			if st.Code() != codes.Unimplemented {
 				t.Errorf("expected UNIMPLEMENTED, got %v", err)
@@ -137,11 +137,11 @@ func TestWhitelistFailureMultipleFields(t *testing.T) {
 	}
 }
 
-func TestWhitelistFailsUnknownFields(t *testing.T) {
+func TestAllowlistFailsUnknownFields(t *testing.T) {
 	kr := proto.MessageV2(&kmspb.KeyRing{Name: "foo"})
 	kr.ProtoReflect().SetUnknown(protoreflect.RawFields{0xF0, 0x01})
 
-	err := whitelist("name").check(kr)
+	err := allowlist("name").check(kr)
 	st, _ := status.FromError(err)
 	if st.Code() != codes.Unimplemented {
 		t.Errorf("expected UNIMPLEMENTED for unknown fields, got %v", err)

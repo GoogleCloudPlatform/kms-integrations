@@ -20,13 +20,16 @@ import (
 
 // variables used by test cases
 var (
-	client   *kms.KeyManagementClient
-	location string
+	client            *ContractTestClient
+	location          string
+	asyncPollInterval time.Duration
 )
 
 func TestMain(m *testing.M) {
 	flag.StringVar(&location, "location", "projects/fakekms-testing/locations/us-east1",
 		"the project and location to use for testing")
+	flag.DurationVar(&asyncPollInterval, "async_poll_interval", time.Millisecond,
+		"the duration to sleep between Get requests when waiting on asynchronous events")
 	realKMS := flag.Bool("realkms", false,
 		"true if tests should be run against real KMS instead of fakekms")
 	credsFilePath := flag.String("credentials_file", "",
@@ -49,13 +52,13 @@ func testRealKMS(m *testing.M, credsFilePath string) {
 		opts = append(opts, option.WithCredentialsFile(credsFilePath))
 	}
 
-	var err error
-	client, err = kms.NewKeyManagementClient(initCtx, opts...)
+	c, err := kms.NewKeyManagementClient(initCtx, opts...)
 	if err != nil {
 		log.Fatalf("error creating KMS client: %v", err)
 	}
-	defer client.Close()
+	defer c.Close()
 
+	client = &ContractTestClient{c}
 	os.Exit(m.Run())
 }
 
@@ -74,11 +77,12 @@ func testFakeKMS(m *testing.M) {
 	initCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	client, err = kms.NewKeyManagementClient(initCtx, option.WithGRPCConn(cc))
+	c, err := kms.NewKeyManagementClient(initCtx, option.WithGRPCConn(cc))
 	if err != nil {
 		log.Fatalf("error creating KMS client: %v", err)
 	}
-	defer client.Close()
+	defer c.Close()
 
+	client = &ContractTestClient{c}
 	os.Exit(m.Run())
 }

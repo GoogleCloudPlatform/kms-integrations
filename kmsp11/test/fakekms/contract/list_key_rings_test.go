@@ -4,8 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"oss-tools/kmsp11/test/fakekms/testutil"
-
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -18,18 +16,8 @@ func TestListKeyRingsSorted(t *testing.T) {
 	// In real KMS, we can't depend on beginning state being empty. We're
 	// creating two key rings here just to make sure that two (or more) exist--
 	// they may not be the first two that are returned in the list request.
-	if _, err := client.CreateKeyRing(ctx, &kmspb.CreateKeyRingRequest{
-		Parent:    location,
-		KeyRingId: testutil.RandomID(t),
-	}); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := client.CreateKeyRing(ctx, &kmspb.CreateKeyRingRequest{
-		Parent:    location,
-		KeyRingId: testutil.RandomID(t),
-	}); err != nil {
-		t.Fatal(err)
-	}
+	client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
+	client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
 
 	iter := client.ListKeyRings(ctx, &kmspb.ListKeyRingsRequest{Parent: location})
 
@@ -55,6 +43,6 @@ func TestListKeyRingsMalformedParent(t *testing.T) {
 		Parent: "locations/foo",
 	})
 	if _, err := iter.Next(); status.Code(err) != codes.InvalidArgument {
-		t.Errorf("err=%v, want code=InvalidArgument", err)
+		t.Errorf("err=%v, want code=%s", err, codes.InvalidArgument)
 	}
 }

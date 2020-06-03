@@ -1,44 +1,96 @@
 package fakekms
 
 import (
+	"crypto/elliptic"
 	"fmt"
 
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 )
 
-// AlgorithmToPurpose maps supported KMS algorithms to their defined purposes.
-var algorithmToPurpose = map[kmspb.CryptoKeyVersion_CryptoKeyVersionAlgorithm]kmspb.CryptoKey_CryptoKeyPurpose{
-	// ENCRYPT_DECRYPT
-	kmspb.CryptoKeyVersion_GOOGLE_SYMMETRIC_ENCRYPTION: kmspb.CryptoKey_ENCRYPT_DECRYPT,
-
-	// ASYMMETRIC_DECRYPT
-	kmspb.CryptoKeyVersion_RSA_DECRYPT_OAEP_2048_SHA256: kmspb.CryptoKey_ASYMMETRIC_DECRYPT,
-	kmspb.CryptoKeyVersion_RSA_DECRYPT_OAEP_3072_SHA256: kmspb.CryptoKey_ASYMMETRIC_DECRYPT,
-	kmspb.CryptoKeyVersion_RSA_DECRYPT_OAEP_4096_SHA256: kmspb.CryptoKey_ASYMMETRIC_DECRYPT,
-	kmspb.CryptoKeyVersion_RSA_DECRYPT_OAEP_4096_SHA512: kmspb.CryptoKey_ASYMMETRIC_DECRYPT,
-
-	// ASYMMETRIC_SIGN
-	kmspb.CryptoKeyVersion_EC_SIGN_P256_SHA256: kmspb.CryptoKey_ASYMMETRIC_SIGN,
-	kmspb.CryptoKeyVersion_EC_SIGN_P384_SHA384: kmspb.CryptoKey_ASYMMETRIC_SIGN,
-
-	kmspb.CryptoKeyVersion_RSA_SIGN_PKCS1_2048_SHA256: kmspb.CryptoKey_ASYMMETRIC_SIGN,
-	kmspb.CryptoKeyVersion_RSA_SIGN_PKCS1_3072_SHA256: kmspb.CryptoKey_ASYMMETRIC_SIGN,
-	kmspb.CryptoKeyVersion_RSA_SIGN_PKCS1_4096_SHA256: kmspb.CryptoKey_ASYMMETRIC_SIGN,
-	kmspb.CryptoKeyVersion_RSA_SIGN_PKCS1_4096_SHA512: kmspb.CryptoKey_ASYMMETRIC_SIGN,
-
-	kmspb.CryptoKeyVersion_RSA_SIGN_PSS_2048_SHA256: kmspb.CryptoKey_ASYMMETRIC_SIGN,
-	kmspb.CryptoKeyVersion_RSA_SIGN_PSS_3072_SHA256: kmspb.CryptoKey_ASYMMETRIC_SIGN,
-	kmspb.CryptoKeyVersion_RSA_SIGN_PSS_4096_SHA256: kmspb.CryptoKey_ASYMMETRIC_SIGN,
-	kmspb.CryptoKeyVersion_RSA_SIGN_PSS_4096_SHA512: kmspb.CryptoKey_ASYMMETRIC_SIGN,
+// algDef contains details about a KMS algorithm
+type algDef struct {
+	Purpose    kmspb.CryptoKey_CryptoKeyPurpose
+	KeyFactory keyFactory
 }
 
-var purposes map[kmspb.CryptoKey_CryptoKeyPurpose]struct{}
-
-func init() { // fill purposes from algorithmToPurpose values
-	purposes = make(map[kmspb.CryptoKey_CryptoKeyPurpose]struct{})
-	for _, p := range algorithmToPurpose {
-		purposes[p] = struct{}{}
+func (a algDef) Asymmetric() bool {
+	switch a.Purpose {
+	case kmspb.CryptoKey_ASYMMETRIC_DECRYPT, kmspb.CryptoKey_ASYMMETRIC_SIGN:
+		return true
+	default:
+		return false
 	}
+}
+
+// algorithms maps KMS algorithms to their definitions
+var algorithms = map[kmspb.CryptoKeyVersion_CryptoKeyVersionAlgorithm]algDef{
+	// ENCRYPT_DECRYPT
+	kmspb.CryptoKeyVersion_GOOGLE_SYMMETRIC_ENCRYPTION: {
+		Purpose:    kmspb.CryptoKey_ENCRYPT_DECRYPT,
+		KeyFactory: symmetricKeyFactory(256),
+	},
+
+	// ASYMMETRIC_DECRYPT
+	kmspb.CryptoKeyVersion_RSA_DECRYPT_OAEP_2048_SHA256: {
+		Purpose:    kmspb.CryptoKey_ASYMMETRIC_DECRYPT,
+		KeyFactory: rsaKeyFactory(2048),
+	},
+	kmspb.CryptoKeyVersion_RSA_DECRYPT_OAEP_3072_SHA256: {
+		Purpose:    kmspb.CryptoKey_ASYMMETRIC_DECRYPT,
+		KeyFactory: rsaKeyFactory(3072),
+	},
+	kmspb.CryptoKeyVersion_RSA_DECRYPT_OAEP_4096_SHA256: {
+		Purpose:    kmspb.CryptoKey_ASYMMETRIC_DECRYPT,
+		KeyFactory: rsaKeyFactory(4096),
+	},
+	kmspb.CryptoKeyVersion_RSA_DECRYPT_OAEP_4096_SHA512: {
+		Purpose:    kmspb.CryptoKey_ASYMMETRIC_DECRYPT,
+		KeyFactory: rsaKeyFactory(4096),
+	},
+
+	// ASYMMETRIC_SIGN
+	kmspb.CryptoKeyVersion_EC_SIGN_P256_SHA256: {
+		Purpose:    kmspb.CryptoKey_ASYMMETRIC_SIGN,
+		KeyFactory: &ecKeyFactory{elliptic.P256()},
+	},
+	kmspb.CryptoKeyVersion_EC_SIGN_P384_SHA384: {
+		Purpose:    kmspb.CryptoKey_ASYMMETRIC_SIGN,
+		KeyFactory: &ecKeyFactory{elliptic.P384()},
+	},
+
+	kmspb.CryptoKeyVersion_RSA_SIGN_PKCS1_2048_SHA256: {
+		Purpose:    kmspb.CryptoKey_ASYMMETRIC_SIGN,
+		KeyFactory: rsaKeyFactory(2048),
+	},
+	kmspb.CryptoKeyVersion_RSA_SIGN_PKCS1_3072_SHA256: {
+		Purpose:    kmspb.CryptoKey_ASYMMETRIC_SIGN,
+		KeyFactory: rsaKeyFactory(3072),
+	},
+	kmspb.CryptoKeyVersion_RSA_SIGN_PKCS1_4096_SHA256: {
+		Purpose:    kmspb.CryptoKey_ASYMMETRIC_SIGN,
+		KeyFactory: rsaKeyFactory(4096),
+	},
+	kmspb.CryptoKeyVersion_RSA_SIGN_PKCS1_4096_SHA512: {
+		Purpose:    kmspb.CryptoKey_ASYMMETRIC_SIGN,
+		KeyFactory: rsaKeyFactory(4096),
+	},
+
+	kmspb.CryptoKeyVersion_RSA_SIGN_PSS_2048_SHA256: {
+		Purpose:    kmspb.CryptoKey_ASYMMETRIC_SIGN,
+		KeyFactory: rsaKeyFactory(2048),
+	},
+	kmspb.CryptoKeyVersion_RSA_SIGN_PSS_3072_SHA256: {
+		Purpose:    kmspb.CryptoKey_ASYMMETRIC_SIGN,
+		KeyFactory: rsaKeyFactory(3072),
+	},
+	kmspb.CryptoKeyVersion_RSA_SIGN_PSS_4096_SHA256: {
+		Purpose:    kmspb.CryptoKey_ASYMMETRIC_SIGN,
+		KeyFactory: rsaKeyFactory(4096),
+	},
+	kmspb.CryptoKeyVersion_RSA_SIGN_PSS_4096_SHA512: {
+		Purpose:    kmspb.CryptoKey_ASYMMETRIC_SIGN,
+		KeyFactory: rsaKeyFactory(4096),
+	},
 }
 
 // nameForValue retrieves the mapped name corresponding to value, or a string representation
@@ -48,16 +100,6 @@ func nameForValue(names map[int32]string, value int32) string {
 		return name
 	}
 	return fmt.Sprintf("%d", value)
-}
-
-// validatePurpose returns nil on success, or Unimplemented if the supplied purpose is not
-// supported. Note that CRYPTO_KEY_PURPOSE_UNSPECIFIED is not a supported purpose.
-func validatePurpose(purpose kmspb.CryptoKey_CryptoKeyPurpose) error {
-	if _, ok := purposes[purpose]; !ok {
-		return errUnimplemented("unsupported purpose: %s",
-			nameForValue(kmspb.CryptoKey_CryptoKeyPurpose_name, int32(purpose)))
-	}
-	return nil
 }
 
 // validateProtectionLevel returns nil on success, or Unimplemented if the supplied protection
@@ -72,16 +114,26 @@ func validateProtectionLevel(pl kmspb.ProtectionLevel) error {
 	}
 }
 
+// algorithmDef returns an algDef corresponding to the supplied algorithm, or Unimplemented
+// if the algorithm is not supported.
+func algorithmDef(alg kmspb.CryptoKeyVersion_CryptoKeyVersionAlgorithm) (algDef, error) {
+	def, ok := algorithms[alg]
+	if !ok {
+		return algDef{}, errUnimplemented("unsupported algorithm: %s",
+			nameForValue(kmspb.CryptoKeyVersion_CryptoKeyVersionAlgorithm_name, int32(alg)))
+	}
+	return def, nil
+}
+
 // validateAlgorithm returns nil on success, Unimplemented if the supplied algorithm is not
 // supported, or InvalidArgument if the algorithm is inconsistent with the supplied purpose.
 // Note that CRYPTO_KEY_VERSION_ALGORITHM_UNSPECIFIED is not a supported algorithm.
 func validateAlgorithm(alg kmspb.CryptoKeyVersion_CryptoKeyVersionAlgorithm, purpose kmspb.CryptoKey_CryptoKeyPurpose) error {
-	gotPurpose, ok := algorithmToPurpose[alg]
-	if !ok {
-		return errUnimplemented("unsupported algorithm: %s",
-			nameForValue(kmspb.CryptoKeyVersion_CryptoKeyVersionAlgorithm_name, int32(alg)))
+	def, err := algorithmDef(alg)
+	if err != nil {
+		return err
 	}
-	if purpose != gotPurpose {
+	if purpose != def.Purpose {
 		return errInvalidArgument("algorithm %s is not valid for purpose %s",
 			nameForValue(kmspb.CryptoKeyVersion_CryptoKeyVersionAlgorithm_name, int32(alg)),
 			nameForValue(kmspb.CryptoKey_CryptoKeyPurpose_name, int32(purpose)))

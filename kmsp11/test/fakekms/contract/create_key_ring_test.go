@@ -45,7 +45,7 @@ func TestCreateKeyRingMalformedParent(t *testing.T) {
 		KeyRingId: "bar",
 	})
 	if status.Code(err) != codes.InvalidArgument {
-		t.Errorf("err=%v, want code=InvalidArgument", err)
+		t.Errorf("err=%v, want code=%s", err, codes.InvalidArgument)
 	}
 }
 
@@ -57,7 +57,7 @@ func TestCreateKeyRingMalformedID(t *testing.T) {
 		KeyRingId: "&bar",
 	})
 	if status.Code(err) != codes.InvalidArgument {
-		t.Errorf("err=%v, want code=InvalidArgument", err)
+		t.Errorf("err=%v, want code=%s", err, codes.InvalidArgument)
 	}
 }
 
@@ -74,6 +74,6 @@ func TestCreateKeyRingDuplicateName(t *testing.T) {
 	}
 
 	if _, err := client.CreateKeyRing(ctx, req); status.Code(err) != codes.AlreadyExists {
-		t.Errorf("err=%v, want code=AlreadyExists", err)
+		t.Errorf("err=%v, want code=%s", err, codes.AlreadyExists)
 	}
 }

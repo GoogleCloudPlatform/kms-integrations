@@ -12,14 +12,10 @@ import (
 // CreateCryptoKey fakes a Cloud KMS API function.
 func (f *fakeKMS) CreateCryptoKey(ctx context.Context, req *kmspb.CreateCryptoKeyRequest) (*kmspb.CryptoKey, error) {
 	// TODO(bdhess): revisit handling of output-only fields (http://g/api-discuss/vUowIGKPFT4)
-	if err := whitelist("parent", "crypto_key_id", "skip_initial_version_creation",
+	if err := allowlist("parent", "crypto_key_id", "skip_initial_version_creation",
 		"crypto_key.purpose", "crypto_key.version_template.algorithm",
 		"crypto_key.version_template.protection_level").check(req); err != nil {
 		return nil, err
-	}
-
-	if !req.SkipInitialVersionCreation {
-		return nil, errUnimplemented("creating versions is not yet supported")
 	}
 
 	krName, err := parseKeyRingName(req.Parent)
@@ -34,9 +30,6 @@ func (f *fakeKMS) CreateCryptoKey(ctx context.Context, req *kmspb.CreateCryptoKe
 	purpose := req.GetCryptoKey().GetPurpose()
 	if purpose == kmspb.CryptoKey_CRYPTO_KEY_PURPOSE_UNSPECIFIED {
 		return nil, errRequiredField("crypto_key.purpose")
-	}
-	if err := validatePurpose(purpose); err != nil {
-		return nil, err
 	}
 
 	alg := req.GetCryptoKey().GetVersionTemplate().GetAlgorithm()
@@ -72,13 +65,26 @@ func (f *fakeKMS) CreateCryptoKey(ctx context.Context, req *kmspb.CreateCryptoKe
 			Algorithm:       alg,
 		},
 	}
-	kr.keys[name] = &cryptoKey{pb: pb}
+
+	ck := &cryptoKey{
+		pb:       pb,
+		versions: make(map[cryptoKeyVersionName]*cryptoKeyVersion),
+	}
+
+	if !req.SkipInitialVersionCreation {
+		ckv := f.createVersion(ck)
+		if purpose == kmspb.CryptoKey_ENCRYPT_DECRYPT {
+			pb.Primary = ckv
+		}
+	}
+
+	kr.keys[name] = ck
 	return pb, nil
 }
 
 // GetCryptoKey fakes a Cloud KMS API function.
 func (f *fakeKMS) GetCryptoKey(ctx context.Context, req *kmspb.GetCryptoKeyRequest) (*kmspb.CryptoKey, error) {
-	if err := whitelist("name").check(req); err != nil {
+	if err := allowlist("name").check(req); err != nil {
 		return nil, err
 	}
 
@@ -97,7 +103,7 @@ func (f *fakeKMS) GetCryptoKey(ctx context.Context, req *kmspb.GetCryptoKeyReque
 
 // ListCryptoKeys fakes a Cloud KMS API function.
 func (f *fakeKMS) ListCryptoKeys(ctx context.Context, req *kmspb.ListCryptoKeysRequest) (*kmspb.ListCryptoKeysResponse, error) {
-	if err := whitelist("parent").check(req); err != nil {
+	if err := allowlist("parent").check(req); err != nil {
 		return nil, err
 	}
 
@@ -132,7 +138,7 @@ func (f *fakeKMS) ListCryptoKeys(ctx context.Context, req *kmspb.ListCryptoKeysR
 
 // UpdateCryptoKey fakes a Cloud KMS API function.
 func (f *fakeKMS) UpdateCryptoKey(ctx context.Context, req *kmspb.UpdateCryptoKeyRequest) (*kmspb.CryptoKey, error) {
-	if err := whitelist("crypto_key", "update_mask").check(req); err != nil {
+	if err := allowlist("crypto_key", "update_mask").check(req); err != nil {
 		return nil, err
 	}
 

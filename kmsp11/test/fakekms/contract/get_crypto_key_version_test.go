@@ -13,24 +13,26 @@ import (
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 )
 
-func TestGetCryptoKeyEqualsCreated(t *testing.T) {
+func TestGetCryptoKeyVersionEqualsCreated(t *testing.T) {
 	ctx := context.Background()
 	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
-
-	want := client.CreateTestCK(ctx, t, &kmspb.CreateCryptoKeyRequest{
-		Parent:      kr.Name,
-		CryptoKeyId: "foo",
+	ck := client.CreateTestCK(ctx, t, &kmspb.CreateCryptoKeyRequest{
+		Parent: kr.Name,
 		CryptoKey: &kmspb.CryptoKey{
 			Purpose: kmspb.CryptoKey_ENCRYPT_DECRYPT,
 		},
 		SkipInitialVersionCreation: true,
 	})
 
-	got, err := client.GetCryptoKey(ctx, &kmspb.GetCryptoKeyRequest{
+	want := client.CreateTestCKVAndWait(ctx, t, &kmspb.CreateCryptoKeyVersionRequest{
+		Parent: ck.Name,
+	})
+
+	got, err := client.GetCryptoKeyVersion(ctx, &kmspb.GetCryptoKeyVersionRequest{
 		Name: want.Name,
 	})
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
 	if diff := cmp.Diff(want, got, testutil.ProtoDiffOpts()...); diff != "" {
@@ -38,10 +40,10 @@ func TestGetCryptoKeyEqualsCreated(t *testing.T) {
 	}
 }
 
-func TestGetCryptoKeyMalformedName(t *testing.T) {
+func TestGetCryptoKeyVersionMalformedName(t *testing.T) {
 	ctx := context.Background()
 
-	_, err := client.GetCryptoKey(ctx, &kmspb.GetCryptoKeyRequest{
+	_, err := client.GetCryptoKeyVersion(ctx, &kmspb.GetCryptoKeyVersionRequest{
 		Name: "malformed name",
 	})
 	if status.Code(err) != codes.InvalidArgument {
@@ -49,12 +51,12 @@ func TestGetCryptoKeyMalformedName(t *testing.T) {
 	}
 }
 
-func TestGetCryptoKeyNotFound(t *testing.T) {
+func TestGetCryptoKeyVersionNotFound(t *testing.T) {
 	ctx := context.Background()
 	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
 
-	_, err := client.GetCryptoKey(ctx, &kmspb.GetCryptoKeyRequest{
-		Name: kr.Name + "/cryptoKeys/foo",
+	_, err := client.GetCryptoKeyVersion(ctx, &kmspb.GetCryptoKeyVersionRequest{
+		Name: kr.Name + "/cryptoKeys/foo/cryptoKeyVersions/1",
 	})
 	if status.Code(err) != codes.NotFound {
 		t.Errorf("err=%v, want code=%s", err, codes.NotFound)
