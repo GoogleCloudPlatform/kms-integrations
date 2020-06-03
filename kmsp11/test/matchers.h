@@ -50,6 +50,15 @@ MATCHER_P(EqualsProto, proto,
   return google::protobuf::util::MessageDifferencer::Equals(arg, proto);
 }
 
+// Tests that the supplied StatusOr is OK and has a value that matches the
+// provided matcher.
+MATCHER_P(IsOkAndHolds, matcher, "") {
+  if (!arg.ok()) {
+    return false;
+  }
+  return testing::ExplainMatchResult(matcher, arg.value(), result_listener);
+}
+
 }  // namespace kmsp11
 
 #endif  // KMSP11_TEST_MATCHERS_H_

@@ -19,4 +19,27 @@ absl::Status CryptokiStrCopy(absl::string_view src, absl::Span<uint8_t> dest,
   return absl::OkStatus();
 }
 
+std::string MarshalBigNum(const BIGNUM* value) {
+  std::string s;
+  s.resize(BN_num_bytes(value));
+  BN_bn2bin(value, reinterpret_cast<uint8_t*>(const_cast<char*>(s.data())));
+  return s;
+}
+
+std::string MarshalBool(bool value) { return std::string(1, value); }
+
+std::string MarshalDate(absl::Time value) {
+  return absl::FormatTime("%E4Y%m%d", value, absl::UTCTimeZone());
+}
+
+std::string MarshalULong(unsigned long int value) {
+  return std::string(reinterpret_cast<const char*>(&value),
+                     sizeof(unsigned long int));
+}
+
+std::string MarshalULongList(absl::Span<const unsigned long int> value) {
+  return std::string(reinterpret_cast<const char*>(value.data()),
+                     value.size() * sizeof(unsigned long int));
+}
+
 }  // namespace kmsp11

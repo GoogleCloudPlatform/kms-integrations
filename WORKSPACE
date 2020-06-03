@@ -13,6 +13,15 @@ http_archive(
 )
 
 http_archive(
+    name = "boringssl",  # 2020-05-20
+    # Use github mirror instead of https://boringssl.googlesource.com/boringssl
+    # to obtain a boringssl archive with consistent sha256
+    sha256 = "3909329105e28cfeedcd8028865c92f1081ae2524a0ad6c09eba5d91d9ae3869",
+    strip_prefix = "boringssl-3ab047a8e377083a9b38dc908fe1612d5743a021",
+    url = "https://github.com/google/boringssl/archive/3ab047a8e377083a9b38dc908fe1612d5743a021.tar.gz",
+)
+
+http_archive(
     name = "com_github_gflags_gflags",  # 2020-03-18
     sha256 = "68e26a487038a842da3ef2ddd1f886dad656e9efaf1a3d49e87d1d3a9fa3a8eb",
     strip_prefix = "gflags-addd749114fab4f24b7ea1e0f2f837584389e52c",

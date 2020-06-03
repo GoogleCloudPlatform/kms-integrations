@@ -18,6 +18,30 @@ cc_test(
 )
 
 cc_library(
+    name = "crypto_utils",
+    srcs = ["crypto_utils.cc"],
+    hdrs = ["crypto_utils.h"],
+    deps = [
+        ":errors",
+        ":status_or",
+        "@boringssl//:crypto",
+    ],
+)
+
+cc_test(
+    name = "crypto_utils_test",
+    size = "small",
+    srcs = ["crypto_utils_test.cc"],
+    data = [":testdata"],
+    deps = [
+        ":crypto_utils",
+        "//kmsp11/test",
+        "@bazel_tools//tools/cpp/runfiles",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
     name = "errors",
     srcs = ["errors.cc"],
     hdrs = ["errors.h"],
@@ -169,8 +193,11 @@ cc_library(
     hdrs = ["string_utils.h"],
     deps = [
         ":errors",
+        "@boringssl//:crypto",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/time",
+        "@com_google_absl//absl/types:span",
     ],
 )
 
@@ -181,7 +208,11 @@ cc_test(
     deps = [
         ":string_utils",
         "//kmsp11/test",
-        "@com_google_absl//absl/types:span",
         "@com_google_googletest//:gtest_main",
     ],
+)
+
+filegroup(
+    name = "testdata",
+    srcs = glob(["testdata/*"]),
 )

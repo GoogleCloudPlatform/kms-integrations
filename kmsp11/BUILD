@@ -27,6 +27,32 @@ cc_test(
     ],
 )
 
+cc_library(
+    name = "attribute_map",
+    srcs = ["attribute_map.cc"],
+    hdrs = ["attribute_map.h"],
+    deps = [
+        ":cryptoki_headers",
+        "//kmsp11/util:errors",
+        "//kmsp11/util:status_or",
+        "//kmsp11/util:string_utils",
+        "@boringssl//:crypto",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/types:variant",
+    ],
+)
+
+cc_test(
+    name = "attribute_map_test",
+    size = "small",
+    srcs = ["attribute_map_test.cc"],
+    deps = [
+        ":attribute_map",
+        "//kmsp11/test",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
 genrule(
     name = "cryptoki_raw_header_files",
     srcs = [
@@ -52,6 +78,33 @@ cc_library(
     name = "cryptoki_headers",
     hdrs = ["cryptoki.h"],
     deps = [":cryptoki_raw_headers"],
+)
+
+cc_library(
+    name = "object",
+    srcs = ["object.cc"],
+    hdrs = ["object.h"],
+    deps = [
+        ":algorithm_details",
+        ":attribute_map",
+        ":cryptoki_headers",
+        "//kmsp11/util:crypto_utils",
+        "//kmsp11/util:status_macros",
+        "@com_google_absl//absl/strings",
+        "@com_google_googleapis//google/cloud/kms/v1:kms_cc_proto",
+    ],
+)
+
+cc_test(
+    name = "object_test",
+    size = "small",
+    srcs = ["object_test.cc"],
+    deps = [
+        ":object",
+        "//kmsp11/test",
+        "//kmsp11/util:crypto_utils",
+        "@com_google_googletest//:gtest_main",
+    ],
 )
 
 cc_library(
