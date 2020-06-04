@@ -3,6 +3,7 @@
 #include "kmsp11/config/config.h"
 #include "kmsp11/cryptoki.h"
 #include "kmsp11/main/function_list.h"
+#include "kmsp11/mechanism.h"
 #include "kmsp11/provider.h"
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/status_macros.h"
@@ -201,6 +202,51 @@ absl::Status Logout(CK_SESSION_HANDLE hSession) {
   ASSIGN_OR_RETURN(std::shared_ptr<Session> session,
                    provider->GetSession(hSession));
   return session->token()->Logout();
+}
+
+// Get a list of mechanisms supported in a token.
+// http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc235002331
+absl::Status GetMechanismList(CK_SLOT_ID slotID,
+                              CK_MECHANISM_TYPE_PTR pMechanismList,
+                              CK_ULONG_PTR pulCount) {
+  RETURN_IF_ERROR(GetToken(slotID).status());  // ensure slotID is valid
+  if (!pulCount) {
+    return NullArgumentError("pulCount", SOURCE_LOCATION);
+  }
+
+  absl::Span<const CK_MECHANISM_TYPE> types = Mechanisms();
+
+  if (!pMechanismList) {
+    *pulCount = types.size();
+    return absl::OkStatus();
+  }
+
+  if (*pulCount < types.size()) {
+    absl::Status result = OutOfRangeError(
+        absl::StrFormat("*pulCount=%d but there are %d mechanisms", *pulCount,
+                        types.size()),
+        SOURCE_LOCATION);
+    *pulCount = types.size();
+    return result;
+  }
+
+  for (int i = 0; i < types.size(); i++) {
+    pMechanismList[i] = types[i];
+  }
+  *pulCount = types.size();
+  return absl::OkStatus();
+}
+
+// Get information about a mechanism supported in a token.
+// http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc235002332
+absl::Status GetMechanismInfo(CK_SLOT_ID slotID, CK_MECHANISM_TYPE type,
+                              CK_MECHANISM_INFO_PTR pInfo) {
+  RETURN_IF_ERROR(GetToken(slotID).status());  // ensure slotID is valid
+  if (!pInfo) {
+    return NullArgumentError("pInfo", SOURCE_LOCATION);
+  }
+  ASSIGN_OR_RETURN(*pInfo, MechanismInfo(type));
+  return absl::OkStatus();
 }
 
 }  // namespace kmsp11

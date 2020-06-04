@@ -17,6 +17,8 @@ namespace {
 namespace kms_v1 = ::google::cloud::kms::v1;
 
 using ::testing::ElementsAre;
+using ::testing::Ge;
+using ::testing::IsSupersetOf;
 
 class BridgeTest : public testing::Test {
  protected:
@@ -445,6 +447,82 @@ TEST_F(BridgeTest, LogoutFailsSecondCall) {
   EXPECT_OK(Logout(handle));
 
   EXPECT_THAT(Logout(handle), StatusRvIs(CKR_USER_NOT_LOGGED_IN));
+}
+
+TEST_F(BridgeTest, GetMechanismListSucceeds) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_ULONG count;
+  EXPECT_OK(GetMechanismList(0, nullptr, &count));
+
+  std::vector<CK_MECHANISM_TYPE> types(count);
+  EXPECT_OK(GetMechanismList(0, types.data(), &count));
+  EXPECT_EQ(types.size(), count);
+  EXPECT_THAT(types, IsSupersetOf({CKM_RSA_PKCS, CKM_RSA_PKCS_PSS,
+                                   CKM_RSA_PKCS_OAEP, CKM_ECDSA}));
+}
+
+TEST_F(BridgeTest, GetMechanismListFailsInvalidSize) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  std::vector<CK_MECHANISM_TYPE> types(1);
+  CK_ULONG count = 1;
+  EXPECT_THAT(GetMechanismList(0, types.data(), &count),
+              StatusRvIs(CKR_BUFFER_TOO_SMALL));
+  EXPECT_THAT(count, Ge(4));
+}
+
+TEST_F(BridgeTest, GetMechanismListFailsNotInitialized) {
+  CK_ULONG count;
+  EXPECT_THAT(GetMechanismList(0, nullptr, &count),
+              StatusRvIs(CKR_CRYPTOKI_NOT_INITIALIZED));
+}
+
+TEST_F(BridgeTest, GetMechanismListFailsInvalidSlotId) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_ULONG count;
+  EXPECT_THAT(GetMechanismList(5, nullptr, &count),
+              StatusRvIs(CKR_SLOT_ID_INVALID));
+}
+
+TEST_F(BridgeTest, GetMechanismInfo) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_MECHANISM_INFO info;
+  EXPECT_OK(GetMechanismInfo(0, CKM_RSA_PKCS_PSS, &info));
+
+  EXPECT_EQ(info.ulMinKeySize, 2048);
+  EXPECT_EQ(info.ulMaxKeySize, 4096);
+  EXPECT_EQ(info.flags, CKF_SIGN);
+}
+
+TEST_F(BridgeTest, GetMechanismInfoFailsInvalidMechanism) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_MECHANISM_INFO info;
+  EXPECT_THAT(GetMechanismInfo(0, CKM_RSA_X9_31, &info),
+              StatusRvIs(CKR_MECHANISM_INVALID));
+}
+
+TEST_F(BridgeTest, GetMechanismInfoFailsNotInitialized) {
+  CK_MECHANISM_INFO info;
+  EXPECT_THAT(GetMechanismInfo(0, CKM_RSA_PKCS, &info),
+              StatusRvIs(CKR_CRYPTOKI_NOT_INITIALIZED));
+}
+
+TEST_F(BridgeTest, GetMechanismInfoFailsInvalidSlotId) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_MECHANISM_INFO info;
+  EXPECT_THAT(GetMechanismInfo(5, CKM_RSA_PKCS_PSS, &info),
+              StatusRvIs(CKR_SLOT_ID_INVALID));
 }
 
 }  // namespace

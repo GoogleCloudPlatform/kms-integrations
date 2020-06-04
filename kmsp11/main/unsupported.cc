@@ -7,17 +7,6 @@
 
 namespace kmsp11 {
 
-absl::Status GetMechanismList(CK_SLOT_ID slotID,
-                              CK_MECHANISM_TYPE_PTR pMechanismList,
-                              CK_ULONG_PTR pulCount) {
-  return UnsupportedError(SOURCE_LOCATION);
-}
-
-absl::Status GetMechanismInfo(CK_SLOT_ID slotID, CK_MECHANISM_TYPE type,
-                              CK_MECHANISM_INFO_PTR pInfo) {
-  return UnsupportedError(SOURCE_LOCATION);
-}
-
 absl::Status GetAttributeValue(CK_SESSION_HANDLE hSession,
                                CK_OBJECT_HANDLE hObject,
                                CK_ATTRIBUTE_PTR pTemplate, CK_ULONG ulCount) {

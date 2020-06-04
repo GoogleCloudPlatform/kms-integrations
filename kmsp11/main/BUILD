@@ -22,6 +22,7 @@ cc_library(
     linkstatic = 1,
     deps = [
         "//kmsp11:cryptoki_headers",
+        "//kmsp11:mechanism",
         "//kmsp11:provider",
         "//kmsp11/config",
         "//kmsp11/util:errors",

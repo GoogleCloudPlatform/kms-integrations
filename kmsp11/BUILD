@@ -81,6 +81,29 @@ cc_library(
 )
 
 cc_library(
+    name = "mechanism",
+    srcs = ["mechanism.cc"],
+    hdrs = ["mechanism.h"],
+    deps = [
+        ":cryptoki_headers",
+        "//kmsp11/util:errors",
+        "//kmsp11/util:status_or",
+        "@com_google_absl//absl/container:flat_hash_map",
+    ],
+)
+
+cc_test(
+    name = "mechanism_test",
+    size = "small",
+    srcs = ["mechanism_test.cc"],
+    deps = [
+        ":mechanism",
+        "//kmsp11/test",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
     name = "object",
     srcs = ["object.cc"],
     hdrs = ["object.h"],
