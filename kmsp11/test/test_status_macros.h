@@ -12,6 +12,11 @@
 // Macros for testing the results of functions that return a status.
 #define EXPECT_OK(expr) EXPECT_THAT(::kmsp11::ToStatus(expr), ::kmsp11::IsOk());
 #define ASSERT_OK(expr) ASSERT_THAT(::kmsp11::ToStatus(expr), ::kmsp11::IsOk());
+#define CHECK_OK(expr)                                  \
+  do {                                                  \
+    ::absl::Status __status = ::kmsp11::ToStatus(expr); \
+    CHECK(__status.ok()) << __status << " is not OK";   \
+  } while (0);
 
 // Implementation for ASSERT_OK_AND_ASSIGN, declared below.
 #define ASSERT_OK_AND_ASSIGN_IMPL(var, lhs, rexpr) \

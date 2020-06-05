@@ -87,6 +87,34 @@ cc_test(
 )
 
 cc_library(
+    name = "kms_client",
+    srcs = ["kms_client.cc"],
+    hdrs = ["kms_client.h"],
+    deps = [
+        ":status_macros",
+        ":status_or",
+        ":status_utils",
+        "//kmsp11:version",
+        "@com_github_googleapis_google_cloud_cpp//google/cloud:google_cloud_cpp_grpc_utils",
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_googleapis//google/cloud/kms/v1:kms_cc_grpc",
+        "@com_google_googleapis//google/cloud/kms/v1:kms_cc_proto",
+    ],
+)
+
+cc_test(
+    name = "kms_client_test",
+    size = "small",
+    srcs = ["kms_client_test.cc"],
+    deps = [
+        ":kms_client",
+        "//kmsp11/test",
+        "//kmsp11/test/fakekms/cpp:fakekms",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
     name = "platform",
     srcs = select({
         "//:windows": ["platform_win.cc"],
@@ -129,6 +157,7 @@ cc_library(
     hdrs = ["status_macros.h"],
     deps = [
         ":status_or",
+        ":status_utils",
         "@com_google_absl//absl/status",
     ],
 )
@@ -174,6 +203,8 @@ cc_library(
         ":status_or",
         "//kmsp11:cryptoki_headers",
         "@com_github_google_glog//:glog",
+        "@com_github_googleapis_google_cloud_cpp//google/cloud:google_cloud_cpp_grpc_utils",
+        "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/status",
     ],
 )

@@ -9,6 +9,7 @@ cc_library(
     deps = [
         ":matchers",
         ":proto_parser",
+        ":resource_helpers",
         ":runfiles",
         ":test_status_macros",
     ],
@@ -58,6 +59,20 @@ cc_test(
         ":proto_parser",
         ":test_message_cc_proto",
         "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "resource_helpers",
+    testonly = 1,
+    srcs = ["resource_helpers.cc"],
+    hdrs = ["resource_helpers.h"],
+    deps = [
+        ":test_status_macros",
+        "//kmsp11/util:crypto_utils",
+        "@com_google_absl//absl/strings",
+        "@com_google_googleapis//google/cloud/kms/v1:kms_cc_grpc",
+        "@com_google_googleapis//google/cloud/kms/v1:kms_cc_proto",
     ],
 )
 

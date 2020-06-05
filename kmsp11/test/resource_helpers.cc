@@ -1,0 +1,54 @@
+#include "kmsp11/test/resource_helpers.h"
+
+#include "absl/strings/escaping.h"
+#include "absl/strings/str_format.h"
+#include "absl/time/clock.h"
+#include "kmsp11/util/crypto_utils.h"
+
+namespace kmsp11 {
+namespace {
+namespace kms_v1 = ::google::cloud::kms::v1;
+}
+
+const absl::string_view kTestLocation =
+    "projects/kmsp11-test/locations/us-central1";
+
+kms_v1::KeyRing CreateKeyRingOrDie(kms_v1::KeyManagementService::Stub* kms_stub,
+                                   absl::string_view location_name,
+                                   absl::string_view key_ring_id,
+                                   const kms_v1::KeyRing& key_ring) {
+  kms_v1::CreateKeyRingRequest req;
+  req.set_parent(std::string(location_name));
+  req.set_key_ring_id(std::string(key_ring_id));
+  *req.mutable_key_ring() = key_ring;
+
+  kms_v1::KeyRing kr;
+  grpc::ClientContext ctx;
+
+  CHECK_OK(kms_stub->CreateKeyRing(&ctx, req, &kr));
+  return kr;
+}
+
+kms_v1::CryptoKey CreateCryptoKeyOrDie(
+    kms_v1::KeyManagementService::Stub* kms_stub,
+    absl::string_view key_ring_name, absl::string_view crypto_key_id,
+    const kms_v1::CryptoKey& crypto_key, bool skip_initial_version_creation) {
+  kms_v1::CreateCryptoKeyRequest req;
+  req.set_parent(std::string(key_ring_name));
+  req.set_crypto_key_id(std::string(crypto_key_id));
+  *req.mutable_crypto_key() = crypto_key;
+  req.set_skip_initial_version_creation(skip_initial_version_creation);
+
+  kms_v1::CryptoKey ck;
+  grpc::ClientContext ctx;
+
+  CHECK_OK(kms_stub->CreateCryptoKey(&ctx, req, &ck));
+  return ck;
+}
+
+std::string RandomId(absl::string_view prefix) {
+  return absl::StrFormat("%s-%s", prefix,
+                         absl::BytesToHexString(RandBytes(12)));
+}
+
+}  // namespace kmsp11

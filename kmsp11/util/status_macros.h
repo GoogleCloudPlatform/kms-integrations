@@ -1,6 +1,8 @@
 #ifndef KMSP11_UTIL_STATUS_MACROS_H_
 #define KMSP11_UTIL_STATUS_MACROS_H_
 
+#include "kmsp11/util/status_utils.h"
+
 // Run a command that returns an absl::Status. If the called code returns a
 // non-OK status, return that value up out of this method too.
 //
@@ -9,7 +11,7 @@
 #define RETURN_IF_ERROR(expr)                                                \
   do {                                                                       \
     /* Using _status below to avoid capture problems if expr is "status". */ \
-    const ::absl::Status _status = (expr);                                   \
+    const ::absl::Status _status = ::kmsp11::ToStatus(expr);                                   \
     if (!_status.ok()) return _status;                                       \
   } while (0)
 
