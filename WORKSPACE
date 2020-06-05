@@ -36,6 +36,15 @@ http_archive(
 )
 
 http_archive(
+    name = "com_github_grpc_grpc",  # v1.29.1 / 2020-05-20
+    sha256 = "bda7b52bab00592c115d5c2757ca729b665ed39cdf048541bf8aab212464c5a0",
+    strip_prefix = "grpc-7d89dbb311f049b43bda7bbf6f7d7bf1b4c24419",
+    urls = [
+        "https://github.com/grpc/grpc/archive/7d89dbb311f049b43bda7bbf6f7d7bf1b4c24419.tar.gz",
+    ],
+)
+
+http_archive(
     name = "com_github_jbeder_yaml_cpp",  # 2020-04-29
     sha256 = "736326d88059b5ebe77cb1d3825ade55c8708898817e067a05931444a7843faa",
     strip_prefix = "yaml-cpp-9fb51534877d16597cfd94c18890d87af0879d65",
@@ -120,6 +129,19 @@ switched_rules_by_language(
 load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
 
 grpc_deps()
+
+# Call the workspace dependency functions defined, but not invoked, in grpc_deps.bzl.
+load("@upb//bazel:workspace_deps.bzl", "upb_deps")
+
+upb_deps()
+
+load("@build_bazel_rules_apple//apple:repositories.bzl", "apple_rules_dependencies")
+
+apple_rules_dependencies()
+
+load("@build_bazel_apple_support//lib:repositories.bzl", "apple_support_dependencies")
+
+apple_support_dependencies()
 
 ## Golang
 load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")

@@ -20,6 +20,9 @@ build:macos --copt=-DGRPC_BAZEL_BUILD
 # Windows-specific options
 # Prevent glog symbols from being exported with `__declspec(dllexport)`
 build:windows --cxxopt=/DGOOGLE_GLOG_DLL_DECL=
+# Prevent glog from conflicting with windows.h
+# https://code.google.com/archive/p/google-glog/issues/33
+build:windows --cxxopt=/DGLOG_NO_ABBREVIATED_SEVERITIES
 
 # Import from .bazelrc.local if it exists. Keep this at the end of the file so
 # that local options can override options that are declared in this file.
