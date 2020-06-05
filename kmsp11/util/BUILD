@@ -36,6 +36,7 @@ cc_test(
     deps = [
         ":crypto_utils",
         "//kmsp11/test",
+        "@com_google_absl//absl/random",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -66,6 +67,7 @@ cc_library(
     name = "handle_map",
     hdrs = ["handle_map.h"],
     deps = [
+        ":crypto_utils",
         ":errors",
         ":status_or",
         "//kmsp11:cryptoki_headers",

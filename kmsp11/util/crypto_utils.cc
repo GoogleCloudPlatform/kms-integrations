@@ -7,6 +7,7 @@
 #include "openssl/evp.h"
 #include "openssl/mem.h"
 #include "openssl/pem.h"
+#include "openssl/rand.h"
 
 namespace kmsp11 {
 
@@ -92,12 +93,25 @@ StatusOr<bssl::UniquePtr<EVP_PKEY>> ParseX509PublicKeyPem(
   return std::move(result);
 }
 
+std::string RandBytes(size_t len) {
+  std::string result;
+  result.resize(len);
+  RAND_bytes(reinterpret_cast<uint8_t*>(const_cast<char*>(result.data())), len);
+  return result;
+}
+
 std::string SslErrorToString() {
   bssl::UniquePtr<BIO> bio(BIO_new(BIO_s_mem()));
   ERR_print_errors(bio.get());
   char* buf;
   size_t len = BIO_get_mem_data(bio.get(), &buf);
   return std::string(buf, len);
+}
+
+uint64_t BoringBitGenerator::operator()() {
+  uint64_t result;
+  RAND_bytes(reinterpret_cast<uint8_t*>(&result), sizeof(result));
+  return result;
 }
 
 }  // namespace kmsp11

@@ -2,6 +2,7 @@
 
 #include <fstream>
 
+#include "absl/random/random.h"
 #include "absl/strings/escaping.h"
 #include "gmock/gmock.h"
 #include "kmsp11/test/runfiles.h"
@@ -102,6 +103,12 @@ TEST(ParseAndMarshalPublicKeyTest, RsaKey) {
   EXPECT_EQ(got_der, want_der);
 }
 
+TEST(RandBytesTest, SmokeTest) {
+  std::string rand = RandBytes(8);
+  EXPECT_EQ(rand.size(), 8);
+  EXPECT_NE(rand, std::string("\x00", 8));
+}
+
 TEST(SslErrorToStringTest, ErrorEmitted) {
   bssl::UniquePtr<EC_KEY> ec_key(EC_KEY_new_by_curve_name(0));
   EXPECT_THAT(ec_key, IsNull());
@@ -113,6 +120,13 @@ TEST(SslErrorToStringTest, EmptyStringOnNoError) {
       EC_KEY_new_by_curve_name(NID_X9_62_prime256v1));
   EXPECT_THAT(ec_key, Not(IsNull()));
   EXPECT_THAT(SslErrorToString(), IsEmpty());
+}
+
+TEST(BoringBitGeneratorTest, SmokeTest) {
+  BoringBitGenerator bbg;
+  uint16_t generated = absl::Uniform<uint16_t>(bbg, 12, 24);
+  EXPECT_GE(generated, 12);
+  EXPECT_LT(generated, 24);
 }
 
 }  // namespace

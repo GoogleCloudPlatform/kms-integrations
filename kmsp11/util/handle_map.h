@@ -6,6 +6,7 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/random/random.h"
 #include "kmsp11/cryptoki.h"
+#include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/status_or.h"
 
@@ -82,7 +83,7 @@ class HandleMap {
  private:
   CK_RV not_found_rv_;
   absl::Mutex mutex_;
-  absl::BitGen bit_gen_ ABSL_GUARDED_BY(mutex_);
+  BoringBitGenerator bit_gen_ ABSL_GUARDED_BY(mutex_);
   absl::flat_hash_map<CK_ULONG, std::shared_ptr<T>> items_
       ABSL_GUARDED_BY(mutex_);
 

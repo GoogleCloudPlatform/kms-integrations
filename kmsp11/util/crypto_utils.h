@@ -31,8 +31,28 @@ StatusOr<std::string> MarshalX509PublicKeyDer(const EVP_PKEY* key);
 StatusOr<bssl::UniquePtr<EVP_PKEY>> ParseX509PublicKeyPem(
     absl::string_view public_key_pem);
 
+// Retrieves len bytes of randomness from Boring's CSPRNG.
+std::string RandBytes(size_t len);
+
 // Retrieves the contents of BoringSSL's error stack, and dumps it to a string.
 std::string SslErrorToString();
+
+// A UniformRandomBitGenerator backed by Boring's CSPRNG.
+// https://en.cppreference.com/w/cpp/named_req/UniformRandomBitGenerator
+class BoringBitGenerator {
+ public:
+  using result_type = uint64_t;
+
+  inline static constexpr uint64_t min() {
+    return std::numeric_limits<uint64_t>::min();
+  }
+
+  inline static constexpr uint64_t max() {
+    return std::numeric_limits<uint64_t>::max();
+  }
+
+  uint64_t operator()();
+};
 
 }  // namespace kmsp11
 
