@@ -36,7 +36,6 @@ cc_test(
     deps = [
         ":crypto_utils",
         "//kmsp11/test",
-        "@bazel_tools//tools/cpp/runfiles",
         "@com_google_googletest//:gtest_main",
     ],
 )

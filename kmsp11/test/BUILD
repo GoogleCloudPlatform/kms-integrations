@@ -9,6 +9,7 @@ cc_library(
     deps = [
         ":matchers",
         ":proto_parser",
+        ":runfiles",
         ":test_status_macros",
     ],
 )
@@ -57,6 +58,19 @@ cc_test(
         ":proto_parser",
         ":test_message_cc_proto",
         "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "runfiles",
+    testonly = 1,
+    srcs = ["runfiles.cc"],
+    hdrs = ["runfiles.h"],
+    deps = [
+        "@bazel_tools//tools/cpp/runfiles",
+        "@com_google_absl//absl/base",
+        "@com_google_absl//absl/strings",
+        "@com_google_googletest//:gtest",
     ],
 )
 

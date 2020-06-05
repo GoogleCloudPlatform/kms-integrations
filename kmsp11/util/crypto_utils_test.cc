@@ -4,31 +4,23 @@
 
 #include "absl/strings/escaping.h"
 #include "gmock/gmock.h"
+#include "kmsp11/test/runfiles.h"
 #include "kmsp11/test/test_status_macros.h"
 #include "openssl/bn.h"
 #include "openssl/bytestring.h"
 #include "openssl/ec_key.h"
 #include "openssl/obj.h"
-#include "tools/cpp/runfiles/runfiles.h"
 
 namespace kmsp11 {
 namespace {
 
-using ::bazel::tools::cpp::runfiles::Runfiles;
 using ::testing::HasSubstr;
 using ::testing::IsEmpty;
 using ::testing::IsNull;
 using ::testing::Not;
 
 StatusOr<std::string> LoadRunfile(absl::string_view filename) {
-  std::string error;
-  std::unique_ptr<Runfiles> runfiles(Runfiles::CreateForTest(&error));
-  if (!runfiles) {
-    return absl::InternalError(
-        absl::StrCat("could not load runfiles: ", error));
-  }
-
-  std::string location = runfiles->Rlocation(
+  std::string location = RunfileLocation(
       absl::StrCat("com_google_kmstools/kmsp11/util/testdata/", filename));
   std::ifstream runfile(location, std::ifstream::in | std::ifstream::binary);
   return std::string((std::istreambuf_iterator<char>(runfile)),
