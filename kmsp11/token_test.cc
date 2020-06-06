@@ -14,7 +14,10 @@ namespace {
 using ::testing::AllOf;
 using ::testing::Eq;
 using ::testing::Field;
+using ::testing::IsEmpty;
 using ::testing::Le;
+using ::testing::Pointee;
+using ::testing::Property;
 
 class TokenTest : public testing::Test {
  protected:
@@ -22,16 +25,17 @@ class TokenTest : public testing::Test {
     ASSERT_OK_AND_ASSIGN(fake_kms_, FakeKms::New());
 
     auto fake_client = fake_kms_->NewClient();
-    kms_v1::KeyRing kr;
-    kr = CreateKeyRingOrDie(fake_client.get(), kTestLocation, RandomId(), kr);
+    key_ring_ = CreateKeyRingOrDie(fake_client.get(), kTestLocation, RandomId(),
+                                   key_ring_);
 
-    config_.set_key_ring(kr.name());
+    config_.set_key_ring(key_ring_.name());
     client_ = absl::make_unique<KmsClient>(fake_kms_->listen_addr(),
                                            grpc::InsecureChannelCredentials(),
                                            absl::Seconds(1));
   }
 
   std::unique_ptr<FakeKms> fake_kms_;
+  kms_v1::KeyRing key_ring_;
   TokenConfig config_;
   std::unique_ptr<KmsClient> client_;
 };
@@ -276,6 +280,147 @@ TEST_F(TokenTest, LogoutWithoutLoginFails) {
                        Token::New(0, config_, client_.get()));
 
   EXPECT_THAT(token->Logout(), StatusRvIs(CKR_USER_NOT_LOGGED_IN));
+}
+
+TEST_F(TokenTest, FindObjectsPublicBeforePrivate) {
+  auto kms_client = fake_kms_->NewClient();
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey_CryptoKeyPurpose_ASYMMETRIC_SIGN);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion_CryptoKeyVersionAlgorithm_EC_SIGN_P384_SHA384);
+  ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), "ck", ck, true);
+
+  kms_v1::CryptoKeyVersion ckv;
+  ckv = CreateCryptoKeyVersionOrDie(kms_client.get(), ck.name(), ckv);
+  ckv = WaitForEnablement(kms_client.get(), ckv);
+
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+
+  std::vector<CK_ULONG> handles =
+      token->FindObjects([](const Object& o) -> bool { return true; });
+  EXPECT_EQ(handles.size(), 2);
+
+  EXPECT_THAT(
+      token->GetObject(handles[0]),
+      IsOkAndHolds(Pointee(AllOf(
+          Property("kms_key_name", &Object::kms_key_name, ckv.name()),
+          Property("object_class", &Object::object_class, CKO_PUBLIC_KEY)))));
+  EXPECT_THAT(
+      token->GetObject(handles[1]),
+      IsOkAndHolds(Pointee(AllOf(
+          Property("kms_key_name", &Object::kms_key_name, ckv.name()),
+          Property("object_class", &Object::object_class, CKO_PRIVATE_KEY)))));
+}
+
+TEST_F(TokenTest, FindObjectsKeyNamesSorted) {
+  auto kms_client = fake_kms_->NewClient();
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey_CryptoKeyPurpose_ASYMMETRIC_SIGN);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion_CryptoKeyVersionAlgorithm_EC_SIGN_P384_SHA384);
+  ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), "ck", ck, true);
+
+  kms_v1::CryptoKeyVersion ckv1;
+  ckv1 = CreateCryptoKeyVersionOrDie(kms_client.get(), ck.name(), ckv1);
+  ckv1 = WaitForEnablement(kms_client.get(), ckv1);
+
+  kms_v1::CryptoKeyVersion ckv2;
+  ckv2 = CreateCryptoKeyVersionOrDie(kms_client.get(), ck.name(), ckv2);
+  ckv2 = WaitForEnablement(kms_client.get(), ckv2);
+
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+
+  std::vector<CK_ULONG> handles =
+      token->FindObjects([](const Object& o) -> bool {
+        return o.object_class() == CKO_PUBLIC_KEY;
+      });
+  EXPECT_EQ(handles.size(), 2);
+
+  EXPECT_THAT(
+      token->GetObject(handles[0]),
+      IsOkAndHolds(Pointee(AllOf(
+          Property("kms_key_name", &Object::kms_key_name, ckv1.name()),
+          Property("object_class", &Object::object_class, CKO_PUBLIC_KEY)))));
+  EXPECT_THAT(
+      token->GetObject(handles[1]),
+      IsOkAndHolds(Pointee(AllOf(
+          Property("kms_key_name", &Object::kms_key_name, ckv2.name()),
+          Property("object_class", &Object::object_class, CKO_PUBLIC_KEY)))));
+}
+
+TEST_F(TokenTest, ObjectsEmptyHandleSet) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+
+  EXPECT_THAT(token->FindObjects([](const Object& o) -> bool { return true; }),
+              IsEmpty());
+}
+
+TEST_F(TokenTest, ObjectsUnknownHandle) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+
+  EXPECT_THAT(token->GetObject(1), StatusRvIs(CKR_OBJECT_HANDLE_INVALID));
+}
+
+TEST_F(TokenTest, EncryptDecryptKeyUnavailable) {
+  auto kms_client = fake_kms_->NewClient();
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey_CryptoKeyPurpose_ENCRYPT_DECRYPT);
+  ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), "k", ck, false);
+
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+
+  EXPECT_THAT(token->FindObjects([](const Object& o) -> bool { return true; }),
+              IsEmpty());
+}
+
+TEST_F(TokenTest, DisabledKeyUnavailable) {
+  auto kms_client = fake_kms_->NewClient();
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey_CryptoKeyPurpose_ASYMMETRIC_SIGN);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion_CryptoKeyVersionAlgorithm_EC_SIGN_P384_SHA384);
+  ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), "ck", ck, true);
+
+  kms_v1::CryptoKeyVersion ckv1;
+  ckv1 = CreateCryptoKeyVersionOrDie(kms_client.get(), ck.name(), ckv1);
+  ckv1 = WaitForEnablement(kms_client.get(), ckv1);
+
+  kms_v1::CryptoKeyVersion ckv2;
+  ckv2 = CreateCryptoKeyVersionOrDie(kms_client.get(), ck.name(), ckv2);
+  ckv2 = WaitForEnablement(kms_client.get(), ckv2);
+
+  // Disable ckv1
+  ckv1.set_state(kms_v1::CryptoKeyVersion_CryptoKeyVersionState_DISABLED);
+  google::protobuf::FieldMask update_mask;
+  update_mask.add_paths("state");
+  ckv1 = UpdateCryptoKeyVersionOrDie(kms_client.get(), ckv1, update_mask);
+
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+
+  std::vector<CK_ULONG> handles =
+      token->FindObjects([](const Object& o) -> bool { return true; });
+  EXPECT_EQ(handles.size(), 2);
+
+  EXPECT_THAT(
+      token->GetObject(handles[0]),
+      IsOkAndHolds(Pointee(AllOf(
+          Property("kms_key_name", &Object::kms_key_name, ckv2.name()),
+          Property("object_class", &Object::object_class, CKO_PUBLIC_KEY)))));
+  EXPECT_THAT(
+      token->GetObject(handles[1]),
+      IsOkAndHolds(Pointee(AllOf(
+          Property("kms_key_name", &Object::kms_key_name, ckv2.name()),
+          Property("object_class", &Object::object_class, CKO_PRIVATE_KEY)))));
 }
 
 }  // namespace

@@ -39,6 +39,12 @@ google::cloud::kms::v1::CryptoKeyVersion WaitForEnablement(
     const google::cloud::kms::v1::CryptoKeyVersion& crypto_key_version,
     absl::Duration poll_interval = absl::Milliseconds(1));
 
+// Updates a CryptoKeyVersion with the provided attributes, or CHECK-fails.
+google::cloud::kms::v1::CryptoKeyVersion UpdateCryptoKeyVersionOrDie(
+    google::cloud::kms::v1::KeyManagementService::Stub* kms_stub,
+    const google::cloud::kms::v1::CryptoKeyVersion& crypto_key_version,
+    const google::protobuf::FieldMask& update_mask);
+
 // Returns a randomized string suitable for use as a KMS resource identifier.
 std::string RandomId(absl::string_view prefix = "test-");
 

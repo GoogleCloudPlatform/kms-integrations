@@ -40,8 +40,11 @@ class HandleMap {
     return handle;
   }
 
-  // Finds all keys in the map whose value matches the provided predicate.
-  inline std::vector<CK_ULONG> Find(std::function<bool(const T&)> predicate) {
+  // Finds all keys in the map whose value matches the provided predicate. If
+  // sort_compare is provided, the results are sorted before being returned.
+  inline std::vector<CK_ULONG> Find(
+      std::function<bool(const T&)> predicate,
+      std::function<bool(const T&, const T&)> sort_compare = nullptr) const {
     absl::ReaderMutexLock lock(&mutex_);
 
     std::vector<CK_ULONG> results;
@@ -50,12 +53,22 @@ class HandleMap {
         results.push_back(it.first);
       }
     }
+
+    if (sort_compare != nullptr) {
+      std::sort(results.begin(), results.end(),
+                [&](const CK_ULONG& h1, const CK_ULONG& h2) -> bool const {
+                  // TODO(bdhess): figure out a way to make this not warn about
+                  // holding the mutex.
+                  return sort_compare(*items_.at(h1), *items_.at(h2));
+                });
+    }
+
     return results;
   }
 
   // Gets the map element with the provided handle, or returns NotFound if there
   // is no element with the provided handle.
-  inline StatusOr<std::shared_ptr<T>> Get(CK_ULONG handle) {
+  inline StatusOr<std::shared_ptr<T>> Get(CK_ULONG handle) const {
     absl::ReaderMutexLock lock(&mutex_);
 
     auto it = items_.find(handle);
@@ -82,13 +95,13 @@ class HandleMap {
 
  private:
   CK_RV not_found_rv_;
-  absl::Mutex mutex_;
+  mutable absl::Mutex mutex_;
   BoringBitGenerator bit_gen_ ABSL_GUARDED_BY(mutex_);
   absl::flat_hash_map<CK_ULONG, std::shared_ptr<T>> items_
       ABSL_GUARDED_BY(mutex_);
 
   inline absl::Status HandleNotFoundError(
-      CK_ULONG handle, const SourceLocation& source_location) {
+      CK_ULONG handle, const SourceLocation& source_location) const {
     return NewError(absl::StatusCode::kNotFound,
                     absl::StrFormat("handle not found: %#x", handle),
                     not_found_rv_, SOURCE_LOCATION);

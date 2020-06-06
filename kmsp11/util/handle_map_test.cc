@@ -8,6 +8,7 @@
 namespace kmsp11 {
 namespace {
 
+using ::testing::ElementsAre;
 using ::testing::UnorderedElementsAre;
 
 TEST(HandleMapTest, ItemHandleValid) {
@@ -46,6 +47,21 @@ TEST(HandleMapTest, FindPredicate) {
 
   EXPECT_THAT(map.Find([](int i) { return i % 2 == 0; }),
               UnorderedElementsAre(handle2, handle4));
+}
+
+TEST(HandleMapTest, FindWithSort) {
+  HandleMap<int> map(CKR_SESSION_HANDLE_INVALID);
+
+  CK_ULONG handle3 = map.Add(3);
+  map.Add(4);
+  CK_ULONG handle5 = map.Add(5);
+  map.Add(6);
+  CK_ULONG handle7 = map.Add(7);
+
+  EXPECT_THAT(
+      map.Find([](int i) { return i % 2 == 1; },
+               [](const int& i1, const int& i2) -> bool { return i1 > i2; }),
+      ElementsAre(handle7, handle5, handle3));
 }
 
 TEST(HandleMapTest, GetByHandle) {

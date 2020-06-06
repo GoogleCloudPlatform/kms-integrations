@@ -78,6 +78,21 @@ kms_v1::CryptoKeyVersion WaitForEnablement(
   return ckv;
 }
 
+kms_v1::CryptoKeyVersion UpdateCryptoKeyVersionOrDie(
+    kms_v1::KeyManagementService::Stub* kms_stub,
+    const kms_v1::CryptoKeyVersion& crypto_key_version,
+    const google::protobuf::FieldMask& update_mask) {
+  kms_v1::UpdateCryptoKeyVersionRequest req;
+  *req.mutable_crypto_key_version() = crypto_key_version;
+  *req.mutable_update_mask() = update_mask;
+
+  kms_v1::CryptoKeyVersion ckv;
+  grpc::ClientContext ctx;
+
+  CHECK_OK(kms_stub->UpdateCryptoKeyVersion(&ctx, req, &ckv));
+  return ckv;
+}
+
 std::string RandomId(absl::string_view prefix) {
   return absl::StrFormat("%s-%s", prefix,
                          absl::BytesToHexString(RandBytes(12)));

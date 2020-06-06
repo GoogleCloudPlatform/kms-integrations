@@ -149,6 +149,8 @@ cc_library(
     hdrs = ["token.h"],
     deps = [
         ":cryptoki_headers",
+        ":object",
+        "//kmsp11:algorithm_details",
         "//kmsp11/config:config_cc_proto",
         "//kmsp11/util:handle_map",
         "//kmsp11/util:kms_client",
