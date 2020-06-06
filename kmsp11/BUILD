@@ -132,6 +132,7 @@ cc_test(
     deps = [
         ":provider",
         "//kmsp11/test",
+        "//kmsp11/test/fakekms/cpp:fakekms",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -149,6 +150,8 @@ cc_library(
     deps = [
         ":cryptoki_headers",
         "//kmsp11/config:config_cc_proto",
+        "//kmsp11/util:handle_map",
+        "//kmsp11/util:kms_client",
         "//kmsp11/util:status_macros",
         "//kmsp11/util:status_or",
         "//kmsp11/util:string_utils",
@@ -163,6 +166,7 @@ cc_test(
     deps = [
         ":token",
         "//kmsp11/test",
+        "//kmsp11/test/fakekms/cpp:fakekms",
         "@com_google_googletest//:gtest_main",
     ],
 )

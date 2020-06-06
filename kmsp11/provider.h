@@ -21,6 +21,7 @@ class Provider {
 
   const CK_INFO& info() const { return info_; }
   const unsigned long token_count() const { return tokens_.size(); }
+  KmsClient* kms_client() { return kms_client_.get(); }
 
   StatusOr<Token*> TokenAt(CK_SLOT_ID slot_id);
 
@@ -30,14 +31,17 @@ class Provider {
   absl::Status CloseSession(CK_SESSION_HANDLE session_handle);
 
  private:
-  Provider(CK_INFO info, std::vector<std::unique_ptr<Token>>&& tokens)
+  Provider(CK_INFO info, std::vector<std::unique_ptr<Token>>&& tokens,
+           std::unique_ptr<KmsClient> kms_client)
       : info_(info),
         tokens_(std::move(tokens)),
-        sessions_(CKR_SESSION_HANDLE_INVALID) {}
+        sessions_(CKR_SESSION_HANDLE_INVALID),
+        kms_client_(std::move(kms_client)) {}
 
   const CK_INFO info_;
   const std::vector<std::unique_ptr<Token>> tokens_;
   HandleMap<Session> sessions_;
+  std::unique_ptr<KmsClient> kms_client_;
 };
 
 }  // namespace kmsp11

@@ -5,6 +5,7 @@
 #include "absl/synchronization/mutex.h"
 #include "kmsp11/config/config.pb.h"
 #include "kmsp11/cryptoki.h"
+#include "kmsp11/util/kms_client.h"
 #include "kmsp11/util/status_or.h"
 
 namespace kmsp11 {
@@ -16,7 +17,8 @@ namespace kmsp11 {
 class Token {
  public:
   static StatusOr<std::unique_ptr<Token>> New(CK_SLOT_ID slot_id,
-                                              TokenConfig token_config);
+                                              TokenConfig token_config,
+                                              KmsClient* kms_client);
 
   CK_SLOT_ID slot_id() const { return slot_id_; }
   const CK_SLOT_INFO& slot_info() const { return slot_info_; }

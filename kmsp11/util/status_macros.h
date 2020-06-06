@@ -11,7 +11,7 @@
 #define RETURN_IF_ERROR(expr)                                                \
   do {                                                                       \
     /* Using _status below to avoid capture problems if expr is "status". */ \
-    const ::absl::Status _status = ::kmsp11::ToStatus(expr);                                   \
+    const ::absl::Status _status = ::kmsp11::ToStatus(expr);                 \
     if (!_status.ok()) return _status;                                       \
   } while (0)
 
@@ -19,9 +19,9 @@
 #define STATUS_CONCAT_NAME_INNER(x, y) x##y
 #define STATUS_CONCAT_NAME(x, y) STATUS_CONCAT_NAME_INNER(x, y)
 
-#define ASSIGN_OR_RETURN_IMPL(var, lhs, rexpr)            \
-  auto var = (rexpr);                                     \
-  if (ABSL_PREDICT_FALSE(!var.ok())) return var.status(); \
+#define ASSIGN_OR_RETURN_IMPL(var, lhs, rexpr)                                \
+  auto var = (rexpr);                                                         \
+  if (ABSL_PREDICT_FALSE(!var.ok())) return ::kmsp11::ToStatus(var.status()); \
   lhs = std::move(var).value();
 
 // Executes an expression that returns a StatusOr, extracting its value into the

@@ -4,7 +4,9 @@
 
 #include "gmock/gmock.h"
 #include "kmsp11/config/config.h"
+#include "kmsp11/test/fakekms/cpp/fakekms.h"
 #include "kmsp11/test/matchers.h"
+#include "kmsp11/test/resource_helpers.h"
 #include "kmsp11/test/test_status_macros.h"
 #include "kmsp11/util/cleanup.h"
 #include "kmsp11/util/platform.h"
@@ -12,20 +14,41 @@
 namespace kmsp11 {
 namespace {
 
+namespace kms_v1 = ::google::cloud::kms::v1;
+
 using ::testing::ElementsAre;
 
 class BridgeTest : public testing::Test {
  protected:
-  BridgeTest() : config_file_(std::tmpnam(nullptr)), init_args_({0}) {
-    std::ofstream(config_file_) << R"(---
+  void SetUp() override {
+    ASSERT_OK_AND_ASSIGN(fake_kms_, FakeKms::New());
+
+    auto client = fake_kms_->NewClient();
+    kms_v1::KeyRing kr1;
+    kr1 = CreateKeyRingOrDie(client.get(), kTestLocation, RandomId(), kr1);
+    kms_v1::KeyRing kr2;
+    kr2 = CreateKeyRingOrDie(client.get(), kTestLocation, RandomId(), kr2);
+
+    config_file_ = std::tmpnam(nullptr);
+    std::ofstream(config_file_)
+        << absl::StrFormat(R"(
 tokens:
-  - label: foo
-  - label: bar
-)";
+  - key_ring: "%s"
+    label: "foo"
+  - key_ring: "%s"
+    label: "bar"
+kms_endpoint: "%s"
+use_insecure_grpc_channel_credentials: true
+)",
+                           kr1.name(), kr2.name(), fake_kms_->listen_addr());
+
+    init_args_ = {0};
     init_args_.pReserved = const_cast<char*>(config_file_.c_str());
   }
-  ~BridgeTest() { std::remove(config_file_.c_str()); }
 
+  void TearDown() override { std::remove(config_file_.c_str()); }
+
+  std::unique_ptr<FakeKms> fake_kms_;
   std::string config_file_;
   CK_C_INITIALIZE_ARGS init_args_;
 };

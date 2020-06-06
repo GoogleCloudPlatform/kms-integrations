@@ -37,6 +37,7 @@ cc_test(
     deps = [
         ":bridge",
         "//kmsp11/test",
+        "//kmsp11/test/fakekms/cpp:fakekms",
         "//kmsp11/util:cleanup",
         "//kmsp11/util:platform",
         "@com_google_googletest//:gtest_main",

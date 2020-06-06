@@ -1,13 +1,16 @@
 #include "kmsp11/token.h"
 
+#include "absl/strings/string_view.h"
 #include "kmsp11/util/errors.h"
+#include "kmsp11/util/kms_client.h"
 #include "kmsp11/util/status_macros.h"
 #include "kmsp11/util/status_or.h"
 #include "kmsp11/util/string_utils.h"
 
 namespace kmsp11 {
+namespace {
 
-StatusOr<CK_SLOT_INFO> NewSlotInfo() {
+static StatusOr<CK_SLOT_INFO> NewSlotInfo() {
   CK_SLOT_INFO info = {
       {0},                // slotDescription (set with ' ' padding below)
       {0},                // manufacturerID (set with ' ' padding below)
@@ -22,7 +25,7 @@ StatusOr<CK_SLOT_INFO> NewSlotInfo() {
   return info;
 }
 
-StatusOr<CK_TOKEN_INFO> NewTokenInfo(absl::string_view token_label) {
+static StatusOr<CK_TOKEN_INFO> NewTokenInfo(absl::string_view token_label) {
   CK_TOKEN_INFO info = {
       {0},  // label (set with ' ' padding below)
       {0},  // manufacturerID (set with ' ' padding below)
@@ -52,8 +55,11 @@ StatusOr<CK_TOKEN_INFO> NewTokenInfo(absl::string_view token_label) {
   return info;
 }
 
+}  // namespace
+
 StatusOr<std::unique_ptr<Token>> Token::New(CK_SLOT_ID slot_id,
-                                            TokenConfig token_config) {
+                                            TokenConfig token_config,
+                                            KmsClient* kms_client) {
   ASSIGN_OR_RETURN(CK_SLOT_INFO slot_info, NewSlotInfo());
   ASSIGN_OR_RETURN(CK_TOKEN_INFO token_info,
                    NewTokenInfo(token_config.label()));
