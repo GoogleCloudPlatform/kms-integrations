@@ -115,6 +115,7 @@ cc_library(
         ":cryptoki_headers",
         ":session",
         ":token",
+        ":version",
         "//kmsp11/config:config_cc_proto",
         "//kmsp11/util:errors",
         "//kmsp11/util:handle_map",
@@ -164,4 +165,10 @@ cc_test(
         "//kmsp11/test",
         "@com_google_googletest//:gtest_main",
     ],
+)
+
+cc_library(
+    name = "version",
+    hdrs = ["version.h"],
+    deps = [":cryptoki_headers"],
 )

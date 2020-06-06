@@ -2,11 +2,9 @@
 
 #include "kmsp11/util/status_macros.h"
 #include "kmsp11/util/string_utils.h"
+#include "kmsp11/version.h"
 
 namespace kmsp11 {
-
-// TODO(bdhess): Pull this in from build configuration
-const CK_VERSION kLibraryVersion = {0, 7};
 
 StatusOr<CK_INFO> NewCkInfo() {
   CK_INFO info = {
