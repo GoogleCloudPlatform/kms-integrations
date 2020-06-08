@@ -13,22 +13,6 @@ absl::Status GetAttributeValue(CK_SESSION_HANDLE hSession,
   return UnsupportedError(SOURCE_LOCATION);
 }
 
-absl::Status FindObjectsInit(CK_SESSION_HANDLE hSession,
-                             CK_ATTRIBUTE_PTR pTemplate, CK_ULONG ulCount) {
-  return UnsupportedError(SOURCE_LOCATION);
-}
-
-absl::Status FindObjects(CK_SESSION_HANDLE hSession,
-                         CK_OBJECT_HANDLE_PTR phObject,
-                         CK_ULONG ulMaxObjectCount,
-                         CK_ULONG_PTR pulObjectCount) {
-  return UnsupportedError(SOURCE_LOCATION);
-}
-
-absl::Status FindObjectsFinal(CK_SESSION_HANDLE hSession) {
-  return UnsupportedError(SOURCE_LOCATION);
-}
-
 absl::Status DecryptInit(CK_SESSION_HANDLE hSession,
                          CK_MECHANISM_PTR pMechanism, CK_OBJECT_HANDLE hKey) {
   return UnsupportedError(SOURCE_LOCATION);

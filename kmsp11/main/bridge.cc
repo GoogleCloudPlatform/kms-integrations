@@ -25,6 +25,12 @@ StatusOr<Token*> GetToken(CK_SLOT_ID slot_id) {
   return provider->TokenAt(slot_id);
 }
 
+StatusOr<std::shared_ptr<Session>> GetSession(
+    CK_SESSION_HANDLE session_handle) {
+  ASSIGN_OR_RETURN(Provider * provider, GetProvider());
+  return provider->GetSession(session_handle);
+}
+
 // Initialize the library.
 // http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc235002322
 absl::Status Initialize(CK_VOID_PTR pInitArgs) {
@@ -247,6 +253,49 @@ absl::Status GetMechanismInfo(CK_SLOT_ID slotID, CK_MECHANISM_TYPE type,
   }
   ASSIGN_OR_RETURN(*pInfo, MechanismInfo(type));
   return absl::OkStatus();
+}
+
+// Begin an object browsing operation.
+// http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc235002352
+absl::Status FindObjectsInit(CK_SESSION_HANDLE hSession,
+                             CK_ATTRIBUTE_PTR pTemplate, CK_ULONG ulCount) {
+  ASSIGN_OR_RETURN(std::shared_ptr<Session> session, GetSession(hSession));
+
+  if (ulCount > 0 && !pTemplate) {
+    return NullArgumentError("pTemplate", SOURCE_LOCATION);
+  }
+
+  return session->FindObjectsInit(absl::MakeConstSpan(pTemplate, ulCount));
+}
+
+// Continue an object browsing operation.
+// http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc235002353
+absl::Status FindObjects(CK_SESSION_HANDLE hSession,
+                         CK_OBJECT_HANDLE_PTR phObject,
+                         CK_ULONG ulMaxObjectCount,
+                         CK_ULONG_PTR pulObjectCount) {
+  ASSIGN_OR_RETURN(std::shared_ptr<Session> session, GetSession(hSession));
+
+  if (!phObject) {
+    return NullArgumentError("phObject", SOURCE_LOCATION);
+  }
+  if (!pulObjectCount) {
+    return NullArgumentError("pulObjectCount", SOURCE_LOCATION);
+  }
+
+  ASSIGN_OR_RETURN(absl::Span<const CK_OBJECT_HANDLE> handles,
+                   session->FindObjects(ulMaxObjectCount));
+
+  std::copy(handles.begin(), handles.end(), phObject);
+  *pulObjectCount = handles.size();
+  return absl::OkStatus();
+}
+
+// End an object browsing operation.
+// http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc235002354
+absl::Status FindObjectsFinal(CK_SESSION_HANDLE hSession) {
+  ASSIGN_OR_RETURN(std::shared_ptr<Session> session, GetSession(hSession));
+  return session->FindObjectsFinal();
 }
 
 }  // namespace kmsp11

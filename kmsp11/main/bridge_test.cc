@@ -26,10 +26,8 @@ class BridgeTest : public testing::Test {
     ASSERT_OK_AND_ASSIGN(fake_kms_, FakeKms::New());
 
     auto client = fake_kms_->NewClient();
-    kms_v1::KeyRing kr1;
-    kr1 = CreateKeyRingOrDie(client.get(), kTestLocation, RandomId(), kr1);
-    kms_v1::KeyRing kr2;
-    kr2 = CreateKeyRingOrDie(client.get(), kTestLocation, RandomId(), kr2);
+    kr1_ = CreateKeyRingOrDie(client.get(), kTestLocation, RandomId(), kr1_);
+    kr2_ = CreateKeyRingOrDie(client.get(), kTestLocation, RandomId(), kr2_);
 
     config_file_ = std::tmpnam(nullptr);
     std::ofstream(config_file_)
@@ -42,7 +40,7 @@ tokens:
 kms_endpoint: "%s"
 use_insecure_grpc_channel_credentials: true
 )",
-                           kr1.name(), kr2.name(), fake_kms_->listen_addr());
+                           kr1_.name(), kr2_.name(), fake_kms_->listen_addr());
 
     init_args_ = {0};
     init_args_.pReserved = const_cast<char*>(config_file_.c_str());
@@ -51,6 +49,8 @@ use_insecure_grpc_channel_credentials: true
   void TearDown() override { std::remove(config_file_.c_str()); }
 
   std::unique_ptr<FakeKms> fake_kms_;
+  kms_v1::KeyRing kr1_;
+  kms_v1::KeyRing kr2_;
   std::string config_file_;
   CK_C_INITIALIZE_ARGS init_args_;
 };
@@ -523,6 +523,192 @@ TEST_F(BridgeTest, GetMechanismInfoFailsInvalidSlotId) {
   CK_MECHANISM_INFO info;
   EXPECT_THAT(GetMechanismInfo(5, CKM_RSA_PKCS_PSS, &info),
               StatusRvIs(CKR_SLOT_ID_INVALID));
+}
+
+TEST_F(BridgeTest, FindEcPrivateKey) {
+  auto fake_client = fake_kms_->NewClient();
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey_CryptoKeyPurpose_ASYMMETRIC_SIGN);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion_CryptoKeyVersionAlgorithm_EC_SIGN_P256_SHA256);
+  ck = CreateCryptoKeyOrDie(fake_client.get(), kr1_.name(), "ck", ck, true);
+
+  kms_v1::CryptoKeyVersion ckv;
+  ckv = CreateCryptoKeyVersionOrDie(fake_client.get(), ck.name(), ckv);
+  ckv = WaitForEnablement(fake_client.get(), ckv);
+
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
+
+  CK_OBJECT_CLASS obj_class = CKO_PRIVATE_KEY;
+  CK_KEY_TYPE key_type = CKK_EC;
+  std::vector<CK_ATTRIBUTE> attrs({
+      {CKA_CLASS, &obj_class, sizeof(obj_class)},
+      {CKA_KEY_TYPE, &key_type, sizeof(key_type)},
+  });
+  EXPECT_OK(FindObjectsInit(session, &attrs[0], attrs.size()));
+
+  CK_OBJECT_HANDLE handles[2];
+  CK_ULONG found_count;
+  EXPECT_OK(FindObjects(session, &handles[0], 2, &found_count));
+  EXPECT_EQ(found_count, 1);
+
+  // TODO(bdhess): When C_GetAttributeValue is implemented, ensure that we found
+  // the right object.
+
+  EXPECT_OK(FindObjectsFinal(session));
+}
+
+TEST_F(BridgeTest, FindObjectsInitSuccess) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
+
+  EXPECT_OK(FindObjectsInit(session, nullptr, 0));
+}
+
+TEST_F(BridgeTest, FindObjectsInitFailsNotInitialized) {
+  EXPECT_THAT(FindObjectsInit(0, nullptr, 0),
+              StatusRvIs(CKR_CRYPTOKI_NOT_INITIALIZED));
+}
+
+TEST_F(BridgeTest, FindObjectsInitFailsInvalidSessionHandle) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  EXPECT_THAT(FindObjectsInit(0, nullptr, 0),
+              StatusRvIs(CKR_SESSION_HANDLE_INVALID));
+}
+
+TEST_F(BridgeTest, FindObjectsInitFailsAttributeTemplateNullptr) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
+
+  EXPECT_THAT(FindObjectsInit(session, nullptr, 1),
+              StatusRvIs(CKR_ARGUMENTS_BAD));
+}
+
+TEST_F(BridgeTest, FindObjectsInitFailsAlreadyInitialized) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
+
+  EXPECT_OK(FindObjectsInit(session, nullptr, 0));
+  EXPECT_THAT(FindObjectsInit(session, nullptr, 0),
+              StatusRvIs(CKR_OPERATION_ACTIVE));
+}
+
+TEST_F(BridgeTest, FindObjectsSuccess) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
+
+  EXPECT_OK(FindObjectsInit(session, nullptr, 0));
+
+  CK_OBJECT_HANDLE handle;
+  CK_ULONG found_count;
+  EXPECT_OK(FindObjects(session, &handle, 1, &found_count));
+  EXPECT_EQ(found_count, 0);
+}
+
+TEST_F(BridgeTest, FindObjectsFailsNotInitialized) {
+  EXPECT_THAT(FindObjects(0, nullptr, 0, nullptr),
+              StatusRvIs(CKR_CRYPTOKI_NOT_INITIALIZED));
+}
+
+TEST_F(BridgeTest, FindObjectsFailsInvalidSessionHandle) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  EXPECT_THAT(FindObjects(0, nullptr, 0, nullptr),
+              StatusRvIs(CKR_SESSION_HANDLE_INVALID));
+}
+
+TEST_F(BridgeTest, FindObjectsFailsPhObjectNull) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
+
+  EXPECT_OK(FindObjectsInit(session, nullptr, 0));
+
+  CK_ULONG found_count;
+  EXPECT_THAT(FindObjects(session, nullptr, 0, &found_count),
+              StatusRvIs(CKR_ARGUMENTS_BAD));
+}
+
+TEST_F(BridgeTest, FindObjectsFailsPulCountNull) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
+
+  EXPECT_OK(FindObjectsInit(session, nullptr, 0));
+
+  CK_OBJECT_HANDLE handles[1];
+  EXPECT_THAT(FindObjects(session, &handles[0], 1, nullptr),
+              StatusRvIs(CKR_ARGUMENTS_BAD));
+}
+
+TEST_F(BridgeTest, FindObjectsFailsOperationNotInitialized) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
+
+  CK_OBJECT_HANDLE obj_handle;
+  CK_ULONG found_count;
+  EXPECT_THAT(FindObjects(session, &obj_handle, 1, &found_count),
+              StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
+}
+
+TEST_F(BridgeTest, FindObjectsFinalSuccess) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
+
+  EXPECT_OK(FindObjectsInit(session, nullptr, 0));
+  EXPECT_OK(FindObjectsFinal(session));
+}
+
+TEST_F(BridgeTest, FindObjectsFinalFailsNotInitialized) {
+  EXPECT_THAT(FindObjectsFinal(0), StatusRvIs(CKR_CRYPTOKI_NOT_INITIALIZED));
+}
+
+TEST_F(BridgeTest, FindObjectsFinalFailsInvalidSessionHandle) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  EXPECT_THAT(FindObjectsFinal(0), StatusRvIs(CKR_SESSION_HANDLE_INVALID));
+}
+
+TEST_F(BridgeTest, FindObjectsFinalFailsOperationNotInitialized) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
+
+  EXPECT_THAT(FindObjectsFinal(session),
+              StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
 }  // namespace
