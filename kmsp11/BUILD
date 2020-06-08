@@ -139,8 +139,24 @@ cc_test(
 
 cc_library(
     name = "session",
+    srcs = ["session.cc"],
     hdrs = ["session.h"],
-    deps = [":token"],
+    deps = [
+        ":token",
+        "//kmsp11/operation",
+    ],
+)
+
+cc_test(
+    name = "session_test",
+    size = "small",
+    srcs = ["session_test.cc"],
+    deps = [
+        ":session",
+        "//kmsp11/test",
+        "//kmsp11/test/fakekms/cpp:fakekms",
+        "@com_google_googletest//:gtest_main",
+    ],
 )
 
 cc_library(

@@ -54,6 +54,25 @@ ABSL_MUST_USE_RESULT inline absl::Status NotInitializedError(
                   CKR_CRYPTOKI_NOT_INITIALIZED, SOURCE_LOCATION);
 }
 
+// Creates a new FailedPrecondition error with a return value of
+// CKR_OPERATION_ACTOVE.
+ABSL_MUST_USE_RESULT inline absl::Status OperationActiveError(
+    const SourceLocation& source_location) {
+  return NewError(absl::StatusCode::kFailedPrecondition,
+                  "another operation is already active", CKR_OPERATION_ACTIVE,
+                  SOURCE_LOCATION);
+}
+
+// Creates a new FailedPrecondition error with a return value of
+// CKR_OPERATION_NOT_INITIALIZED.
+ABSL_MUST_USE_RESULT inline absl::Status OperationNotInitializedError(
+    absl::string_view operation_name, const SourceLocation& source_location) {
+  return NewError(
+      absl::StatusCode::kFailedPrecondition,
+      absl::StrFormat("operation '%s' is not active", operation_name),
+      CKR_OPERATION_NOT_INITIALIZED, SOURCE_LOCATION);
+}
+
 // Creates a new error with status code OutOfRange and return value of
 // CKR_BUFFER_TOO_SMALL.
 inline ABSL_MUST_USE_RESULT absl::Status OutOfRangeError(

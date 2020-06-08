@@ -72,7 +72,7 @@ StatusOr<Token*> Provider::TokenAt(CK_SLOT_ID slot_id) {
 
 StatusOr<CK_SESSION_HANDLE> Provider::OpenSession(CK_SLOT_ID slot_id) {
   ASSIGN_OR_RETURN(Token * token, TokenAt(slot_id));
-  return sessions_.Add(Session(token));
+  return sessions_.Add(token);
 }
 
 StatusOr<std::shared_ptr<Session>> Provider::GetSession(

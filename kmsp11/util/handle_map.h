@@ -23,7 +23,7 @@ class HandleMap {
   HandleMap(CK_RV not_found_rv) : not_found_rv_(not_found_rv) {}
 
   // Adds item to the map and returns its handle.
-  inline CK_ULONG Add(T&& item) {
+  inline CK_ULONG Add(std::shared_ptr<T> item) {
     absl::WriterMutexLock lock(&mutex_);
 
     // Generate a new handle by picking a random number in the range [1,
@@ -36,8 +36,15 @@ class HandleMap {
                                        std::numeric_limits<CK_ULONG>::max());
     } while (items_.contains(handle));
 
-    items_.try_emplace(handle, std::make_shared<T>(std::move(item)));
+    items_.try_emplace(handle, item);
     return handle;
+  }
+
+  // Constructs a new T using the provided arguments, adds it to the map, and
+  // returns its handle.
+  template <typename... Args>
+  inline CK_ULONG Add(Args&&... args) {
+    return Add(std::make_shared<T>(std::forward<Args>(args)...));
   }
 
   // Finds all keys in the map whose value matches the provided predicate. If

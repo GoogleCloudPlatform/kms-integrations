@@ -1,12 +1,12 @@
 #ifndef KMSP11_SESSION_H_
 #define KMSP11_SESSION_H_
 
+#include "kmsp11/operation/operation.h"
 #include "kmsp11/token.h"
 
 namespace kmsp11 {
 
-// Session models a PKCS #11 Session, and in the future will contain state
-// related to ongoing operations.
+// Session models a PKCS #11 Session and an optional ongoing operation.
 //
 // See go/kms-pkcs11-model
 class Session {
@@ -15,8 +15,15 @@ class Session {
 
   Token* token() { return token_; }
 
+  absl::Status FindObjectsInit(absl::Span<const CK_ATTRIBUTE> attributes);
+  StatusOr<absl::Span<const CK_OBJECT_HANDLE>> FindObjects(size_t max_count);
+  absl::Status FindObjectsFinal();
+
  private:
   Token* token_;
+
+  absl::Mutex op_mutex_;
+  absl::optional<Operation> op_ ABSL_GUARDED_BY(op_mutex_);
 };
 
 }  // namespace kmsp11
