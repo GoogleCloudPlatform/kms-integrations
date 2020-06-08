@@ -4,6 +4,7 @@
 #include <regex>
 
 #include "absl/status/status.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "gmock/gmock.h"
 #include "google/protobuf/util/message_differencer.h"
@@ -33,10 +34,12 @@ MATCHER_P(StatusIs, status_code,
 }
 
 // Tests that the supplied status has the expected CK_RV.
-MATCHER_P(StatusRvIs, ck_rv,
-          absl::StrFormat("status ck_rv is %s%#x", (negation ? "not " : ""),
-                          ck_rv)) {
-  return GetCkRv(ToStatus(arg)) == ck_rv;
+MATCHER_P(StatusRvIs, ck_rv_matcher,
+          absl::StrCat("status ck_rv matches ",
+                       testing::DescribeMatcher<CK_RV>(ck_rv_matcher,
+                                                       negation))) {
+  return testing::ExplainMatchResult(ck_rv_matcher, GetCkRv(ToStatus(arg)),
+                                     result_listener);
 }
 
 // Tests that the supplied status is OK.

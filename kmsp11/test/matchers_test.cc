@@ -65,25 +65,32 @@ TEST(StatusRvIsTest, OkStatusOr) {
   EXPECT_THAT(StatusOr<int>(3), StatusRvIs(CKR_OK));
 }
 
-TEST(StatusIsTest, DefaultNotOkStatus) {
+TEST(StatusRvIsTest, DefaultNotOkStatus) {
   EXPECT_THAT(absl::AbortedError("aborted"), StatusRvIs(kDefaultErrorCkRv));
 }
 
-TEST(StatusIsTest, DefaultNotOkStatusOr) {
+TEST(StatusRvIsTest, DefaultNotOkStatusOr) {
   EXPECT_THAT(StatusOr<int>(absl::CancelledError("cancelled")),
               StatusRvIs(kDefaultErrorCkRv));
 }
 
-TEST(StatusIsTest, CustomNotOkStatus) {
+TEST(StatusRvIsTest, CustomNotOkStatus) {
   absl::Status status = absl::AbortedError("aborted");
   SetErrorRv(status, CKR_DEVICE_ERROR);
   EXPECT_THAT(status, StatusRvIs(CKR_DEVICE_ERROR));
 }
 
-TEST(StatusIsTest, CustomNotOkStatusOr) {
+TEST(StatusRvIsTest, CustomNotOkStatusOr) {
   absl::Status s = absl::CancelledError("cancelled");
   SetErrorRv(s, CKR_HOST_MEMORY);
   EXPECT_THAT(StatusOr<int>(s), StatusRvIs(CKR_HOST_MEMORY));
+}
+
+TEST(StatusRvIsTest, InnerMatcher) {
+  absl::Status s = absl::CancelledError("cancelled");
+  SetErrorRv(s, CKR_DATA_LEN_RANGE);
+  EXPECT_THAT(
+      s, StatusRvIs(testing::AnyOf(CKR_FUNCTION_FAILED, CKR_DATA_LEN_RANGE)));
 }
 
 TEST(EqualsProtoTest, Equals) {

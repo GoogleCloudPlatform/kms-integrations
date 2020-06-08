@@ -7,12 +7,6 @@
 
 namespace kmsp11 {
 
-absl::Status GetAttributeValue(CK_SESSION_HANDLE hSession,
-                               CK_OBJECT_HANDLE hObject,
-                               CK_ATTRIBUTE_PTR pTemplate, CK_ULONG ulCount) {
-  return UnsupportedError(SOURCE_LOCATION);
-}
-
 absl::Status DecryptInit(CK_SESSION_HANDLE hSession,
                          CK_MECHANISM_PTR pMechanism, CK_OBJECT_HANDLE hKey) {
   return UnsupportedError(SOURCE_LOCATION);

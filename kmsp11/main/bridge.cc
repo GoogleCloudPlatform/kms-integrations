@@ -255,6 +255,57 @@ absl::Status GetMechanismInfo(CK_SLOT_ID slotID, CK_MECHANISM_TYPE type,
   return absl::OkStatus();
 }
 
+// Get the values of the supplied attributes for the given object.
+// http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc235002350
+absl::Status GetAttributeValue(CK_SESSION_HANDLE hSession,
+                               CK_OBJECT_HANDLE hObject,
+                               CK_ATTRIBUTE_PTR pTemplate, CK_ULONG ulCount) {
+  ASSIGN_OR_RETURN(std::shared_ptr<Session> session, GetSession(hSession));
+  ASSIGN_OR_RETURN(std::shared_ptr<Object> object,
+                   session->token()->GetObject(hObject));
+  if (!pTemplate) {
+    return NullArgumentError("pTemplate", SOURCE_LOCATION);
+  }
+
+  absl::Status result = absl::OkStatus();
+  for (CK_ATTRIBUTE& attr : absl::MakeSpan(pTemplate, ulCount)) {
+    StatusOr<absl::string_view> value_or =
+        object->attributes().Value(attr.type);
+
+    // C_GetAttributeValue cases 1 and 2
+    if (!value_or.ok()) {
+      result = value_or.status();
+      attr.ulValueLen = CK_UNAVAILABLE_INFORMATION;
+      continue;
+    }
+
+    absl::string_view value = value_or.value();
+
+    // C_GetAttributeValue case 3
+    if (!attr.pValue) {
+      attr.ulValueLen = value.size();
+      continue;
+    }
+
+    // C_GetAttributeValue case 4
+    if (attr.ulValueLen >= value.size()) {
+      std::copy(value.begin(), value.end(), static_cast<char*>(attr.pValue));
+      attr.ulValueLen = value.size();
+      continue;
+    }
+
+    // C_GetAttributeValue case 5
+    attr.ulValueLen = CK_UNAVAILABLE_INFORMATION;
+    result = OutOfRangeError(
+        absl::StrFormat(
+            "attribute %#X is of length %d, received buffer of length %d",
+            attr.type, value.size(), attr.ulValueLen),
+        SOURCE_LOCATION);
+  }
+
+  return result;
+}
+
 // Begin an object browsing operation.
 // http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc235002352
 absl::Status FindObjectsInit(CK_SESSION_HANDLE hSession,

@@ -16,6 +16,7 @@ namespace {
 
 namespace kms_v1 = ::google::cloud::kms::v1;
 
+using ::testing::AnyOf;
 using ::testing::ElementsAre;
 using ::testing::Ge;
 using ::testing::IsSupersetOf;
@@ -525,6 +526,289 @@ TEST_F(BridgeTest, GetMechanismInfoFailsInvalidSlotId) {
               StatusRvIs(CKR_SLOT_ID_INVALID));
 }
 
+TEST_F(BridgeTest, GetAttributeValueSuccess) {
+  auto fake_client = fake_kms_->NewClient();
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey_CryptoKeyPurpose_ASYMMETRIC_SIGN);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion_CryptoKeyVersionAlgorithm_EC_SIGN_P256_SHA256);
+  ck = CreateCryptoKeyOrDie(fake_client.get(), kr1_.name(), "ck", ck, true);
+
+  kms_v1::CryptoKeyVersion ckv1;
+  ckv1 = CreateCryptoKeyVersionOrDie(fake_client.get(), ck.name(), ckv1);
+  ckv1 = WaitForEnablement(fake_client.get(), ckv1);
+
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
+
+  CK_OBJECT_CLASS obj_class = CKO_PRIVATE_KEY;
+  CK_ATTRIBUTE attr_template = {CKA_CLASS, &obj_class, sizeof(obj_class)};
+  EXPECT_OK(FindObjectsInit(session, &attr_template, 1));
+
+  CK_OBJECT_HANDLE object;
+  CK_ULONG found_count;
+  EXPECT_OK(FindObjects(session, &object, 1, &found_count));
+  EXPECT_EQ(found_count, 1);
+
+  CK_KEY_TYPE key_type;
+  CK_ATTRIBUTE key_type_attr = {CKA_KEY_TYPE, &key_type, sizeof(key_type)};
+  EXPECT_OK(GetAttributeValue(session, object, &key_type_attr, 1));
+  EXPECT_EQ(key_type, CKK_EC);
+}
+
+TEST_F(BridgeTest, GetAttributeValueFailsSensitiveAttribute) {
+  auto fake_client = fake_kms_->NewClient();
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey_CryptoKeyPurpose_ASYMMETRIC_SIGN);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion_CryptoKeyVersionAlgorithm_EC_SIGN_P256_SHA256);
+  ck = CreateCryptoKeyOrDie(fake_client.get(), kr1_.name(), "ck", ck, true);
+
+  kms_v1::CryptoKeyVersion ckv1;
+  ckv1 = CreateCryptoKeyVersionOrDie(fake_client.get(), ck.name(), ckv1);
+  ckv1 = WaitForEnablement(fake_client.get(), ckv1);
+
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
+
+  CK_OBJECT_CLASS obj_class = CKO_PRIVATE_KEY;
+  CK_ATTRIBUTE attr_template = {CKA_CLASS, &obj_class, sizeof(obj_class)};
+  EXPECT_OK(FindObjectsInit(session, &attr_template, 1));
+
+  CK_OBJECT_HANDLE object;
+  CK_ULONG found_count;
+  EXPECT_OK(FindObjects(session, &object, 1, &found_count));
+  EXPECT_EQ(found_count, 1);
+
+  char key_value[256];
+  CK_ATTRIBUTE value_attr = {CKA_VALUE, key_value, 256};
+  EXPECT_THAT(GetAttributeValue(session, object, &value_attr, 1),
+              StatusRvIs(CKR_ATTRIBUTE_SENSITIVE));
+  EXPECT_EQ(value_attr.ulValueLen, CK_UNAVAILABLE_INFORMATION);
+}
+
+TEST_F(BridgeTest, GetAttributeValueFailsNonExistentAttribute) {
+  auto fake_client = fake_kms_->NewClient();
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey_CryptoKeyPurpose_ASYMMETRIC_SIGN);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion_CryptoKeyVersionAlgorithm_EC_SIGN_P256_SHA256);
+  ck = CreateCryptoKeyOrDie(fake_client.get(), kr1_.name(), "ck", ck, true);
+
+  kms_v1::CryptoKeyVersion ckv1;
+  ckv1 = CreateCryptoKeyVersionOrDie(fake_client.get(), ck.name(), ckv1);
+  ckv1 = WaitForEnablement(fake_client.get(), ckv1);
+
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
+
+  CK_OBJECT_CLASS obj_class = CKO_PRIVATE_KEY;
+  CK_ATTRIBUTE attr_template = {CKA_CLASS, &obj_class, sizeof(obj_class)};
+  EXPECT_OK(FindObjectsInit(session, &attr_template, 1));
+
+  CK_OBJECT_HANDLE object;
+  CK_ULONG found_count;
+  EXPECT_OK(FindObjects(session, &object, 1, &found_count));
+  EXPECT_EQ(found_count, 1);
+
+  char modulus[256];
+  CK_ATTRIBUTE mod_attr = {CKA_MODULUS, modulus, 256};
+  EXPECT_THAT(GetAttributeValue(session, object, &mod_attr, 1),
+              StatusRvIs(CKR_ATTRIBUTE_TYPE_INVALID));
+  EXPECT_EQ(mod_attr.ulValueLen, CK_UNAVAILABLE_INFORMATION);
+}
+
+TEST_F(BridgeTest, GetAttributeValueSuccessNoBuffer) {
+  auto fake_client = fake_kms_->NewClient();
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey_CryptoKeyPurpose_ASYMMETRIC_SIGN);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion_CryptoKeyVersionAlgorithm_EC_SIGN_P256_SHA256);
+  ck = CreateCryptoKeyOrDie(fake_client.get(), kr1_.name(), "ck", ck, true);
+
+  kms_v1::CryptoKeyVersion ckv1;
+  ckv1 = CreateCryptoKeyVersionOrDie(fake_client.get(), ck.name(), ckv1);
+  ckv1 = WaitForEnablement(fake_client.get(), ckv1);
+
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
+
+  CK_OBJECT_CLASS obj_class = CKO_PRIVATE_KEY;
+  CK_ATTRIBUTE attr_template = {CKA_CLASS, &obj_class, sizeof(obj_class)};
+  EXPECT_OK(FindObjectsInit(session, &attr_template, 1))
+
+  CK_OBJECT_HANDLE object;
+  CK_ULONG found_count;
+  EXPECT_OK(FindObjects(session, &object, 1, &found_count));
+  EXPECT_EQ(found_count, 1);
+
+  CK_ATTRIBUTE public_key = {CKA_PUBLIC_KEY_INFO, nullptr, 0};
+  EXPECT_OK(GetAttributeValue(session, object, &public_key, 1));
+}
+
+TEST_F(BridgeTest, GetAttributeValueFailureBufferTooShort) {
+  auto fake_client = fake_kms_->NewClient();
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey_CryptoKeyPurpose_ASYMMETRIC_SIGN);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion_CryptoKeyVersionAlgorithm_EC_SIGN_P256_SHA256);
+  ck = CreateCryptoKeyOrDie(fake_client.get(), kr1_.name(), "ck", ck, true);
+
+  kms_v1::CryptoKeyVersion ckv1;
+  ckv1 = CreateCryptoKeyVersionOrDie(fake_client.get(), ck.name(), ckv1);
+  ckv1 = WaitForEnablement(fake_client.get(), ckv1);
+
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
+
+  CK_OBJECT_CLASS obj_class = CKO_PRIVATE_KEY;
+  CK_ATTRIBUTE attr_template = {CKA_CLASS, &obj_class, sizeof(obj_class)};
+  EXPECT_OK(FindObjectsInit(session, &attr_template, 1))
+
+  CK_OBJECT_HANDLE object;
+  CK_ULONG found_count;
+  EXPECT_OK(FindObjects(session, &object, 1, &found_count));
+  EXPECT_EQ(found_count, 1);
+
+  char buf[2];
+  CK_ATTRIBUTE ec_params = {CKA_EC_PARAMS, buf, 2};
+  EXPECT_THAT(GetAttributeValue(session, object, &ec_params, 1),
+              StatusRvIs(CKR_BUFFER_TOO_SMALL));
+  EXPECT_GT(ec_params.ulValueLen, 2);
+}
+
+TEST_F(BridgeTest, GetAttributeValueFailureAllAttributesProcessed) {
+  auto fake_client = fake_kms_->NewClient();
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey_CryptoKeyPurpose_ASYMMETRIC_SIGN);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion_CryptoKeyVersionAlgorithm_EC_SIGN_P256_SHA256);
+  ck = CreateCryptoKeyOrDie(fake_client.get(), kr1_.name(), "ck", ck, true);
+
+  kms_v1::CryptoKeyVersion ckv1;
+  ckv1 = CreateCryptoKeyVersionOrDie(fake_client.get(), ck.name(), ckv1);
+  ckv1 = WaitForEnablement(fake_client.get(), ckv1);
+
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
+
+  CK_OBJECT_CLASS obj_class = CKO_PRIVATE_KEY;
+  CK_ATTRIBUTE attr_template = {CKA_CLASS, &obj_class, sizeof(obj_class)};
+  EXPECT_OK(FindObjectsInit(session, &attr_template, 1))
+
+  CK_OBJECT_HANDLE object;
+  CK_ULONG found_count;
+  EXPECT_OK(FindObjects(session, &object, 1, &found_count));
+  EXPECT_EQ(found_count, 1);
+
+  CK_BBOOL decrypt, token;
+  char value_buf[2], point_buf[2], modulus_buf[2];
+  CK_ATTRIBUTE attr_results[5] = {
+      {CKA_DECRYPT, &decrypt, sizeof(decrypt)},
+      {CKA_VALUE, value_buf, sizeof(value_buf)},
+      {CKA_EC_POINT, point_buf, sizeof(point_buf)},
+      {CKA_MODULUS, modulus_buf, sizeof(modulus_buf)},
+      {CKA_TOKEN, &token, sizeof(token)},
+  };
+
+  EXPECT_THAT(GetAttributeValue(session, object, attr_results, 5),
+              StatusRvIs(AnyOf(CKR_BUFFER_TOO_SMALL, CKR_ATTRIBUTE_SENSITIVE,
+                               CKR_ATTRIBUTE_TYPE_INVALID)));
+
+  // All valid attributes with sufficient buffer space were processed.
+  EXPECT_EQ(decrypt, CK_FALSE);
+  EXPECT_EQ(attr_results[0].ulValueLen, 1);
+  EXPECT_EQ(token, CK_TRUE);
+  EXPECT_EQ(attr_results[4].ulValueLen, 1);
+
+  // Sensitive attribute is unavailable.
+  EXPECT_EQ(attr_results[1].ulValueLen, CK_UNAVAILABLE_INFORMATION);
+  // Buffer too small attribute is unavailable.
+  EXPECT_THAT(attr_results[2].ulValueLen, CK_UNAVAILABLE_INFORMATION);
+  // Not found attribute is unavailable.
+  EXPECT_EQ(attr_results[3].ulValueLen, CK_UNAVAILABLE_INFORMATION);
+}
+
+TEST_F(BridgeTest, GetAttributeValueFailureNotInitialized) {
+  EXPECT_THAT(GetAttributeValue(0, 0, nullptr, 0),
+              StatusRvIs(CKR_CRYPTOKI_NOT_INITIALIZED));
+}
+
+TEST_F(BridgeTest, GetAttributeValueFailureInvalidSessionHandle) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  EXPECT_THAT(GetAttributeValue(0, 0, nullptr, 0),
+              StatusRvIs(CKR_SESSION_HANDLE_INVALID));
+}
+
+TEST_F(BridgeTest, GetAttributeValueFailureInvalidObjectHandle) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
+
+  EXPECT_THAT(GetAttributeValue(session, 0, nullptr, 0),
+              StatusRvIs(CKR_OBJECT_HANDLE_INVALID));
+}
+
+TEST_F(BridgeTest, GetAttributeValueFailureNullTemplate) {
+  auto fake_client = fake_kms_->NewClient();
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey_CryptoKeyPurpose_ASYMMETRIC_SIGN);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion_CryptoKeyVersionAlgorithm_EC_SIGN_P256_SHA256);
+  ck = CreateCryptoKeyOrDie(fake_client.get(), kr1_.name(), "ck", ck, true);
+
+  kms_v1::CryptoKeyVersion ckv1;
+  ckv1 = CreateCryptoKeyVersionOrDie(fake_client.get(), ck.name(), ckv1);
+  ckv1 = WaitForEnablement(fake_client.get(), ckv1);
+
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
+
+  CK_OBJECT_CLASS obj_class = CKO_PRIVATE_KEY;
+  CK_ATTRIBUTE attr_template = {CKA_CLASS, &obj_class, sizeof(obj_class)};
+  EXPECT_OK(FindObjectsInit(session, &attr_template, 1))
+
+  CK_OBJECT_HANDLE object;
+  CK_ULONG found_count;
+  EXPECT_OK(FindObjects(session, &object, 1, &found_count));
+  EXPECT_EQ(found_count, 1);
+
+  EXPECT_THAT(GetAttributeValue(session, object, nullptr, 1),
+              StatusRvIs(CKR_ARGUMENTS_BAD));
+}
+
 TEST_F(BridgeTest, FindEcPrivateKey) {
   auto fake_client = fake_kms_->NewClient();
 
@@ -557,8 +841,15 @@ TEST_F(BridgeTest, FindEcPrivateKey) {
   EXPECT_OK(FindObjects(session, &handles[0], 2, &found_count));
   EXPECT_EQ(found_count, 1);
 
-  // TODO(bdhess): When C_GetAttributeValue is implemented, ensure that we found
-  // the right object.
+  char label[2];
+  std::vector<CK_ATTRIBUTE> found_attrs({
+      {CKA_CLASS, &obj_class, sizeof(obj_class)},
+      {CKA_LABEL, label, 2},
+  });
+  EXPECT_OK(GetAttributeValue(session, handles[0], found_attrs.data(), 2));
+
+  EXPECT_EQ(obj_class, CKO_PRIVATE_KEY);
+  EXPECT_EQ(std::string(label, 2), "ck");
 
   EXPECT_OK(FindObjectsFinal(session));
 }
