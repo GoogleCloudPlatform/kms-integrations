@@ -10,7 +10,9 @@ namespace kmsp11 {
 namespace {
 
 using ::testing::AllOf;
+using ::testing::Eq;
 using ::testing::Gt;
+using ::testing::HasSubstr;
 using ::testing::Lt;
 using ::testing::Not;
 
@@ -52,9 +54,18 @@ TEST(StatusIsTest, NotOkStatus) {
               StatusIs(absl::StatusCode::kAborted));
 }
 
+TEST(StatusIsTest, NotOkStatusWithMessage) {
+  EXPECT_THAT(absl::AbortedError("aborted"),
+              StatusIs(absl::StatusCode::kAborted, HasSubstr("bort")));
+}
+
 TEST(StatusIsTest, NotOkStatusOr) {
   EXPECT_THAT(StatusOr<int>(absl::CancelledError("cancelled")),
               StatusIs(absl::StatusCode::kCancelled));
+}
+TEST(StatusIsTest, NotOkStatusOrWithMessage) {
+  EXPECT_THAT(absl::CancelledError("cancelled"),
+              StatusIs(absl::StatusCode::kCancelled, Eq("cancelled")));
 }
 
 TEST(StatusRvIsTest, OkStatus) {

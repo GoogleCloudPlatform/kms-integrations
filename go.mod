@@ -8,6 +8,7 @@ require (
 	github.com/golang/protobuf v1.4.1
 	github.com/google/go-cmp v0.4.0
 	github.com/google/uuid v1.1.1
+	golang.org/x/tools v0.0.0-20200610052024-8d7dbee4c8ae // indirect
 	google.golang.org/api v0.23.0
 	google.golang.org/genproto v0.0.0-20200331122359-1ee6d9798940
 	google.golang.org/grpc v1.29.1

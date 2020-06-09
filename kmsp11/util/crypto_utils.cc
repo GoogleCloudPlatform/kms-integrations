@@ -11,6 +11,74 @@
 
 namespace kmsp11 {
 
+absl::Status EncryptRsaOaep(EVP_PKEY* key, const EVP_MD* hash,
+                            absl::Span<const uint8_t> plaintext,
+                            absl::Span<uint8_t> ciphertext) {
+  if (!key) {
+    return NewInvalidArgumentError("missing required argument: key",
+                                   CKR_DEVICE_ERROR, SOURCE_LOCATION);
+  }
+  if (!hash) {
+    return NewInvalidArgumentError("missing required argument: hash",
+                                   CKR_DEVICE_ERROR, SOURCE_LOCATION);
+  }
+
+  const RSA* rsa_key = EVP_PKEY_get0_RSA(key);
+  if (!rsa_key) {
+    return NewInvalidArgumentError(
+        absl::StrFormat("unexpected key type %d provided to EncryptRsaOaep",
+                        EVP_PKEY_id(key)),
+        CKR_DEVICE_ERROR, SOURCE_LOCATION);
+  }
+
+  size_t modulus_size = RSA_size(rsa_key);
+  if (ciphertext.size() != modulus_size) {
+    return NewInvalidArgumentError(
+        absl::StrFormat("unexpected ciphertext size (got %d, want %d)",
+                        ciphertext.size(), modulus_size),
+        CKR_DEVICE_ERROR, SOURCE_LOCATION);
+  }
+
+  // Size limit from https://tools.ietf.org/html/rfc8017#section-7.1.1
+  size_t max_plaintext_size = modulus_size - (2 * EVP_MD_size(hash)) - 2;
+  if (plaintext.size() > max_plaintext_size) {
+    return NewInvalidArgumentError(
+        absl::StrFormat("plaintext size %d exceeds maximum %d",
+                        plaintext.size(), max_plaintext_size),
+        CKR_DATA_LEN_RANGE, SOURCE_LOCATION);
+  }
+
+  bssl::UniquePtr<EVP_PKEY_CTX> ctx(EVP_PKEY_CTX_new(key, nullptr));
+
+  if (!ctx || !EVP_PKEY_encrypt_init(ctx.get()) ||
+      !EVP_PKEY_CTX_set_rsa_padding(ctx.get(), RSA_PKCS1_OAEP_PADDING) ||
+      !EVP_PKEY_CTX_set_rsa_mgf1_md(ctx.get(), hash) ||
+      !EVP_PKEY_CTX_set_rsa_oaep_md(ctx.get(), hash)) {
+    return NewInternalError(
+        absl::StrCat("error building encryption context: ", SslErrorToString()),
+        SOURCE_LOCATION);
+  }
+
+  size_t out_len = ciphertext.size();
+  if (!EVP_PKEY_encrypt(ctx.get(), ciphertext.data(), &out_len,
+                        plaintext.data(), plaintext.size())) {
+    return NewInternalError(
+        absl::StrCat("failed to encrypt: ", SslErrorToString()),
+        SOURCE_LOCATION);
+  }
+
+  if (out_len != modulus_size) {
+    std::fill(ciphertext.begin(), ciphertext.end(), 0);
+    return NewInternalError(
+        absl::StrFormat(
+            "actual encrypted length mismatches expected (got %d, expected %d)",
+            out_len, modulus_size),
+        SOURCE_LOCATION);
+  }
+
+  return absl::OkStatus();
+}
+
 StatusOr<std::string> MarshalEcParametersDer(const EC_KEY* key) {
   CBB cbb;
   CBB_zero(&cbb);
@@ -71,6 +139,27 @@ StatusOr<std::string> MarshalX509PublicKeyDer(const EVP_PKEY* key) {
   std::string result(reinterpret_cast<char*>(out_bytes), out_len);
   OPENSSL_free(out_bytes);
   return result;
+}
+
+StatusOr<bssl::UniquePtr<EVP_PKEY>> ParsePkcs8PrivateKeyPem(
+    absl::string_view private_key_pem) {
+  bssl::UniquePtr<BIO> bio(
+      BIO_new_mem_buf(private_key_pem.data(), private_key_pem.size()));
+  if (!bio) {
+    return NewInternalError(
+        absl::StrCat("error allocating bio: ", SslErrorToString()),
+        SOURCE_LOCATION);
+  }
+
+  bssl::UniquePtr<EVP_PKEY> result(
+      PEM_read_bio_PrivateKey(bio.get(), nullptr, nullptr, nullptr));
+  if (!result) {
+    return NewInvalidArgumentError(
+        absl::StrCat("error parsing private key: ", SslErrorToString()),
+        CKR_DEVICE_ERROR, SOURCE_LOCATION);
+  }
+
+  return std::move(result);
 }
 
 StatusOr<bssl::UniquePtr<EVP_PKEY>> ParseX509PublicKeyPem(

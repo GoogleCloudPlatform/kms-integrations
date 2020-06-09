@@ -11,6 +11,8 @@
 #include "openssl/bytestring.h"
 #include "openssl/ec_key.h"
 #include "openssl/obj.h"
+#include "openssl/rsa.h"
+#include "tools/cpp/runfiles/runfiles.h"
 
 namespace kmsp11 {
 namespace {
@@ -26,6 +28,120 @@ StatusOr<std::string> LoadRunfile(absl::string_view filename) {
   std::ifstream runfile(location, std::ifstream::in | std::ifstream::binary);
   return std::string((std::istreambuf_iterator<char>(runfile)),
                      (std::istreambuf_iterator<char>()));
+}
+
+TEST(EncryptRsaOaepTest, EncryptDecryptSuccess) {
+  ASSERT_OK_AND_ASSIGN(std::string pub_pem, LoadRunfile("rsa_2048_public.pem"));
+  ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub_key,
+                       ParseX509PublicKeyPem(pub_pem));
+
+  std::string plaintext_str = "here is a sample plaintext";
+  absl::Span<const uint8_t> plaintext(
+      reinterpret_cast<const uint8_t*>(plaintext_str.data()),
+      plaintext_str.size());
+  std::vector<uint8_t> ciphertext(2048 / 8);
+
+  EXPECT_OK(EncryptRsaOaep(pub_key.get(), EVP_sha256(), plaintext,
+                           absl::MakeSpan(ciphertext)));
+
+  // Some custom code to decrypt and compare
+  ASSERT_OK_AND_ASSIGN(std::string prv_pem,
+                       LoadRunfile("rsa_2048_private.pem"));
+  ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> prv_key,
+                       ParsePkcs8PrivateKeyPem(prv_pem));
+
+  bssl::UniquePtr<EVP_PKEY_CTX> ctx(EVP_PKEY_CTX_new(prv_key.get(), nullptr));
+  EXPECT_TRUE(ctx);
+  EXPECT_TRUE(EVP_PKEY_decrypt_init(ctx.get()));
+  EXPECT_TRUE(EVP_PKEY_CTX_set_rsa_padding(ctx.get(), RSA_PKCS1_OAEP_PADDING));
+  EXPECT_TRUE(EVP_PKEY_CTX_set_rsa_mgf1_md(ctx.get(), EVP_sha256()));
+  EXPECT_TRUE(EVP_PKEY_CTX_set_rsa_oaep_md(ctx.get(), EVP_sha256()));
+
+  std::vector<uint8_t> recovered(2048 / 8);
+  size_t out_len = recovered.size();
+  EXPECT_TRUE(EVP_PKEY_decrypt(ctx.get(), recovered.data(), &out_len,
+                               ciphertext.data(), ciphertext.size()));
+  recovered.resize(out_len);
+  EXPECT_EQ(plaintext, recovered);
+}
+
+TEST(EncryptRsaOaepTest, InvalidArgumentErrorNullKey) {
+  std::vector<uint8_t> plaintext = {0x01};
+  std::vector<uint8_t> ciphertext(2048 / 8);
+
+  EXPECT_THAT(EncryptRsaOaep(nullptr, EVP_sha256(), plaintext,
+                             absl::MakeSpan(ciphertext)),
+              StatusIs(absl::StatusCode::kInvalidArgument,
+                       HasSubstr("missing required argument: key")));
+}
+
+TEST(EncryptRsaOaepTest, InvalidArgumentErrorNullHash) {
+  ASSERT_OK_AND_ASSIGN(std::string pub_pem, LoadRunfile("rsa_2048_public.pem"));
+  ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub_key,
+                       ParseX509PublicKeyPem(pub_pem));
+
+  std::vector<uint8_t> plaintext = {0x01};
+  std::vector<uint8_t> ciphertext(2048 / 8);
+
+  EXPECT_THAT(EncryptRsaOaep(pub_key.get(), nullptr, plaintext,
+                             absl::MakeSpan(ciphertext)),
+              StatusIs(absl::StatusCode::kInvalidArgument,
+                       HasSubstr("missing required argument: hash")));
+}
+
+TEST(EncryptRsaOaepTest, InvalidArgumentErrorIncorrectKeyType) {
+  ASSERT_OK_AND_ASSIGN(std::string pub_pem, LoadRunfile("ec_p256_public.pem"));
+  ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub_key,
+                       ParseX509PublicKeyPem(pub_pem));
+
+  std::vector<uint8_t> plaintext = {0x01};
+  std::vector<uint8_t> ciphertext(2048 / 8);
+
+  EXPECT_THAT(EncryptRsaOaep(pub_key.get(), EVP_sha256(), plaintext,
+                             absl::MakeSpan(ciphertext)),
+              StatusIs(absl::StatusCode::kInvalidArgument,
+                       HasSubstr("unexpected key type")));
+}
+
+TEST(EncryptRsaOaepTest, InvalidArgumentErrorPlaintextTooLong) {
+  ASSERT_OK_AND_ASSIGN(std::string pub_pem, LoadRunfile("rsa_2048_public.pem"));
+  ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub_key,
+                       ParseX509PublicKeyPem(pub_pem));
+
+  std::vector<uint8_t> plaintext(257);
+  std::vector<uint8_t> ciphertext(2048 / 8);
+
+  EXPECT_THAT(EncryptRsaOaep(pub_key.get(), EVP_sha256(), plaintext,
+                             absl::MakeSpan(ciphertext)),
+              StatusRvIs(CKR_DATA_LEN_RANGE));
+}
+
+TEST(EncryptRsaOaepTest, InvalidArgumentErrorCiphertextTooShort) {
+  ASSERT_OK_AND_ASSIGN(std::string pub_pem, LoadRunfile("rsa_2048_public.pem"));
+  ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub_key,
+                       ParseX509PublicKeyPem(pub_pem));
+
+  std::vector<uint8_t> plaintext = {0x01};
+  std::vector<uint8_t> ciphertext(255);
+
+  EXPECT_THAT(EncryptRsaOaep(pub_key.get(), EVP_sha256(), plaintext,
+                             absl::MakeSpan(ciphertext)),
+              StatusIs(absl::StatusCode::kInvalidArgument,
+                       HasSubstr("unexpected ciphertext size")));
+}
+
+TEST(EncryptRsaOaepTest, InvalidArgumentErrorCiphertextTooLong) {
+  ASSERT_OK_AND_ASSIGN(std::string pub_pem, LoadRunfile("rsa_2048_public.pem"));
+  ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub_key,
+                       ParseX509PublicKeyPem(pub_pem));
+
+  std::vector<uint8_t> plaintext = {0x01};
+  std::vector<uint8_t> ciphertext(257);
+
+  EXPECT_THAT(EncryptRsaOaep(pub_key.get(), EVP_sha256(), plaintext,
+                             absl::MakeSpan(ciphertext)),
+              StatusIs(absl::StatusCode::kInvalidArgument,
+                       HasSubstr("unexpected ciphertext size")));
 }
 
 TEST(MarshalEcParametersTest, CurveOidMarshaled) {
@@ -101,6 +217,30 @@ TEST(ParseAndMarshalPublicKeyTest, RsaKey) {
   ASSERT_OK_AND_ASSIGN(std::string want_der,
                        LoadRunfile("rsa_2048_public.der"));
   EXPECT_EQ(got_der, want_der);
+}
+
+TEST(ParsePrivateKeyTest, EcKey) {
+  // Parse the private key in PEM format.
+  ASSERT_OK_AND_ASSIGN(std::string pem, LoadRunfile("ec_p256_private.pem"));
+  ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> key,
+                       ParsePkcs8PrivateKeyPem(pem));
+
+  const EC_KEY* ec_key = EVP_PKEY_get0_EC_KEY(key.get());
+  EXPECT_TRUE(EC_KEY_get0_private_key(ec_key));
+  EXPECT_TRUE(EC_KEY_check_key(ec_key));
+  EXPECT_TRUE(EC_KEY_check_fips(ec_key));
+}
+
+TEST(ParsePrivateKeyTest, RsaKey) {
+  // Parse the private key in PEM format.
+  ASSERT_OK_AND_ASSIGN(std::string pem, LoadRunfile("rsa_2048_private.pem"));
+  ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> key,
+                       ParsePkcs8PrivateKeyPem(pem));
+
+  RSA* rsa = EVP_PKEY_get0_RSA(key.get());
+  EXPECT_TRUE(RSA_get0_e(rsa));
+  EXPECT_TRUE(RSA_check_key(rsa));
+  EXPECT_TRUE(RSA_check_fips(rsa));
 }
 
 TEST(RandBytesTest, SmokeTest) {

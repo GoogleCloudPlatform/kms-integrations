@@ -33,6 +33,26 @@ MATCHER_P(StatusIs, status_code,
   return ToStatus(arg).code() == status_code;
 }
 
+// Tests that the supplied status has the expected status code and has a message
+// that matches the supplied message matcher.
+MATCHER_P2(
+    StatusIs, status_code, message_matcher,
+    negation ? absl::StrFormat(
+                   "is a status whose code is not %d or has a message that %s",
+                   status_code,
+                   testing::DescribeMatcher<absl::string_view>(message_matcher,
+                                                               true))
+             : absl::StrFormat(
+                   "is a status whose code is %d and has a message that %s",
+                   status_code,
+                   testing::DescribeMatcher<absl::string_view>(message_matcher,
+                                                               false))) {
+  absl::Status status = ToStatus(arg);
+  return status.code() == status_code &&
+         testing::ExplainMatchResult(message_matcher, status.message(),
+                                     result_listener);
+}
+
 // Tests that the supplied status has the expected CK_RV.
 MATCHER_P(StatusRvIs, ck_rv_matcher,
           absl::StrCat("status ck_rv matches ",

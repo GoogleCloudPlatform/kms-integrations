@@ -6,6 +6,13 @@
 
 namespace kmsp11 {
 
+// Encrypts plaintext using RSAES-OAEP with MGF-1, and writes it to ciphertext.
+// Ciphertext size must be exactly equal to the RSA modulus size. Hash is used
+// in both OAEP and MGF-1; OAEP labels are not supported.
+absl::Status EncryptRsaOaep(EVP_PKEY* key, const EVP_MD* hash,
+                            absl::Span<const uint8_t> plaintext,
+                            absl::Span<uint8_t> ciphertext);
+
 // Marshals EC Parameters (always of choice NamedCurve) in DER format for the
 // provided key.
 //
@@ -24,6 +31,11 @@ StatusOr<std::string> MarshalEcPointDer(const EC_KEY* key);
 // Required to populate the attribute CKA_PUBLIC_KEY_INFO:
 // http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/errata01/os/pkcs11-base-v2.40-errata01-os-complete.html#_Toc441755781
 StatusOr<std::string> MarshalX509PublicKeyDer(const EVP_PKEY* key);
+
+// Parses a private key in PKCS #8 PrivateKey PEM format. Returns
+// InvalidArgument if the provided key is malformed.
+StatusOr<bssl::UniquePtr<EVP_PKEY>> ParsePkcs8PrivateKeyPem(
+    absl::string_view private_key_pem);
 
 // Parses a public key in X.509 SubjectPublicKeyInfo PEM format. Returns
 // InvalidArgument if the provided key is malformed.
