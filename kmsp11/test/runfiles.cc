@@ -1,6 +1,9 @@
 #include "kmsp11/test/runfiles.h"
 
+#include <fstream>
+
 #include "absl/base/call_once.h"
+#include "absl/strings/str_cat.h"
 #include "gtest/gtest.h"
 #include "tools/cpp/runfiles/runfiles.h"
 
@@ -25,8 +28,16 @@ Runfiles* GetRunfiles() {
 
 }  // namespace
 
-std::string RunfileLocation(const std::string& runfile_path) {
-  return GetRunfiles()->Rlocation(runfile_path);
+std::string RunfileLocation(absl::string_view filename) {
+  return GetRunfiles()->Rlocation(std::string(filename));
+}
+
+StatusOr<std::string> LoadTestRunfile(absl::string_view filename) {
+  std::string location = RunfileLocation(
+      absl::StrCat("com_google_kmstools/kmsp11/test/testdata/", filename));
+  std::ifstream runfile(location, std::ifstream::in | std::ifstream::binary);
+  return std::string((std::istreambuf_iterator<char>(runfile)),
+                     (std::istreambuf_iterator<char>()));
 }
 
 }  // namespace kmsp11

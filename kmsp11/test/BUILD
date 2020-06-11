@@ -81,12 +81,19 @@ cc_library(
     testonly = 1,
     srcs = ["runfiles.cc"],
     hdrs = ["runfiles.h"],
+    data = [":testdata"],
     deps = [
+        "//kmsp11/util:status_or",
         "@bazel_tools//tools/cpp/runfiles",
         "@com_google_absl//absl/base",
         "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest",
     ],
+)
+
+filegroup(
+    name = "testdata",
+    srcs = glob(["testdata/*"]),
 )
 
 cc_proto_library(

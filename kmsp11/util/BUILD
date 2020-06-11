@@ -32,7 +32,6 @@ cc_test(
     name = "crypto_utils_test",
     size = "small",
     srcs = ["crypto_utils_test.cc"],
-    data = [":testdata"],
     deps = [
         ":crypto_utils",
         "//kmsp11/test",
@@ -246,9 +245,4 @@ cc_test(
         "//kmsp11/test",
         "@com_google_googletest//:gtest_main",
     ],
-)
-
-filegroup(
-    name = "testdata",
-    srcs = glob(["testdata/*"]),
 )

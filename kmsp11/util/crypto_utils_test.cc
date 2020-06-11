@@ -1,7 +1,5 @@
 #include "kmsp11/util/crypto_utils.h"
 
-#include <fstream>
-
 #include "absl/random/random.h"
 #include "absl/strings/escaping.h"
 #include "gmock/gmock.h"
@@ -12,7 +10,6 @@
 #include "openssl/ec_key.h"
 #include "openssl/obj.h"
 #include "openssl/rsa.h"
-#include "tools/cpp/runfiles/runfiles.h"
 
 namespace kmsp11 {
 namespace {
@@ -22,16 +19,9 @@ using ::testing::IsEmpty;
 using ::testing::IsNull;
 using ::testing::Not;
 
-StatusOr<std::string> LoadRunfile(absl::string_view filename) {
-  std::string location = RunfileLocation(
-      absl::StrCat("com_google_kmstools/kmsp11/util/testdata/", filename));
-  std::ifstream runfile(location, std::ifstream::in | std::ifstream::binary);
-  return std::string((std::istreambuf_iterator<char>(runfile)),
-                     (std::istreambuf_iterator<char>()));
-}
-
 TEST(EncryptRsaOaepTest, EncryptDecryptSuccess) {
-  ASSERT_OK_AND_ASSIGN(std::string pub_pem, LoadRunfile("rsa_2048_public.pem"));
+  ASSERT_OK_AND_ASSIGN(std::string pub_pem,
+                       LoadTestRunfile("rsa_2048_public.pem"));
   ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub_key,
                        ParseX509PublicKeyPem(pub_pem));
 
@@ -46,7 +36,7 @@ TEST(EncryptRsaOaepTest, EncryptDecryptSuccess) {
 
   // Some custom code to decrypt and compare
   ASSERT_OK_AND_ASSIGN(std::string prv_pem,
-                       LoadRunfile("rsa_2048_private.pem"));
+                       LoadTestRunfile("rsa_2048_private.pem"));
   ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> prv_key,
                        ParsePkcs8PrivateKeyPem(prv_pem));
 
@@ -76,7 +66,8 @@ TEST(EncryptRsaOaepTest, InvalidArgumentErrorNullKey) {
 }
 
 TEST(EncryptRsaOaepTest, InvalidArgumentErrorNullHash) {
-  ASSERT_OK_AND_ASSIGN(std::string pub_pem, LoadRunfile("rsa_2048_public.pem"));
+  ASSERT_OK_AND_ASSIGN(std::string pub_pem,
+                       LoadTestRunfile("rsa_2048_public.pem"));
   ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub_key,
                        ParseX509PublicKeyPem(pub_pem));
 
@@ -90,7 +81,8 @@ TEST(EncryptRsaOaepTest, InvalidArgumentErrorNullHash) {
 }
 
 TEST(EncryptRsaOaepTest, InvalidArgumentErrorIncorrectKeyType) {
-  ASSERT_OK_AND_ASSIGN(std::string pub_pem, LoadRunfile("ec_p256_public.pem"));
+  ASSERT_OK_AND_ASSIGN(std::string pub_pem,
+                       LoadTestRunfile("ec_p256_public.pem"));
   ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub_key,
                        ParseX509PublicKeyPem(pub_pem));
 
@@ -104,7 +96,8 @@ TEST(EncryptRsaOaepTest, InvalidArgumentErrorIncorrectKeyType) {
 }
 
 TEST(EncryptRsaOaepTest, InvalidArgumentErrorPlaintextTooLong) {
-  ASSERT_OK_AND_ASSIGN(std::string pub_pem, LoadRunfile("rsa_2048_public.pem"));
+  ASSERT_OK_AND_ASSIGN(std::string pub_pem,
+                       LoadTestRunfile("rsa_2048_public.pem"));
   ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub_key,
                        ParseX509PublicKeyPem(pub_pem));
 
@@ -117,7 +110,8 @@ TEST(EncryptRsaOaepTest, InvalidArgumentErrorPlaintextTooLong) {
 }
 
 TEST(EncryptRsaOaepTest, InvalidArgumentErrorCiphertextTooShort) {
-  ASSERT_OK_AND_ASSIGN(std::string pub_pem, LoadRunfile("rsa_2048_public.pem"));
+  ASSERT_OK_AND_ASSIGN(std::string pub_pem,
+                       LoadTestRunfile("rsa_2048_public.pem"));
   ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub_key,
                        ParseX509PublicKeyPem(pub_pem));
 
@@ -131,7 +125,8 @@ TEST(EncryptRsaOaepTest, InvalidArgumentErrorCiphertextTooShort) {
 }
 
 TEST(EncryptRsaOaepTest, InvalidArgumentErrorCiphertextTooLong) {
-  ASSERT_OK_AND_ASSIGN(std::string pub_pem, LoadRunfile("rsa_2048_public.pem"));
+  ASSERT_OK_AND_ASSIGN(std::string pub_pem,
+                       LoadTestRunfile("rsa_2048_public.pem"));
   ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub_key,
                        ParseX509PublicKeyPem(pub_pem));
 
@@ -190,22 +185,7 @@ TEST(MarshalEcPointTest, PointMarshaled) {
 
 TEST(ParseAndMarshalPublicKeyTest, EcKey) {
   // Parse the public key in PEM format.
-  ASSERT_OK_AND_ASSIGN(std::string pem, LoadRunfile("ec_p256_public.pem"));
-  ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> parsed_key,
-                       ParseX509PublicKeyPem(pem));
-
-  // Marshal the public key in DER format.
-  ASSERT_OK_AND_ASSIGN(std::string got_der,
-                       MarshalX509PublicKeyDer(parsed_key.get()));
-
-  // Ensure the marshaled key matches the expected.
-  ASSERT_OK_AND_ASSIGN(std::string want_der, LoadRunfile("ec_p256_public.der"));
-  EXPECT_EQ(got_der, want_der);
-}
-
-TEST(ParseAndMarshalPublicKeyTest, RsaKey) {
-  // Parse the public key in PEM format.
-  ASSERT_OK_AND_ASSIGN(std::string pem, LoadRunfile("rsa_2048_public.pem"));
+  ASSERT_OK_AND_ASSIGN(std::string pem, LoadTestRunfile("ec_p256_public.pem"));
   ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> parsed_key,
                        ParseX509PublicKeyPem(pem));
 
@@ -215,13 +195,29 @@ TEST(ParseAndMarshalPublicKeyTest, RsaKey) {
 
   // Ensure the marshaled key matches the expected.
   ASSERT_OK_AND_ASSIGN(std::string want_der,
-                       LoadRunfile("rsa_2048_public.der"));
+                       LoadTestRunfile("ec_p256_public.der"));
+  EXPECT_EQ(got_der, want_der);
+}
+
+TEST(ParseAndMarshalPublicKeyTest, RsaKey) {
+  // Parse the public key in PEM format.
+  ASSERT_OK_AND_ASSIGN(std::string pem, LoadTestRunfile("rsa_2048_public.pem"));
+  ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> parsed_key,
+                       ParseX509PublicKeyPem(pem));
+
+  // Marshal the public key in DER format.
+  ASSERT_OK_AND_ASSIGN(std::string got_der,
+                       MarshalX509PublicKeyDer(parsed_key.get()));
+
+  // Ensure the marshaled key matches the expected.
+  ASSERT_OK_AND_ASSIGN(std::string want_der,
+                       LoadTestRunfile("rsa_2048_public.der"));
   EXPECT_EQ(got_der, want_der);
 }
 
 TEST(ParsePrivateKeyTest, EcKey) {
   // Parse the private key in PEM format.
-  ASSERT_OK_AND_ASSIGN(std::string pem, LoadRunfile("ec_p256_private.pem"));
+  ASSERT_OK_AND_ASSIGN(std::string pem, LoadTestRunfile("ec_p256_private.pem"));
   ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> key,
                        ParsePkcs8PrivateKeyPem(pem));
 
@@ -233,7 +229,8 @@ TEST(ParsePrivateKeyTest, EcKey) {
 
 TEST(ParsePrivateKeyTest, RsaKey) {
   // Parse the private key in PEM format.
-  ASSERT_OK_AND_ASSIGN(std::string pem, LoadRunfile("rsa_2048_private.pem"));
+  ASSERT_OK_AND_ASSIGN(std::string pem,
+                       LoadTestRunfile("rsa_2048_private.pem"));
   ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> key,
                        ParsePkcs8PrivateKeyPem(pem));
 
