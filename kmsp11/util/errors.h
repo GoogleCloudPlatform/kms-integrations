@@ -32,6 +32,13 @@ ABSL_MUST_USE_RESULT inline absl::Status InvalidMechanismError(
                   CKR_MECHANISM_INVALID, source_location);
 }
 
+// Creates a new InvalidArgument error with ck_rv = CKR_MECHANISM_PARAM_INVALID.
+ABSL_MUST_USE_RESULT inline absl::Status InvalidMechanismParamError(
+    absl::string_view message, const SourceLocation& source_location) {
+  return NewError(absl::StatusCode::kInvalidArgument, message,
+                  CKR_MECHANISM_PARAM_INVALID, source_location);
+}
+
 // Creates a new Internal error with a return value of
 // CKR_GENERAL_ERROR.
 ABSL_MUST_USE_RESULT inline absl::Status NewInternalError(
