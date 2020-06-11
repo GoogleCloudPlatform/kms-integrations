@@ -43,6 +43,16 @@ KmsClient::KmsClient(absl::string_view endpoint_address,
   kms_stub_ = kms_v1::KeyManagementService::NewStub(channel);
 }
 
+StatusOr<kms_v1::PublicKey> KmsClient::GetPublicKey(
+    const kms_v1::GetPublicKeyRequest& request) const {
+  grpc::ClientContext ctx;
+  AddContextSettings(&ctx, "name", request.name(), rpc_timeout_);
+
+  kms_v1::PublicKey response;
+  RETURN_IF_ERROR(kms_stub_->GetPublicKey(&ctx, request, &response));
+  return response;
+}
+
 CryptoKeysRange KmsClient::ListCryptoKeys(
     const kms_v1::ListCryptoKeysRequest& request) const {
   return CryptoKeysRange(
@@ -67,6 +77,35 @@ CryptoKeysRange KmsClient::ListCryptoKeys(
         std::vector<kms_v1::CryptoKey> result(response.crypto_keys_size());
         auto& keys = *response.mutable_crypto_keys();
         std::move(keys.begin(), keys.end(), result.begin());
+        return result;
+      });
+}
+
+CryptoKeyVersionsRange KmsClient::ListCryptoKeyVersions(
+    const kms_v1::ListCryptoKeyVersionsRequest& request) const {
+  return CryptoKeyVersionsRange(
+      request,
+      [this](const kms_v1::ListCryptoKeyVersionsRequest& request)
+          -> ::google::cloud::StatusOr<kms_v1::ListCryptoKeyVersionsResponse> {
+        grpc::ClientContext ctx;
+        AddContextSettings(&ctx, "parent", request.parent(), rpc_timeout_);
+
+        kms_v1::ListCryptoKeyVersionsResponse response;
+        grpc::Status result =
+            kms_stub_->ListCryptoKeyVersions(&ctx, request, &response);
+        if (!result.ok()) {
+          return google::cloud::Status(
+              google::cloud::StatusCode(result.error_code()),
+              result.error_message());
+        }
+        return response;
+      },
+      [](kms_v1::ListCryptoKeyVersionsResponse response)
+          -> std::vector<kms_v1::CryptoKeyVersion> {
+        std::vector<kms_v1::CryptoKeyVersion> result(
+            response.crypto_key_versions_size());
+        auto& versions = *response.mutable_crypto_key_versions();
+        std::move(versions.begin(), versions.end(), result.begin());
         return result;
       });
 }

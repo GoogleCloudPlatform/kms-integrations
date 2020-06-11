@@ -26,6 +26,19 @@ google::cloud::kms::v1::CryptoKey CreateCryptoKeyOrDie(
     const google::cloud::kms::v1::CryptoKey& crypto_key,
     bool skip_initial_version_creation);
 
+// Creates a CryptoKeyVersion with the provided attributes, or CHECK-fails.
+google::cloud::kms::v1::CryptoKeyVersion CreateCryptoKeyVersionOrDie(
+    google::cloud::kms::v1::KeyManagementService::Stub* kms_stub,
+    absl::string_view crypto_key_name,
+    const google::cloud::kms::v1::CryptoKeyVersion& crypto_key_version);
+
+// Invokes GetCryptoKeyVersion in a loop, waiting poll_interval between each
+// request, until the specified CryptoKeyVersion's state is ENABLED.
+google::cloud::kms::v1::CryptoKeyVersion WaitForEnablement(
+    google::cloud::kms::v1::KeyManagementService::Stub* kms_stub,
+    const google::cloud::kms::v1::CryptoKeyVersion& crypto_key_version,
+    absl::Duration poll_interval = absl::Milliseconds(1));
+
 // Returns a randomized string suitable for use as a KMS resource identifier.
 std::string RandomId(absl::string_view prefix = "test-");
 

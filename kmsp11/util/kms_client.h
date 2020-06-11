@@ -20,6 +20,10 @@ using CryptoKeysRange =
                                              kms_v1::ListCryptoKeysRequest,
                                              kms_v1::ListCryptoKeysResponse>;
 
+using CryptoKeyVersionsRange = google::cloud::internal::PaginationRange<
+    kms_v1::CryptoKeyVersion, kms_v1::ListCryptoKeyVersionsRequest,
+    kms_v1::ListCryptoKeyVersionsResponse>;
+
 class KmsClient {
  public:
   KmsClient(absl::string_view endpoint_address,
@@ -28,8 +32,14 @@ class KmsClient {
 
   kms_v1::KeyManagementService::Stub* kms_stub() { return kms_stub_.get(); }
 
+  StatusOr<kms_v1::PublicKey> GetPublicKey(
+      const kms_v1::GetPublicKeyRequest& request) const;
+
   CryptoKeysRange ListCryptoKeys(
       const kms_v1::ListCryptoKeysRequest& request) const;
+
+  CryptoKeyVersionsRange ListCryptoKeyVersions(
+      const kms_v1::ListCryptoKeyVersionsRequest& request) const;
 
  private:
   std::unique_ptr<kms_v1::KeyManagementService::Stub> kms_stub_;

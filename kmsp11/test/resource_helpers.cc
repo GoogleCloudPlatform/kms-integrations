@@ -46,6 +46,38 @@ kms_v1::CryptoKey CreateCryptoKeyOrDie(
   return ck;
 }
 
+kms_v1::CryptoKeyVersion CreateCryptoKeyVersionOrDie(
+    kms_v1::KeyManagementService::Stub* kms_stub,
+    absl::string_view crypto_key_name,
+    const kms_v1::CryptoKeyVersion& crypto_key_version) {
+  kms_v1::CreateCryptoKeyVersionRequest req;
+  req.set_parent(std::string(crypto_key_name));
+  *req.mutable_crypto_key_version() = crypto_key_version;
+
+  kms_v1::CryptoKeyVersion ckv;
+  grpc::ClientContext ctx;
+
+  CHECK_OK(kms_stub->CreateCryptoKeyVersion(&ctx, req, &ckv));
+  return ckv;
+}
+
+kms_v1::CryptoKeyVersion WaitForEnablement(
+    kms_v1::KeyManagementService::Stub* kms_stub,
+    const kms_v1::CryptoKeyVersion& crypto_key_version,
+    absl::Duration poll_interval) {
+  kms_v1::CryptoKeyVersion ckv = crypto_key_version;
+  while (ckv.state() !=
+         kms_v1::CryptoKeyVersion_CryptoKeyVersionState_ENABLED) {
+    absl::SleepFor(poll_interval);
+    kms_v1::GetCryptoKeyVersionRequest req;
+    req.set_name(ckv.name());
+
+    grpc::ClientContext ctx;
+    CHECK_OK(kms_stub->GetCryptoKeyVersion(&ctx, req, &ckv));
+  }
+  return ckv;
+}
+
 std::string RandomId(absl::string_view prefix) {
   return absl::StrFormat("%s-%s", prefix,
                          absl::BytesToHexString(RandBytes(12)));
