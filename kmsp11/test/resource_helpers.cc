@@ -93,6 +93,19 @@ kms_v1::CryptoKeyVersion UpdateCryptoKeyVersionOrDie(
   return ckv;
 }
 
+kms_v1::PublicKey GetPublicKey(
+    kms_v1::KeyManagementService::Stub* kms_stub,
+    const kms_v1::CryptoKeyVersion& crypto_key_version) {
+  kms_v1::GetPublicKeyRequest req;
+  req.set_name(crypto_key_version.name());
+
+  kms_v1::PublicKey pub;
+  grpc::ClientContext ctx;
+
+  CHECK_OK(kms_stub->GetPublicKey(&ctx, req, &pub));
+  return pub;
+}
+
 std::string RandomId(absl::string_view prefix) {
   return absl::StrFormat("%s-%s", prefix,
                          absl::BytesToHexString(RandBytes(12)));

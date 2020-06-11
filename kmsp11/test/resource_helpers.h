@@ -45,6 +45,11 @@ google::cloud::kms::v1::CryptoKeyVersion UpdateCryptoKeyVersionOrDie(
     const google::cloud::kms::v1::CryptoKeyVersion& crypto_key_version,
     const google::protobuf::FieldMask& update_mask);
 
+// Gets the public key for the provided CryptoKeyVersion.
+google::cloud::kms::v1::PublicKey GetPublicKey(
+    google::cloud::kms::v1::KeyManagementService::Stub* kms_stub,
+    const google::cloud::kms::v1::CryptoKeyVersion& crypto_key_version);
+
 // Returns a randomized string suitable for use as a KMS resource identifier.
 std::string RandomId(absl::string_view prefix = "test-");
 

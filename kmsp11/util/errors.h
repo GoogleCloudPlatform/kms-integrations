@@ -22,6 +22,16 @@ ABSL_MUST_USE_RESULT inline absl::Status FailedPreconditionError(
                   source_location);
 }
 
+// Creates a new InvalidArgument error with ck_rv = CKR_MECHANISM_INVALID.
+ABSL_MUST_USE_RESULT inline absl::Status InvalidMechanismError(
+    CK_MECHANISM_TYPE mechanism_type, absl::string_view operation,
+    const SourceLocation& source_location) {
+  return NewError(absl::StatusCode::kInvalidArgument,
+                  absl::StrFormat("mechanism %#x is not valid for operation %s",
+                                  mechanism_type, operation),
+                  CKR_MECHANISM_INVALID, source_location);
+}
+
 // Creates a new Internal error with a return value of
 // CKR_GENERAL_ERROR.
 ABSL_MUST_USE_RESULT inline absl::Status NewInternalError(
