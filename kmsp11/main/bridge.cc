@@ -349,4 +349,65 @@ absl::Status FindObjectsFinal(CK_SESSION_HANDLE hSession) {
   return session->FindObjectsFinal();
 }
 
+// Begin a decrypt operation.
+// http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc235002361
+absl::Status DecryptInit(CK_SESSION_HANDLE hSession,
+                         CK_MECHANISM_PTR pMechanism, CK_OBJECT_HANDLE hKey) {
+  ASSIGN_OR_RETURN(std::shared_ptr<Session> session, GetSession(hSession));
+
+  StatusOr<std::shared_ptr<Object>> key_or = session->token()->GetObject(hKey);
+  if (!key_or.ok()) {
+    if (GetCkRv(key_or.status()) == CKR_OBJECT_HANDLE_INVALID) {
+      absl::Status result(key_or.status());
+      SetErrorRv(result, CKR_KEY_HANDLE_INVALID);
+      return result;
+    }
+    return key_or.status();
+  }
+
+  if (!pMechanism) {
+    return NullArgumentError("pMechanism", SOURCE_LOCATION);
+  }
+  return session->DecryptInit(key_or.value(), pMechanism);
+}
+
+// Complete a decrypt operation.
+// http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc235002362
+absl::Status Decrypt(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pEncryptedData,
+                     CK_ULONG ulEncryptedDataLen, CK_BYTE_PTR pData,
+                     CK_ULONG_PTR pulDataLen) {
+  ASSIGN_OR_RETURN(std::shared_ptr<Session> session, GetSession(hSession));
+  if (!pEncryptedData) {
+    return NullArgumentError("pEncryptedData", SOURCE_LOCATION);
+  }
+  if (!pulDataLen) {
+    return NullArgumentError("pulDataLen", SOURCE_LOCATION);
+  }
+
+  ASSIGN_OR_RETURN(absl::Span<const uint8_t> plaintext,
+                   session->Decrypt(absl::MakeConstSpan(pEncryptedData,
+                                                        ulEncryptedDataLen)));
+
+  if (!pData) {
+    *pulDataLen = plaintext.size();
+    return absl::OkStatus();
+  }
+
+  if (*pulDataLen < plaintext.size()) {
+    absl::Status result = OutOfRangeError(
+        absl::StrFormat(
+            "plaintext of length %d cannot fit in buffer of length %d",
+            plaintext.size(), *pulDataLen),
+        SOURCE_LOCATION);
+    *pulDataLen = plaintext.size();
+    return result;
+  }
+
+  std::copy(plaintext.begin(), plaintext.end(), pData);
+  *pulDataLen = plaintext.size();
+
+  session->ReleaseOperation();
+  return absl::OkStatus();
+}
+
 }  // namespace kmsp11

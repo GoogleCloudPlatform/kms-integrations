@@ -14,6 +14,28 @@ cc_library(
 )
 
 cc_library(
+    name = "crypter_ops",
+    srcs = ["crypter_ops.cc"],
+    hdrs = ["crypter_ops.h"],
+    deps = [
+        ":crypter_interfaces",
+        ":rsaes_oaep",
+        "//kmsp11/util:errors",
+    ],
+)
+
+cc_test(
+    name = "crypter_ops_test",
+    size = "small",
+    srcs = ["crypter_ops_test.cc"],
+    deps = [
+        ":crypter_ops",
+        "//kmsp11/test",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
     name = "find",
     hdrs = ["find.h"],
     deps = [
@@ -26,6 +48,7 @@ cc_library(
     name = "operation",
     hdrs = ["operation.h"],
     deps = [
+        ":crypter_ops",
         ":find",
         "@com_google_absl//absl/types:variant",
     ],

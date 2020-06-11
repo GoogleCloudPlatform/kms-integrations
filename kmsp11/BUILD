@@ -204,6 +204,7 @@ cc_test(
         ":session",
         "//kmsp11/test",
         "//kmsp11/test/fakekms/cpp:fakekms",
+        "//kmsp11/util:crypto_utils",
         "@com_google_googletest//:gtest_main",
     ],
 )

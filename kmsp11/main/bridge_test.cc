@@ -9,7 +9,9 @@
 #include "kmsp11/test/resource_helpers.h"
 #include "kmsp11/test/test_status_macros.h"
 #include "kmsp11/util/cleanup.h"
+#include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/platform.h"
+#include "openssl/rand.h"
 
 namespace kmsp11 {
 namespace {
@@ -1061,6 +1063,202 @@ TEST_F(BridgeTest, FindObjectsFinalFailsOperationNotInitialized) {
 
   EXPECT_THAT(FindObjectsFinal(session),
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
+}
+
+class AsymmetricDecryptTest : public BridgeTest {
+ protected:
+  void SetUp() override {
+    BridgeTest::SetUp();
+    auto kms_client = fake_kms_->NewClient();
+
+    kms_v1::CryptoKey ck;
+    ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_DECRYPT);
+    ck.mutable_version_template()->set_algorithm(
+        kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256);
+    ck = CreateCryptoKeyOrDie(kms_client.get(), kr1_.name(), "ck", ck, true);
+
+    kms_v1::CryptoKeyVersion ckv;
+    ckv = CreateCryptoKeyVersionOrDie(kms_client.get(), ck.name(), ckv);
+    ckv = WaitForEnablement(kms_client.get(), ckv);
+
+    kms_v1::PublicKey pub_proto = GetPublicKey(kms_client.get(), ckv);
+    ASSERT_OK_AND_ASSIGN(public_key_, ParseX509PublicKeyPem(pub_proto.pem()));
+
+    EXPECT_OK(Initialize(&init_args_));
+    EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session_));
+
+    CK_OBJECT_CLASS prv = CKO_PRIVATE_KEY;
+    CK_ATTRIBUTE attr_template[2] = {
+        {CKA_ID, const_cast<char*>(ckv.name().data()), ckv.name().size()},
+        {CKA_CLASS, &prv, sizeof(prv)},
+    };
+    EXPECT_OK(FindObjectsInit(session_, attr_template, 2));
+
+    CK_ULONG found_count;
+    EXPECT_OK(FindObjects(session_, &private_key_, 1, &found_count));
+    EXPECT_EQ(found_count, 1);
+
+    EXPECT_OK(FindObjectsFinal(session_));
+  }
+
+  void TearDown() override { EXPECT_OK(Finalize(nullptr)); }
+
+  CK_SESSION_HANDLE session_;
+  CK_OBJECT_HANDLE private_key_;
+  bssl::UniquePtr<EVP_PKEY> public_key_;
+};
+
+TEST_F(AsymmetricDecryptTest, DecryptSuccess) {
+  std::vector<uint8_t> plaintext(128);
+  RAND_bytes(plaintext.data(), plaintext.size());
+
+  uint8_t ciphertext[256];
+  EXPECT_OK(EncryptRsaOaep(public_key_.get(), EVP_sha256(), plaintext,
+                           absl::MakeSpan(ciphertext)));
+
+  CK_RSA_PKCS_OAEP_PARAMS params{CKM_SHA256, CKG_MGF1_SHA256,
+                                 CKZ_DATA_SPECIFIED, nullptr, 0};
+  CK_MECHANISM mech{CKM_RSA_PKCS_OAEP, &params, sizeof(params)};
+
+  EXPECT_OK(DecryptInit(session_, &mech, private_key_));
+
+  CK_ULONG plaintext_size;
+  EXPECT_OK(Decrypt(session_, ciphertext, sizeof(ciphertext), nullptr,
+                    &plaintext_size));
+  EXPECT_EQ(plaintext_size, plaintext.size());
+
+  std::vector<uint8_t> recovered_plaintext(plaintext_size);
+  EXPECT_OK(Decrypt(session_, ciphertext, sizeof(ciphertext),
+                    recovered_plaintext.data(), &plaintext_size));
+  EXPECT_EQ(recovered_plaintext, plaintext);
+  EXPECT_EQ(plaintext_size, plaintext.size());
+
+  // Operation should be terminated after success
+  EXPECT_THAT(Decrypt(session_, ciphertext, sizeof(ciphertext), nullptr,
+                      &plaintext_size),
+              StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
+}
+
+TEST_F(AsymmetricDecryptTest, DecryptSuccessSameBuffer) {
+  std::vector<uint8_t> plaintext(128);
+  RAND_bytes(plaintext.data(), plaintext.size());
+
+  std::vector<uint8_t> buf(256);
+  EXPECT_OK(EncryptRsaOaep(public_key_.get(), EVP_sha256(), plaintext,
+                           absl::MakeSpan(buf)));
+
+  CK_RSA_PKCS_OAEP_PARAMS params{CKM_SHA256, CKG_MGF1_SHA256,
+                                 CKZ_DATA_SPECIFIED, nullptr, 0};
+  CK_MECHANISM mech{CKM_RSA_PKCS_OAEP, &params, sizeof(params)};
+
+  EXPECT_OK(DecryptInit(session_, &mech, private_key_));
+
+  CK_ULONG plaintext_size = buf.size();
+  EXPECT_OK(
+      Decrypt(session_, buf.data(), buf.size(), buf.data(), &plaintext_size));
+  EXPECT_EQ(plaintext_size, plaintext.size());
+
+  buf.resize(plaintext_size);
+  EXPECT_EQ(buf, plaintext);
+}
+
+TEST_F(AsymmetricDecryptTest, DecryptBufferTooSmall) {
+  std::vector<uint8_t> plaintext(128);
+  RAND_bytes(plaintext.data(), plaintext.size());
+
+  uint8_t ciphertext[256];
+  EXPECT_OK(EncryptRsaOaep(public_key_.get(), EVP_sha256(), plaintext,
+                           absl::MakeSpan(ciphertext)));
+
+  CK_RSA_PKCS_OAEP_PARAMS params{CKM_SHA256, CKG_MGF1_SHA256,
+                                 CKZ_DATA_SPECIFIED, nullptr, 0};
+  CK_MECHANISM mech{CKM_RSA_PKCS_OAEP, &params, sizeof(params)};
+
+  EXPECT_OK(DecryptInit(session_, &mech, private_key_));
+
+  std::vector<uint8_t> recovered_plaintext(32);
+  CK_ULONG plaintext_size = recovered_plaintext.size();
+  EXPECT_THAT(Decrypt(session_, ciphertext, sizeof(ciphertext),
+                      recovered_plaintext.data(), &plaintext_size),
+              StatusRvIs(CKR_BUFFER_TOO_SMALL));
+  EXPECT_EQ(plaintext_size, plaintext.size());
+
+  // Operation should be able to proceed after CKR_BUFFER_TOO_SMALL.
+  recovered_plaintext.resize(plaintext_size);
+  EXPECT_OK(Decrypt(session_, ciphertext, sizeof(ciphertext),
+                    recovered_plaintext.data(), &plaintext_size));
+  EXPECT_EQ(plaintext, recovered_plaintext);
+
+  // Operation should now be terminated.
+  EXPECT_THAT(Decrypt(session_, ciphertext, sizeof(ciphertext), nullptr,
+                      &plaintext_size),
+              StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
+}
+
+TEST_F(AsymmetricDecryptTest, DecryptParametersMismatch) {
+  CK_RSA_PKCS_OAEP_PARAMS params{CKM_SHA512, CKG_MGF1_SHA512,
+                                 CKZ_DATA_SPECIFIED, nullptr, 0};
+  CK_MECHANISM mech{CKM_RSA_PKCS_OAEP, &params, sizeof(params)};
+
+  EXPECT_THAT(DecryptInit(session_, &mech, private_key_),
+              StatusRvIs(CKR_MECHANISM_PARAM_INVALID));
+}
+
+TEST_F(AsymmetricDecryptTest, DecryptInitFailsInvalidSessionHandle) {
+  EXPECT_THAT(DecryptInit(0, nullptr, 0),
+              StatusRvIs(CKR_SESSION_HANDLE_INVALID));
+}
+
+TEST_F(AsymmetricDecryptTest, DecryptInitFailsInvalidKeyHandle) {
+  CK_RSA_PKCS_OAEP_PARAMS params{CKM_SHA256, CKG_MGF1_SHA256,
+                                 CKZ_DATA_SPECIFIED, nullptr, 0};
+  CK_MECHANISM mech{CKM_RSA_PKCS_OAEP, &params, sizeof(params)};
+
+  EXPECT_THAT(DecryptInit(session_, &mech, 0),
+              StatusRvIs(CKR_KEY_HANDLE_INVALID));
+}
+
+TEST_F(AsymmetricDecryptTest, DecryptInitFailsOperationActive) {
+  CK_RSA_PKCS_OAEP_PARAMS params{CKM_SHA256, CKG_MGF1_SHA256,
+                                 CKZ_DATA_SPECIFIED, nullptr, 0};
+  CK_MECHANISM mech{CKM_RSA_PKCS_OAEP, &params, sizeof(params)};
+
+  EXPECT_OK(DecryptInit(session_, &mech, private_key_));
+  EXPECT_THAT(DecryptInit(session_, &mech, private_key_),
+              StatusRvIs(CKR_OPERATION_ACTIVE));
+}
+
+TEST_F(AsymmetricDecryptTest, DecryptFailsOperationNotInitialized) {
+  uint8_t ciphertext[256];
+  CK_ULONG plaintext_size;
+  EXPECT_THAT(Decrypt(session_, ciphertext, sizeof(ciphertext), nullptr,
+                      &plaintext_size),
+              StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
+}
+
+TEST_F(AsymmetricDecryptTest, DecryptFailsNullCiphertext) {
+  CK_RSA_PKCS_OAEP_PARAMS params{CKM_SHA256, CKG_MGF1_SHA256,
+                                 CKZ_DATA_SPECIFIED, nullptr, 0};
+  CK_MECHANISM mech{CKM_RSA_PKCS_OAEP, &params, sizeof(params)};
+
+  EXPECT_OK(DecryptInit(session_, &mech, private_key_));
+
+  CK_ULONG plaintext_size;
+  EXPECT_THAT(Decrypt(session_, nullptr, 0, nullptr, &plaintext_size),
+              StatusRvIs(CKR_ARGUMENTS_BAD));
+}
+
+TEST_F(AsymmetricDecryptTest, DecryptFailsNullPlaintextSize) {
+  CK_RSA_PKCS_OAEP_PARAMS params{CKM_SHA256, CKG_MGF1_SHA256,
+                                 CKZ_DATA_SPECIFIED, nullptr, 0};
+  CK_MECHANISM mech{CKM_RSA_PKCS_OAEP, &params, sizeof(params)};
+
+  EXPECT_OK(DecryptInit(session_, &mech, private_key_));
+
+  uint8_t ciphertext[256];
+  EXPECT_THAT(
+      Decrypt(session_, ciphertext, sizeof(ciphertext), nullptr, nullptr),
+      StatusRvIs(CKR_ARGUMENTS_BAD));
 }
 
 }  // namespace

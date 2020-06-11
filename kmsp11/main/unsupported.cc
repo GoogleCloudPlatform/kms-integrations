@@ -7,17 +7,6 @@
 
 namespace kmsp11 {
 
-absl::Status DecryptInit(CK_SESSION_HANDLE hSession,
-                         CK_MECHANISM_PTR pMechanism, CK_OBJECT_HANDLE hKey) {
-  return UnsupportedError(SOURCE_LOCATION);
-}
-
-absl::Status Decrypt(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pEncryptedData,
-                     CK_ULONG ulEncryptedDataLen, CK_BYTE_PTR pData,
-                     CK_ULONG_PTR pulDataLen) {
-  return UnsupportedError(SOURCE_LOCATION);
-}
-
 absl::Status SignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechanism,
                       CK_OBJECT_HANDLE hKey) {
   return UnsupportedError(SOURCE_LOCATION);
