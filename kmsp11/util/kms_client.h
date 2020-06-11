@@ -32,6 +32,9 @@ class KmsClient {
 
   kms_v1::KeyManagementService::Stub* kms_stub() { return kms_stub_.get(); }
 
+  StatusOr<kms_v1::AsymmetricDecryptResponse> AsymmetricDecrypt(
+      const kms_v1::AsymmetricDecryptRequest& request) const;
+
   StatusOr<kms_v1::PublicKey> GetPublicKey(
       const kms_v1::GetPublicKeyRequest& request) const;
 

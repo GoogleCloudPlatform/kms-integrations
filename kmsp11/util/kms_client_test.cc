@@ -137,5 +137,54 @@ TEST_F(KmsClientTest, GetPublicKeyFailureInvalidName) {
   EXPECT_THAT(client_->GetPublicKey(pub_req),
               StatusIs(absl::StatusCode::kInvalidArgument));
 }
+
+TEST_F(KmsClientTest, AsymmetricDecryptSuccess) {
+  kms_v1::KeyRing kr;
+  kr = CreateKeyRingOrDie(client_->kms_stub(), kTestLocation, RandomId(), kr);
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey_CryptoKeyPurpose_ASYMMETRIC_DECRYPT);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::
+          CryptoKeyVersion_CryptoKeyVersionAlgorithm_RSA_DECRYPT_OAEP_2048_SHA256);
+  ck = CreateCryptoKeyOrDie(client_->kms_stub(), kr.name(), "ck", ck, true);
+
+  kms_v1::CryptoKeyVersion ckv;
+  ckv = CreateCryptoKeyVersionOrDie(client_->kms_stub(), ck.name(), ckv);
+  ckv = WaitForEnablement(client_->kms_stub(), ckv);
+
+  kms_v1::GetPublicKeyRequest pub_req;
+  pub_req.set_name(ckv.name());
+  ASSERT_OK_AND_ASSIGN(kms_v1::PublicKey pk, client_->GetPublicKey(pub_req));
+
+  ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub,
+                       ParseX509PublicKeyPem(pk.pem()));
+
+  std::string plaintext_str = "Here is a sample plaintext";
+  absl::Span<const uint8_t> plaintext(
+      reinterpret_cast<const uint8_t*>(plaintext_str.data()),
+      plaintext_str.size());
+
+  uint8_t ct_data[256];
+  absl::Span<uint8_t> ciphertext = absl::MakeSpan(ct_data);
+
+  EXPECT_OK(EncryptRsaOaep(pub.get(), EVP_sha256(), plaintext, ciphertext));
+
+  kms_v1::AsymmetricDecryptRequest decrypt_req;
+  decrypt_req.set_name(ckv.name());
+  decrypt_req.set_ciphertext(ciphertext.data(), ciphertext.size());
+
+  ASSERT_OK_AND_ASSIGN(kms_v1::AsymmetricDecryptResponse decrypt_resp,
+                       client_->AsymmetricDecrypt(decrypt_req));
+  EXPECT_EQ(decrypt_resp.plaintext(), plaintext_str);
+}
+
+TEST_F(KmsClientTest, AsymmetricDecryptFailureInvalidName) {
+  kms_v1::AsymmetricDecryptRequest req;
+  req.set_name("foo");
+  EXPECT_THAT(client_->AsymmetricDecrypt(req),
+              StatusIs(absl::StatusCode::kInvalidArgument));
+}
+
 }  // namespace
 }  // namespace kmsp11
