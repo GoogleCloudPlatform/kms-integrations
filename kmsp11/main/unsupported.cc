@@ -80,17 +80,6 @@ absl::Status SetAttributeValue(CK_SESSION_HANDLE hSession,
   return UnsupportedError(SOURCE_LOCATION);
 }
 
-absl::Status EncryptInit(CK_SESSION_HANDLE hSession,
-                         CK_MECHANISM_PTR pMechanism, CK_OBJECT_HANDLE hKey) {
-  return UnsupportedError(SOURCE_LOCATION);
-}
-
-absl::Status Encrypt(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pData,
-                     CK_ULONG ulDataLen, CK_BYTE_PTR pEncryptedData,
-                     CK_ULONG_PTR pulEncryptedDataLen) {
-  return UnsupportedError(SOURCE_LOCATION);
-}
-
 absl::Status EncryptUpdate(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pPart,
                            CK_ULONG ulPartLen, CK_BYTE_PTR pEncryptedPart,
                            CK_ULONG_PTR pulEncryptedPartLen) {

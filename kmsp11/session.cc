@@ -78,4 +78,27 @@ StatusOr<absl::Span<const uint8_t>> Session::Decrypt(
   return absl::get<DecryptOp>(op_.value())->Decrypt(kms_client_, ciphertext);
 }
 
+absl::Status Session::EncryptInit(std::shared_ptr<Object> key,
+                                  CK_MECHANISM* mechanism) {
+  absl::MutexLock l(&op_mutex_);
+
+  if (op_.has_value()) {
+    return OperationActiveError(SOURCE_LOCATION);
+  }
+
+  ASSIGN_OR_RETURN(op_, NewEncryptOp(key, mechanism));
+  return absl::OkStatus();
+}
+
+StatusOr<absl::Span<const uint8_t>> Session::Encrypt(
+    absl::Span<const uint8_t> plaintext) {
+  absl::MutexLock l(&op_mutex_);
+
+  if (!op_.has_value() || !absl::holds_alternative<EncryptOp>(op_.value())) {
+    return OperationNotInitializedError("encrypt", SOURCE_LOCATION);
+  }
+
+  return absl::get<EncryptOp>(op_.value())->Encrypt(kms_client_, plaintext);
+}
+
 }  // namespace kmsp11

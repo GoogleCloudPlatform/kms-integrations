@@ -13,6 +13,7 @@ using ::testing::AllOf;
 using ::testing::IsEmpty;
 using ::testing::Pointee;
 using ::testing::Property;
+using ::testing::SizeIs;
 
 class SessionTest : public testing::Test {
  protected:
@@ -265,6 +266,85 @@ TEST_F(SessionTest, DecryptNotInitialized) {
 
   uint8_t ciphertext[32];
   EXPECT_THAT(s.Decrypt(ciphertext), StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
+}
+
+TEST_F(SessionTest, Encrypt) {
+  auto kms_client = fake_kms_->NewClient();
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_DECRYPT);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256);
+  ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), "ck", ck, true);
+
+  kms_v1::CryptoKeyVersion ckv;
+  ckv = CreateCryptoKeyVersionOrDie(kms_client.get(), ck.name(), ckv);
+  ckv = WaitForEnablement(kms_client.get(), ckv);
+
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), client_.get());
+
+  std::vector<CK_OBJECT_HANDLE> handles =
+      s.token()->FindObjects([&](const Object& o) -> bool {
+        return o.kms_key_name() == ckv.name() &&
+               o.object_class() == CKO_PUBLIC_KEY;
+      });
+  EXPECT_EQ(handles.size(), 1);
+  ASSERT_OK_AND_ASSIGN(std::shared_ptr<Object> object,
+                       s.token()->GetObject(handles[0]));
+
+  CK_RSA_PKCS_OAEP_PARAMS params{CKM_SHA256, CKG_MGF1_SHA256,
+                                 CKZ_DATA_SPECIFIED, nullptr, 0};
+  CK_MECHANISM mech{CKM_RSA_PKCS_OAEP, &params, sizeof(params)};
+
+  EXPECT_OK(s.EncryptInit(object, &mech));
+
+  std::vector<uint8_t> plaintext = {0x00, 0x01, 0x02, 0x03};
+  EXPECT_THAT(s.Encrypt(plaintext), IsOkAndHolds(SizeIs(256)));
+}
+
+TEST_F(SessionTest, EncryptInitAlreadyActive) {
+  auto kms_client = fake_kms_->NewClient();
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_DECRYPT);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256);
+  ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), "ck", ck, true);
+
+  kms_v1::CryptoKeyVersion ckv;
+  ckv = CreateCryptoKeyVersionOrDie(kms_client.get(), ck.name(), ckv);
+  ckv = WaitForEnablement(kms_client.get(), ckv);
+
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), client_.get());
+
+  std::vector<CK_OBJECT_HANDLE> handles =
+      s.token()->FindObjects([&](const Object& o) -> bool {
+        return o.kms_key_name() == ckv.name() &&
+               o.object_class() == CKO_PUBLIC_KEY;
+      });
+  EXPECT_EQ(handles.size(), 1);
+  ASSERT_OK_AND_ASSIGN(std::shared_ptr<Object> object,
+                       s.token()->GetObject(handles[0]));
+
+  CK_RSA_PKCS_OAEP_PARAMS params{CKM_SHA256, CKG_MGF1_SHA256,
+                                 CKZ_DATA_SPECIFIED, nullptr, 0};
+  CK_MECHANISM mech{CKM_RSA_PKCS_OAEP, &params, sizeof(params)};
+
+  EXPECT_OK(s.EncryptInit(object, &mech));
+  EXPECT_THAT(s.EncryptInit(object, &mech), StatusRvIs(CKR_OPERATION_ACTIVE));
+}
+
+TEST_F(SessionTest, EncryptNotInitialized) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), client_.get());
+
+  uint8_t plaintext[256];
+  EXPECT_THAT(s.Encrypt(plaintext), StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
 }  // namespace

@@ -16,4 +16,15 @@ StatusOr<DecryptOp> NewDecryptOp(std::shared_ptr<Object> key,
   }
 }
 
+StatusOr<EncryptOp> NewEncryptOp(std::shared_ptr<Object> key,
+                                 const CK_MECHANISM* mechanism) {
+  switch (mechanism->mechanism) {
+    case CKM_RSA_PKCS_OAEP:
+      return RsaOaepEncrypter::New(key, mechanism);
+    default:
+      return InvalidMechanismError(mechanism->mechanism, "encrypt",
+                                   SOURCE_LOCATION);
+  }
+}
+
 }  // namespace kmsp11

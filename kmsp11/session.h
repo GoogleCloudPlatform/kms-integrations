@@ -27,6 +27,11 @@ class Session {
   StatusOr<absl::Span<const uint8_t>> Decrypt(
       absl::Span<const uint8_t> ciphertext);
 
+  absl::Status EncryptInit(std::shared_ptr<Object> key,
+                           CK_MECHANISM* mechanism);
+  StatusOr<absl::Span<const uint8_t>> Encrypt(
+      absl::Span<const uint8_t> plaintext);
+
  private:
   Token* token_;
   KmsClient* kms_client_;

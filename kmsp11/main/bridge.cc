@@ -410,4 +410,64 @@ absl::Status Decrypt(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pEncryptedData,
   return absl::OkStatus();
 }
 
+// Begin an encrypt operation.
+// http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc235002356
+absl::Status EncryptInit(CK_SESSION_HANDLE hSession,
+                         CK_MECHANISM_PTR pMechanism, CK_OBJECT_HANDLE hKey) {
+  ASSIGN_OR_RETURN(std::shared_ptr<Session> session, GetSession(hSession));
+
+  StatusOr<std::shared_ptr<Object>> key_or = session->token()->GetObject(hKey);
+  if (!key_or.ok()) {
+    if (GetCkRv(key_or.status()) == CKR_OBJECT_HANDLE_INVALID) {
+      absl::Status result(key_or.status());
+      SetErrorRv(result, CKR_KEY_HANDLE_INVALID);
+      return result;
+    }
+    return key_or.status();
+  }
+
+  if (!pMechanism) {
+    return NullArgumentError("pMechanism", SOURCE_LOCATION);
+  }
+  return session->EncryptInit(key_or.value(), pMechanism);
+}
+
+// Complete an encrypt operation.
+// http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc235002357
+absl::Status Encrypt(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pData,
+                     CK_ULONG ulDataLen, CK_BYTE_PTR pEncryptedData,
+                     CK_ULONG_PTR pulEncryptedDataLen) {
+  ASSIGN_OR_RETURN(std::shared_ptr<Session> session, GetSession(hSession));
+  if (!pData) {
+    return NullArgumentError("pData", SOURCE_LOCATION);
+  }
+  if (!pulEncryptedDataLen) {
+    return NullArgumentError("pulEncryptedDataLen", SOURCE_LOCATION);
+  }
+
+  ASSIGN_OR_RETURN(absl::Span<const uint8_t> ciphertext,
+                   session->Encrypt(absl::MakeConstSpan(pData, ulDataLen)));
+
+  if (!pEncryptedData) {
+    *pulEncryptedDataLen = ciphertext.size();
+    return absl::OkStatus();
+  }
+
+  if (*pulEncryptedDataLen < ciphertext.size()) {
+    absl::Status result = OutOfRangeError(
+        absl::StrFormat(
+            "ciphertext of length %d cannot fit in buffer of length %d",
+            ciphertext.size(), *pulEncryptedDataLen),
+        SOURCE_LOCATION);
+    *pulEncryptedDataLen = ciphertext.size();
+    return result;
+  }
+
+  std::copy(ciphertext.begin(), ciphertext.end(), pEncryptedData);
+  *pulEncryptedDataLen = ciphertext.size();
+
+  session->ReleaseOperation();
+  return absl::OkStatus();
+}
+
 }  // namespace kmsp11
