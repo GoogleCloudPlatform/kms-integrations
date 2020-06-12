@@ -50,6 +50,11 @@ StatusOr<std::string> MarshalX509PublicKeyDer(const EVP_PKEY* key);
 StatusOr<bssl::UniquePtr<EVP_PKEY>> ParsePkcs8PrivateKeyPem(
     absl::string_view private_key_pem);
 
+// Parses a public key in X.509 SubjectPublicKeyInfo DER format. Returns
+// InvalidArgument if the provided key is malformed.
+StatusOr<bssl::UniquePtr<EVP_PKEY>> ParseX509PublicKeyDer(
+    absl::string_view public_key_der);
+
 // Parses a public key in X.509 SubjectPublicKeyInfo PEM format. Returns
 // InvalidArgument if the provided key is malformed.
 // Required to parse PEM public keys retrieved from Cloud KMS.

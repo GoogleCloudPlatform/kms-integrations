@@ -182,7 +182,141 @@ TEST(NewOaepDecrypterTest, FailureLabelSpecified) {
               StatusRvIs(CKR_MECHANISM_PARAM_INVALID));
 }
 
-class OaepDecryptTest : public testing::Test {
+TEST(NewOaepEncrypterTest, Success) {
+  ASSERT_OK_AND_ASSIGN(
+      KeyPair kp,
+      NewMockKeyPair(kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256,
+                     "rsa_2048_public.pem"));
+  std::shared_ptr<Object> key = std::make_shared<Object>(kp.public_key);
+
+  CK_RSA_PKCS_OAEP_PARAMS params = NewOaepParams();
+  CK_MECHANISM mechanism = NewOaepMechanism(&params);
+
+  EXPECT_OK(RsaOaepEncrypter::New(key, &mechanism));
+}
+
+TEST(NewOaepEncrypterTest, FailureWrongKeyType) {
+  ASSERT_OK_AND_ASSIGN(
+      KeyPair kp, NewMockKeyPair(kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256,
+                                 "ec_p256_public.pem"));
+  std::shared_ptr<Object> key = std::make_shared<Object>(kp.public_key);
+
+  CK_RSA_PKCS_OAEP_PARAMS params = NewOaepParams();
+  CK_MECHANISM mechanism = NewOaepMechanism(&params);
+
+  EXPECT_THAT(RsaOaepEncrypter::New(key, &mechanism),
+              StatusRvIs(CKR_KEY_TYPE_INCONSISTENT));
+}
+
+TEST(NewOaepEncrypterTest, FailureWrongObjectClass) {
+  ASSERT_OK_AND_ASSIGN(
+      KeyPair kp,
+      NewMockKeyPair(kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256,
+                     "rsa_2048_public.pem"));
+  std::shared_ptr<Object> key = std::make_shared<Object>(kp.private_key);
+
+  CK_RSA_PKCS_OAEP_PARAMS params = NewOaepParams();
+  CK_MECHANISM mechanism = NewOaepMechanism(&params);
+
+  EXPECT_THAT(RsaOaepEncrypter::New(key, &mechanism),
+              StatusRvIs(CKR_KEY_FUNCTION_NOT_PERMITTED));
+}
+
+TEST(NewOaepEncrypterTest, FailureMechanismNotAllowed) {
+  ASSERT_OK_AND_ASSIGN(
+      KeyPair kp,
+      NewMockKeyPair(kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_2048_SHA256,
+                     "rsa_2048_public.pem"));
+  std::shared_ptr<Object> key = std::make_shared<Object>(kp.public_key);
+
+  CK_RSA_PKCS_OAEP_PARAMS params = NewOaepParams();
+  CK_MECHANISM mechanism = NewOaepMechanism(&params);
+
+  EXPECT_THAT(RsaOaepEncrypter::New(key, &mechanism),
+              StatusRvIs(CKR_KEY_FUNCTION_NOT_PERMITTED));
+}
+
+TEST(NewOaepEncrypterTest, FailureNoParameters) {
+  ASSERT_OK_AND_ASSIGN(
+      KeyPair kp,
+      NewMockKeyPair(kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256,
+                     "rsa_2048_public.pem"));
+  std::shared_ptr<Object> key = std::make_shared<Object>(kp.public_key);
+
+  CK_MECHANISM mechanism = {
+      CKM_RSA_PKCS_OAEP,  // mechanism
+      nullptr,            // pParameter
+      0,                  // ulParameterLen
+  };
+
+  EXPECT_THAT(RsaOaepEncrypter::New(key, &mechanism),
+              StatusRvIs(CKR_MECHANISM_PARAM_INVALID));
+}
+
+TEST(NewOaepEncrypterTest, FailureWrongHashAlgorithm) {
+  ASSERT_OK_AND_ASSIGN(
+      KeyPair kp,
+      NewMockKeyPair(kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256,
+                     "rsa_2048_public.pem"));
+  std::shared_ptr<Object> key = std::make_shared<Object>(kp.public_key);
+
+  CK_RSA_PKCS_OAEP_PARAMS params = NewOaepParams();
+  params.hashAlg = CKM_SHA_1;
+  CK_MECHANISM mechanism = NewOaepMechanism(&params);
+
+  EXPECT_THAT(RsaOaepEncrypter::New(key, &mechanism),
+              StatusRvIs(CKR_MECHANISM_PARAM_INVALID));
+}
+
+TEST(NewOaepEncrypterTest, FailureWrongMgf) {
+  ASSERT_OK_AND_ASSIGN(
+      KeyPair kp,
+      NewMockKeyPair(kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256,
+                     "rsa_2048_public.pem"));
+  std::shared_ptr<Object> key = std::make_shared<Object>(kp.public_key);
+
+  CK_RSA_PKCS_OAEP_PARAMS params = NewOaepParams();
+  params.mgf = CKG_MGF1_SHA384;
+  CK_MECHANISM mechanism = NewOaepMechanism(&params);
+
+  EXPECT_THAT(RsaOaepEncrypter::New(key, &mechanism),
+              StatusRvIs(CKR_MECHANISM_PARAM_INVALID));
+}
+
+TEST(NewOaepEncrypterTest, FailureSourceUnspecified) {
+  ASSERT_OK_AND_ASSIGN(
+      KeyPair kp,
+      NewMockKeyPair(kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256,
+                     "rsa_2048_public.pem"));
+  std::shared_ptr<Object> key = std::make_shared<Object>(kp.public_key);
+
+  CK_RSA_PKCS_OAEP_PARAMS params = NewOaepParams();
+  params.source = 0;
+  CK_MECHANISM mechanism = NewOaepMechanism(&params);
+
+  EXPECT_THAT(RsaOaepEncrypter::New(key, &mechanism),
+              StatusRvIs(CKR_MECHANISM_PARAM_INVALID));
+}
+
+TEST(NewOaepEncrypterTest, FailureLabelSpecified) {
+  ASSERT_OK_AND_ASSIGN(
+      KeyPair kp,
+      NewMockKeyPair(kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256,
+                     "rsa_2048_public.pem"));
+  std::shared_ptr<Object> key = std::make_shared<Object>(kp.private_key);
+
+  uint8_t label[16];
+
+  CK_RSA_PKCS_OAEP_PARAMS params = NewOaepParams();
+  params.pSourceData = &label;
+  params.ulSourceDataLen = sizeof(label);
+  CK_MECHANISM mechanism = NewOaepMechanism(&params);
+
+  EXPECT_THAT(RsaOaepDecrypter::New(key, &mechanism),
+              StatusRvIs(CKR_MECHANISM_PARAM_INVALID));
+}
+
+class OaepCryptTest : public testing::Test {
  protected:
   void SetUp() override {
     ASSERT_OK_AND_ASSIGN(fake_kms_, FakeKms::New());
@@ -212,47 +346,55 @@ class OaepDecryptTest : public testing::Test {
 
     ASSERT_OK_AND_ASSIGN(KeyPair kp,
                          Object::NewKeyPair(ckv, public_key_.get()));
-    std::shared_ptr<Object> key = std::make_shared<Object>(kp.private_key);
+    std::shared_ptr<Object> prv = std::make_shared<Object>(kp.private_key);
+    std::shared_ptr<Object> pub = std::make_shared<Object>(kp.public_key);
 
     CK_RSA_PKCS_OAEP_PARAMS params = NewOaepParams();
     CK_MECHANISM mechanism = NewOaepMechanism(&params);
 
-    ASSERT_OK_AND_ASSIGN(decrypter_, RsaOaepDecrypter::New(key, &mechanism));
+    ASSERT_OK_AND_ASSIGN(encrypter_, RsaOaepEncrypter::New(pub, &mechanism));
+    ASSERT_OK_AND_ASSIGN(decrypter_, RsaOaepDecrypter::New(prv, &mechanism));
   }
 
   std::unique_ptr<FakeKms> fake_kms_;
   std::unique_ptr<KmsClient> client_;
   std::string kms_key_name_;
   bssl::UniquePtr<EVP_PKEY> public_key_;
+  std::unique_ptr<EncrypterInterface> encrypter_;
   std::unique_ptr<DecrypterInterface> decrypter_;
 };
 
-TEST_F(OaepDecryptTest, DecryptSuccess) {
+TEST_F(OaepCryptTest, EncryptDecryptSuccess) {
   std::vector<uint8_t> plaintext = {0xDE, 0xAD, 0xBE, 0xEF};
-  uint8_t ciphertext[256];
 
-  EXPECT_OK(EncryptRsaOaep(public_key_.get(), EVP_sha256(), plaintext,
-                           absl::MakeSpan(ciphertext)));
+  ASSERT_OK_AND_ASSIGN(absl::Span<const uint8_t> ciphertext,
+                       encrypter_->Encrypt(client_.get(), plaintext));
+  EXPECT_NE(plaintext, ciphertext);
 
   ASSERT_OK_AND_ASSIGN(absl::Span<const uint8_t> recovered_plaintext,
                        decrypter_->Decrypt(client_.get(), ciphertext));
-
   EXPECT_EQ(recovered_plaintext, plaintext);
 }
 
-TEST_F(OaepDecryptTest, DecryptFailureBadCiphertextSize) {
+TEST_F(OaepCryptTest, EncryptFailureBadCiphertextSize) {
+  uint8_t ciphertext[256];
+  EXPECT_THAT(encrypter_->Encrypt(client_.get(), ciphertext),
+              StatusRvIs(CKR_DATA_LEN_RANGE));
+}
+
+TEST_F(OaepCryptTest, DecryptFailureBadCiphertextSize) {
   uint8_t ciphertext[255];
   EXPECT_THAT(decrypter_->Decrypt(client_.get(), ciphertext),
               StatusRvIs(CKR_ENCRYPTED_DATA_LEN_RANGE));
 }
 
-TEST_F(OaepDecryptTest, DecryptFailureCiphertextInvalid) {
+TEST_F(OaepCryptTest, DecryptFailureCiphertextInvalid) {
   uint8_t ciphertext[256];
   EXPECT_THAT(decrypter_->Decrypt(client_.get(), ciphertext),
               StatusRvIs(CKR_ENCRYPTED_DATA_INVALID));
 }
 
-TEST_F(OaepDecryptTest, DecryptFailureKeyDisabled) {
+TEST_F(OaepCryptTest, DecryptFailureKeyDisabled) {
   kms_v1::CryptoKeyVersion ckv;
   ckv.set_name(kms_key_name_);
   ckv.set_state(kms_v1::CryptoKeyVersion::DISABLED);
@@ -267,7 +409,7 @@ TEST_F(OaepDecryptTest, DecryptFailureKeyDisabled) {
               StatusRvIs(CKR_DEVICE_ERROR));
 }
 
-TEST_F(OaepDecryptTest, CachedResultReturnedOnSameCiphertext) {
+TEST_F(OaepCryptTest, DecryptUsesCache) {
   std::vector<uint8_t> plaintext = {0xCA, 0xFE, 0xFE, 0xED};
   uint8_t ciphertext[256];
 
@@ -292,7 +434,7 @@ TEST_F(OaepDecryptTest, CachedResultReturnedOnSameCiphertext) {
   EXPECT_EQ(recovered_plaintext, plaintext);
 }
 
-TEST_F(OaepDecryptTest, CachedResultNotReturnedWhenCiphertextChanges) {
+TEST_F(OaepCryptTest, DecryptSkipsCacheOnCiphertextChange) {
   std::vector<uint8_t> plaintext = {0xCA, 0xFE, 0xFE, 0xED};
   uint8_t ciphertext[256];
 

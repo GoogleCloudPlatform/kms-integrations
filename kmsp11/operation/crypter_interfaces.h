@@ -7,6 +7,14 @@
 
 namespace kmsp11 {
 
+class EncrypterInterface {
+ public:
+  virtual StatusOr<absl::Span<const uint8_t>> Encrypt(
+      KmsClient* client, absl::Span<const uint8_t> plaintext) = 0;
+
+  virtual ~EncrypterInterface() {}
+};
+
 class DecrypterInterface {
  public:
   virtual StatusOr<absl::Span<const uint8_t>> Decrypt(

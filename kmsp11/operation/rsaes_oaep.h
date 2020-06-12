@@ -57,6 +57,32 @@ class RsaOaepDecryptResult {
   std::unique_ptr<std::string, ZeroDelete> plaintext_;
 };
 
+// An implementation of EncrypterInterface that encrypts RSAES-OAEP ciphertexts
+// using BoringSSL.
+class RsaOaepEncrypter : public EncrypterInterface {
+ public:
+  static StatusOr<std::unique_ptr<EncrypterInterface>> New(
+      std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
+
+  // Encrypt returns a span whose underlying bytes are bound to the lifetime of
+  // this encrypter.
+  StatusOr<absl::Span<const uint8_t>> Encrypt(
+      KmsClient* client, absl::Span<const uint8_t> ciphertext) override;
+
+  virtual ~RsaOaepEncrypter() {}
+
+ private:
+  RsaOaepEncrypter(std::shared_ptr<Object> object,
+                   bssl::UniquePtr<EVP_PKEY> key)
+      : object_(object),
+        key_(std::move(key)),
+        ciphertext_(object->algorithm().key_bit_length / 8) {}
+
+  std::shared_ptr<Object> object_;
+  bssl::UniquePtr<EVP_PKEY> key_;
+  std::vector<uint8_t> ciphertext_;
+};
+
 }  // namespace kmsp11
 
 #endif  // KMSP11_OPERATION_RSAES_OAEP_H_

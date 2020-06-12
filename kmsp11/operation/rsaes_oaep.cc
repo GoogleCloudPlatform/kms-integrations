@@ -3,6 +3,7 @@
 #include "kmsp11/object.h"
 #include "kmsp11/operation/preconditions.h"
 #include "kmsp11/util/cleanup.h"
+#include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/status_macros.h"
 #include "kmsp11/util/string_utils.h"
@@ -65,6 +66,29 @@ static absl::Status ValidateRsaOaepParameters(Object* key, void* parameters,
 }
 
 }  // namespace
+
+StatusOr<std::unique_ptr<EncrypterInterface>> RsaOaepEncrypter::New(
+    std::shared_ptr<Object> key, const CK_MECHANISM* mechanism) {
+  RETURN_IF_ERROR(CheckKeyPreconditions(CKK_RSA, CKO_PUBLIC_KEY,
+                                        CKM_RSA_PKCS_OAEP, key.get()));
+  RETURN_IF_ERROR(ValidateRsaOaepParameters(key.get(), mechanism->pParameter,
+                                            mechanism->ulParameterLen));
+
+  ASSIGN_OR_RETURN(absl::string_view key_der,
+                   key->attributes().Value(CKA_PUBLIC_KEY_INFO));
+  ASSIGN_OR_RETURN(bssl::UniquePtr<EVP_PKEY> parsed_key,
+                   ParseX509PublicKeyDer(key_der));
+
+  return std::unique_ptr<EncrypterInterface>(
+      new RsaOaepEncrypter(key, std::move(parsed_key)));
+}
+
+StatusOr<absl::Span<const uint8_t>> RsaOaepEncrypter::Encrypt(
+    KmsClient* client, absl::Span<const uint8_t> plaintext) {
+  RETURN_IF_ERROR(EncryptRsaOaep(key_.get(), object_->algorithm().digest,
+                                 plaintext, absl::MakeSpan(ciphertext_)));
+  return absl::MakeConstSpan(ciphertext_);
+}
 
 StatusOr<std::unique_ptr<DecrypterInterface>> RsaOaepDecrypter::New(
     std::shared_ptr<Object> key, const CK_MECHANISM* mechanism) {

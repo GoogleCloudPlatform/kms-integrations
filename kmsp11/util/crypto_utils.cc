@@ -223,6 +223,21 @@ StatusOr<bssl::UniquePtr<EVP_PKEY>> ParsePkcs8PrivateKeyPem(
   return std::move(result);
 }
 
+StatusOr<bssl::UniquePtr<EVP_PKEY>> ParseX509PublicKeyDer(
+    absl::string_view public_key_der) {
+  const uint8_t* der_bytes =
+      reinterpret_cast<const uint8_t*>(public_key_der.data());
+  bssl::UniquePtr<EVP_PKEY> result(
+      d2i_PUBKEY(nullptr, &der_bytes, public_key_der.size()));
+
+  if (!result) {
+    return NewInvalidArgumentError(
+        absl::StrCat("error parsing public key: ", SslErrorToString()),
+        CKR_DEVICE_ERROR, SOURCE_LOCATION);
+  }
+  return std::move(result);
+}
+
 StatusOr<bssl::UniquePtr<EVP_PKEY>> ParseX509PublicKeyPem(
     absl::string_view public_key_pem) {
   bssl::UniquePtr<BIO> bio(

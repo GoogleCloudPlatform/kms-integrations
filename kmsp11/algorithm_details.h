@@ -5,6 +5,7 @@
 #include "google/cloud/kms/v1/service.pb.h"
 #include "kmsp11/cryptoki.h"
 #include "kmsp11/util/status_or.h"
+#include "openssl/evp.h"
 
 namespace kmsp11 {
 
@@ -16,6 +17,7 @@ struct AlgorithmDetails {
   size_t key_bit_length;
   CK_MECHANISM_TYPE key_gen_mechanism;
   CK_MECHANISM_TYPE digest_mechanism;
+  const EVP_MD* digest;
 };
 
 StatusOr<AlgorithmDetails> GetDetails(

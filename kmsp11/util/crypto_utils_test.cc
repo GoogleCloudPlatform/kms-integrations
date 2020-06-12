@@ -273,6 +273,30 @@ TEST(ParsePrivateKeyTest, RsaKey) {
   EXPECT_TRUE(RSA_check_fips(rsa));
 }
 
+TEST(ParsePublicKeyTest, EcKey) {
+  // Parse the public key in DER format.
+  ASSERT_OK_AND_ASSIGN(std::string der, LoadTestRunfile("ec_p256_public.der"));
+  ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> key,
+                       ParseX509PublicKeyDer(der));
+
+  const EC_KEY* ec_key = EVP_PKEY_get0_EC_KEY(key.get());
+  EXPECT_TRUE(EC_KEY_get0_public_key(ec_key));
+  EXPECT_TRUE(EC_KEY_check_key(ec_key));
+  EXPECT_TRUE(EC_KEY_check_fips(ec_key));
+}
+
+TEST(ParsePublicKeyTest, RsaKey) {
+  // Parse the public key in DER format.
+  ASSERT_OK_AND_ASSIGN(std::string der, LoadTestRunfile("rsa_2048_public.der"));
+  ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> key,
+                       ParseX509PublicKeyDer(der));
+
+  RSA* rsa = EVP_PKEY_get0_RSA(key.get());
+  EXPECT_TRUE(RSA_get0_e(rsa));
+  EXPECT_TRUE(RSA_check_key(rsa));
+  EXPECT_TRUE(RSA_check_fips(rsa));
+}
+
 TEST(RandBytesTest, SmokeTest) {
   std::string rand = RandBytes(8);
   EXPECT_EQ(rand.size(), 8);
