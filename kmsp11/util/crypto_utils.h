@@ -10,6 +10,21 @@ namespace kmsp11 {
 // Convert an ASN1_TIME structure to an absl::Time.
 StatusOr<absl::Time> Asn1TimeToAbsl(const ASN1_TIME* time);
 
+// Converts a signature in ASN.1 format (as returned by OpenSSL and Cloud KMS)
+// into IEEE P-1363 format (as required by PKCS #11).
+StatusOr<std::vector<uint8_t>> EcdsaSigAsn1ToP1363(absl::string_view asn1_sig,
+                                                   const EC_GROUP* group);
+
+// Returns the length of a signature in IEEE P-1363 format (with leading zeroes)
+// for the provided group.
+int EcdsaSigLengthP1363(const EC_GROUP* group);
+
+// Verifies that the provided signature in IEEE P-1363 format is a valid
+// signature over digest.
+absl::Status EcdsaVerifyP1363(EC_KEY* public_key, const EVP_MD* hash,
+                              absl::Span<const uint8_t> digest,
+                              absl::Span<const uint8_t> signature);
+
 // Encrypts plaintext using RSAES-OAEP with MGF-1, and writes it to ciphertext.
 // Ciphertext size must be exactly equal to the RSA modulus size. Hash is used
 // in both OAEP and MGF-1; OAEP labels are not supported.

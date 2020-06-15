@@ -14,6 +14,7 @@
 #include "openssl/obj.h"
 #include "openssl/pem.h"
 #include "openssl/rsa.h"
+#include "openssl/sha.h"
 
 namespace kmsp11 {
 namespace {
@@ -38,6 +39,152 @@ TEST(Asn1TimeToAbslTest, Now) {
 
   absl::Time now_seconds = absl::FromUnixSeconds(absl::ToUnixSeconds(now));
   EXPECT_THAT(Asn1TimeToAbsl(asn1_time.get()), IsOkAndHolds(now_seconds));
+}
+
+TEST(EcdsaSigAsn1ToP1363Test, ValidSignature) {
+  bssl::UniquePtr<EC_GROUP> g(EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1));
+
+  std::string asn1_sig = absl::HexStringToBytes(
+      "304502203B0C7CD5208944E1F7DDDAA304B4129A33FDD9449EED83EB14A1F2A780CB1436"
+      "022100BF049416636F7981A2C3DD8B68E5850590E6C536C3E81A55F259C4D9988DD97E");
+
+  std::string expected_p1363_sig = absl::HexStringToBytes(
+      "3B0C7CD5208944E1F7DDDAA304B4129A33FDD9449EED83EB14A1F2A780CB1436"    // r
+      "BF049416636F7981A2C3DD8B68E5850590E6C536C3E81A55F259C4D9988DD97E");  // s
+  absl::Span<const uint8_t> p1363_bytes = absl::MakeConstSpan(
+      reinterpret_cast<const uint8_t*>(expected_p1363_sig.data()),
+      expected_p1363_sig.size());
+
+  EXPECT_THAT(EcdsaSigAsn1ToP1363(asn1_sig, g.get()),
+              IsOkAndHolds(p1363_bytes));
+}
+
+TEST(EcdsaSigAsn1ToP1363Test, BadData) {
+  bssl::UniquePtr<EC_GROUP> g(EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1));
+  EXPECT_THAT(EcdsaSigAsn1ToP1363("abcde", g.get()),
+              StatusIs(absl::StatusCode::kInvalidArgument));
+}
+
+TEST(EcdsaSigAsn1ToP1363Test, GroupTooSmallForSignature) {
+  bssl::UniquePtr<EC_GROUP> g(EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1));
+  std::string p384_sig = absl::HexStringToBytes(
+      "3065023012b30abef6b5476fe6b612ae557c0425661e26b44b1bfe19daf2ca28e3113083"
+      "ba8e4ae4cc45a0320abd3394f1c548d7023100e7bf25603e2d07076ff30b7a2abec473da"
+      "8b11c572b35fc631991d5de62ddca7525aaba89325dfd04fecc47bff426f82");
+  EXPECT_THAT(EcdsaSigAsn1ToP1363(p384_sig, g.get()),
+              StatusIs(absl::StatusCode::kOutOfRange));
+}
+
+TEST(EcdsaSigLengthTest, P256Length) {
+  bssl::UniquePtr<EC_GROUP> g(EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1));
+  EXPECT_EQ(EcdsaSigLengthP1363(g.get()), 64);
+}
+
+TEST(EcdsaSigLengthTest, P521Length) {
+  bssl::UniquePtr<EC_GROUP> g(EC_GROUP_new_by_curve_name(NID_secp521r1));
+  EXPECT_EQ(EcdsaSigLengthP1363(g.get()), 132);
+}
+
+TEST(EcdsaVerifyP1363Test, ValidSignature) {
+  ASSERT_OK_AND_ASSIGN(std::string pub_pem,
+                       LoadTestRunfile("ec_p256_public.pem"));
+  ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub_key,
+                       ParseX509PublicKeyPem(pub_pem));
+  EC_KEY* ec_pub = EVP_PKEY_get0_EC_KEY(pub_key.get());
+  EXPECT_TRUE(ec_pub);
+
+  std::string data = "This is a message to authenticate\n";
+  uint8_t data_hash[32];
+  SHA256(reinterpret_cast<const uint8_t*>(data.data()), data.size(), data_hash);
+
+  std::string valid_sig = absl::HexStringToBytes(
+      "3B0C7CD5208944E1F7DDDAA304B4129A33FDD9449EED83EB14A1F2A780CB1436"    // r
+      "BF049416636F7981A2C3DD8B68E5850590E6C536C3E81A55F259C4D9988DD97E");  // s
+  absl::Span<const uint8_t> valid_sig_bytes = absl::MakeConstSpan(
+      reinterpret_cast<const uint8_t*>(valid_sig.data()), valid_sig.size());
+
+  EXPECT_OK(EcdsaVerifyP1363(ec_pub, EVP_sha256(), data_hash, valid_sig_bytes));
+}
+
+TEST(EcdsaVerifyP1363Test, InvalidSignatureDigestLength) {
+  ASSERT_OK_AND_ASSIGN(std::string pub_pem,
+                       LoadTestRunfile("ec_p256_public.pem"));
+  ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub_key,
+                       ParseX509PublicKeyPem(pub_pem));
+  EC_KEY* ec_pub = EVP_PKEY_get0_EC_KEY(pub_key.get());
+  EXPECT_TRUE(ec_pub);
+
+  uint8_t data_hash[31], sig_bytes[64];
+  EXPECT_THAT(EcdsaVerifyP1363(ec_pub, EVP_sha256(), data_hash, sig_bytes),
+              StatusRvIs(CKR_DATA_LEN_RANGE));
+}
+
+TEST(EcdsaVerifyP1363Test, InvalidSignatureBitFlip) {
+  ASSERT_OK_AND_ASSIGN(std::string pub_pem,
+                       LoadTestRunfile("ec_p256_public.pem"));
+  ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub_key,
+                       ParseX509PublicKeyPem(pub_pem));
+  EC_KEY* ec_pub = EVP_PKEY_get0_EC_KEY(pub_key.get());
+  EXPECT_TRUE(ec_pub);
+
+  std::string data = "This is a message to authenticate\n";
+  uint8_t data_hash[32];
+  SHA256(reinterpret_cast<const uint8_t*>(data.data()), data.size(), data_hash);
+
+  std::string last_bit_flipped = absl::HexStringToBytes(
+      "3B0C7CD5208944E1F7DDDAA304B4129A33FDD9449EED83EB14A1F2A780CB1436"    // r
+      "BF049416636F7981A2C3DD8B68E5850590E6C536C3E81A55F259C4D9988DD97F");  // s
+  absl::Span<const uint8_t> sig_bytes = absl::MakeConstSpan(
+      reinterpret_cast<const uint8_t*>(last_bit_flipped.data()),
+      last_bit_flipped.size());
+
+  EXPECT_THAT(EcdsaVerifyP1363(ec_pub, EVP_sha256(), data_hash, sig_bytes),
+              StatusRvIs(CKR_SIGNATURE_INVALID));
+}
+
+TEST(EcdsaVerifyP1363Test, InvalidSignatureOddLength) {
+  ASSERT_OK_AND_ASSIGN(std::string pub_pem,
+                       LoadTestRunfile("ec_p256_public.pem"));
+  ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub_key,
+                       ParseX509PublicKeyPem(pub_pem));
+  EC_KEY* ec_pub = EVP_PKEY_get0_EC_KEY(pub_key.get());
+  EXPECT_TRUE(ec_pub);
+
+  std::string data = "This is a message to authenticate\n";
+  uint8_t data_hash[32];
+  SHA256(reinterpret_cast<const uint8_t*>(data.data()), data.size(), data_hash);
+
+  std::string last_byte_omitted = absl::HexStringToBytes(
+      "3B0C7CD5208944E1F7DDDAA304B4129A33FDD9449EED83EB14A1F2A780CB1436"
+      "BF049416636F7981A2C3DD8B68E5850590E6C536C3E81A55F259C4D9988DD9");
+  absl::Span<const uint8_t> sig_bytes = absl::MakeConstSpan(
+      reinterpret_cast<const uint8_t*>(last_byte_omitted.data()),
+      last_byte_omitted.size());
+
+  EXPECT_THAT(EcdsaVerifyP1363(ec_pub, EVP_sha256(), data_hash, sig_bytes),
+              StatusRvIs(CKR_SIGNATURE_LEN_RANGE));
+}
+
+TEST(EcdsaVerifyP1363Test, InvalidSignatureTooLong) {
+  ASSERT_OK_AND_ASSIGN(std::string pub_pem,
+                       LoadTestRunfile("ec_p256_public.pem"));
+  ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub_key,
+                       ParseX509PublicKeyPem(pub_pem));
+  EC_KEY* ec_pub = EVP_PKEY_get0_EC_KEY(pub_key.get());
+  EXPECT_TRUE(ec_pub);
+
+  std::string data = "This is a message to authenticate\n";
+  uint8_t data_hash[32];
+  SHA256(reinterpret_cast<const uint8_t*>(data.data()), data.size(), data_hash);
+
+  std::string extra_byte = absl::HexStringToBytes(
+      "3B0C7CD5208944E1F7DDDAA304B4129A33FDD9449EED83EB14A1F2A780CB1436"
+      "BF049416636F7981A2C3DD8B68E5850590E6C536C3E81A55F259C4D9988DD97EFF");
+  absl::Span<const uint8_t> sig_bytes = absl::MakeConstSpan(
+      reinterpret_cast<const uint8_t*>(extra_byte.data()), extra_byte.size());
+
+  EXPECT_THAT(EcdsaVerifyP1363(ec_pub, EVP_sha256(), data_hash, sig_bytes),
+              StatusRvIs(CKR_SIGNATURE_LEN_RANGE));
 }
 
 TEST(EncryptRsaOaepTest, EncryptDecryptSuccess) {

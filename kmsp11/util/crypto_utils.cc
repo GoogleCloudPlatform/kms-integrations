@@ -5,6 +5,7 @@
 #include "openssl/bn.h"
 #include "openssl/bytestring.h"
 #include "openssl/ec_key.h"
+#include "openssl/ecdsa.h"
 #include "openssl/evp.h"
 #include "openssl/mem.h"
 #include "openssl/pem.h"
@@ -58,6 +59,80 @@ StatusOr<absl::Time> Asn1TimeToAbsl(const ASN1_TIME* time) {
   absl::CivilSecond second = absl::CivilSecond(day) + diff_secs;
 
   return absl::FromCivil(second, absl::UTCTimeZone());
+}
+
+StatusOr<std::vector<uint8_t>> EcdsaSigAsn1ToP1363(absl::string_view asn1_sig,
+                                                   const EC_GROUP* group) {
+  bssl::UniquePtr<ECDSA_SIG> sig(ECDSA_SIG_from_bytes(
+      reinterpret_cast<const uint8_t*>(asn1_sig.data()), asn1_sig.size()));
+  if (!sig) {
+    return NewInvalidArgumentError(
+        absl::StrCat("error parsing asn.1 signature: ", SslErrorToString()),
+        CKR_FUNCTION_FAILED, SOURCE_LOCATION);
+  }
+
+  int sig_len = EcdsaSigLengthP1363(group);
+  int n_len = sig_len / 2;
+
+  std::vector<uint8_t> result(sig_len);
+  if (!BN_bn2bin_padded(&result[0], n_len, ECDSA_SIG_get0_r(sig.get())) ||
+      !BN_bn2bin_padded(&result[n_len], n_len, ECDSA_SIG_get0_s(sig.get()))) {
+    return NewError(
+        absl::StatusCode::kOutOfRange,
+        absl::StrCat("error marshaling signature value: ", SslErrorToString()),
+        CKR_FUNCTION_FAILED, SOURCE_LOCATION);
+  }
+
+  return result;
+}
+
+int EcdsaSigLengthP1363(const EC_GROUP* group) {
+  return 2 * BN_num_bytes(EC_GROUP_get0_order(group));
+}
+
+absl::Status EcdsaVerifyP1363(EC_KEY* public_key, const EVP_MD* hash,
+                              absl::Span<const uint8_t> digest,
+                              absl::Span<const uint8_t> signature) {
+  if (digest.length() != EVP_MD_size(hash)) {
+    return NewInvalidArgumentError(
+        absl::StrFormat("digest length mismatches expected (got %d, want %d)",
+                        digest.length(), EVP_MD_size(hash)),
+        CKR_DATA_LEN_RANGE, SOURCE_LOCATION);
+  }
+
+  if (signature.length() % 2 == 1) {
+    return NewInvalidArgumentError(
+        absl::StrFormat(
+            "signature of length %d contains an uneven number of bytes",
+            signature.length()),
+        CKR_SIGNATURE_LEN_RANGE, SOURCE_LOCATION);
+  }
+
+  int max_len = EcdsaSigLengthP1363(EC_KEY_get0_group(public_key));
+  if (signature.length() > max_len) {
+    return NewInvalidArgumentError(
+        absl::StrFormat(
+            "provided signature length exceeds maximum (got %d, want <= %d)",
+            signature.length(), max_len),
+        CKR_SIGNATURE_LEN_RANGE, SOURCE_LOCATION);
+  }
+
+  bssl::UniquePtr<ECDSA_SIG> sig(ECDSA_SIG_new());
+  int n_len = signature.length() / 2;
+  if (!BN_bin2bn(&signature[0], n_len, sig->r) ||
+      !BN_bin2bn(&signature[n_len], n_len, sig->s)) {
+    return NewInternalError(
+        absl::StrCat("error parsing signature component: ", SslErrorToString()),
+        SOURCE_LOCATION);
+  }
+
+  if (!ECDSA_do_verify(digest.data(), digest.size(), sig.get(), public_key)) {
+    return NewInvalidArgumentError(
+        absl::StrCat("verification failed: ", SslErrorToString()),
+        CKR_SIGNATURE_INVALID, SOURCE_LOCATION);
+  }
+
+  return absl::OkStatus();
 }
 
 absl::Status EncryptRsaOaep(EVP_PKEY* key, const EVP_MD* hash,
