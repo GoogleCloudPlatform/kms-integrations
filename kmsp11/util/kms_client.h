@@ -35,6 +35,9 @@ class KmsClient {
   StatusOr<kms_v1::AsymmetricDecryptResponse> AsymmetricDecrypt(
       const kms_v1::AsymmetricDecryptRequest& request) const;
 
+  StatusOr<kms_v1::AsymmetricSignResponse> AsymmetricSign(
+      const kms_v1::AsymmetricSignRequest& request) const;
+
   StatusOr<kms_v1::PublicKey> GetPublicKey(
       const kms_v1::GetPublicKeyRequest& request) const;
 

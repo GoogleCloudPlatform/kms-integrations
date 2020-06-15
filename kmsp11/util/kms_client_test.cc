@@ -7,6 +7,8 @@
 #include "kmsp11/test/resource_helpers.h"
 #include "kmsp11/test/test_status_macros.h"
 #include "kmsp11/util/crypto_utils.h"
+#include "openssl/ec_key.h"
+#include "openssl/sha.h"
 
 namespace kmsp11 {
 namespace {
@@ -183,6 +185,53 @@ TEST_F(KmsClientTest, AsymmetricDecryptFailureInvalidName) {
   kms_v1::AsymmetricDecryptRequest req;
   req.set_name("foo");
   EXPECT_THAT(client_->AsymmetricDecrypt(req),
+              StatusIs(absl::StatusCode::kInvalidArgument));
+}
+
+TEST_F(KmsClientTest, AsymmetricSignSuccess) {
+  kms_v1::KeyRing kr;
+  kr = CreateKeyRingOrDie(client_->kms_stub(), kTestLocation, RandomId(), kr);
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+  ck = CreateCryptoKeyOrDie(client_->kms_stub(), kr.name(), "ck", ck, true);
+
+  kms_v1::CryptoKeyVersion ckv;
+  ckv = CreateCryptoKeyVersionOrDie(client_->kms_stub(), ck.name(), ckv);
+  ckv = WaitForEnablement(client_->kms_stub(), ckv);
+
+  kms_v1::GetPublicKeyRequest pub_req;
+  pub_req.set_name(ckv.name());
+  ASSERT_OK_AND_ASSIGN(kms_v1::PublicKey pk, client_->GetPublicKey(pub_req));
+
+  ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub,
+                       ParseX509PublicKeyPem(pk.pem()));
+
+  std::string data = "Here is some data to authenticate";
+  uint8_t digest[32];
+  SHA256(reinterpret_cast<const uint8_t*>(data.data()), data.size(), digest);
+
+  kms_v1::AsymmetricSignRequest sign_req;
+  sign_req.set_name(ckv.name());
+  sign_req.mutable_digest()->set_sha256(digest, sizeof(digest));
+
+  ASSERT_OK_AND_ASSIGN(kms_v1::AsymmetricSignResponse sign_resp,
+                       client_->AsymmetricSign(sign_req));
+
+  EC_KEY* ec_key = EVP_PKEY_get0_EC_KEY(pub.get());
+  ASSERT_OK_AND_ASSIGN(
+      std::vector<uint8_t> p1363_sig,
+      EcdsaSigAsn1ToP1363(sign_resp.signature(), EC_KEY_get0_group(ec_key)));
+
+  EXPECT_OK(EcdsaVerifyP1363(ec_key, EVP_sha256(), digest, p1363_sig));
+}
+
+TEST_F(KmsClientTest, AsymmetricSignFailureInvalidName) {
+  kms_v1::AsymmetricSignRequest req;
+  req.set_name("foo");
+  EXPECT_THAT(client_->AsymmetricSign(req),
               StatusIs(absl::StatusCode::kInvalidArgument));
 }
 

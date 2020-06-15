@@ -53,6 +53,16 @@ StatusOr<kms_v1::AsymmetricDecryptResponse> KmsClient::AsymmetricDecrypt(
   return response;
 }
 
+StatusOr<kms_v1::AsymmetricSignResponse> KmsClient::AsymmetricSign(
+    const kms_v1::AsymmetricSignRequest& request) const {
+  grpc::ClientContext ctx;
+  AddContextSettings(&ctx, "name", request.name(), rpc_timeout_);
+
+  kms_v1::AsymmetricSignResponse response;
+  RETURN_IF_ERROR(kms_stub_->AsymmetricSign(&ctx, request, &response));
+  return response;
+}
+
 StatusOr<kms_v1::PublicKey> KmsClient::GetPublicKey(
     const kms_v1::GetPublicKeyRequest& request) const {
   grpc::ClientContext ctx;
