@@ -9,6 +9,23 @@
 #include "yaml-cpp/yaml.h"
 
 namespace kmsp11 {
+namespace {
+
+// Exceptions are disallowed by our style guide. Wrap YAML::LoadFile (which may
+// throw) in a noexcept function, and convert thrown exceptions to a reasonable
+// absl::Status.
+static StatusOr<YAML::Node> ParseYamlFile(
+    const std::string& file_path) noexcept {
+  try {
+    return YAML::LoadFile(file_path);
+  } catch (const YAML::Exception& e) {
+    return NewInvalidArgumentError(
+        absl::StrFormat("error parsing file at %s: %s", file_path, e.what()),
+        CKR_GENERAL_ERROR, SOURCE_LOCATION);
+  }
+}
+
+}  // namespace
 
 StatusOr<LibraryConfig> LoadConfigFromEnvironment() {
   char* env_value = std::getenv(kConfigEnvVariable);
@@ -20,19 +37,6 @@ StatusOr<LibraryConfig> LoadConfigFromEnvironment() {
         CKR_GENERAL_ERROR, SOURCE_LOCATION);
   }
   return LoadConfigFromFile(env_value);
-}
-
-// Exceptions are disallowed by our style guide. Wrap YAML::LoadFile (which may
-// throw) in a noexcept function, and convert thrown exceptions to a reasonable
-// absl::Status.
-StatusOr<YAML::Node> ParseYamlFile(const std::string& file_path) noexcept {
-  try {
-    return YAML::LoadFile(file_path);
-  } catch (const YAML::Exception& e) {
-    return NewInvalidArgumentError(
-        absl::StrFormat("error parsing file at %s: %s", file_path, e.what()),
-        CKR_GENERAL_ERROR, SOURCE_LOCATION);
-  }
 }
 
 StatusOr<LibraryConfig> LoadConfigFromFile(const std::string& config_path) {

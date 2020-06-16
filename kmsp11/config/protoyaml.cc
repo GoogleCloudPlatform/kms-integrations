@@ -5,22 +5,23 @@
 #include "kmsp11/util/status_macros.h"
 
 namespace kmsp11 {
+namespace {
 
 using google::protobuf::FieldDescriptor;
 using google::protobuf::Message;
 using google::protobuf::MessageFactory;
 using google::protobuf::Reflection;
 
-absl::Status YamlError(absl::string_view message, YAML::Mark mark,
-                       SourceLocation source_location) {
+static absl::Status YamlError(absl::string_view message, YAML::Mark mark,
+                              SourceLocation source_location) {
   return NewInvalidArgumentError(
       absl::StrFormat("error in YAML document at line %d, column %d: %s",
                       mark.line, mark.column, message),
       CKR_GENERAL_ERROR, source_location);
 }
 
-absl::Status SetScalarField(Message* dest, const FieldDescriptor* field,
-                            const YAML::Node& value) {
+static absl::Status SetScalarField(Message* dest, const FieldDescriptor* field,
+                                   const YAML::Node& value) {
   if (!value.IsScalar()) {
     return YamlError("expected scalar node", value.Mark(), SOURCE_LOCATION);
   }
@@ -57,8 +58,9 @@ absl::Status SetScalarField(Message* dest, const FieldDescriptor* field,
   }
 }
 
-absl::Status SetRepeatedField(Message* dest, const FieldDescriptor* field,
-                              const YAML::Node& value) {
+static absl::Status SetRepeatedField(Message* dest,
+                                     const FieldDescriptor* field,
+                                     const YAML::Node& value) {
   if (!value.IsSequence()) {
     return YamlError("expected a sequence", value.Mark(), SOURCE_LOCATION);
   }
@@ -98,8 +100,8 @@ absl::Status SetRepeatedField(Message* dest, const FieldDescriptor* field,
   }
 }
 
-absl::Status SetMessageField(Message* dest, const FieldDescriptor* field,
-                             const YAML::Node& value) {
+static absl::Status SetMessageField(Message* dest, const FieldDescriptor* field,
+                                    const YAML::Node& value) {
   std::unique_ptr<Message> child_message(
       MessageFactory::generated_factory()
           ->GetPrototype(field->message_type())
@@ -111,8 +113,8 @@ absl::Status SetMessageField(Message* dest, const FieldDescriptor* field,
   return absl::OkStatus();
 }
 
-absl::Status SetField(Message* dest, const FieldDescriptor* field,
-                      const YAML::Node& value) {
+static absl::Status SetField(Message* dest, const FieldDescriptor* field,
+                             const YAML::Node& value) {
   if (field->is_repeated()) {
     return SetRepeatedField(dest, field, value);
   }
@@ -121,6 +123,8 @@ absl::Status SetField(Message* dest, const FieldDescriptor* field,
   }
   return SetScalarField(dest, field, value);
 }
+
+}  // namespace
 
 absl::Status YamlToProto(const YAML::Node& node,
                          google::protobuf::Message* message) {
