@@ -173,5 +173,24 @@ scalars {
   EXPECT_THAT(result, EqualsProto(want));
 }
 
+TEST(ProtoyamlTest, RepeatedMessageUnmodifiedOnParseError) {
+  YAML::Node node = YAML::Load(R"(---
+scalars:
+  - int_field: 123
+  - foo_field: 456
+)");
+
+  RepeatedScalars want = ParseTestProto(R"(
+scalars {
+  bool_field: false
+})");
+
+  RepeatedScalars got(want);
+
+  EXPECT_THAT(YamlToProto(node, &got),
+              StatusIs(absl::StatusCode::kInvalidArgument));
+  EXPECT_THAT(got, EqualsProto(want));
+}
+
 }  // namespace
 }  // namespace kmsp11

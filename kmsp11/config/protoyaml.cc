@@ -59,35 +59,36 @@ absl::Status SetScalarField(Message* dest, const FieldDescriptor* field,
 
 absl::Status SetRepeatedField(Message* dest, const FieldDescriptor* field,
                               const YAML::Node& value) {
-  const Reflection* reflect = dest->GetReflection();
-  // Clear the repeated field. This allows overwriting pre-configured default
-  // values with values that are actually specified in YAML.
-  // (If we didn't clear repeated fields that are specified in YAML, we'd end up
-  // with the sum of the template and what's specified in YAML.)
-  reflect->ClearField(dest, field);
-
   if (!value.IsSequence()) {
     return YamlError("expected a sequence", value.Mark(), SOURCE_LOCATION);
   }
 
   switch (field->type()) {
-    case FieldDescriptor::TYPE_MESSAGE:
-      for (const YAML::Node& child_node : value) {
-        // Using a bare pointer to facilitate ownership passing in
-        // AddAllocatedMessage, which doesn't have an overload that takes smart
-        // pointers.
-        Message* child_message = MessageFactory::generated_factory()
-                                     ->GetPrototype(field->message_type())
-                                     ->New();
-        absl::Status result = YamlToProto(child_node, child_message);
-        if (!result.ok()) {
-          delete child_message;
-          return result;
-        }
+    case FieldDescriptor::TYPE_MESSAGE: {
+      const Reflection* reflect = dest->GetReflection();
 
-        dest->GetReflection()->AddAllocatedMessage(dest, field, child_message);
+      // Process all the child messages (and handle any errors) before we make
+      // any changes to dest.
+      std::vector<std::unique_ptr<Message>> child_messages;
+      child_messages.reserve(value.size());
+      for (const YAML::Node& child_node : value) {
+        child_messages.emplace_back(MessageFactory::generated_factory()
+                                        ->GetPrototype(field->message_type())
+                                        ->New());
+        RETURN_IF_ERROR(YamlToProto(child_node, child_messages.back().get()));
+      }
+
+      // Clear the repeated field. This allows overwriting pre-configured
+      // default values with values that are actually specified in YAML. (If we
+      // didn't clear repeated fields that are specified in YAML, we'd end up
+      // with the sum of the template and what's specified in YAML.)
+      reflect->ClearField(dest, field);
+
+      for (std::unique_ptr<Message>& m : child_messages) {
+        reflect->AddAllocatedMessage(dest, field, m.release());
       }
       return absl::OkStatus();
+    }
 
     default:
       return NewInternalError(
@@ -99,19 +100,14 @@ absl::Status SetRepeatedField(Message* dest, const FieldDescriptor* field,
 
 absl::Status SetMessageField(Message* dest, const FieldDescriptor* field,
                              const YAML::Node& value) {
-  // Using a bare pointer to facilitate ownership passing in
-  // AddAllocatedMessage, which doesn't have an overload that takes a smart
-  // pointer.
-  Message* child_message = MessageFactory::generated_factory()
-                               ->GetPrototype(field->message_type())
-                               ->New();
-  absl::Status result = YamlToProto(value, child_message);
-  if (!result.ok()) {
-    delete child_message;
-    return result;
-  }
+  std::unique_ptr<Message> child_message(
+      MessageFactory::generated_factory()
+          ->GetPrototype(field->message_type())
+          ->New());
 
-  dest->GetReflection()->SetAllocatedMessage(dest, child_message, field);
+  RETURN_IF_ERROR(YamlToProto(value, child_message.get()));
+  dest->GetReflection()->SetAllocatedMessage(dest, child_message.release(),
+                                             field);
   return absl::OkStatus();
 }
 
