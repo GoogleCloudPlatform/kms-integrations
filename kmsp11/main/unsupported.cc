@@ -7,17 +7,6 @@
 
 namespace kmsp11 {
 
-absl::Status SignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechanism,
-                      CK_OBJECT_HANDLE hKey) {
-  return UnsupportedError(SOURCE_LOCATION);
-}
-
-absl::Status Sign(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pData,
-                  CK_ULONG ulDataLen, CK_BYTE_PTR pSignature,
-                  CK_ULONG_PTR pulSignatureLen) {
-  return UnsupportedError(SOURCE_LOCATION);
-}
-
 absl::Status InitToken(CK_SLOT_ID slotID, CK_UTF8CHAR_PTR pPin,
                        CK_ULONG ulPinLen, CK_UTF8CHAR_PTR pLabel) {
   return UnsupportedError(SOURCE_LOCATION);
@@ -148,17 +137,6 @@ absl::Status SignRecoverInit(CK_SESSION_HANDLE hSession,
 absl::Status SignRecover(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pData,
                          CK_ULONG ulDataLen, CK_BYTE_PTR pSignature,
                          CK_ULONG_PTR pulSignatureLen) {
-  return UnsupportedError(SOURCE_LOCATION);
-}
-
-absl::Status VerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechanism,
-                        CK_OBJECT_HANDLE hKey) {
-  return UnsupportedError(SOURCE_LOCATION);
-}
-
-absl::Status Verify(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pData,
-                    CK_ULONG ulDataLen, CK_BYTE_PTR pSignature,
-                    CK_ULONG ulSignatureLen) {
   return UnsupportedError(SOURCE_LOCATION);
 }
 

@@ -25,6 +25,7 @@ cc_library(
         "//kmsp11:mechanism",
         "//kmsp11:provider",
         "//kmsp11/config",
+        "//kmsp11/util:cleanup",
         "//kmsp11/util:errors",
         "@com_google_absl//absl/status",
     ],

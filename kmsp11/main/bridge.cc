@@ -5,6 +5,7 @@
 #include "kmsp11/main/function_list.h"
 #include "kmsp11/mechanism.h"
 #include "kmsp11/provider.h"
+#include "kmsp11/util/cleanup.h"
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/status_macros.h"
 
@@ -29,6 +30,21 @@ StatusOr<std::shared_ptr<Session>> GetSession(
     CK_SESSION_HANDLE session_handle) {
   ASSIGN_OR_RETURN(Provider * provider, GetProvider());
   return provider->GetSession(session_handle);
+}
+
+StatusOr<std::shared_ptr<Object>> GetKey(Session* session,
+                                         CK_OBJECT_HANDLE key_handle) {
+  StatusOr<std::shared_ptr<Object>> key_or =
+      session->token()->GetObject(key_handle);
+  if (!key_or.ok()) {
+    if (GetCkRv(key_or.status()) == CKR_OBJECT_HANDLE_INVALID) {
+      absl::Status result(key_or.status());
+      SetErrorRv(result, CKR_KEY_HANDLE_INVALID);
+      return result;
+    }
+    return key_or.status();
+  }
+  return key_or.value();
 }
 
 // Initialize the library.
@@ -354,21 +370,12 @@ absl::Status FindObjectsFinal(CK_SESSION_HANDLE hSession) {
 absl::Status DecryptInit(CK_SESSION_HANDLE hSession,
                          CK_MECHANISM_PTR pMechanism, CK_OBJECT_HANDLE hKey) {
   ASSIGN_OR_RETURN(std::shared_ptr<Session> session, GetSession(hSession));
-
-  StatusOr<std::shared_ptr<Object>> key_or = session->token()->GetObject(hKey);
-  if (!key_or.ok()) {
-    if (GetCkRv(key_or.status()) == CKR_OBJECT_HANDLE_INVALID) {
-      absl::Status result(key_or.status());
-      SetErrorRv(result, CKR_KEY_HANDLE_INVALID);
-      return result;
-    }
-    return key_or.status();
-  }
+  ASSIGN_OR_RETURN(std::shared_ptr<Object> key, GetKey(session.get(), hKey));
 
   if (!pMechanism) {
     return NullArgumentError("pMechanism", SOURCE_LOCATION);
   }
-  return session->DecryptInit(key_or.value(), pMechanism);
+  return session->DecryptInit(key, pMechanism);
 }
 
 // Complete a decrypt operation.
@@ -415,21 +422,12 @@ absl::Status Decrypt(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pEncryptedData,
 absl::Status EncryptInit(CK_SESSION_HANDLE hSession,
                          CK_MECHANISM_PTR pMechanism, CK_OBJECT_HANDLE hKey) {
   ASSIGN_OR_RETURN(std::shared_ptr<Session> session, GetSession(hSession));
-
-  StatusOr<std::shared_ptr<Object>> key_or = session->token()->GetObject(hKey);
-  if (!key_or.ok()) {
-    if (GetCkRv(key_or.status()) == CKR_OBJECT_HANDLE_INVALID) {
-      absl::Status result(key_or.status());
-      SetErrorRv(result, CKR_KEY_HANDLE_INVALID);
-      return result;
-    }
-    return key_or.status();
-  }
+  ASSIGN_OR_RETURN(std::shared_ptr<Object> key, GetKey(session.get(), hKey));
 
   if (!pMechanism) {
     return NullArgumentError("pMechanism", SOURCE_LOCATION);
   }
-  return session->EncryptInit(key_or.value(), pMechanism);
+  return session->EncryptInit(key, pMechanism);
 }
 
 // Complete an encrypt operation.
@@ -468,6 +466,90 @@ absl::Status Encrypt(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pData,
 
   session->ReleaseOperation();
   return absl::OkStatus();
+}
+
+// Begin a sign operation.
+// http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc235002372
+absl::Status SignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechanism,
+                      CK_OBJECT_HANDLE hKey) {
+  ASSIGN_OR_RETURN(std::shared_ptr<Session> session, GetSession(hSession));
+  ASSIGN_OR_RETURN(std::shared_ptr<Object> key, GetKey(session.get(), hKey));
+
+  if (!pMechanism) {
+    return NullArgumentError("pMechanism", SOURCE_LOCATION);
+  }
+  return session->SignInit(key, pMechanism);
+}
+
+// Complete a sign operation.
+// http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc235002373
+absl::Status Sign(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pData,
+                  CK_ULONG ulDataLen, CK_BYTE_PTR pSignature,
+                  CK_ULONG_PTR pulSignatureLen) {
+  ASSIGN_OR_RETURN(std::shared_ptr<Session> session, GetSession(hSession));
+  if (!pData) {
+    return NullArgumentError("pData", SOURCE_LOCATION);
+  }
+  if (!pulSignatureLen) {
+    return NullArgumentError("pulSignatureLen", SOURCE_LOCATION);
+  }
+
+  ASSIGN_OR_RETURN(size_t sig_length, session->SignatureLength());
+
+  if (!pSignature) {
+    *pulSignatureLen = sig_length;
+    return absl::OkStatus();
+  }
+
+  if (*pulSignatureLen < sig_length) {
+    absl::Status result = OutOfRangeError(
+        absl::StrFormat(
+            "signature of length %d cannot fit in buffer of length %d",
+            sig_length, *pulSignatureLen),
+        SOURCE_LOCATION);
+    *pulSignatureLen = sig_length;
+    return result;
+  }
+
+  Cleanup c([&session]() -> void { session->ReleaseOperation(); });
+
+  absl::Status result = session->Sign(absl::MakeConstSpan(pData, ulDataLen),
+                                      absl::MakeSpan(pSignature, sig_length));
+  if (result.ok()) {
+    *pulSignatureLen = sig_length;
+  }
+  return result;
+}
+
+// Begin a verify operation.
+// http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc235002379
+absl::Status VerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechanism,
+                        CK_OBJECT_HANDLE hKey) {
+  ASSIGN_OR_RETURN(std::shared_ptr<Session> session, GetSession(hSession));
+  ASSIGN_OR_RETURN(std::shared_ptr<Object> key, GetKey(session.get(), hKey));
+
+  if (!pMechanism) {
+    return NullArgumentError("pMechanism", SOURCE_LOCATION);
+  }
+  return session->VerifyInit(key, pMechanism);
+}
+
+// Complete a verify operation.
+// http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc235002380
+absl::Status Verify(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pData,
+                    CK_ULONG ulDataLen, CK_BYTE_PTR pSignature,
+                    CK_ULONG ulSignatureLen) {
+  ASSIGN_OR_RETURN(std::shared_ptr<Session> session, GetSession(hSession));
+  if (!pData) {
+    return NullArgumentError("pData", SOURCE_LOCATION);
+  }
+  if (!pSignature) {
+    return NullArgumentError("pSignature", SOURCE_LOCATION);
+  }
+
+  Cleanup c([&session]() -> void { session->ReleaseOperation(); });
+  return session->Verify(absl::MakeConstSpan(pData, ulDataLen),
+                         absl::MakeConstSpan(pSignature, ulSignatureLen));
 }
 
 }  // namespace kmsp11
