@@ -101,4 +101,61 @@ StatusOr<absl::Span<const uint8_t>> Session::Encrypt(
   return absl::get<EncryptOp>(op_.value())->Encrypt(kms_client_, plaintext);
 }
 
+absl::Status Session::SignInit(std::shared_ptr<Object> key,
+                               CK_MECHANISM* mechanism) {
+  absl::MutexLock l(&op_mutex_);
+
+  if (op_.has_value()) {
+    return OperationActiveError(SOURCE_LOCATION);
+  }
+
+  ASSIGN_OR_RETURN(op_, NewSignOp(key, mechanism));
+  return absl::OkStatus();
+}
+
+absl::Status Session::Sign(absl::Span<const uint8_t> digest,
+                           absl::Span<uint8_t> signature) {
+  absl::MutexLock l(&op_mutex_);
+
+  if (!op_.has_value() || !absl::holds_alternative<SignOp>(op_.value())) {
+    return OperationNotInitializedError("sign", SOURCE_LOCATION);
+  }
+
+  return absl::get<SignOp>(op_.value())->Sign(kms_client_, digest, signature);
+}
+
+StatusOr<size_t> Session::SignatureLength() {
+  absl::MutexLock l(&op_mutex_);
+
+  if (!op_.has_value() || !absl::holds_alternative<SignOp>(op_.value())) {
+    return OperationNotInitializedError("sign", SOURCE_LOCATION);
+  }
+
+  return absl::get<SignOp>(op_.value())->signature_length();
+}
+
+absl::Status Session::VerifyInit(std::shared_ptr<Object> key,
+                                 CK_MECHANISM* mechanism) {
+  absl::MutexLock l(&op_mutex_);
+
+  if (op_.has_value()) {
+    return OperationActiveError(SOURCE_LOCATION);
+  }
+
+  ASSIGN_OR_RETURN(op_, NewVerifyOp(key, mechanism));
+  return absl::OkStatus();
+}
+
+absl::Status Session::Verify(absl::Span<const uint8_t> digest,
+                             absl::Span<const uint8_t> signature) {
+  absl::MutexLock l(&op_mutex_);
+
+  if (!op_.has_value() || !absl::holds_alternative<VerifyOp>(op_.value())) {
+    return OperationNotInitializedError("verify", SOURCE_LOCATION);
+  }
+
+  return absl::get<VerifyOp>(op_.value())
+      ->Verify(kms_client_, digest, signature);
+}
+
 }  // namespace kmsp11

@@ -1,5 +1,6 @@
 #include "kmsp11/operation/crypter_ops.h"
 
+#include "kmsp11/operation/ecdsa.h"
 #include "kmsp11/operation/rsaes_oaep.h"
 #include "kmsp11/util/errors.h"
 
@@ -23,6 +24,28 @@ StatusOr<EncryptOp> NewEncryptOp(std::shared_ptr<Object> key,
       return RsaOaepEncrypter::New(key, mechanism);
     default:
       return InvalidMechanismError(mechanism->mechanism, "encrypt",
+                                   SOURCE_LOCATION);
+  }
+}
+
+StatusOr<SignOp> NewSignOp(std::shared_ptr<Object> key,
+                           const CK_MECHANISM* mechanism) {
+  switch (mechanism->mechanism) {
+    case CKM_ECDSA:
+      return EcdsaSigner::New(key, mechanism);
+    default:
+      return InvalidMechanismError(mechanism->mechanism, "sign",
+                                   SOURCE_LOCATION);
+  }
+}
+
+StatusOr<VerifyOp> NewVerifyOp(std::shared_ptr<Object> key,
+                               const CK_MECHANISM* mechanism) {
+  switch (mechanism->mechanism) {
+    case CKM_ECDSA:
+      return EcdsaVerifier::New(key, mechanism);
+    default:
+      return InvalidMechanismError(mechanism->mechanism, "verify",
                                    SOURCE_LOCATION);
   }
 }

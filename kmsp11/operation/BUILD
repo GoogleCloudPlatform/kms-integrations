@@ -19,6 +19,7 @@ cc_library(
     hdrs = ["crypter_ops.h"],
     deps = [
         ":crypter_interfaces",
+        ":ecdsa",
         ":rsaes_oaep",
         "//kmsp11/util:errors",
     ],

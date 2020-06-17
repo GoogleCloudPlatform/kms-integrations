@@ -347,5 +347,213 @@ TEST_F(SessionTest, EncryptNotInitialized) {
   EXPECT_THAT(s.Encrypt(plaintext), StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
+TEST_F(SessionTest, Sign) {
+  auto kms_client = fake_kms_->NewClient();
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+  ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), "ck", ck, true);
+
+  kms_v1::CryptoKeyVersion ckv;
+  ckv = CreateCryptoKeyVersionOrDie(kms_client.get(), ck.name(), ckv);
+  ckv = WaitForEnablement(kms_client.get(), ckv);
+
+  kms_v1::PublicKey pub_proto = GetPublicKey(kms_client.get(), ckv);
+  ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub,
+                       ParseX509PublicKeyPem(pub_proto.pem()));
+
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), client_.get());
+
+  std::vector<CK_OBJECT_HANDLE> handles =
+      s.token()->FindObjects([&](const Object& o) -> bool {
+        return o.kms_key_name() == ckv.name() &&
+               o.object_class() == CKO_PRIVATE_KEY;
+      });
+  EXPECT_EQ(handles.size(), 1);
+  ASSERT_OK_AND_ASSIGN(std::shared_ptr<Object> object,
+                       s.token()->GetObject(handles[0]));
+
+  CK_MECHANISM mech{CKM_ECDSA, nullptr, 0};
+
+  uint8_t digest[32], signature[64];
+  EXPECT_OK(s.SignInit(object, &mech));
+  EXPECT_OK(s.Sign(digest, absl::MakeSpan(signature)));
+
+  EXPECT_OK(EcdsaVerifyP1363(EVP_PKEY_get0_EC_KEY(pub.get()), EVP_sha256(),
+                             digest, signature));
+}
+
+TEST_F(SessionTest, SignInitAlreadyActive) {
+  auto kms_client = fake_kms_->NewClient();
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+  ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), "ck", ck, true);
+
+  kms_v1::CryptoKeyVersion ckv;
+  ckv = CreateCryptoKeyVersionOrDie(kms_client.get(), ck.name(), ckv);
+  ckv = WaitForEnablement(kms_client.get(), ckv);
+
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), client_.get());
+
+  std::vector<CK_OBJECT_HANDLE> handles =
+      s.token()->FindObjects([&](const Object& o) -> bool {
+        return o.kms_key_name() == ckv.name() &&
+               o.object_class() == CKO_PRIVATE_KEY;
+      });
+  EXPECT_EQ(handles.size(), 1);
+  ASSERT_OK_AND_ASSIGN(std::shared_ptr<Object> object,
+                       s.token()->GetObject(handles[0]));
+
+  CK_MECHANISM mech{CKM_ECDSA, nullptr, 0};
+
+  EXPECT_OK(s.SignInit(object, &mech))
+  EXPECT_THAT(s.SignInit(object, &mech), StatusRvIs(CKR_OPERATION_ACTIVE));
+}
+
+TEST_F(SessionTest, SignatureLength) {
+  auto kms_client = fake_kms_->NewClient();
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+  ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), "ck", ck, true);
+
+  kms_v1::CryptoKeyVersion ckv;
+  ckv = CreateCryptoKeyVersionOrDie(kms_client.get(), ck.name(), ckv);
+  ckv = WaitForEnablement(kms_client.get(), ckv);
+
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), client_.get());
+
+  std::vector<CK_OBJECT_HANDLE> handles =
+      s.token()->FindObjects([&](const Object& o) -> bool {
+        return o.kms_key_name() == ckv.name() &&
+               o.object_class() == CKO_PRIVATE_KEY;
+      });
+  EXPECT_EQ(handles.size(), 1);
+  ASSERT_OK_AND_ASSIGN(std::shared_ptr<Object> object,
+                       s.token()->GetObject(handles[0]));
+
+  CK_MECHANISM mech{CKM_ECDSA, nullptr, 0};
+
+  EXPECT_OK(s.SignInit(object, &mech));
+  EXPECT_THAT(s.SignatureLength(), IsOkAndHolds(64));
+}
+
+TEST_F(SessionTest, SignatureLengthNotInitialized) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), client_.get());
+
+  EXPECT_THAT(s.SignatureLength(), StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
+}
+
+TEST_F(SessionTest, SignNotInitialized) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), client_.get());
+
+  uint8_t digest[32], signature[64];
+  EXPECT_THAT(s.Sign(digest, absl::MakeSpan(signature)),
+              StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
+}
+
+TEST_F(SessionTest, SignVerify) {
+  auto kms_client = fake_kms_->NewClient();
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+  ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), "ck", ck, true);
+
+  kms_v1::CryptoKeyVersion ckv;
+  ckv = CreateCryptoKeyVersionOrDie(kms_client.get(), ck.name(), ckv);
+  ckv = WaitForEnablement(kms_client.get(), ckv);
+
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), client_.get());
+
+  std::vector<CK_OBJECT_HANDLE> handles =
+      s.token()->FindObjects([&](const Object& o) -> bool {
+        return o.kms_key_name() == ckv.name() &&
+               o.object_class() == CKO_PRIVATE_KEY;
+      });
+  EXPECT_EQ(handles.size(), 1);
+  ASSERT_OK_AND_ASSIGN(std::shared_ptr<Object> prv,
+                       s.token()->GetObject(handles[0]));
+
+  handles = s.token()->FindObjects([&](const Object& o) -> bool {
+    return o.kms_key_name() == ckv.name() && o.object_class() == CKO_PUBLIC_KEY;
+  });
+  EXPECT_EQ(handles.size(), 1);
+  ASSERT_OK_AND_ASSIGN(std::shared_ptr<Object> pub,
+                       s.token()->GetObject(handles[0]));
+
+  CK_MECHANISM mech{CKM_ECDSA, nullptr, 0};
+
+  uint8_t digest[32], signature[64];
+  EXPECT_OK(s.SignInit(prv, &mech));
+  EXPECT_OK(s.Sign(digest, absl::MakeSpan(signature)));
+  s.ReleaseOperation();
+
+  EXPECT_OK(s.VerifyInit(pub, &mech));
+  EXPECT_OK(s.Verify(digest, signature));
+}
+
+TEST_F(SessionTest, VerifyInitAlreadyActive) {
+  auto kms_client = fake_kms_->NewClient();
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+  ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), "ck", ck, true);
+
+  kms_v1::CryptoKeyVersion ckv;
+  ckv = CreateCryptoKeyVersionOrDie(kms_client.get(), ck.name(), ckv);
+  ckv = WaitForEnablement(kms_client.get(), ckv);
+
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), client_.get());
+
+  std::vector<CK_OBJECT_HANDLE> handles =
+      s.token()->FindObjects([&](const Object& o) -> bool {
+        return o.kms_key_name() == ckv.name() &&
+               o.object_class() == CKO_PUBLIC_KEY;
+      });
+  EXPECT_EQ(handles.size(), 1);
+  ASSERT_OK_AND_ASSIGN(std::shared_ptr<Object> object,
+                       s.token()->GetObject(handles[0]));
+
+  CK_MECHANISM mech{CKM_ECDSA, nullptr, 0};
+
+  EXPECT_OK(s.VerifyInit(object, &mech));
+  EXPECT_THAT(s.VerifyInit(object, &mech), StatusRvIs(CKR_OPERATION_ACTIVE));
+}
+
+TEST_F(SessionTest, VerifyNotInitialized) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), client_.get());
+
+  uint8_t digest[32], signature[64];
+  EXPECT_THAT(s.Verify(digest, signature),
+              StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
+}
+
 }  // namespace
 }  // namespace kmsp11

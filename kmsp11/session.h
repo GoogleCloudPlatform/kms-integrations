@@ -32,6 +32,15 @@ class Session {
   StatusOr<absl::Span<const uint8_t>> Encrypt(
       absl::Span<const uint8_t> plaintext);
 
+  absl::Status SignInit(std::shared_ptr<Object> key, CK_MECHANISM* mechanism);
+  absl::Status Sign(absl::Span<const uint8_t> digest,
+                    absl::Span<uint8_t> signature);
+  StatusOr<size_t> SignatureLength();
+
+  absl::Status VerifyInit(std::shared_ptr<Object> key, CK_MECHANISM* mechanism);
+  absl::Status Verify(absl::Span<const uint8_t> digest,
+                      absl::Span<const uint8_t> signature);
+
  private:
   Token* token_;
   KmsClient* kms_client_;

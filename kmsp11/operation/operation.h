@@ -8,7 +8,7 @@
 namespace kmsp11 {
 
 // Operation models an in progress stateful PKCS #11 operation.
-using Operation = absl::variant<FindOp, DecryptOp, EncryptOp>;
+using Operation = absl::variant<FindOp, DecryptOp, EncryptOp, SignOp, VerifyOp>;
 
 }  // namespace kmsp11
 
