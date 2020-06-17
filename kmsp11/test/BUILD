@@ -68,7 +68,9 @@ cc_library(
     srcs = ["resource_helpers.cc"],
     hdrs = ["resource_helpers.h"],
     deps = [
+        ":runfiles",
         ":test_status_macros",
+        "//kmsp11:object",
         "//kmsp11/util:crypto_utils",
         "//kmsp11/util:kms_v1",
         "@com_google_absl//absl/strings",

@@ -14,22 +14,6 @@
 namespace kmsp11 {
 namespace {
 
-static StatusOr<KeyPair> NewMockKeyPair(
-    kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm,
-    absl::string_view public_key_runfile) {
-  kms_v1::CryptoKeyVersion ckv;
-  ckv.set_name(
-      "projects/foo/locations/bar/keyRings/baz/cryptoKeys/qux/"
-      "cryptoKeyVersions/1");
-  ckv.set_algorithm(algorithm);
-  ckv.set_state(kms_v1::CryptoKeyVersion::ENABLED);
-
-  ASSIGN_OR_RETURN(std::string pub_pem, LoadTestRunfile(public_key_runfile));
-  ASSIGN_OR_RETURN(bssl::UniquePtr<EVP_PKEY> pub,
-                   ParseX509PublicKeyPem(pub_pem));
-  return Object::NewKeyPair(ckv, pub.get());
-}
-
 static CK_RSA_PKCS_OAEP_PARAMS NewOaepParams() {
   return CK_RSA_PKCS_OAEP_PARAMS{
       CKM_SHA256,          // hashAlg

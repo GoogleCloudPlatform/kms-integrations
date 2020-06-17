@@ -6,6 +6,7 @@
 #include "google/cloud/kms/v1/resources.pb.h"
 #include "google/cloud/kms/v1/service.grpc.pb.h"
 #include "google/cloud/kms/v1/service.pb.h"
+#include "kmsp11/object.h"
 #include "kmsp11/test/test_status_macros.h"
 #include "kmsp11/util/kms_v1.h"
 
@@ -52,6 +53,12 @@ kms_v1::PublicKey GetPublicKey(
 
 // Returns a randomized string suitable for use as a KMS resource identifier.
 std::string RandomId(absl::string_view prefix = "test-");
+
+// Returns a mock KeyPair with the provided algorithm and public key.
+StatusOr<KeyPair> NewMockKeyPair(
+    google::cloud::kms::v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm
+        algorithm,
+    absl::string_view public_key_runfile);
 
 }  // namespace kmsp11
 

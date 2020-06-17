@@ -3,6 +3,7 @@
 #include "absl/strings/escaping.h"
 #include "absl/strings/str_format.h"
 #include "absl/time/clock.h"
+#include "kmsp11/test/runfiles.h"
 #include "kmsp11/util/crypto_utils.h"
 
 namespace kmsp11 {
@@ -106,6 +107,22 @@ kms_v1::PublicKey GetPublicKey(
 std::string RandomId(absl::string_view prefix) {
   return absl::StrFormat("%s-%s", prefix,
                          absl::BytesToHexString(RandBytes(12)));
+}
+
+StatusOr<KeyPair> NewMockKeyPair(
+    kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm,
+    absl::string_view public_key_runfile) {
+  kms_v1::CryptoKeyVersion ckv;
+  ckv.set_name(
+      "projects/foo/locations/bar/keyRings/baz/cryptoKeys/qux/"
+      "cryptoKeyVersions/1");
+  ckv.set_algorithm(algorithm);
+  ckv.set_state(kms_v1::CryptoKeyVersion::ENABLED);
+
+  ASSIGN_OR_RETURN(std::string pub_pem, LoadTestRunfile(public_key_runfile));
+  ASSIGN_OR_RETURN(bssl::UniquePtr<EVP_PKEY> pub,
+                   ParseX509PublicKeyPem(pub_pem));
+  return Object::NewKeyPair(ckv, pub.get());
 }
 
 }  // namespace kmsp11
