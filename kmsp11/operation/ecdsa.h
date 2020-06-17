@@ -29,7 +29,23 @@ class EcdsaSigner : public KmsSigner {
   bssl::UniquePtr<EC_KEY> key_;
 };
 
+class EcdsaVerifier : public VerifierInterface {
+ public:
+  static StatusOr<std::unique_ptr<VerifierInterface>> New(
+      std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
 
+  absl::Status Verify(KmsClient* client, absl::Span<const uint8_t> digest,
+                      absl::Span<const uint8_t> signature) override;
+
+  virtual ~EcdsaVerifier() {}
+
+ private:
+  EcdsaVerifier(std::shared_ptr<Object> object, bssl::UniquePtr<EC_KEY> key)
+      : object_(object), key_(std::move(key)) {}
+
+  std::shared_ptr<Object> object_;
+  bssl::UniquePtr<EC_KEY> key_;
+};
 
 }  // namespace kmsp11
 

@@ -43,4 +43,26 @@ absl::Status EcdsaSigner::CopySignature(absl::string_view src,
   return absl::OkStatus();
 }
 
+StatusOr<std::unique_ptr<VerifierInterface>> EcdsaVerifier::New(
+    std::shared_ptr<Object> key, const CK_MECHANISM* mechanism) {
+  RETURN_IF_ERROR(
+      CheckKeyPreconditions(CKK_EC, CKO_PUBLIC_KEY, CKM_ECDSA, key.get()));
+  RETURN_IF_ERROR(EnsureNoParameters(mechanism));
+
+  ASSIGN_OR_RETURN(absl::string_view key_der,
+                   key->attributes().Value(CKA_PUBLIC_KEY_INFO));
+  ASSIGN_OR_RETURN(bssl::UniquePtr<EVP_PKEY> parsed_key,
+                   ParseX509PublicKeyDer(key_der));
+
+  return std::unique_ptr<VerifierInterface>(new EcdsaVerifier(
+      key, bssl::UniquePtr<EC_KEY>(EVP_PKEY_get1_EC_KEY(parsed_key.get()))));
+}
+
+absl::Status EcdsaVerifier::Verify(KmsClient* client,
+                                   absl::Span<const uint8_t> digest,
+                                   absl::Span<const uint8_t> signature) {
+  return EcdsaVerifyP1363(key_.get(), object_->algorithm().digest, digest,
+                          signature);
+}
+
 }  // namespace kmsp11

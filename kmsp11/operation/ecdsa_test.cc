@@ -47,6 +47,41 @@ TEST(NewSignerTest, FailureWrongObjectClass) {
               StatusRvIs(CKR_KEY_FUNCTION_NOT_PERMITTED));
 }
 
+TEST(NewVerifierTest, ParamInvalid) {
+  ASSERT_OK_AND_ASSIGN(
+      KeyPair kp, NewMockKeyPair(kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256,
+                                 "ec_p256_public.pem"));
+  std::shared_ptr<Object> key = std::make_shared<Object>(kp.public_key);
+
+  char buf[1];
+  CK_MECHANISM mechanism{CKM_ECDSA, buf, sizeof(buf)};
+  EXPECT_THAT(EcdsaVerifier::New(key, &mechanism),
+              StatusRvIs(CKR_MECHANISM_PARAM_INVALID));
+}
+
+TEST(NewVerifierTest, FailureWrongKeyType) {
+  ASSERT_OK_AND_ASSIGN(
+      KeyPair kp,
+      NewMockKeyPair(kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256,
+                     "rsa_2048_public.pem"));
+  std::shared_ptr<Object> key = std::make_shared<Object>(kp.public_key);
+
+  CK_MECHANISM mechanism{CKM_ECDSA, nullptr, 0};
+  EXPECT_THAT(EcdsaVerifier::New(key, &mechanism),
+              StatusRvIs(CKR_KEY_TYPE_INCONSISTENT));
+}
+
+TEST(NewVerifierTest, FailureWrongObjectClass) {
+  ASSERT_OK_AND_ASSIGN(
+      KeyPair kp, NewMockKeyPair(kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256,
+                                 "ec_p256_public.pem"));
+  std::shared_ptr<Object> key = std::make_shared<Object>(kp.private_key);
+
+  CK_MECHANISM mechanism{CKM_ECDSA, nullptr, 0};
+  EXPECT_THAT(EcdsaVerifier::New(key, &mechanism),
+              StatusRvIs(CKR_KEY_FUNCTION_NOT_PERMITTED));
+}
+
 class EcdsaTest : public testing::Test {
  protected:
   void SetUp() override {
@@ -125,6 +160,59 @@ TEST_F(EcdsaTest, SignSignatureLengthInvalid) {
   EXPECT_THAT(signer->Sign(client_.get(), digest, absl::MakeSpan(sig)),
               AllOf(StatusIs(absl::StatusCode::kInternal),
                     StatusRvIs(CKR_GENERAL_ERROR)));
+}
+
+TEST_F(EcdsaTest, SignVerifySuccess) {
+  std::vector<uint8_t> data = {0xDE, 0xAD, 0xBE, 0xEF};
+  uint8_t digest[48];
+  SHA384(data.data(), data.size(), digest);
+
+  CK_MECHANISM mech{CKM_ECDSA, nullptr, 0};
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<SignerInterface> signer,
+                       EcdsaSigner::New(prv_, &mech));
+  std::vector<uint8_t> sig(signer->signature_length());
+  EXPECT_OK(signer->Sign(client_.get(), digest, absl::MakeSpan(sig)));
+
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<VerifierInterface> verifier,
+                       EcdsaVerifier::New(pub_, &mech));
+  EXPECT_OK(verifier->Verify(client_.get(), digest, sig));
+}
+
+TEST_F(EcdsaTest, VerifyDigestLengthInvalid) {
+  uint8_t digest[49], sig[96];
+
+  CK_MECHANISM mech{CKM_ECDSA, nullptr, 0};
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<VerifierInterface> verifier,
+                       EcdsaVerifier::New(pub_, &mech));
+
+  EXPECT_THAT(verifier->Verify(client_.get(), digest, absl::MakeSpan(sig)),
+              AllOf(StatusIs(absl::StatusCode::kInvalidArgument),
+                    StatusRvIs(CKR_DATA_LEN_RANGE)));
+}
+
+TEST_F(EcdsaTest, VerifySignatureLengthInvalid) {
+  uint8_t digest[48], sig[95];
+
+  CK_MECHANISM mech{CKM_ECDSA, nullptr, 0};
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<VerifierInterface> verifier,
+                       EcdsaVerifier::New(pub_, &mech));
+
+  EXPECT_THAT(verifier->Verify(client_.get(), digest, absl::MakeSpan(sig)),
+              AllOf(StatusIs(absl::StatusCode::kInvalidArgument),
+                    StatusRvIs(CKR_SIGNATURE_LEN_RANGE)));
+}
+
+TEST_F(EcdsaTest, VerifyBadSignature) {
+  std::vector<uint8_t> data = {0xDE, 0xAD, 0xBE, 0xEF};
+  uint8_t digest[48], sig[96];
+  SHA384(data.data(), data.size(), digest);
+
+  CK_MECHANISM mech{CKM_ECDSA, nullptr, 0};
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<VerifierInterface> verifier,
+                       EcdsaVerifier::New(pub_, &mech));
+  EXPECT_THAT(verifier->Verify(client_.get(), digest, sig),
+              AllOf(StatusIs(absl::StatusCode::kInvalidArgument),
+                    StatusRvIs(CKR_SIGNATURE_INVALID)));
 }
 
 }  // namespace

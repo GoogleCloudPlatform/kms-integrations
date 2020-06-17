@@ -34,6 +34,14 @@ class SignerInterface {
   virtual ~SignerInterface() {}
 };
 
+class VerifierInterface {
+ public:
+  virtual absl::Status Verify(KmsClient* client,
+                              absl::Span<const uint8_t> digest,
+                              absl::Span<const uint8_t> signature) = 0;
+  virtual ~VerifierInterface() {}
+};
+
 }  // namespace kmsp11
 
 #endif  // KMSP11_OPERATION_CRYPTER_INTERFACES_H_
