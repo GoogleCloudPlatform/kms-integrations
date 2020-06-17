@@ -36,11 +36,55 @@ cc_test(
 )
 
 cc_library(
+    name = "ecdsa",
+    srcs = ["ecdsa.cc"],
+    hdrs = ["ecdsa.h"],
+    deps = [
+        ":crypter_interfaces",
+        ":kms_signer",
+        ":preconditions",
+        "//kmsp11:cryptoki_headers",
+        "//kmsp11/util:cleanup",
+        "//kmsp11/util:crypto_utils",
+        "//kmsp11/util:kms_client",
+        "//kmsp11/util:status_macros",
+        "//kmsp11/util:status_or",
+        "//kmsp11/util:string_utils",
+    ],
+)
+
+cc_test(
+    name = "ecdsa_test",
+    size = "small",
+    srcs = ["ecdsa_test.cc"],
+    deps = [
+        ":ecdsa",
+        "//kmsp11/test",
+        "//kmsp11/test/fakekms/cpp:fakekms",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
     name = "find",
     hdrs = ["find.h"],
     deps = [
         "//kmsp11:cryptoki_headers",
         "@com_google_absl//absl/types:span",
+    ],
+)
+
+cc_library(
+    name = "kms_signer",
+    srcs = ["kms_signer.cc"],
+    hdrs = ["kms_signer.h"],
+    deps = [
+        ":crypter_interfaces",
+        "//kmsp11:cryptoki_headers",
+        "//kmsp11/util:crypto_utils",
+        "//kmsp11/util:kms_client",
+        "//kmsp11/util:status_macros",
+        "//kmsp11/util:status_or",
     ],
 )
 

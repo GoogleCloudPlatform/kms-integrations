@@ -36,4 +36,14 @@ absl::Status CheckKeyPreconditions(CK_KEY_TYPE key_type,
   return absl::OkStatus();
 }
 
+absl::Status EnsureNoParameters(const CK_MECHANISM* mechanism) {
+  if (mechanism->pParameter || mechanism->ulParameterLen > 0) {
+    return NewInvalidArgumentError(
+        absl::StrFormat("mechanism %#x does not take parameters",
+                        mechanism->mechanism),
+        CKR_MECHANISM_PARAM_INVALID, SOURCE_LOCATION);
+  }
+  return absl::OkStatus();
+}
+
 }  // namespace kmsp11

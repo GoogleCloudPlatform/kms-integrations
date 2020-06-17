@@ -14,6 +14,9 @@ absl::Status CheckKeyPreconditions(CK_KEY_TYPE key_type,
                                    CK_MECHANISM_TYPE mechanism_type,
                                    Object* object);
 
+// Returns InvalidArgument if the provided mechanism contains parameters.
+absl::Status EnsureNoParameters(const CK_MECHANISM* mechanism);
+
 }  // namespace kmsp11
 
 #endif  // KMSP11_OPERATION_MECHANISM_PRECONDITIONS_H_

@@ -23,6 +23,17 @@ class DecrypterInterface {
   virtual ~DecrypterInterface() {}
 };
 
+class SignerInterface {
+ public:
+  virtual const EVP_MD* digest_algorithm() = 0;
+  virtual size_t signature_length() = 0;
+
+  virtual absl::Status Sign(KmsClient* client, absl::Span<const uint8_t> digest,
+                            absl::Span<uint8_t> signature) = 0;
+
+  virtual ~SignerInterface() {}
+};
+
 }  // namespace kmsp11
 
 #endif  // KMSP11_OPERATION_CRYPTER_INTERFACES_H_
