@@ -2,8 +2,10 @@
 
 #include "gmock/gmock.h"
 #include "kmsp11/test/matchers.h"
+#include "kmsp11/test/runfiles.h"
 #include "kmsp11/test/test_status_macros.h"
 #include "kmsp11/util/crypto_utils.h"
+#include "kmsp11/util/status_macros.h"
 #include "openssl/rsa.h"
 
 namespace kmsp11 {
@@ -12,6 +14,10 @@ namespace {
 using ::testing::Each;
 using ::testing::ElementsAre;
 using ::testing::Field;
+using ::testing::HasSubstr;
+using ::testing::IsEmpty;
+using ::testing::Not;
+using ::testing::SizeIs;
 
 namespace kms_v1 = ::google::cloud::kms::v1;
 
@@ -26,24 +32,14 @@ kms_v1::CryptoKeyVersion NewTestCkv() {
 }
 
 StatusOr<bssl::UniquePtr<EVP_PKEY>> GetTestP256Key() {
-  static const char* key_pem = R"(-----BEGIN PUBLIC KEY-----
-MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE7vZa2EcY4GKQXWUObY7EXWEkGZZt
-8QljjI2sA1T1t2p+Vu/G4g6o1zfMCpDNvJFxA+1JwNqdiBUqox9Ie0CNOg==
------END PUBLIC KEY-----)";
-  return ParseX509PublicKeyPem(key_pem);
+  ASSIGN_OR_RETURN(std::string test_key, LoadTestRunfile("ec_p256_public.pem"));
+  return ParseX509PublicKeyPem(test_key);
 }
 
 StatusOr<bssl::UniquePtr<EVP_PKEY>> GetTestRsa2048Key() {
-  static const char* key_pem = R"(-----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmqD9FEz81Yo/OuwbQqmH
-dY5JdTZNSkAAqIn08BqS6t6LRHQ2gUXKy2LVgMXCgwt/g9pCzB4+x1Vx8/WPWzmq
-f2x5d/XT28ZEVbFtUpa5XDhGasP+rgTMj6cAaQk31zm4GE7zCil3ohgNAMzwHpg+
-J+ckkYoBQ2FT01neTMxGHFidNQGHEONQ5tDOFa/hU4RFTN7QB6tQ4k2J1BEvT25Z
-7RTmo0stzQi3032En7EE3POlPC1Mj8itRuYMf8nNtaRALKIqYpEAUTSCnme4EIl2
-bMvH8DIgLW5muXaJI9ys5tsT19pIkxaN2x/Icc19QS6SMaTF/o/MvLkdwWbj13uA
-yQIDAQAB
------END PUBLIC KEY-----)";
-  return ParseX509PublicKeyPem(key_pem);
+  ASSIGN_OR_RETURN(std::string test_key,
+                   LoadTestRunfile("rsa_2048_public.pem"));
+  return ParseX509PublicKeyPem(test_key);
 }
 
 TEST(NewKeyPairTest, KmsKeyNameMatches) {
@@ -184,6 +180,48 @@ TEST(NewKeyPairTest, RsaKeyAttributes) {
               StatusRvIs(CKR_ATTRIBUTE_SENSITIVE));
   EXPECT_THAT(prv_attrs.Value(CKA_PRIME_2),
               StatusRvIs(CKR_ATTRIBUTE_SENSITIVE));
+}
+
+TEST(NewCertificateTest, CertificateAttributes) {
+  kms_v1::CryptoKeyVersion ckv = NewTestCkv();
+  ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub, GetTestP256Key());
+  ASSERT_OK_AND_ASSIGN(std::string key_der, MarshalX509PublicKeyDer(pub.get()));
+
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<CertAuthority> authority,
+                       CertAuthority::New());
+  ASSERT_OK_AND_ASSIGN(Object cert,
+                       Object::NewCertificate(ckv, pub.get(), authority.get()));
+
+  const AttributeMap& attrs = cert.attributes();
+
+  EXPECT_THAT(attrs.Value(CKA_CLASS),
+              IsOkAndHolds(MarshalULong(CKO_CERTIFICATE)));
+  EXPECT_THAT(attrs.Value(CKA_CERTIFICATE_TYPE),
+              IsOkAndHolds(MarshalULong(CKC_X_509)));
+  EXPECT_THAT(attrs.Value(CKA_TRUSTED), IsOkAndHolds(MarshalBool(false)));
+  EXPECT_THAT(attrs.Value(CKA_CERTIFICATE_CATEGORY),
+              IsOkAndHolds(MarshalULong(CK_CERTIFICATE_CATEGORY_UNSPECIFIED)));
+  EXPECT_THAT(attrs.Value(CKA_CHECK_VALUE), IsOkAndHolds(SizeIs(3)));
+  EXPECT_THAT(attrs.Value(CKA_START_DATE), IsOkAndHolds(Not(IsEmpty())));
+  EXPECT_THAT(attrs.Value(CKA_END_DATE), IsOkAndHolds(HasSubstr("99991231")));
+  EXPECT_THAT(attrs.Value(CKA_PUBLIC_KEY_INFO), IsOkAndHolds(key_der));
+
+  EXPECT_THAT(attrs.Value(CKA_SUBJECT), IsOkAndHolds(HasSubstr("baz")));
+  EXPECT_THAT(attrs.Value(CKA_ID), IsOkAndHolds(ckv.name()));
+  EXPECT_THAT(attrs.Value(CKA_ISSUER),
+              IsOkAndHolds(HasSubstr("cloud-kms-pkcs11")));
+  EXPECT_THAT(attrs.Value(CKA_SERIAL_NUMBER), IsOkAndHolds(Not(IsEmpty())));
+  EXPECT_THAT(attrs.Value(CKA_URL), IsOkAndHolds(IsEmpty()));
+  EXPECT_THAT(attrs.Value(CKA_HASH_OF_SUBJECT_PUBLIC_KEY),
+              IsOkAndHolds(IsEmpty()));
+  EXPECT_THAT(attrs.Value(CKA_HASH_OF_ISSUER_PUBLIC_KEY),
+              IsOkAndHolds(IsEmpty()));
+  EXPECT_THAT(attrs.Value(CKA_JAVA_MIDP_SECURITY_DOMAIN),
+              IsOkAndHolds(MarshalULong(CK_SECURITY_DOMAIN_UNSPECIFIED)));
+
+  // check a couple of attributes that shouldn't be set
+  EXPECT_THAT(attrs.Value(CKA_VERIFY), StatusRvIs(CKR_ATTRIBUTE_TYPE_INVALID));
+  EXPECT_THAT(attrs.Value(CKA_COLOR), StatusRvIs(CKR_ATTRIBUTE_TYPE_INVALID));
 }
 
 }  // namespace

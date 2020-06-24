@@ -42,7 +42,7 @@ class TokenTest : public testing::Test {
 
 TEST_F(TokenTest, SlotInfoSlotDescriptionIsSet) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
-                       Token::New(0, config_, client_.get()));
+                       Token::New(0, config_, client_.get(), false));
 
   EXPECT_EQ(StrFromBytes(token->slot_info().slotDescription),
             // Note the space-padding to get to 64 characters
@@ -421,6 +421,57 @@ TEST_F(TokenTest, DisabledKeyUnavailable) {
       IsOkAndHolds(Pointee(AllOf(
           Property("kms_key_name", &Object::kms_key_name, ckv2.name()),
           Property("object_class", &Object::object_class, CKO_PRIVATE_KEY)))));
+}
+
+TEST_F(TokenTest, CertGeneratedWhenConfigIsSet) {
+  auto kms_client = fake_kms_->NewClient();
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384);
+  ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), "ck", ck, true);
+
+  kms_v1::CryptoKeyVersion ckv;
+  ckv = CreateCryptoKeyVersionOrDie(kms_client.get(), ck.name(), ckv);
+  ckv = WaitForEnablement(kms_client.get(), ckv);
+
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get(), true));
+
+  std::vector<CK_ULONG> handles =
+      token->FindObjects([](const Object& o) -> bool {
+        return o.object_class() == CKO_CERTIFICATE;
+      });
+  EXPECT_EQ(handles.size(), 1);
+
+  EXPECT_THAT(
+      token->GetObject(handles[0]),
+      IsOkAndHolds(Pointee(AllOf(
+          Property("kms_key_name", &Object::kms_key_name, ckv.name()),
+          Property("object_class", &Object::object_class, CKO_CERTIFICATE)))));
+}
+
+TEST_F(TokenTest, CertNotGeneratedWhenConfigIsUnset) {
+  auto kms_client = fake_kms_->NewClient();
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384);
+  ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), "ck", ck, true);
+
+  kms_v1::CryptoKeyVersion ckv;
+  ckv = CreateCryptoKeyVersionOrDie(kms_client.get(), ck.name(), ckv);
+  ckv = WaitForEnablement(kms_client.get(), ckv);
+
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get(), false));
+
+  EXPECT_THAT(token->FindObjects([](const Object& o) -> bool {
+    return o.object_class() == CKO_CERTIFICATE;
+  }),
+              IsEmpty());
 }
 
 }  // namespace

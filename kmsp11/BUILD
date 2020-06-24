@@ -135,6 +135,7 @@ cc_library(
     deps = [
         ":algorithm_details",
         ":attribute_map",
+        ":cert_authority",
         ":cryptoki_headers",
         "//kmsp11/util:crypto_utils",
         "//kmsp11/util:status_macros",

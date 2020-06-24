@@ -20,7 +20,8 @@ class Token {
  public:
   static StatusOr<std::unique_ptr<Token>> New(CK_SLOT_ID slot_id,
                                               TokenConfig token_config,
-                                              KmsClient* kms_client);
+                                              KmsClient* kms_client,
+                                              bool generate_certs = false);
 
   CK_SLOT_ID slot_id() const { return slot_id_; }
   const CK_SLOT_INFO& slot_info() const { return slot_info_; }

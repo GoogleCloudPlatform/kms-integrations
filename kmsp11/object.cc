@@ -6,6 +6,7 @@
 #include "kmsp11/util/status_macros.h"
 #include "openssl/ec_key.h"
 #include "openssl/rsa.h"
+#include "openssl/x509.h"
 
 namespace kmsp11 {
 namespace {
@@ -160,6 +161,53 @@ absl::Status AddRsaPrivateKeyAttributes(AttributeMap* attrs,
   return absl::OkStatus();
 }
 
+absl::Status AddX509CertificateAttributes(AttributeMap* attrs,
+                                          const kms_v1::CryptoKeyVersion& ckv,
+                                          X509* cert) {
+  ASSIGN_OR_RETURN(absl::Time not_before,
+                   Asn1TimeToAbsl(X509_get_notBefore(cert)));
+  ASSIGN_OR_RETURN(absl::Time not_after,
+                   Asn1TimeToAbsl(X509_get_notAfter(cert)));
+  ASSIGN_OR_RETURN(std::string public_key_info,
+                   MarshalX509PublicKeyDer(X509_get_pubkey(cert)));
+
+  ASSIGN_OR_RETURN(std::string subject_der,
+                   MarshalX509Name(X509_get_subject_name(cert)));
+  ASSIGN_OR_RETURN(std::string issuer_der,
+                   MarshalX509Name(X509_get_issuer_name(cert)));
+  ASSIGN_OR_RETURN(std::string serial,
+                   MarshalAsn1Integer(X509_get_serialNumber(cert)));
+  ASSIGN_OR_RETURN(std::string cert_der, MarshalX509CertificateDer(cert));
+
+  char cert_der_sha1[20];
+  SHA1(reinterpret_cast<const uint8_t*>(cert_der.data()), cert_der.size(),
+       reinterpret_cast<uint8_t*>(cert_der_sha1));
+
+  // 4.6.2 Certificate objects
+  attrs->PutULong(CKA_CERTIFICATE_TYPE, CKC_X_509);
+  attrs->PutBool(CKA_TRUSTED, false);
+  attrs->PutULong(CKA_CERTIFICATE_CATEGORY,
+                  CK_CERTIFICATE_CATEGORY_UNSPECIFIED);
+  attrs->Put(CKA_CHECK_VALUE, absl::string_view(cert_der_sha1, 3));
+  attrs->PutDate(CKA_START_DATE, not_before);
+  attrs->PutDate(CKA_END_DATE, not_after);
+  attrs->Put(CKA_PUBLIC_KEY_INFO, public_key_info);
+
+  // 4.6.3 X.509 public key certificate objects
+  attrs->Put(CKA_SUBJECT, subject_der);
+  attrs->Put(CKA_ID, ckv.name());
+  attrs->Put(CKA_ISSUER, issuer_der);
+  attrs->Put(CKA_SERIAL_NUMBER, serial);
+  attrs->Put(CKA_VALUE, cert_der);
+  attrs->Put(CKA_URL, "");
+  attrs->Put(CKA_HASH_OF_SUBJECT_PUBLIC_KEY, "");
+  attrs->Put(CKA_HASH_OF_ISSUER_PUBLIC_KEY, "");
+  attrs->PutULong(CKA_JAVA_MIDP_SECURITY_DOMAIN,
+                  CK_SECURITY_DOMAIN_UNSPECIFIED);
+
+  return absl::OkStatus();
+}
+
 }  // namespace
 
 StatusOr<KeyPair> Object::NewKeyPair(
@@ -202,6 +250,23 @@ StatusOr<KeyPair> Object::NewKeyPair(
   ASSIGN_OR_RETURN(AlgorithmDetails algorithm, GetDetails(ckv.algorithm()));
   return KeyPair{Object(ckv.name(), CKO_PUBLIC_KEY, algorithm, pub_attrs),
                  Object(ckv.name(), CKO_PRIVATE_KEY, algorithm, prv_attrs)};
+}
+
+StatusOr<Object> Object::NewCertificate(
+    const google::cloud::kms::v1::CryptoKeyVersion& ckv, EVP_PKEY* public_key,
+    const CertAuthority* cert_authority) {
+  ASSIGN_OR_RETURN(std::string key_id, GetKeyId(ckv.name()));
+  ASSIGN_OR_RETURN(AlgorithmDetails algorithm, GetDetails(ckv.algorithm()));
+  ASSIGN_OR_RETURN(
+      bssl::UniquePtr<X509> cert,
+      cert_authority->GenerateCert(key_id, public_key, algorithm.purpose));
+
+  AttributeMap cert_attrs;
+  cert_attrs.PutULong(CKA_CLASS, CKO_CERTIFICATE);
+  RETURN_IF_ERROR(AddStorageAttributes(&cert_attrs, ckv));
+  RETURN_IF_ERROR(AddX509CertificateAttributes(&cert_attrs, ckv, cert.get()));
+
+  return Object(ckv.name(), CKO_CERTIFICATE, algorithm, cert_attrs);
 }
 
 }  // namespace kmsp11

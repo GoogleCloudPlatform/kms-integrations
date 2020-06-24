@@ -1,5 +1,6 @@
 #include "kmsp11/provider.h"
 
+#include "kmsp11/cert_authority.h"
 #include "kmsp11/util/kms_client.h"
 #include "kmsp11/util/status_macros.h"
 #include "kmsp11/util/string_utils.h"
@@ -52,7 +53,8 @@ StatusOr<std::unique_ptr<Provider>> Provider::New(LibraryConfig config) {
   tokens.reserve(config.tokens_size());
   for (const TokenConfig& tokenConfig : config.tokens()) {
     ASSIGN_OR_RETURN(std::unique_ptr<Token> token,
-                     Token::New(tokens.size(), tokenConfig, client.get()));
+                     Token::New(tokens.size(), tokenConfig, client.get(),
+                                config.generate_certs()));
     tokens.emplace_back(std::move(token));
   }
 

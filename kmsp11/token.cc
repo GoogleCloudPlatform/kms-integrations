@@ -56,12 +56,17 @@ static StatusOr<CK_TOKEN_INFO> NewTokenInfo(absl::string_view token_label) {
   return info;
 }
 
-static absl::Status AddAsymmetricKeyPair(KmsClient* client,
+struct LoadContext {
+  KmsClient* client;
+  absl::optional<CertAuthority*> cert_authority;
+};
+
+static absl::Status AddAsymmetricKeyPair(const LoadContext& ctx,
                                          const kms_v1::CryptoKey& key,
                                          HandleMap<Object>* objects) {
   kms_v1::ListCryptoKeyVersionsRequest req;
   req.set_parent(key.name());
-  CryptoKeyVersionsRange v = client->ListCryptoKeyVersions(req);
+  CryptoKeyVersionsRange v = ctx.client->ListCryptoKeyVersions(req);
 
   for (CryptoKeyVersionsRange::iterator it = v.begin(); it != v.end(); it++) {
     ASSIGN_OR_RETURN(kms_v1::CryptoKeyVersion ckv, *it);
@@ -79,33 +84,41 @@ static absl::Status AddAsymmetricKeyPair(KmsClient* client,
     kms_v1::GetPublicKeyRequest pub_req;
     pub_req.set_name(ckv.name());
 
-    ASSIGN_OR_RETURN(kms_v1::PublicKey pub_resp, client->GetPublicKey(pub_req));
+    ASSIGN_OR_RETURN(kms_v1::PublicKey pub_resp,
+                     ctx.client->GetPublicKey(pub_req));
     ASSIGN_OR_RETURN(bssl::UniquePtr<EVP_PKEY> pub,
                      ParseX509PublicKeyPem(pub_resp.pem()));
     ASSIGN_OR_RETURN(KeyPair key_pair, Object::NewKeyPair(ckv, pub.get()));
 
     objects->Add(std::move(key_pair.public_key));
     objects->Add(std::move(key_pair.private_key));
+
+    if (ctx.cert_authority.has_value()) {
+      ASSIGN_OR_RETURN(
+          Object cert,
+          Object::NewCertificate(ckv, pub.get(), ctx.cert_authority.value()));
+      objects->Add(std::move(cert));
+    }
   }
 
   return absl::OkStatus();
 }
 
 static StatusOr<std::unique_ptr<HandleMap<Object>>> LoadObjects(
-    KmsClient* client, absl::string_view key_ring_name) {
+    const LoadContext& ctx, absl::string_view key_ring_name) {
   auto objects =
       absl::make_unique<HandleMap<Object>>(CKR_OBJECT_HANDLE_INVALID);
 
   kms_v1::ListCryptoKeysRequest req;
   req.set_parent(std::string(key_ring_name));
-  CryptoKeysRange keys = client->ListCryptoKeys(req);
+  CryptoKeysRange keys = ctx.client->ListCryptoKeys(req);
 
   for (CryptoKeysRange::iterator it = keys.begin(); it != keys.end(); it++) {
     ASSIGN_OR_RETURN(kms_v1::CryptoKey key, *it);
     switch (key.purpose()) {
       case kms_v1::CryptoKey_CryptoKeyPurpose_ASYMMETRIC_DECRYPT:
       case kms_v1::CryptoKey_CryptoKeyPurpose_ASYMMETRIC_SIGN:
-        RETURN_IF_ERROR(AddAsymmetricKeyPair(client, key, objects.get()));
+        RETURN_IF_ERROR(AddAsymmetricKeyPair(ctx, key, objects.get()));
         break;
       default:
         LOG(INFO) << "skipping key " << key.name()
@@ -120,12 +133,24 @@ static StatusOr<std::unique_ptr<HandleMap<Object>>> LoadObjects(
 
 StatusOr<std::unique_ptr<Token>> Token::New(CK_SLOT_ID slot_id,
                                             TokenConfig token_config,
-                                            KmsClient* kms_client) {
+                                            KmsClient* kms_client,
+                                            bool generate_certs) {
   ASSIGN_OR_RETURN(CK_SLOT_INFO slot_info, NewSlotInfo());
   ASSIGN_OR_RETURN(CK_TOKEN_INFO token_info,
                    NewTokenInfo(token_config.label()));
+
+  LoadContext ctx;
+  ctx.client = kms_client;
+  ctx.cert_authority = absl::nullopt;
+
+  ASSIGN_OR_RETURN(std::unique_ptr<CertAuthority> cert_authority,
+                   CertAuthority::New());
+  if (generate_certs) {
+    ctx.cert_authority = cert_authority.get();
+  }
+
   ASSIGN_OR_RETURN(std::unique_ptr<HandleMap<Object>> objects,
-                   LoadObjects(kms_client, token_config.key_ring()));
+                   LoadObjects(ctx, token_config.key_ring()));
 
   // using `new` to invoke a private constructor
   return std::unique_ptr<Token>(
@@ -198,13 +223,13 @@ absl::Status Token::Logout() {
 
 std::vector<CK_OBJECT_HANDLE> Token::FindObjects(
     std::function<bool(const Object&)> predicate) const {
-  return objects_->Find(
-      predicate, [](const Object& o1, const Object& o2) -> bool {
-        if (o1.kms_key_name() == o2.kms_key_name()) {
-          return o1.object_class() < o2.object_class();
-        }
-        return o1.kms_key_name() < o2.kms_key_name();
-      });
+  return objects_->Find(predicate,
+                        [](const Object& o1, const Object& o2) -> bool {
+                          if (o1.kms_key_name() == o2.kms_key_name()) {
+                            return o1.object_class() < o2.object_class();
+                          }
+                          return o1.kms_key_name() < o2.kms_key_name();
+                        });
 }
 
 }  // namespace kmsp11

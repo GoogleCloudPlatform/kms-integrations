@@ -854,6 +854,67 @@ TEST_F(BridgeTest, FindEcPrivateKey) {
   EXPECT_OK(FindObjectsFinal(session));
 }
 
+TEST_F(BridgeTest, FindCertificate) {
+  auto fake_client = fake_kms_->NewClient();
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+  ck = CreateCryptoKeyOrDie(fake_client.get(), kr1_.name(), "ck", ck, true);
+
+  kms_v1::CryptoKeyVersion ckv;
+  ckv = CreateCryptoKeyVersionOrDie(fake_client.get(), ck.name(), ckv);
+  ckv = WaitForEnablement(fake_client.get(), ckv);
+
+  std::ofstream(config_file_, std::ofstream::out | std::ofstream::app)
+      << "generate_certs: true" << std::endl;
+
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
+
+  CK_OBJECT_CLASS obj_class = CKO_CERTIFICATE;
+  CK_ATTRIBUTE attr_template{CKA_CLASS, &obj_class, sizeof(obj_class)};
+  EXPECT_OK(FindObjectsInit(session, &attr_template, 1));
+
+  CK_OBJECT_HANDLE handles[2];
+  CK_ULONG found_count;
+  EXPECT_OK(FindObjects(session, &handles[0], 2, &found_count));
+  EXPECT_EQ(found_count, 1);
+}
+
+TEST_F(BridgeTest, NoCertificatesWhenConfigNotSet) {
+  auto fake_client = fake_kms_->NewClient();
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+  ck = CreateCryptoKeyOrDie(fake_client.get(), kr1_.name(), "ck", ck, true);
+
+  kms_v1::CryptoKeyVersion ckv;
+  ckv = CreateCryptoKeyVersionOrDie(fake_client.get(), ck.name(), ckv);
+  ckv = WaitForEnablement(fake_client.get(), ckv);
+
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
+
+  CK_OBJECT_CLASS obj_class = CKO_CERTIFICATE;
+  CK_ATTRIBUTE attr_template{CKA_CLASS, &obj_class, sizeof(obj_class)};
+  EXPECT_OK(FindObjectsInit(session, &attr_template, 1));
+
+  CK_OBJECT_HANDLE handle;
+  CK_ULONG found_count;
+  EXPECT_OK(FindObjects(session, &handle, 1, &found_count));
+  EXPECT_EQ(found_count, 0);
+}
+
 TEST_F(BridgeTest, FindObjectsInitSuccess) {
   EXPECT_OK(Initialize(&init_args_));
   Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
