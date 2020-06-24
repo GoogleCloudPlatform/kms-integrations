@@ -53,6 +53,31 @@ cc_test(
     ],
 )
 
+cc_library(
+    name = "cert_authority",
+    srcs = ["cert_authority.cc"],
+    hdrs = ["cert_authority.h"],
+    deps = [
+        "//kmsp11/util:crypto_utils",
+        "//kmsp11/util:errors",
+        "//kmsp11/util:kms_client",
+        "//kmsp11/util:status_or",
+        "@boringssl//:crypto",
+        "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_test(
+    name = "cert_authority_test",
+    size = "small",
+    srcs = ["cert_authority_test.cc"],
+    deps = [
+        ":cert_authority",
+        "//kmsp11/test",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
 genrule(
     name = "cryptoki_raw_header_files",
     srcs = [

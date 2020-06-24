@@ -44,7 +44,7 @@ ABSL_MUST_USE_RESULT inline absl::Status InvalidMechanismParamError(
 ABSL_MUST_USE_RESULT inline absl::Status NewInternalError(
     absl::string_view msg, const SourceLocation& source_location) {
   return NewError(absl::StatusCode::kInternal, msg, CKR_GENERAL_ERROR,
-                  SOURCE_LOCATION);
+                  source_location);
 }
 
 // Creates a new InvalidArgument error with the provided CK_RV.
@@ -68,16 +68,16 @@ ABSL_MUST_USE_RESULT inline absl::Status NotInitializedError(
     const SourceLocation& source_location) {
   return NewError(absl::StatusCode::kFailedPrecondition,
                   "the library is not initialized",
-                  CKR_CRYPTOKI_NOT_INITIALIZED, SOURCE_LOCATION);
+                  CKR_CRYPTOKI_NOT_INITIALIZED, source_location);
 }
 
 // Creates a new FailedPrecondition error with a return value of
-// CKR_OPERATION_ACTOVE.
+// CKR_OPERATION_ACTIVE.
 ABSL_MUST_USE_RESULT inline absl::Status OperationActiveError(
     const SourceLocation& source_location) {
   return NewError(absl::StatusCode::kFailedPrecondition,
                   "another operation is already active", CKR_OPERATION_ACTIVE,
-                  SOURCE_LOCATION);
+                  source_location);
 }
 
 // Creates a new FailedPrecondition error with a return value of
@@ -87,7 +87,7 @@ ABSL_MUST_USE_RESULT inline absl::Status OperationNotInitializedError(
   return NewError(
       absl::StatusCode::kFailedPrecondition,
       absl::StrFormat("operation '%s' is not active", operation_name),
-      CKR_OPERATION_NOT_INITIALIZED, SOURCE_LOCATION);
+      CKR_OPERATION_NOT_INITIALIZED, source_location);
 }
 
 // Creates a new error with status code OutOfRange and return value of
