@@ -1,5 +1,6 @@
 #include "kmsp11/util/crypto_utils.h"
 
+#include "absl/time/time.h"
 #include "kmsp11/util/errors.h"
 #include "openssl/bn.h"
 #include "openssl/bytestring.h"
@@ -8,8 +9,56 @@
 #include "openssl/mem.h"
 #include "openssl/pem.h"
 #include "openssl/rand.h"
+#include "openssl/x509.h"
 
 namespace kmsp11 {
+namespace {
+static const bssl::UniquePtr<ASN1_TIME> kUnixEpoch(
+    ASN1_TIME_set(nullptr, absl::ToTimeT(absl::UnixEpoch())));
+
+// A helper for invoking an OpenSSL function of the form i2d_FOO, and returning
+// the DER output as a string.
+template <typename T>
+StatusOr<std::string> MarshalDer(T* obj, int i2d_function(T*, uint8_t**)) {
+  int len = i2d_function(obj, nullptr);
+  if (len <= 0) {
+    return NewInternalError(
+        absl::StrCat("failed to compute output length during DER marshaling: ",
+                     SslErrorToString()),
+        SOURCE_LOCATION);
+  }
+
+  std::string result(len, ' ');
+  uint8_t* result_data =
+      reinterpret_cast<uint8_t*>(const_cast<char*>(result.data()));
+
+  len = i2d_function(obj, &result_data);
+  if (len != result.size()) {
+    return NewInternalError(
+        absl::StrFormat(
+            "length mismatch during DER marshaling (got %d, want %d)", len,
+            result.size()),
+        SOURCE_LOCATION);
+  }
+
+  return result;
+}
+
+}  // namespace
+
+StatusOr<absl::Time> Asn1TimeToAbsl(const ASN1_TIME* time) {
+  int diff_days, diff_secs;
+  if (ASN1_TIME_diff(&diff_days, &diff_secs, kUnixEpoch.get(), time) != 1) {
+    return NewInternalError(
+        absl::StrCat("error processing ASN1_TIME: ", SslErrorToString()),
+        SOURCE_LOCATION);
+  }
+
+  absl::CivilDay day = absl::CivilDay() + diff_days;
+  absl::CivilSecond second = absl::CivilSecond(day) + diff_secs;
+
+  return absl::FromCivil(second, absl::UTCTimeZone());
+}
 
 absl::Status EncryptRsaOaep(EVP_PKEY* key, const EVP_MD* hash,
                             absl::Span<const uint8_t> plaintext,
@@ -79,6 +128,10 @@ absl::Status EncryptRsaOaep(EVP_PKEY* key, const EVP_MD* hash,
   return absl::OkStatus();
 }
 
+StatusOr<std::string> MarshalAsn1Integer(ASN1_INTEGER* value) {
+  return MarshalDer(value, &i2d_ASN1_INTEGER);
+}
+
 StatusOr<std::string> MarshalEcParametersDer(const EC_KEY* key) {
   CBB cbb;
   CBB_zero(&cbb);
@@ -120,6 +173,14 @@ StatusOr<std::string> MarshalEcPointDer(const EC_KEY* key) {
   std::string result(reinterpret_cast<char*>(out_bytes), out_len);
   OPENSSL_free(out_bytes);
   return result;
+}
+
+StatusOr<std::string> MarshalX509CertificateDer(X509* cert) {
+  return MarshalDer(cert, &i2d_X509);
+}
+
+StatusOr<std::string> MarshalX509Name(X509_NAME* value) {
+  return MarshalDer(value, &i2d_X509_NAME);
 }
 
 StatusOr<std::string> MarshalX509PublicKeyDer(const EVP_PKEY* key) {

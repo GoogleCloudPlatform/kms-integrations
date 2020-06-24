@@ -1,10 +1,14 @@
 #ifndef KMSP11_UTIL_CRYPTO_UTILS_H_
 #define KMSP11_UTIL_CRYPTO_UTILS_H_
 
+#include "absl/time/time.h"
 #include "kmsp11/util/status_or.h"
 #include "openssl/evp.h"
 
 namespace kmsp11 {
+
+// Convert an ASN1_TIME structure to an absl::Time.
+StatusOr<absl::Time> Asn1TimeToAbsl(const ASN1_TIME* time);
 
 // Encrypts plaintext using RSAES-OAEP with MGF-1, and writes it to ciphertext.
 // Ciphertext size must be exactly equal to the RSA modulus size. Hash is used
@@ -12,6 +16,9 @@ namespace kmsp11 {
 absl::Status EncryptRsaOaep(EVP_PKEY* key, const EVP_MD* hash,
                             absl::Span<const uint8_t> plaintext,
                             absl::Span<uint8_t> ciphertext);
+
+// Marshals an ASN.1 integer in DER format.
+StatusOr<std::string> MarshalAsn1Integer(ASN1_INTEGER* value);
 
 // Marshals EC Parameters (always of choice NamedCurve) in DER format for the
 // provided key.
@@ -25,6 +32,12 @@ StatusOr<std::string> MarshalEcParametersDer(const EC_KEY* key);
 // Required to populate the attribute CKA_EC_POINT:
 // http://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/errata01/os/pkcs11-curr-v2.40-errata01-os-complete.html#_Toc416960012
 StatusOr<std::string> MarshalEcPointDer(const EC_KEY* key);
+
+// Marshals an X.509 certificate in DER format.
+StatusOr<std::string> MarshalX509CertificateDer(X509* cert);
+
+// Marshals an X.509 name (subject or issuer) in DER format.
+StatusOr<std::string> MarshalX509Name(X509_NAME* value);
 
 // Marshals a public key to X.509 SubjectPublicKeyInfo DER format.
 //

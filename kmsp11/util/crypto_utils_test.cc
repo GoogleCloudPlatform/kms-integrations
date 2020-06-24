@@ -2,13 +2,17 @@
 
 #include "absl/random/random.h"
 #include "absl/strings/escaping.h"
+#include "absl/time/clock.h"
+#include "absl/time/time.h"
 #include "gmock/gmock.h"
 #include "kmsp11/test/runfiles.h"
 #include "kmsp11/test/test_status_macros.h"
+#include "openssl/asn1.h"
 #include "openssl/bn.h"
 #include "openssl/bytestring.h"
 #include "openssl/ec_key.h"
 #include "openssl/obj.h"
+#include "openssl/pem.h"
 #include "openssl/rsa.h"
 
 namespace kmsp11 {
@@ -18,6 +22,23 @@ using ::testing::HasSubstr;
 using ::testing::IsEmpty;
 using ::testing::IsNull;
 using ::testing::Not;
+
+TEST(Asn1TimeToAbslTest, Epoch) {
+  absl::Time epoch = absl::UnixEpoch();
+  bssl::UniquePtr<ASN1_TIME> asn1_time(
+      ASN1_TIME_set(nullptr, absl::ToTimeT(epoch)));
+
+  EXPECT_THAT(Asn1TimeToAbsl(asn1_time.get()), IsOkAndHolds(epoch));
+}
+
+TEST(Asn1TimeToAbslTest, Now) {
+  absl::Time now = absl::Now();
+  bssl::UniquePtr<ASN1_TIME> asn1_time(
+      ASN1_TIME_set(nullptr, absl::ToTimeT(now)));
+
+  absl::Time now_seconds = absl::FromUnixSeconds(absl::ToUnixSeconds(now));
+  EXPECT_THAT(Asn1TimeToAbsl(asn1_time.get()), IsOkAndHolds(now_seconds));
+}
 
 TEST(EncryptRsaOaepTest, EncryptDecryptSuccess) {
   ASSERT_OK_AND_ASSIGN(std::string pub_pem,
@@ -181,6 +202,18 @@ TEST(MarshalEcPointTest, PointMarshaled) {
   EXPECT_EQ(EC_POINT_cmp(group.get(), EC_KEY_get0_public_key(key.get()),
                          point.get(), bn_ctx.get()),
             0);
+}
+
+TEST(MarshalX509CertificateTest, MarshalPemToDer) {
+  ASSERT_OK_AND_ASSIGN(std::string pem, LoadTestRunfile("ec_p256_cert.pem"));
+  ASSERT_OK_AND_ASSIGN(std::string der, LoadTestRunfile("ec_p256_cert.der"));
+
+  bssl::UniquePtr<BIO> bio(BIO_new(BIO_s_mem()));
+  EXPECT_EQ(BIO_write(bio.get(), pem.data(), pem.size()), pem.size());
+  bssl::UniquePtr<X509> cert(
+      PEM_read_bio_X509(bio.get(), nullptr, nullptr, nullptr));
+
+  EXPECT_THAT(MarshalX509CertificateDer(cert.get()), IsOkAndHolds(der));
 }
 
 TEST(ParseAndMarshalPublicKeyTest, EcKey) {
