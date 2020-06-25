@@ -109,6 +109,13 @@ http_file(
     urls = ["http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/errata01/os/include/pkcs11-v2.40/pkcs11t.h"],
 )
 
+http_archive(
+    name = "rules_jvm_external",  # v3.2 // 2020-02-24
+    sha256 = "19d402ef15f58750352a1a38b694191209ebc7f0252104b81196124fdd43ffa0",
+    strip_prefix = "rules_jvm_external-3.2",
+    url = "https://github.com/bazelbuild/rules_jvm_external/archive/3.2.tar.gz",
+)
+
 # Transitive Dependencies
 
 ## Google Cloud CPP
@@ -142,6 +149,22 @@ apple_rules_dependencies()
 load("@build_bazel_apple_support//lib:repositories.bzl", "apple_support_dependencies")
 
 apple_support_dependencies()
+
+## Java
+
+load("@rules_jvm_external//:defs.bzl", "maven_install")
+
+maven_install(
+    artifacts = [
+        "com.google.cloud:google-cloud-kms:1.39.0",
+        "com.google.guava:guava:28.2-jre",
+        "junit:junit:4.13",
+    ],
+    fetch_sources = True,
+    repositories = [
+        "https://repo.maven.apache.org/maven2/",
+    ],
+)
 
 ## Golang
 load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")

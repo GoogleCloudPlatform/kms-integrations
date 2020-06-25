@@ -7,6 +7,12 @@ build --enable_platform_specific_config
 build:linux --cxxopt=-std=c++11
 build:macos --cxxopt=-std=c++11
 
+# Java Version
+build --host_javabase=@bazel_tools//tools/jdk:remote_jdk11
+build --javabase=@bazel_tools//tools/jdk:remote_jdk11
+build --host_java_toolchain=@bazel_tools//tools/jdk:toolchain_java11
+build --java_toolchain=@bazel_tools//tools/jdk:toolchain_java11
+
 # Linux-specific options
 # Position-independent code
 build:linux --copt=-fPIC
