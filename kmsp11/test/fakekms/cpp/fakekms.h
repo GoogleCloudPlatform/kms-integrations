@@ -3,9 +3,9 @@
 
 #include "absl/strings/str_split.h"
 #include "absl/strings/strip.h"
-#include "google/cloud/kms/v1/service.grpc.pb.h"
 #include "grpcpp/create_channel.h"
 #include "grpcpp/security/credentials.h"
+#include "kmsp11/util/kms_v1.h"
 #include "kmsp11/util/status_or.h"
 
 namespace kmsp11 {
@@ -24,16 +24,14 @@ namespace kmsp11 {
 // resources associated with the fake.
 class FakeKms {
  public:
-  using kms_service = ::google::cloud::kms::v1::KeyManagementService;
-
   static StatusOr<std::unique_ptr<FakeKms>> New();
 
   virtual ~FakeKms() {}
 
   const std::string& listen_addr() const { return listen_addr_; }
 
-  inline std::unique_ptr<kms_service::Stub> NewClient() {
-    return kms_service::NewStub(
+  inline std::unique_ptr<kms_v1::KeyManagementService::Stub> NewClient() {
+    return kms_v1::KeyManagementService::NewStub(
         grpc::CreateChannel(listen_addr_, grpc::InsecureChannelCredentials()));
   }
 

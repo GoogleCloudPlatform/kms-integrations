@@ -5,21 +5,15 @@
 namespace kmsp11 {
 namespace {
 
-namespace kms_v1 = ::google::cloud::kms::v1;
 using ::testing::ElementsAre;
 
 TEST(GetAlgorithmDetailsTest, AlgorithmEc) {
   ASSERT_OK_AND_ASSIGN(
       AlgorithmDetails details,
-      GetDetails(
-          kms_v1::
-              CryptoKeyVersion_CryptoKeyVersionAlgorithm_EC_SIGN_P384_SHA384));
+      GetDetails(kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384));
 
-  EXPECT_EQ(
-      details.algorithm,
-      kms_v1::CryptoKeyVersion_CryptoKeyVersionAlgorithm_EC_SIGN_P384_SHA384);
-  EXPECT_EQ(details.purpose,
-            kms_v1::CryptoKey_CryptoKeyPurpose_ASYMMETRIC_SIGN);
+  EXPECT_EQ(details.algorithm, kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384);
+  EXPECT_EQ(details.purpose, kms_v1::CryptoKey::ASYMMETRIC_SIGN);
   EXPECT_THAT(details.allowed_mechanisms, ElementsAre(CKM_ECDSA));
   EXPECT_EQ(details.key_type, CKK_EC);
   EXPECT_EQ(details.key_bit_length, 384);
@@ -30,16 +24,11 @@ TEST(GetAlgorithmDetailsTest, AlgorithmEc) {
 TEST(GetAlgorithmDetailsTest, AlgorithmRsaOaep) {
   ASSERT_OK_AND_ASSIGN(
       AlgorithmDetails details,
-      GetDetails(
-          kms_v1::
-              CryptoKeyVersion_CryptoKeyVersionAlgorithm_RSA_DECRYPT_OAEP_4096_SHA256));
+      GetDetails(kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_4096_SHA256));
 
-  EXPECT_EQ(
-      details.algorithm,
-      kms_v1::
-          CryptoKeyVersion_CryptoKeyVersionAlgorithm_RSA_DECRYPT_OAEP_4096_SHA256);
-  EXPECT_EQ(details.purpose,
-            kms_v1::CryptoKey_CryptoKeyPurpose_ASYMMETRIC_DECRYPT);
+  EXPECT_EQ(details.algorithm,
+            kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_4096_SHA256);
+  EXPECT_EQ(details.purpose, kms_v1::CryptoKey::ASYMMETRIC_DECRYPT);
   EXPECT_THAT(details.allowed_mechanisms, ElementsAre(CKM_RSA_PKCS_OAEP));
   EXPECT_EQ(details.key_type, CKK_RSA);
   EXPECT_EQ(details.key_bit_length, 4096);
@@ -48,9 +37,8 @@ TEST(GetAlgorithmDetailsTest, AlgorithmRsaOaep) {
 }
 
 TEST(GetAlgorithmDetailsTest, AlgorithmNotFound) {
-  StatusOr<AlgorithmDetails> details = GetDetails(
-      kms_v1::
-          CryptoKeyVersion_CryptoKeyVersionAlgorithm_EXTERNAL_SYMMETRIC_ENCRYPTION);
+  StatusOr<AlgorithmDetails> details =
+      GetDetails(kms_v1::CryptoKeyVersion::EXTERNAL_SYMMETRIC_ENCRYPTION);
   EXPECT_FALSE(details.ok());
   EXPECT_THAT(details.status(), StatusIs(absl::StatusCode::kInternal));
   EXPECT_THAT(details.status(), StatusRvIs(CKR_GENERAL_ERROR));

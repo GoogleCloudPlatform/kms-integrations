@@ -116,8 +116,8 @@ static StatusOr<std::unique_ptr<HandleMap<Object>>> LoadObjects(
   for (CryptoKeysRange::iterator it = keys.begin(); it != keys.end(); it++) {
     ASSIGN_OR_RETURN(kms_v1::CryptoKey key, *it);
     switch (key.purpose()) {
-      case kms_v1::CryptoKey_CryptoKeyPurpose_ASYMMETRIC_DECRYPT:
-      case kms_v1::CryptoKey_CryptoKeyPurpose_ASYMMETRIC_SIGN:
+      case kms_v1::CryptoKey::ASYMMETRIC_DECRYPT:
+      case kms_v1::CryptoKey::ASYMMETRIC_SIGN:
         RETURN_IF_ERROR(AddAsymmetricKeyPair(ctx, key, objects.get()));
         break;
       default:

@@ -11,8 +11,6 @@
 namespace kmsp11 {
 namespace {
 
-namespace kms_v1 = ::google::cloud::kms::v1;
-
 StatusOr<std::string> GetKeyId(absl::string_view version_name) {
   std::vector<std::string> parts = absl::StrSplit(version_name, '/');
   if (parts.size() != 10 || parts[0] != "projects" || parts[2] != "locations" ||
@@ -67,11 +65,9 @@ absl::Status AddPublicKeyAttributes(AttributeMap* attrs,
   // 4.8 Public key objects
   attrs->Put(CKA_SUBJECT, "");
   attrs->PutBool(CKA_ENCRYPT,
-                 algorithm.purpose ==
-                     kms_v1::CryptoKey_CryptoKeyPurpose_ASYMMETRIC_DECRYPT);
-  attrs->PutBool(
-      CKA_VERIFY,
-      algorithm.purpose == kms_v1::CryptoKey_CryptoKeyPurpose_ASYMMETRIC_SIGN);
+                 algorithm.purpose == kms_v1::CryptoKey::ASYMMETRIC_DECRYPT);
+  attrs->PutBool(CKA_VERIFY,
+                 algorithm.purpose == kms_v1::CryptoKey::ASYMMETRIC_SIGN);
   attrs->PutBool(CKA_VERIFY_RECOVER, false);
   attrs->PutBool(CKA_WRAP, false);
   attrs->PutBool(CKA_TRUSTED, false);
@@ -89,11 +85,9 @@ absl::Status AddPrivateKeyAttributes(AttributeMap* attrs,
   attrs->Put(CKA_SUBJECT, "");
   attrs->PutBool(CKA_SENSITIVE, true);
   attrs->PutBool(CKA_DECRYPT,
-                 algorithm.purpose ==
-                     kms_v1::CryptoKey_CryptoKeyPurpose_ASYMMETRIC_DECRYPT);
-  attrs->PutBool(
-      CKA_SIGN,
-      algorithm.purpose == kms_v1::CryptoKey_CryptoKeyPurpose_ASYMMETRIC_SIGN);
+                 algorithm.purpose == kms_v1::CryptoKey::ASYMMETRIC_DECRYPT);
+  attrs->PutBool(CKA_SIGN,
+                 algorithm.purpose == kms_v1::CryptoKey::ASYMMETRIC_SIGN);
   attrs->PutBool(CKA_SIGN_RECOVER, false);
   attrs->PutBool(CKA_UNWRAP, false);
   attrs->PutBool(CKA_EXTRACTABLE, false);

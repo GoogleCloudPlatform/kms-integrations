@@ -6,9 +6,6 @@
 #include "kmsp11/util/crypto_utils.h"
 
 namespace kmsp11 {
-namespace {
-namespace kms_v1 = ::google::cloud::kms::v1;
-}
 
 const absl::string_view kTestLocation =
     "projects/kmsp11-test/locations/us-central1";

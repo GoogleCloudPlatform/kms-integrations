@@ -286,9 +286,9 @@ TEST_F(TokenTest, FindObjectsPublicBeforePrivate) {
   auto kms_client = fake_kms_->NewClient();
 
   kms_v1::CryptoKey ck;
-  ck.set_purpose(kms_v1::CryptoKey_CryptoKeyPurpose_ASYMMETRIC_SIGN);
+  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
   ck.mutable_version_template()->set_algorithm(
-      kms_v1::CryptoKeyVersion_CryptoKeyVersionAlgorithm_EC_SIGN_P384_SHA384);
+      kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384);
   ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), "ck", ck, true);
 
   kms_v1::CryptoKeyVersion ckv;
@@ -318,9 +318,9 @@ TEST_F(TokenTest, FindObjectsKeyNamesSorted) {
   auto kms_client = fake_kms_->NewClient();
 
   kms_v1::CryptoKey ck;
-  ck.set_purpose(kms_v1::CryptoKey_CryptoKeyPurpose_ASYMMETRIC_SIGN);
+  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
   ck.mutable_version_template()->set_algorithm(
-      kms_v1::CryptoKeyVersion_CryptoKeyVersionAlgorithm_EC_SIGN_P384_SHA384);
+      kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384);
   ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), "ck", ck, true);
 
   kms_v1::CryptoKeyVersion ckv1;
@@ -371,7 +371,7 @@ TEST_F(TokenTest, EncryptDecryptKeyUnavailable) {
   auto kms_client = fake_kms_->NewClient();
 
   kms_v1::CryptoKey ck;
-  ck.set_purpose(kms_v1::CryptoKey_CryptoKeyPurpose_ENCRYPT_DECRYPT);
+  ck.set_purpose(kms_v1::CryptoKey::ENCRYPT_DECRYPT);
   ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), "k", ck, false);
 
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
@@ -385,9 +385,9 @@ TEST_F(TokenTest, DisabledKeyUnavailable) {
   auto kms_client = fake_kms_->NewClient();
 
   kms_v1::CryptoKey ck;
-  ck.set_purpose(kms_v1::CryptoKey_CryptoKeyPurpose_ASYMMETRIC_SIGN);
+  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
   ck.mutable_version_template()->set_algorithm(
-      kms_v1::CryptoKeyVersion_CryptoKeyVersionAlgorithm_EC_SIGN_P384_SHA384);
+      kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384);
   ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), "ck", ck, true);
 
   kms_v1::CryptoKeyVersion ckv1;

@@ -32,14 +32,14 @@ TEST_F(KmsClientTest, ListCryptoKeysSuccess) {
   kr = CreateKeyRingOrDie(client_->kms_stub(), kTestLocation, RandomId(), kr);
 
   kms_v1::CryptoKey ck1;
-  ck1.set_purpose(kms_v1::CryptoKey_CryptoKeyPurpose_ENCRYPT_DECRYPT);
+  ck1.set_purpose(kms_v1::CryptoKey::ENCRYPT_DECRYPT);
   ck1 = CreateCryptoKeyOrDie(client_->kms_stub(), kr.name(), "ck1", ck1, true);
 
   kms_v1::CryptoKey ck2;
-  ck2.set_purpose(kms_v1::CryptoKey_CryptoKeyPurpose_ASYMMETRIC_DECRYPT);
+  ck2.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_DECRYPT);
   ck2.mutable_version_template()->set_algorithm(
       kms_v1::
-          CryptoKeyVersion_CryptoKeyVersionAlgorithm_RSA_DECRYPT_OAEP_2048_SHA256);
+          CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256);
   ck2 = CreateCryptoKeyOrDie(client_->kms_stub(), kr.name(), "ck2", ck2, true);
 
   kms_v1::ListCryptoKeysRequest list_req;
@@ -72,9 +72,9 @@ TEST_F(KmsClientTest, ListCryptoKeyVersionsSuccess) {
   kr = CreateKeyRingOrDie(client_->kms_stub(), kTestLocation, RandomId(), kr);
 
   kms_v1::CryptoKey ck;
-  ck.set_purpose(kms_v1::CryptoKey_CryptoKeyPurpose_ASYMMETRIC_SIGN);
+  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
   ck.mutable_version_template()->set_algorithm(
-      kms_v1::CryptoKeyVersion_CryptoKeyVersionAlgorithm_EC_SIGN_P256_SHA256);
+      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
   ck = CreateCryptoKeyOrDie(client_->kms_stub(), kr.name(), "ck", ck, true);
 
   kms_v1::CryptoKeyVersion ckv1;
@@ -115,9 +115,9 @@ TEST_F(KmsClientTest, GetPublicKeySuccess) {
   kr = CreateKeyRingOrDie(client_->kms_stub(), kTestLocation, RandomId(), kr);
 
   kms_v1::CryptoKey ck;
-  ck.set_purpose(kms_v1::CryptoKey_CryptoKeyPurpose_ASYMMETRIC_SIGN);
+  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
   ck.mutable_version_template()->set_algorithm(
-      kms_v1::CryptoKeyVersion_CryptoKeyVersionAlgorithm_EC_SIGN_P256_SHA256);
+      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
   ck = CreateCryptoKeyOrDie(client_->kms_stub(), kr.name(), "ck", ck, true);
 
   kms_v1::CryptoKeyVersion ckv;
@@ -145,10 +145,10 @@ TEST_F(KmsClientTest, AsymmetricDecryptSuccess) {
   kr = CreateKeyRingOrDie(client_->kms_stub(), kTestLocation, RandomId(), kr);
 
   kms_v1::CryptoKey ck;
-  ck.set_purpose(kms_v1::CryptoKey_CryptoKeyPurpose_ASYMMETRIC_DECRYPT);
+  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_DECRYPT);
   ck.mutable_version_template()->set_algorithm(
       kms_v1::
-          CryptoKeyVersion_CryptoKeyVersionAlgorithm_RSA_DECRYPT_OAEP_2048_SHA256);
+          CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256);
   ck = CreateCryptoKeyOrDie(client_->kms_stub(), kr.name(), "ck", ck, true);
 
   kms_v1::CryptoKeyVersion ckv;

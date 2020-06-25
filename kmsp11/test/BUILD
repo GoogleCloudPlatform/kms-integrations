@@ -70,9 +70,8 @@ cc_library(
     deps = [
         ":test_status_macros",
         "//kmsp11/util:crypto_utils",
+        "//kmsp11/util:kms_v1",
         "@com_google_absl//absl/strings",
-        "@com_google_googleapis//google/cloud/kms/v1:kms_cc_grpc",
-        "@com_google_googleapis//google/cloud/kms/v1:kms_cc_proto",
     ],
 )
 

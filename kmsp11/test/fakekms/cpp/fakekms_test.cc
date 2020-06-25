@@ -1,17 +1,12 @@
 #include "kmsp11/test/fakekms/cpp/fakekms.h"
 
 #include "gmock/gmock.h"
-#include "google/cloud/kms/v1/resources.pb.h"
-#include "google/cloud/kms/v1/service.grpc.pb.h"
-#include "google/cloud/kms/v1/service.pb.h"
 #include "grpcpp/create_channel.h"
 #include "grpcpp/security/credentials.h"
 #include "kmsp11/test/test_status_macros.h"
 
 namespace kmsp11 {
 namespace {
-
-namespace kms_v1 = ::google::cloud::kms::v1;
 
 TEST(CppFakeKmsTest, SmokeTest) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake, FakeKms::New());

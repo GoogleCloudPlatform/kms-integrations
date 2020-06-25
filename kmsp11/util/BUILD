@@ -90,14 +90,13 @@ cc_library(
     srcs = ["kms_client.cc"],
     hdrs = ["kms_client.h"],
     deps = [
+        ":kms_v1",
         ":status_macros",
         ":status_or",
         ":status_utils",
         "//kmsp11:version",
         "@com_github_googleapis_google_cloud_cpp//google/cloud:google_cloud_cpp_grpc_utils",
         "@com_github_grpc_grpc//:grpc++",
-        "@com_google_googleapis//google/cloud/kms/v1:kms_cc_grpc",
-        "@com_google_googleapis//google/cloud/kms/v1:kms_cc_proto",
     ],
 )
 
@@ -110,6 +109,15 @@ cc_test(
         "//kmsp11/test",
         "//kmsp11/test/fakekms/cpp:fakekms",
         "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "kms_v1",
+    hdrs = ["kms_v1.h"],
+    deps = [
+        "@com_google_googleapis//google/cloud/kms/v1:kms_cc_grpc",
+        "@com_google_googleapis//google/cloud/kms/v1:kms_cc_proto",
     ],
 )
 

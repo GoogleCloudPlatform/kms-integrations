@@ -9,10 +9,10 @@ cc_library(
     deps = [
         ":cryptoki_headers",
         "//kmsp11/util:errors",
+        "//kmsp11/util:kms_v1",
         "//kmsp11/util:status_or",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/container:flat_hash_set",
-        "@com_google_googleapis//google/cloud/kms/v1:kms_cc_proto",
     ],
 )
 
@@ -138,9 +138,9 @@ cc_library(
         ":cert_authority",
         ":cryptoki_headers",
         "//kmsp11/util:crypto_utils",
+        "//kmsp11/util:kms_v1",
         "//kmsp11/util:status_macros",
         "@com_google_absl//absl/strings",
-        "@com_google_googleapis//google/cloud/kms/v1:kms_cc_proto",
     ],
 )
 

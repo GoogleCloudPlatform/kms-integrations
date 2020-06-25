@@ -19,15 +19,13 @@ using ::testing::IsEmpty;
 using ::testing::Not;
 using ::testing::SizeIs;
 
-namespace kms_v1 = ::google::cloud::kms::v1;
-
 kms_v1::CryptoKeyVersion NewTestCkv() {
   kms_v1::CryptoKeyVersion v;
   v.set_name(
       "projects/foo/locations/global/keyRings/bar/cryptoKeys/baz/"
       "cryptoKeyVersions/1");
   v.set_algorithm(
-      kms_v1::CryptoKeyVersion_CryptoKeyVersionAlgorithm_EC_SIGN_P256_SHA256);
+      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
   return v;
 }
 
@@ -154,7 +152,7 @@ TEST(NewKeyPairTest, RsaKeyAttributes) {
   kms_v1::CryptoKeyVersion ckv = NewTestCkv();
   ckv.set_algorithm(
       kms_v1::
-          CryptoKeyVersion_CryptoKeyVersionAlgorithm_RSA_SIGN_PKCS1_2048_SHA256);
+          CryptoKeyVersion::RSA_SIGN_PKCS1_2048_SHA256);
 
   ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub, GetTestRsa2048Key());
   const RSA* rsa_key = EVP_PKEY_get0_RSA(pub.get());

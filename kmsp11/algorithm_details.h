@@ -4,14 +4,15 @@
 #include "google/cloud/kms/v1/resources.pb.h"
 #include "google/cloud/kms/v1/service.pb.h"
 #include "kmsp11/cryptoki.h"
+#include "kmsp11/util/kms_v1.h"
 #include "kmsp11/util/status_or.h"
 #include "openssl/evp.h"
 
 namespace kmsp11 {
 
 struct AlgorithmDetails {
-  google::cloud::kms::v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm;
-  google::cloud::kms::v1::CryptoKey::CryptoKeyPurpose purpose;
+  kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm;
+  kms_v1::CryptoKey::CryptoKeyPurpose purpose;
   std::vector<CK_MECHANISM_TYPE> allowed_mechanisms;
   CK_KEY_TYPE key_type;
   size_t key_bit_length;
@@ -21,8 +22,7 @@ struct AlgorithmDetails {
 };
 
 StatusOr<AlgorithmDetails> GetDetails(
-    google::cloud::kms::v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm
-        algorithm);
+    kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm);
 
 }  // namespace kmsp11
 

@@ -14,12 +14,12 @@ cc_library(
     deps = [
         "//kmsp11/test",
         "//kmsp11/util:cleanup",
+        "//kmsp11/util:kms_v1",
         "//kmsp11/util:status_macros",
         "//kmsp11/util:status_or",
         "@com_github_google_glog//:glog",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/strings",
-        "@com_google_googleapis//google/cloud/kms/v1:kms_cc_grpc",
     ],
 )
 
@@ -34,8 +34,6 @@ cc_test(
         ":fakekms",
         "//kmsp11/test",
         "@com_github_grpc_grpc//:grpc++",
-        "@com_google_googleapis//google/cloud/kms/v1:kms_cc_grpc",
-        "@com_google_googleapis//google/cloud/kms/v1:kms_cc_proto",
         "@com_google_googletest//:gtest_main",
     ],
 )

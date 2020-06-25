@@ -5,8 +5,6 @@
 
 namespace kmsp11 {
 
-namespace kms_v1 = ::google::cloud::kms::v1;
-
 #define KMS_ALGORITHM(name) \
   kms_v1::CryptoKeyVersion_CryptoKeyVersionAlgorithm_##name
 #define KMS_PURPOSE(name) kms_v1::CryptoKey_CryptoKeyPurpose_##name

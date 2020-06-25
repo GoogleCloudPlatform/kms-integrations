@@ -10,8 +10,6 @@
 namespace kmsp11 {
 namespace {
 
-namespace kms_v1 = ::google::cloud::kms::v1;
-
 static StatusOr<KeyPair> NewMockKeyPair(
     kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm,
     absl::string_view public_key_runfile) {
