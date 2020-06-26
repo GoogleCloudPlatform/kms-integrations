@@ -10,7 +10,7 @@ set RESULTS_DIR=%KOKORO_ARTIFACTS_DIR%\results
 mkdir "%RESULTS_DIR%"
 
 :: Add the latest version of Bazel to the PATH
-choco install bazel --version 3.0.0 -y --no-progress || exit /b
+choco install bazel --version 3.3.0 -y --no-progress || exit /b
 
 :: https://docs.bazel.build/versions/master/windows.html#build-c-with-msvc
 set BAZEL_VC=C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\VC\
@@ -19,7 +19,7 @@ set BAZEL_VC=C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\VC\
 set PATH=C:\tools\msys64\usr\bin;%PATH%
 set BAZEL_SH=C:\tools\msys64\usr\bin\bash.exe
 
-bazel test ...
+bazel test ... --keep_going
 set RV=%ERRORLEVEL%
 
 C:\Python37\python.exe "%PROJECT_ROOT%\.kokoro\copy_test_outputs.py" ^

@@ -22,7 +22,7 @@ export RESULTS_DIR="${KOKORO_ARTIFACTS_DIR}/results"
 mkdir "${RESULTS_DIR}"
 
 # Add the latest version of Bazel to the PATH
-use_bazel.sh 3.1.0
+use_bazel.sh 3.3.0
 
 # Ensure that test logs are uploaded on failure
 _backup_artifacts() {
@@ -31,4 +31,4 @@ _backup_artifacts() {
 }
 trap _backup_artifacts EXIT
 
-bazel test ...
+bazel test ... --keep_going
