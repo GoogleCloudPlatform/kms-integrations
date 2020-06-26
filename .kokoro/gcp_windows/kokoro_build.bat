@@ -22,6 +22,10 @@ set BAZEL_SH=C:\tools\msys64\usr\bin\bash.exe
 bazel test ... --keep_going
 set RV=%ERRORLEVEL%
 
+if exist "%PROJECT_ROOT%\bazel-bin\kmsp11\main\libkmsp11.so" copy ^
+    "%PROJECT_ROOT%\bazel-bin\kmsp11\main\libkmsp11.so" ^
+    "%RESULTS_DIR%\kmsp11.dll"
+
 C:\Python37\python.exe "%PROJECT_ROOT%\.kokoro\copy_test_outputs.py" ^
     "%PROJECT_ROOT%\bazel-testlogs" "%RESULTS_DIR%\testlogs"
 

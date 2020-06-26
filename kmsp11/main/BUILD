@@ -117,8 +117,58 @@ function_def_template(
     out = "function_list.h",
 )
 
+cc_binary(
+    name = "libkmsp11.so",
+    linkopts = select({
+        "//:linux": [
+            # Make all symbols hidden, except those that are specifially exported.
+            "-Wl,--version-script,$(location :linux_exports.lds)",
+            # Disallow undefined symbols in object files.
+            "-z defs",
+            # Link statically with libstdc++ and libgcc
+            "-static-libstdc++",
+            "-static-libgcc",
+        ],
+        "//:macos": [
+            # Make all symbols hidden, except those that are specifially exported.
+            "-Wl,-exported_symbols_list,$(location :macos_exports.lds)",
+        ],
+        "//conditions:default": [],
+    }),
+    linkshared = 1,
+    visibility = ["//visibility:public"],
+    win_def_file = select({
+        "//:windows": ":win_exports.def",
+        "//conditions:default": None,
+    }),
+    deps = [":bridge"] +
+           select({
+               "//:linux": [":linux_exports.lds"],
+               "//:macos": [":macos_exports.lds"],
+               "//conditions:default": [],
+           }),
+)
+
+function_def_template(
+    name = "linux_exports",
+    src = "linux_exports.lds.template",
+    out = "linux_exports.lds",
+)
+
+function_def_template(
+    name = "macos_exports",
+    src = "macos_exports.lds.template",
+    out = "macos_exports.lds",
+)
+
 function_def_template(
     name = "main_cc",
     src = "main.cc.template",
     out = "main.cc",
+)
+
+function_def_template(
+    name = "win_exports",
+    src = "win_exports.def.template",
+    out = "win_exports.def",
 )

@@ -24,11 +24,20 @@ mkdir "${RESULTS_DIR}"
 # Add the latest version of Bazel to the PATH
 use_bazel.sh 3.3.0
 
-# Ensure that test logs are uploaded on failure
-_backup_artifacts() {
+# Ensure that build outputs and test logs are uploaded even on failure
+_upload_artifacts() {
+  if [ -e "${PROJECT_ROOT}/bazel-bin/kmsp11/main/libkmsp11.so" ]; then
+    cp "${PROJECT_ROOT}/bazel-bin/kmsp11/main/libkmsp11.so" \
+      "${RESULTS_DIR}/libkmsp11.so"
+  fi
+
   python3 "${PROJECT_ROOT}/.kokoro/copy_test_outputs.py" \
     "${PROJECT_ROOT}/bazel-testlogs" "${RESULTS_DIR}/testlogs"
 }
-trap _backup_artifacts EXIT
+trap _upload_artifacts EXIT
 
-bazel test ... --keep_going
+# Force bazel to statically link libstdc++
+# See https://github.com/bazelbuild/bazel/pull/8660
+BAZEL_LINKOPTS="-static-libstdc++ -static-libgcc" \
+  BAZEL_LINKLIBS="-l%:libstdc++.a -lm" \
+  bazel test ... --keep_going
