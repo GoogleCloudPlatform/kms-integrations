@@ -115,6 +115,15 @@ static StatusOr<std::unique_ptr<HandleMap<Object>>> LoadObjects(
 
   for (CryptoKeysRange::iterator it = keys.begin(); it != keys.end(); it++) {
     ASSIGN_OR_RETURN(kms_v1::CryptoKey key, *it);
+
+    if (key.version_template().protection_level() !=
+        kms_v1::ProtectionLevel::HSM) {
+      LOG(INFO) << "skipping key " << key.name()
+                << " with unsupported protection level "
+                << key.version_template().protection_level();
+      continue;
+    }
+
     switch (key.purpose()) {
       case kms_v1::CryptoKey::ASYMMETRIC_DECRYPT:
       case kms_v1::CryptoKey::ASYMMETRIC_SIGN:

@@ -289,6 +289,8 @@ TEST_F(TokenTest, FindObjectsPublicBeforePrivate) {
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
   ck.mutable_version_template()->set_algorithm(
       kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM);
   ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), "ck", ck, true);
 
   kms_v1::CryptoKeyVersion ckv;
@@ -321,6 +323,8 @@ TEST_F(TokenTest, FindObjectsKeyNamesSorted) {
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
   ck.mutable_version_template()->set_algorithm(
       kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM);
   ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), "ck", ck, true);
 
   kms_v1::CryptoKeyVersion ckv1;
@@ -381,6 +385,24 @@ TEST_F(TokenTest, EncryptDecryptKeyUnavailable) {
               IsEmpty());
 }
 
+TEST_F(TokenTest, SoftwareKeyUnavailable) {
+  auto kms_client = fake_kms_->NewClient();
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::SOFTWARE);
+  ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), "k", ck, false);
+
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+
+  EXPECT_THAT(token->FindObjects([](const Object& o) -> bool { return true; }),
+              IsEmpty());
+}
+
 TEST_F(TokenTest, DisabledKeyUnavailable) {
   auto kms_client = fake_kms_->NewClient();
 
@@ -388,6 +410,8 @@ TEST_F(TokenTest, DisabledKeyUnavailable) {
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
   ck.mutable_version_template()->set_algorithm(
       kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM);
   ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), "ck", ck, true);
 
   kms_v1::CryptoKeyVersion ckv1;
@@ -430,6 +454,8 @@ TEST_F(TokenTest, CertGeneratedWhenConfigIsSet) {
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
   ck.mutable_version_template()->set_algorithm(
       kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM);
   ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), "ck", ck, true);
 
   kms_v1::CryptoKeyVersion ckv;
@@ -459,6 +485,8 @@ TEST_F(TokenTest, CertNotGeneratedWhenConfigIsUnset) {
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
   ck.mutable_version_template()->set_algorithm(
       kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM);
   ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), "ck", ck, true);
 
   kms_v1::CryptoKeyVersion ckv;

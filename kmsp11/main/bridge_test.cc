@@ -534,6 +534,8 @@ TEST_F(BridgeTest, GetAttributeValueSuccess) {
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
   ck.mutable_version_template()->set_algorithm(
       kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM);
   ck = CreateCryptoKeyOrDie(fake_client.get(), kr1_.name(), "ck", ck, true);
 
   kms_v1::CryptoKeyVersion ckv1;
@@ -568,6 +570,8 @@ TEST_F(BridgeTest, GetAttributeValueFailsSensitiveAttribute) {
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
   ck.mutable_version_template()->set_algorithm(
       kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM);
   ck = CreateCryptoKeyOrDie(fake_client.get(), kr1_.name(), "ck", ck, true);
 
   kms_v1::CryptoKeyVersion ckv1;
@@ -603,6 +607,8 @@ TEST_F(BridgeTest, GetAttributeValueFailsNonExistentAttribute) {
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
   ck.mutable_version_template()->set_algorithm(
       kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM);
   ck = CreateCryptoKeyOrDie(fake_client.get(), kr1_.name(), "ck", ck, true);
 
   kms_v1::CryptoKeyVersion ckv1;
@@ -638,6 +644,8 @@ TEST_F(BridgeTest, GetAttributeValueSuccessNoBuffer) {
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
   ck.mutable_version_template()->set_algorithm(
       kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM);
   ck = CreateCryptoKeyOrDie(fake_client.get(), kr1_.name(), "ck", ck, true);
 
   kms_v1::CryptoKeyVersion ckv1;
@@ -670,6 +678,8 @@ TEST_F(BridgeTest, GetAttributeValueFailureBufferTooShort) {
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
   ck.mutable_version_template()->set_algorithm(
       kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM);
   ck = CreateCryptoKeyOrDie(fake_client.get(), kr1_.name(), "ck", ck, true);
 
   kms_v1::CryptoKeyVersion ckv1;
@@ -705,6 +715,8 @@ TEST_F(BridgeTest, GetAttributeValueFailureAllAttributesProcessed) {
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
   ck.mutable_version_template()->set_algorithm(
       kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM);
   ck = CreateCryptoKeyOrDie(fake_client.get(), kr1_.name(), "ck", ck, true);
 
   kms_v1::CryptoKeyVersion ckv1;
@@ -785,6 +797,8 @@ TEST_F(BridgeTest, GetAttributeValueFailureNullTemplate) {
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
   ck.mutable_version_template()->set_algorithm(
       kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM);
   ck = CreateCryptoKeyOrDie(fake_client.get(), kr1_.name(), "ck", ck, true);
 
   kms_v1::CryptoKeyVersion ckv1;
@@ -817,6 +831,8 @@ TEST_F(BridgeTest, FindEcPrivateKey) {
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
   ck.mutable_version_template()->set_algorithm(
       kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM);
   ck = CreateCryptoKeyOrDie(fake_client.get(), kr1_.name(), "ck", ck, true);
 
   kms_v1::CryptoKeyVersion ckv;
@@ -862,6 +878,8 @@ TEST_F(BridgeTest, FindCertificate) {
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
   ck.mutable_version_template()->set_algorithm(
       kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM);
   ck = CreateCryptoKeyOrDie(fake_client.get(), kr1_.name(), "ck", ck, true);
 
   kms_v1::CryptoKeyVersion ckv;
@@ -894,6 +912,8 @@ TEST_F(BridgeTest, NoCertificatesWhenConfigNotSet) {
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
   ck.mutable_version_template()->set_algorithm(
       kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM);
   ck = CreateCryptoKeyOrDie(fake_client.get(), kr1_.name(), "ck", ck, true);
 
   kms_v1::CryptoKeyVersion ckv;
@@ -1074,6 +1094,8 @@ class AsymmetricCryptTest : public BridgeTest {
     ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_DECRYPT);
     ck.mutable_version_template()->set_algorithm(
         kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256);
+    ck.mutable_version_template()->set_protection_level(
+        kms_v1::ProtectionLevel::HSM);
     ck = CreateCryptoKeyOrDie(kms_client.get(), kr1_.name(), "ck", ck, true);
 
     kms_v1::CryptoKeyVersion ckv;
@@ -1421,6 +1443,8 @@ class AsymmetricSignTest : public BridgeTest {
     ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
     ck.mutable_version_template()->set_algorithm(
         kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+    ck.mutable_version_template()->set_protection_level(
+        kms_v1::ProtectionLevel::HSM);
     ck = CreateCryptoKeyOrDie(kms_client.get(), kr1_.name(), "ck", ck, true);
 
     kms_v1::CryptoKeyVersion ckv;

@@ -53,6 +53,8 @@ TEST_F(SessionTest, FindAllSinglePage) {
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
   ck.mutable_version_template()->set_algorithm(
       kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM);
   ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), "ck", ck, true);
 
   kms_v1::CryptoKeyVersion ckv;
@@ -90,6 +92,8 @@ TEST_F(SessionTest, FindIgnoreResults) {
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
   ck.mutable_version_template()->set_algorithm(
       kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM);
   ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), "ck", ck, true);
 
   kms_v1::CryptoKeyVersion ckv;
@@ -111,6 +115,8 @@ TEST_F(SessionTest, FindPublicKeysMultiPage) {
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
   ck.mutable_version_template()->set_algorithm(
       kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM);
   ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), "ck", ck, true);
 
   kms_v1::CryptoKeyVersion ckv1;
@@ -189,6 +195,8 @@ TEST_F(SessionTest, Decrypt) {
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_DECRYPT);
   ck.mutable_version_template()->set_algorithm(
       kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM);
   ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), "ck", ck, true);
 
   kms_v1::CryptoKeyVersion ckv;
@@ -232,6 +240,8 @@ TEST_F(SessionTest, DecryptInitAlreadyActive) {
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_DECRYPT);
   ck.mutable_version_template()->set_algorithm(
       kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM);
   ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), "ck", ck, true);
 
   kms_v1::CryptoKeyVersion ckv;
@@ -275,6 +285,8 @@ TEST_F(SessionTest, Encrypt) {
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_DECRYPT);
   ck.mutable_version_template()->set_algorithm(
       kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM);
   ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), "ck", ck, true);
 
   kms_v1::CryptoKeyVersion ckv;
@@ -311,6 +323,8 @@ TEST_F(SessionTest, EncryptInitAlreadyActive) {
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_DECRYPT);
   ck.mutable_version_template()->set_algorithm(
       kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM);
   ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), "ck", ck, true);
 
   kms_v1::CryptoKeyVersion ckv;
@@ -354,6 +368,8 @@ TEST_F(SessionTest, Sign) {
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
   ck.mutable_version_template()->set_algorithm(
       kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM);
   ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), "ck", ck, true);
 
   kms_v1::CryptoKeyVersion ckv;
@@ -394,6 +410,8 @@ TEST_F(SessionTest, SignInitAlreadyActive) {
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
   ck.mutable_version_template()->set_algorithm(
       kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM);
   ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), "ck", ck, true);
 
   kms_v1::CryptoKeyVersion ckv;
@@ -426,6 +444,8 @@ TEST_F(SessionTest, SignatureLength) {
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
   ck.mutable_version_template()->set_algorithm(
       kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM);
   ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), "ck", ck, true);
 
   kms_v1::CryptoKeyVersion ckv;
@@ -476,6 +496,8 @@ TEST_F(SessionTest, SignVerify) {
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
   ck.mutable_version_template()->set_algorithm(
       kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM);
   ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), "ck", ck, true);
 
   kms_v1::CryptoKeyVersion ckv;
@@ -520,6 +542,8 @@ TEST_F(SessionTest, VerifyInitAlreadyActive) {
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
   ck.mutable_version_template()->set_algorithm(
       kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM);
   ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), "ck", ck, true);
 
   kms_v1::CryptoKeyVersion ckv;
