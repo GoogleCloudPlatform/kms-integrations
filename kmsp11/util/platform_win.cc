@@ -1,11 +1,13 @@
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/platform.h"
 
-void SetEnvVariable(const std::string& name, const std::string& value) {
-  _putenv_s(name.c_str(), value.c_str());
+namespace kmsp11 {
+
+void SetEnvVariable(const char* name, const char* value) {
+  _putenv_s(name, value);
 }
 
-void ClearEnvVariable(const std::string& name) { _putenv_s(name.c_str(), ""); }
+void ClearEnvVariable(const char* name) { _putenv_s(name, ""); }
 
 absl::Status EnsureWriteProtected(const char* filename) {
   return absl::OkStatus();
@@ -16,3 +18,5 @@ absl::Status SetMode(const char* filename, int mode) {
                   "SetMode is not implemented on Windows", CKR_GENERAL_ERROR,
                   SOURCE_LOCATION);
 }
+
+}  // namespace kmsp11

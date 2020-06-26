@@ -4,11 +4,13 @@
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/platform.h"
 
-void SetEnvVariable(const std::string& name, const std::string& value) {
-  setenv(name.c_str(), value.c_str(), 1);
+namespace kmsp11 {
+
+void SetEnvVariable(const char* name, const char* value) {
+  setenv(name, value, 1);
 }
 
-void ClearEnvVariable(const std::string& name) { unsetenv(name.c_str()); }
+void ClearEnvVariable(const char* name) { unsetenv(name); }
 
 absl::Status EnsureWriteProtected(const char* filename) {
   struct stat buf;
@@ -40,3 +42,5 @@ absl::Status SetMode(const char* filename, int mode) {
   }
   return absl::OkStatus();
 }
+
+}  // namespace kmsp11
