@@ -21,6 +21,7 @@ cc_library(
         ":crypter_interfaces",
         ":ecdsa",
         ":rsaes_oaep",
+        ":rsassa_pkcs1",
         "//kmsp11/util:errors",
     ],
 )
@@ -144,6 +145,36 @@ cc_test(
     srcs = ["rsaes_oaep_test.cc"],
     deps = [
         ":rsaes_oaep",
+        "//kmsp11/test",
+        "//kmsp11/test/fakekms/cpp:fakekms",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "rsassa_pkcs1",
+    srcs = ["rsassa_pkcs1.cc"],
+    hdrs = ["rsassa_pkcs1.h"],
+    deps = [
+        ":crypter_interfaces",
+        ":kms_signer",
+        ":preconditions",
+        "//kmsp11:cryptoki_headers",
+        "//kmsp11/util:cleanup",
+        "//kmsp11/util:crypto_utils",
+        "//kmsp11/util:kms_client",
+        "//kmsp11/util:status_macros",
+        "//kmsp11/util:status_or",
+        "//kmsp11/util:string_utils",
+    ],
+)
+
+cc_test(
+    name = "rsassa_pkcs1_test",
+    size = "small",
+    srcs = ["rsassa_pkcs1_test.cc"],
+    deps = [
+        ":rsassa_pkcs1",
         "//kmsp11/test",
         "//kmsp11/test/fakekms/cpp:fakekms",
         "@com_google_googletest//:gtest_main",

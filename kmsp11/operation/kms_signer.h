@@ -14,8 +14,8 @@ class KmsSigner : public SignerInterface {
     return object_->algorithm().digest;
   }
 
-  absl::Status Sign(KmsClient* client, absl::Span<const uint8_t> digest,
-                    absl::Span<uint8_t> signature) override;
+  virtual absl::Status Sign(KmsClient* client, absl::Span<const uint8_t> digest,
+                            absl::Span<uint8_t> signature) override;
 
   virtual ~KmsSigner() {}
 

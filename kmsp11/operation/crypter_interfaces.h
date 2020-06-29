@@ -28,7 +28,7 @@ class SignerInterface {
   virtual const EVP_MD* digest_algorithm() = 0;
   virtual size_t signature_length() = 0;
 
-  virtual absl::Status Sign(KmsClient* client, absl::Span<const uint8_t> digest,
+  virtual absl::Status Sign(KmsClient* client, absl::Span<const uint8_t> data,
                             absl::Span<uint8_t> signature) = 0;
 
   virtual ~SignerInterface() {}
@@ -36,8 +36,7 @@ class SignerInterface {
 
 class VerifierInterface {
  public:
-  virtual absl::Status Verify(KmsClient* client,
-                              absl::Span<const uint8_t> digest,
+  virtual absl::Status Verify(KmsClient* client, absl::Span<const uint8_t> data,
                               absl::Span<const uint8_t> signature) = 0;
   virtual ~VerifierInterface() {}
 };

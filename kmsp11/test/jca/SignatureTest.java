@@ -41,6 +41,38 @@ public class SignatureTest {
     signAndVerify(cryptoKeyId, "SHA384withECDSA");
   }
 
+  @Test
+  public void testRsa2048Pkcs1Sha256SignVerify() throws Exception {
+    String cryptoKeyId = "rsa-pkcs1-2048-sha256-key";
+    createCkv(cryptoKeyId, CryptoKeyVersion.CryptoKeyVersionAlgorithm.RSA_SIGN_PKCS1_2048_SHA256);
+
+    signAndVerify(cryptoKeyId, "SHA256withRSA");
+  }
+
+  @Test
+  public void testRsa3072Pkcs1Sha256SignVerify() throws Exception {
+    String cryptoKeyId = "rsa-pkcs1-3072-sha256-key";
+    createCkv(cryptoKeyId, CryptoKeyVersion.CryptoKeyVersionAlgorithm.RSA_SIGN_PKCS1_3072_SHA256);
+
+    signAndVerify(cryptoKeyId, "SHA256withRSA");
+  }
+
+  @Test
+  public void testRsa4096Pkcs1Sha256SignVerify() throws Exception {
+    String cryptoKeyId = "rsa-pkcs1-4096-sha256-key";
+    createCkv(cryptoKeyId, CryptoKeyVersion.CryptoKeyVersionAlgorithm.RSA_SIGN_PKCS1_4096_SHA256);
+
+    signAndVerify(cryptoKeyId, "SHA256withRSA");
+  }
+
+  @Test
+  public void testRsa4096Pkcs1Sha512SignVerify() throws Exception {
+    String cryptoKeyId = "rsa-pkcs1-4096-sha512-key";
+    createCkv(cryptoKeyId, CryptoKeyVersion.CryptoKeyVersionAlgorithm.RSA_SIGN_PKCS1_4096_SHA512);
+
+    signAndVerify(cryptoKeyId, "SHA512withRSA");
+  }
+
   private void signAndVerify(String keyLabel, String jcaAlgorithm) throws Exception {
     Provider provider = f.newProvider();
 
