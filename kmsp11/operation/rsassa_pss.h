@@ -26,6 +26,24 @@ class RsaPssSigner : public KmsSigner {
   bssl::UniquePtr<RSA> key_;
 };
 
+class RsaPssVerifier : public VerifierInterface {
+ public:
+  static StatusOr<std::unique_ptr<VerifierInterface>> New(
+      std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
+
+  absl::Status Verify(KmsClient* client, absl::Span<const uint8_t> digest,
+                      absl::Span<const uint8_t> signature) override;
+
+  virtual ~RsaPssVerifier() {}
+
+ private:
+  RsaPssVerifier(std::shared_ptr<Object> object, bssl::UniquePtr<RSA> key)
+      : object_(object), key_(std::move(key)) {}
+
+  std::shared_ptr<Object> object_;
+  bssl::UniquePtr<RSA> key_;
+};
+
 }  // namespace kmsp11
 
 #endif  // KMSP11_OPERATION_RSASSA_PSS_H_

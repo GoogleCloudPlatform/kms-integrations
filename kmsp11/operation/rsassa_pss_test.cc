@@ -90,6 +90,82 @@ TEST(NewSignerTest, FailureWrongObjectClass) {
               StatusRvIs(CKR_KEY_FUNCTION_NOT_PERMITTED));
 }
 
+TEST(NewVerifierTest, NullParamInvalid) {
+  ASSERT_OK_AND_ASSIGN(
+      KeyPair kp,
+      NewMockKeyPair(kms_v1::CryptoKeyVersion::RSA_SIGN_PSS_2048_SHA256,
+                     "rsa_2048_public.pem"));
+  std::shared_ptr<Object> key = std::make_shared<Object>(kp.public_key);
+
+  CK_MECHANISM mechanism{CKM_RSA_PKCS_PSS, nullptr, 0};
+  EXPECT_THAT(RsaPssVerifier::New(key, &mechanism),
+              StatusRvIs(CKR_MECHANISM_PARAM_INVALID));
+}
+
+TEST(NewVerifierTest, ParamInvalidWrongDigest) {
+  ASSERT_OK_AND_ASSIGN(
+      KeyPair kp,
+      NewMockKeyPair(kms_v1::CryptoKeyVersion::RSA_SIGN_PSS_2048_SHA256,
+                     "rsa_2048_public.pem"));
+  std::shared_ptr<Object> key = std::make_shared<Object>(kp.public_key);
+
+  CK_RSA_PKCS_PSS_PARAMS params{CKM_SHA_1, CKG_MGF1_SHA256, 32};
+  CK_MECHANISM mechanism{CKM_RSA_PKCS_PSS, &params, sizeof(params)};
+  EXPECT_THAT(RsaPssVerifier::New(key, &mechanism),
+              StatusRvIs(CKR_MECHANISM_PARAM_INVALID));
+}
+
+TEST(NewVerifierTest, ParamInvalidWrongMgf) {
+  ASSERT_OK_AND_ASSIGN(
+      KeyPair kp,
+      NewMockKeyPair(kms_v1::CryptoKeyVersion::RSA_SIGN_PSS_2048_SHA256,
+                     "rsa_2048_public.pem"));
+  std::shared_ptr<Object> key = std::make_shared<Object>(kp.public_key);
+
+  CK_RSA_PKCS_PSS_PARAMS params{CKM_SHA256, CKG_MGF1_SHA384, 32};
+  CK_MECHANISM mechanism{CKM_RSA_PKCS_PSS, &params, sizeof(params)};
+  EXPECT_THAT(RsaPssVerifier::New(key, &mechanism),
+              StatusRvIs(CKR_MECHANISM_PARAM_INVALID));
+}
+
+TEST(NewVerifierTest, ParamInvalidWrongSaltLength) {
+  ASSERT_OK_AND_ASSIGN(
+      KeyPair kp,
+      NewMockKeyPair(kms_v1::CryptoKeyVersion::RSA_SIGN_PSS_2048_SHA256,
+                     "rsa_2048_public.pem"));
+  std::shared_ptr<Object> key = std::make_shared<Object>(kp.public_key);
+
+  CK_RSA_PKCS_PSS_PARAMS params{CKM_SHA256, CKG_MGF1_SHA256, 48};
+  CK_MECHANISM mechanism{CKM_RSA_PKCS_PSS, &params, sizeof(params)};
+  EXPECT_THAT(RsaPssVerifier::New(key, &mechanism),
+              StatusRvIs(CKR_MECHANISM_PARAM_INVALID));
+}
+
+TEST(NewVerifierTest, FailureWrongKeyType) {
+  ASSERT_OK_AND_ASSIGN(
+      KeyPair kp, NewMockKeyPair(kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256,
+                                 "ec_p256_public.pem"));
+  std::shared_ptr<Object> key = std::make_shared<Object>(kp.public_key);
+
+  CK_RSA_PKCS_PSS_PARAMS params{CKM_SHA256, CKG_MGF1_SHA256, 32};
+  CK_MECHANISM mechanism{CKM_RSA_PKCS_PSS, &params, sizeof(params)};
+  EXPECT_THAT(RsaPssVerifier::New(key, &mechanism),
+              StatusRvIs(CKR_KEY_TYPE_INCONSISTENT));
+}
+
+TEST(NewVerifierTest, FailureWrongObjectClass) {
+  ASSERT_OK_AND_ASSIGN(
+      KeyPair kp,
+      NewMockKeyPair(kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_2048_SHA256,
+                     "rsa_2048_public.pem"));
+  std::shared_ptr<Object> key = std::make_shared<Object>(kp.private_key);
+
+  CK_RSA_PKCS_PSS_PARAMS params{CKM_SHA256, CKG_MGF1_SHA256, 32};
+  CK_MECHANISM mechanism{CKM_RSA_PKCS_PSS, &params, sizeof(params)};
+  EXPECT_THAT(RsaPssVerifier::New(key, &mechanism),
+              StatusRvIs(CKR_KEY_FUNCTION_NOT_PERMITTED));
+}
+
 class RsaPssTest : public testing::Test {
  protected:
   void SetUp() override {
@@ -171,6 +247,62 @@ TEST_F(RsaPssTest, SignSignatureLengthInvalid) {
   EXPECT_THAT(signer->Sign(client_.get(), digest, absl::MakeSpan(sig)),
               AllOf(StatusIs(absl::StatusCode::kInternal),
                     StatusRvIs(CKR_GENERAL_ERROR)));
+}
+
+TEST_F(RsaPssTest, SignVerifySuccess) {
+  std::vector<uint8_t> data = {0xDE, 0xAD, 0xBE, 0xEF};
+  uint8_t digest[32];
+  SHA256(data.data(), data.size(), digest);
+
+  CK_RSA_PKCS_PSS_PARAMS params{CKM_SHA256, CKG_MGF1_SHA256, 32};
+  CK_MECHANISM mech{CKM_RSA_PKCS_PSS, &params, sizeof(params)};
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<SignerInterface> signer,
+                       RsaPssSigner::New(prv_, &mech));
+  std::vector<uint8_t> sig(signer->signature_length());
+  EXPECT_OK(signer->Sign(client_.get(), digest, absl::MakeSpan(sig)));
+
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<VerifierInterface> verifier,
+                       RsaPssVerifier::New(pub_, &mech));
+  EXPECT_OK(verifier->Verify(client_.get(), digest, sig));
+}
+
+TEST_F(RsaPssTest, VerifyDigestLengthInvalid) {
+  uint8_t digest[31], sig[256];
+
+  CK_RSA_PKCS_PSS_PARAMS params{CKM_SHA256, CKG_MGF1_SHA256, 32};
+  CK_MECHANISM mech{CKM_RSA_PKCS_PSS, &params, sizeof(params)};
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<VerifierInterface> verifier,
+                       RsaPssVerifier::New(pub_, &mech));
+
+  EXPECT_THAT(verifier->Verify(client_.get(), digest, sig),
+              AllOf(StatusIs(absl::StatusCode::kInvalidArgument),
+                    StatusRvIs(CKR_DATA_LEN_RANGE)));
+}
+
+TEST_F(RsaPssTest, VerifySignatureLengthInvalid) {
+  uint8_t digest[32], sig[255];
+
+  CK_RSA_PKCS_PSS_PARAMS params{CKM_SHA256, CKG_MGF1_SHA256, 32};
+  CK_MECHANISM mech{CKM_RSA_PKCS_PSS, &params, sizeof(params)};
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<VerifierInterface> verifier,
+                       RsaPssVerifier::New(pub_, &mech));
+
+  EXPECT_THAT(verifier->Verify(client_.get(), digest, sig),
+              AllOf(StatusIs(absl::StatusCode::kInvalidArgument),
+                    StatusRvIs(CKR_SIGNATURE_LEN_RANGE)));
+}
+
+TEST_F(RsaPssTest, VerifyBadSignature) {
+  uint8_t digest[32], sig[256];
+
+  CK_RSA_PKCS_PSS_PARAMS params{CKM_SHA256, CKG_MGF1_SHA256, 32};
+  CK_MECHANISM mech{CKM_RSA_PKCS_PSS, &params, sizeof(params)};
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<VerifierInterface> verifier,
+                       RsaPssVerifier::New(pub_, &mech));
+
+  EXPECT_THAT(verifier->Verify(client_.get(), digest, sig),
+              AllOf(StatusIs(absl::StatusCode::kInvalidArgument),
+                    StatusRvIs(CKR_SIGNATURE_INVALID)));
 }
 
 }  // namespace
