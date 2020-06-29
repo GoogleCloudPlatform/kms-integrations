@@ -87,6 +87,13 @@ absl::Status RsaVerifyPkcs1(RSA* public_key, const EVP_MD* hash,
                             absl::Span<const uint8_t> digest,
                             absl::Span<const uint8_t> signature);
 
+// Verifies that the provided RSA PSS signature is valid over digest.
+// PSS options are not configurable: MGF1 hash is always the same as the data
+// hash, and salt length always equals hash length.
+absl::Status RsaVerifyPss(RSA* public_key, const EVP_MD* hash,
+                          absl::Span<const uint8_t> digest,
+                          absl::Span<const uint8_t> signature);
+
 // Retrieves the contents of BoringSSL's error stack, and dumps it to a string.
 std::string SslErrorToString();
 

@@ -372,6 +372,34 @@ absl::Status RsaVerifyPkcs1(RSA* public_key, const EVP_MD* hash,
   return absl::OkStatus();
 }
 
+absl::Status RsaVerifyPss(RSA* public_key, const EVP_MD* hash,
+                          absl::Span<const uint8_t> digest,
+                          absl::Span<const uint8_t> signature) {
+  if (digest.length() != EVP_MD_size(hash)) {
+    return NewInvalidArgumentError(
+        absl::StrFormat("digest length mismatches expected (got %d, want %d)",
+                        digest.length(), EVP_MD_size(hash)),
+        CKR_DATA_LEN_RANGE, SOURCE_LOCATION);
+  }
+
+  if (signature.length() != RSA_size(public_key)) {
+    return NewInvalidArgumentError(
+        absl::StrFormat(
+            "signature length mismatches expected (got %d, want %d)",
+            signature.length(), RSA_size(public_key)),
+        CKR_SIGNATURE_LEN_RANGE, SOURCE_LOCATION);
+  }
+
+  if (!RSA_verify_pss_mgf1(public_key, digest.data(), digest.size(), hash,
+                           nullptr, -1, signature.data(), signature.size())) {
+    return NewInvalidArgumentError(
+        absl::StrCat("verification failed: ", SslErrorToString()),
+        CKR_SIGNATURE_INVALID, SOURCE_LOCATION);
+  }
+
+  return absl::OkStatus();
+}
+
 std::string SslErrorToString() {
   bssl::UniquePtr<BIO> bio(BIO_new(BIO_s_mem()));
   ERR_print_errors(bio.get());
