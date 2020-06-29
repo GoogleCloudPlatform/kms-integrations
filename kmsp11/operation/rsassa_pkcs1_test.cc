@@ -75,6 +75,42 @@ TEST(NewSignerTest, FailureWrongObjectClass) {
               StatusRvIs(CKR_KEY_FUNCTION_NOT_PERMITTED));
 }
 
+TEST(NewVerifierTest, ParamInvalid) {
+  ASSERT_OK_AND_ASSIGN(
+      KeyPair kp,
+      NewMockKeyPair(kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_2048_SHA256,
+                     "rsa_2048_public.pem"));
+  std::shared_ptr<Object> key = std::make_shared<Object>(kp.public_key);
+
+  char buf[1];
+  CK_MECHANISM mechanism{CKM_RSA_PKCS, buf, sizeof(buf)};
+  EXPECT_THAT(RsaPkcs1Verifier::New(key, &mechanism),
+              StatusRvIs(CKR_MECHANISM_PARAM_INVALID));
+}
+
+TEST(NewVerifierTest, FailureWrongKeyType) {
+  ASSERT_OK_AND_ASSIGN(
+      KeyPair kp, NewMockKeyPair(kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256,
+                                 "ec_p256_public.pem"));
+  std::shared_ptr<Object> key = std::make_shared<Object>(kp.public_key);
+
+  CK_MECHANISM mechanism{CKM_RSA_PKCS, nullptr, 0};
+  EXPECT_THAT(RsaPkcs1Verifier::New(key, &mechanism),
+              StatusRvIs(CKR_KEY_TYPE_INCONSISTENT));
+}
+
+TEST(NewVerifierTest, FailureWrongObjectClass) {
+  ASSERT_OK_AND_ASSIGN(
+      KeyPair kp,
+      NewMockKeyPair(kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_2048_SHA256,
+                     "rsa_2048_public.pem"));
+  std::shared_ptr<Object> key = std::make_shared<Object>(kp.private_key);
+
+  CK_MECHANISM mechanism{CKM_RSA_PKCS, nullptr, 0};
+  EXPECT_THAT(RsaPkcs1Verifier::New(key, &mechanism),
+              StatusRvIs(CKR_KEY_FUNCTION_NOT_PERMITTED));
+}
+
 class RsaPkcs1Test : public testing::Test {
  protected:
   void SetUp() override {
@@ -188,6 +224,98 @@ TEST_F(RsaPkcs1Test, SignSignatureLengthInvalid) {
   EXPECT_THAT(signer->Sign(client_.get(), digest_info, absl::MakeSpan(sig)),
               AllOf(StatusIs(absl::StatusCode::kInternal),
                     StatusRvIs(CKR_GENERAL_ERROR)));
+}
+
+TEST_F(RsaPkcs1Test, SignVerifySuccess) {
+  std::vector<uint8_t> data = {0xDE, 0xAD, 0xBE, 0xEF};
+  uint8_t digest[32];
+  SHA256(data.data(), data.size(), digest);
+
+  ASSERT_OK_AND_ASSIGN(std::vector<uint8_t> digest_info,
+                       BuildRsaDigestInfo(NID_sha256, digest));
+
+  CK_MECHANISM mech{CKM_RSA_PKCS, nullptr, 0};
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<SignerInterface> signer,
+                       RsaPkcs1Signer::New(prv_, &mech));
+  std::vector<uint8_t> sig(signer->signature_length());
+  EXPECT_OK(signer->Sign(client_.get(), digest_info, absl::MakeSpan(sig)));
+
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<VerifierInterface> verifier,
+                       RsaPkcs1Verifier::New(pub_, &mech));
+  EXPECT_OK(verifier->Verify(client_.get(), digest_info, sig));
+}
+
+TEST_F(RsaPkcs1Test, VerifyUnparseableDigestInfo) {
+  uint8_t digest_info[48], sig[256];
+  RAND_bytes(digest_info, sizeof(digest_info));
+
+  CK_MECHANISM mech{CKM_RSA_PKCS, nullptr, 0};
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<VerifierInterface> verifier,
+                       RsaPkcs1Verifier::New(pub_, &mech));
+
+  EXPECT_THAT(verifier->Verify(client_.get(), digest_info, sig),
+              AllOf(StatusIs(absl::StatusCode::kInvalidArgument,
+                             HasSubstr("error parsing DigestInfo")),
+                    StatusRvIs(CKR_DATA_INVALID)));
+}
+
+TEST_F(RsaPkcs1Test, VerifyWrongDigestType) {
+  uint8_t digest[48], sig[256];
+  ASSERT_OK_AND_ASSIGN(std::vector<uint8_t> digest_info,
+                       BuildRsaDigestInfo(NID_sha384, digest));
+
+  CK_MECHANISM mech{CKM_RSA_PKCS, nullptr, 0};
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<VerifierInterface> verifier,
+                       RsaPkcs1Verifier::New(pub_, &mech));
+
+  EXPECT_THAT(verifier->Verify(client_.get(), digest_info, sig),
+              AllOf(StatusIs(absl::StatusCode::kInvalidArgument,
+                             HasSubstr("algorithm NID mismatch")),
+                    StatusRvIs(CKR_DATA_INVALID)));
+}
+
+TEST_F(RsaPkcs1Test, VerifyDigestLengthInvalid) {
+  uint8_t digest[31], sig[256];
+  ASSERT_OK_AND_ASSIGN(std::vector<uint8_t> digest_info,
+                       BuildRsaDigestInfo(NID_sha256, digest));
+
+  CK_MECHANISM mech{CKM_RSA_PKCS, nullptr, 0};
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<VerifierInterface> verifier,
+                       RsaPkcs1Verifier::New(pub_, &mech));
+
+  EXPECT_THAT(verifier->Verify(client_.get(), digest_info, absl::MakeSpan(sig)),
+              AllOf(StatusIs(absl::StatusCode::kInvalidArgument),
+                    StatusRvIs(CKR_DATA_LEN_RANGE)));
+}
+
+TEST_F(RsaPkcs1Test, VerifySignatureLengthInvalid) {
+  uint8_t digest[32], sig[255];
+  ASSERT_OK_AND_ASSIGN(std::vector<uint8_t> digest_info,
+                       BuildRsaDigestInfo(NID_sha256, digest));
+
+  CK_MECHANISM mech{CKM_RSA_PKCS, nullptr, 0};
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<VerifierInterface> verifier,
+                       RsaPkcs1Verifier::New(pub_, &mech));
+
+  EXPECT_THAT(verifier->Verify(client_.get(), digest_info, absl::MakeSpan(sig)),
+              AllOf(StatusIs(absl::StatusCode::kInvalidArgument),
+                    StatusRvIs(CKR_SIGNATURE_LEN_RANGE)));
+}
+
+TEST_F(RsaPkcs1Test, VerifyBadSignature) {
+  std::vector<uint8_t> data = {0xDE, 0xAD, 0xBE, 0xEF};
+  uint8_t digest[32], sig[256];
+  SHA256(data.data(), data.size(), digest);
+
+  ASSERT_OK_AND_ASSIGN(std::vector<uint8_t> digest_info,
+                       BuildRsaDigestInfo(NID_sha256, digest));
+
+  CK_MECHANISM mech{CKM_RSA_PKCS, nullptr, 0};
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<VerifierInterface> verifier,
+                       RsaPkcs1Verifier::New(pub_, &mech));
+  EXPECT_THAT(verifier->Verify(client_.get(), digest_info, sig),
+              AllOf(StatusIs(absl::StatusCode::kInvalidArgument),
+                    StatusRvIs(CKR_SIGNATURE_INVALID)));
 }
 
 }  // namespace

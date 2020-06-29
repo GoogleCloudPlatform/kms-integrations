@@ -47,6 +47,8 @@ StatusOr<VerifyOp> NewVerifyOp(std::shared_ptr<Object> key,
   switch (mechanism->mechanism) {
     case CKM_ECDSA:
       return EcdsaVerifier::New(key, mechanism);
+    case CKM_RSA_PKCS:
+      return RsaPkcs1Verifier::New(key, mechanism);
     default:
       return InvalidMechanismError(mechanism->mechanism, "verify",
                                    SOURCE_LOCATION);
