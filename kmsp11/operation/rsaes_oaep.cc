@@ -22,36 +22,8 @@ static absl::Status ValidateRsaOaepParameters(Object* key, void* parameters,
   }
   CK_RSA_PKCS_OAEP_PARAMS* params = (CK_RSA_PKCS_OAEP_PARAMS*)parameters;
 
-  if (params->hashAlg != key->algorithm().digest_mechanism) {
-    return InvalidMechanismParamError(
-        absl::StrFormat("expected hash algorithm for key %s is %#x, but %#x "
-                        "was supplied in the parameters",
-                        key->kms_key_name(), key->algorithm().digest_mechanism,
-                        params->hashAlg),
-        SOURCE_LOCATION);
-  }
-
-  CK_RSA_PKCS_MGF_TYPE expected_mgf;
-  switch (key->algorithm().digest_mechanism) {
-    case CKM_SHA256:
-      expected_mgf = CKG_MGF1_SHA256;
-      break;
-    case CKM_SHA512:
-      expected_mgf = CKG_MGF1_SHA512;
-      break;
-    default:
-      return NewInternalError(
-          absl::StrFormat("unhandled OAEP hash algorithm: %#x",
-                          key->algorithm().digest_mechanism),
-          SOURCE_LOCATION);
-  }
-  if (params->mgf != expected_mgf) {
-    return InvalidMechanismParamError(
-        absl::StrFormat("expected mgf algorithm for key %s is %#x, but %#x "
-                        "was supplied in the parameters",
-                        key->kms_key_name(), expected_mgf, params->mgf),
-        SOURCE_LOCATION);
-  }
+  RETURN_IF_ERROR(EnsureHashMatches(params->hashAlg, key->algorithm().digest));
+  RETURN_IF_ERROR(EnsureMgf1HashMatches(params->mgf, key->algorithm().digest));
 
   if (params->source != CKZ_DATA_SPECIFIED) {
     return InvalidMechanismParamError(

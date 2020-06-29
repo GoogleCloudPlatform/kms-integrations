@@ -46,4 +46,64 @@ absl::Status EnsureNoParameters(const CK_MECHANISM* mechanism) {
   return absl::OkStatus();
 }
 
+absl::Status EnsureHashMatches(CK_MECHANISM_TYPE actual,
+                               const EVP_MD* expected) {
+  CK_MECHANISM_TYPE expected_ckm;
+  switch (EVP_MD_type(expected)) {
+    case NID_sha256:
+      expected_ckm = CKM_SHA256;
+      break;
+    case NID_sha384:
+      expected_ckm = CKM_SHA384;
+      break;
+    case NID_sha512:
+      expected_ckm = CKM_SHA512;
+      break;
+    default:
+      return NewInternalError(
+          absl::StrFormat("unsupported EVP_MD: %d", EVP_MD_type(expected)),
+          SOURCE_LOCATION);
+  }
+
+  if (expected_ckm != actual) {
+    return InvalidMechanismParamError(
+        absl::StrFormat("expected hash algorithm is %#x, but %#x "
+                        "was supplied in the parameters",
+                        expected_ckm, actual),
+        SOURCE_LOCATION);
+  }
+
+  return absl::OkStatus();
+}
+
+absl::Status EnsureMgf1HashMatches(CK_RSA_PKCS_MGF_TYPE actual,
+                                   const EVP_MD* expected) {
+  CK_RSA_PKCS_MGF_TYPE expected_mgf;
+  switch (EVP_MD_type(expected)) {
+    case NID_sha256:
+      expected_mgf = CKG_MGF1_SHA256;
+      break;
+    case NID_sha384:
+      expected_mgf = CKG_MGF1_SHA384;
+      break;
+    case NID_sha512:
+      expected_mgf = CKG_MGF1_SHA512;
+      break;
+    default:
+      return NewInternalError(absl::StrFormat("unsupported EVP_MD for MGF1: %d",
+                                              EVP_MD_type(expected)),
+                              SOURCE_LOCATION);
+  }
+
+  if (expected_mgf != actual) {
+    return InvalidMechanismParamError(
+        absl::StrFormat(
+            "expected MGF is %#x, but %#x was supplied in the parameters",
+            expected_mgf, actual),
+        SOURCE_LOCATION);
+  }
+
+  return absl::OkStatus();
+}
+
 }  // namespace kmsp11
