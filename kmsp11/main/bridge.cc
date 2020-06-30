@@ -1,5 +1,7 @@
+#include "absl/base/call_once.h"
 #include "absl/status/status.h"
 #include "absl/types/optional.h"
+#include "grpc/fork.h"
 #include "kmsp11/config/config.h"
 #include "kmsp11/cryptoki.h"
 #include "kmsp11/main/function_list.h"
@@ -11,9 +13,11 @@
 #include "kmsp11/util/status_macros.h"
 
 namespace kmsp11 {
+namespace {
 
 static CK_FUNCTION_LIST function_list = NewFunctionList();
 static std::unique_ptr<Provider> provider;
+static absl::once_flag grpc_fork_handler_once;
 
 StatusOr<Provider*> GetProvider() {
   if (!provider) {
@@ -48,15 +52,17 @@ StatusOr<std::shared_ptr<Object>> GetKey(Session* session,
   return key_or.value();
 }
 
+static void ShutdownInternal() {
+  provider = nullptr;
+  grpc_shutdown_blocking();
+  ShutdownLogging();
+}
+
+}  // namespace
+
 // Initialize the library.
 // http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc235002322
 absl::Status Initialize(CK_VOID_PTR pInitArgs) {
-  if (provider) {
-    return FailedPreconditionError("the library is already initialized",
-                                   CKR_CRYPTOKI_ALREADY_INITIALIZED,
-                                   SOURCE_LOCATION);
-  }
-
   auto* init_args = static_cast<CK_C_INITIALIZE_ARGS*>(pInitArgs);
   if (init_args) {
     if ((init_args->flags & CKF_OS_LOCKING_OK) != CKF_OS_LOCKING_OK) {
@@ -71,6 +77,22 @@ absl::Status Initialize(CK_VOID_PTR pInitArgs) {
     }
   }
 
+  if (provider) {
+    if (provider->creation_process_id() == GetProcessId()) {
+      return FailedPreconditionError("the library is already initialized",
+                                     CKR_CRYPTOKI_ALREADY_INITIALIZED,
+                                     SOURCE_LOCATION);
+    }
+
+    // The PID has changed, which means this is Cryptoki re-Initialization in a
+    // post-fork child, which is expected behavior:
+    // http://docs.oasis-open.org/pkcs11/pkcs11-ug/v2.40/cn02/pkcs11-ug-v2.40-cn02.html#_Toc406759987
+
+    // For now, we support this by releasing all of our existing state, and
+    // starting over from scratch. This could be optimized.
+    ShutdownInternal();
+  }
+
   LibraryConfig config;
   if (init_args && init_args->pReserved) {
     // This behavior isn't part of the spec, but there are numerous libraries
@@ -82,6 +104,10 @@ absl::Status Initialize(CK_VOID_PTR pInitArgs) {
   } else {
     ASSIGN_OR_RETURN(config, LoadConfigFromEnvironment());
   }
+
+  // Initialize gRPC state.
+  grpc_init();
+  grpc_fork_handlers_auto_register();
 
   ASSIGN_OR_RETURN(provider, Provider::New(config));
 
@@ -97,8 +123,7 @@ absl::Status Finalize(CK_VOID_PTR pReserved) {
   if (!provider) {
     return NotInitializedError(SOURCE_LOCATION);
   }
-  ShutdownLogging();
-  provider = nullptr;
+  ShutdownInternal();
   return absl::OkStatus();
 }
 

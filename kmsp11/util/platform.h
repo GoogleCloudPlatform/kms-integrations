@@ -35,6 +35,10 @@ absl::Status EnsureWriteProtected(const char* filename);
 // Unimplemented on Windows.
 absl::Status SetMode(const char* filename, int mode);
 
+// Get an int64 representation of the current process's PID. Used to determine
+// if a process has been forked.
+int64_t GetProcessId();
+
 }  // namespace kmsp11
 
 #endif  // KMSP11_UTIL_PLATFORM_H_

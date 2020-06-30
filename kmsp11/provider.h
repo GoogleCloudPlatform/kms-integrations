@@ -7,6 +7,7 @@
 #include "kmsp11/token.h"
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/handle_map.h"
+#include "kmsp11/util/platform.h"
 #include "kmsp11/util/status_or.h"
 
 namespace kmsp11 {
@@ -18,6 +19,9 @@ namespace kmsp11 {
 class Provider {
  public:
   static StatusOr<std::unique_ptr<Provider>> New(LibraryConfig config);
+
+  // Returns the PID of the process that created this Provider.
+  int64_t creation_process_id() { return creation_process_id_; }
 
   const CK_INFO& info() const { return info_; }
   const unsigned long token_count() const { return tokens_.size(); }
@@ -36,12 +40,14 @@ class Provider {
       : info_(info),
         tokens_(std::move(tokens)),
         sessions_(CKR_SESSION_HANDLE_INVALID),
-        kms_client_(std::move(kms_client)) {}
+        kms_client_(std::move(kms_client)),
+        creation_process_id_(GetProcessId()) {}
 
   const CK_INFO info_;
   const std::vector<std::unique_ptr<Token>> tokens_;
   HandleMap<Session> sessions_;
   std::unique_ptr<KmsClient> kms_client_;
+  int64_t creation_process_id_;
 };
 
 }  // namespace kmsp11

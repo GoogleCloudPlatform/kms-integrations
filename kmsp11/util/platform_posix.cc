@@ -1,5 +1,7 @@
 #include <errno.h>
 #include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/platform.h"
@@ -41,6 +43,11 @@ absl::Status SetMode(const char* filename, int mode) {
         CKR_GENERAL_ERROR, SOURCE_LOCATION);
   }
   return absl::OkStatus();
+}
+
+int64_t GetProcessId() {
+  static_assert(sizeof(pid_t) <= sizeof(int64_t), "pid must fit in an int64");
+  return getpid();
 }
 
 }  // namespace kmsp11

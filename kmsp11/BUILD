@@ -168,6 +168,7 @@ cc_library(
         "//kmsp11/config:config_cc_proto",
         "//kmsp11/util:errors",
         "//kmsp11/util:handle_map",
+        "//kmsp11/util:platform",
         "//kmsp11/util:status_macros",
         "//kmsp11/util:status_or",
         "//kmsp11/util:string_utils",
