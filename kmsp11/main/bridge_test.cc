@@ -20,6 +20,7 @@ namespace {
 using ::testing::AnyOf;
 using ::testing::ElementsAre;
 using ::testing::Ge;
+using ::testing::HasSubstr;
 using ::testing::IsSupersetOf;
 
 class BridgeTest : public testing::Test {
@@ -45,6 +46,7 @@ use_insecure_grpc_channel_credentials: true
                            kr1_.name(), kr2_.name(), fake_kms_->listen_addr());
 
     init_args_ = {0};
+    init_args_.flags = CKF_OS_LOCKING_OK;
     init_args_.pReserved = const_cast<char*>(config_file_.c_str());
   }
 
@@ -84,6 +86,7 @@ TEST_F(BridgeTest, InitArgsWithoutReservedLoadsFromEnv) {
   Cleanup c([]() { ClearEnvVariable(kConfigEnvVariable); });
 
   CK_C_INITIALIZE_ARGS init_args = {0};
+  init_args.flags = CKF_OS_LOCKING_OK;
   EXPECT_OK(Initialize(&init_args));
   // Finalize so that other tests see an uninitialized state
   EXPECT_OK(Finalize(nullptr));
@@ -94,10 +97,26 @@ TEST_F(BridgeTest, InitializeFailsWithoutConfig) {
               StatusIs(absl::StatusCode::kFailedPrecondition));
 }
 
+TEST_F(BridgeTest, InitializeFailsWithArgsNoOsLocking) {
+  CK_C_INITIALIZE_ARGS init_args = {0};
+
+  EXPECT_THAT(Initialize(&init_args), StatusRvIs(CKR_CANT_LOCK));
+}
+
+TEST_F(BridgeTest, InitializeFailsWithArgsNoThreads) {
+  CK_C_INITIALIZE_ARGS init_args = {0};
+  init_args.flags = CKF_OS_LOCKING_OK | CKF_LIBRARY_CANT_CREATE_OS_THREADS;
+
+  EXPECT_THAT(Initialize(&init_args), StatusRvIs(CKR_NEED_TO_CREATE_THREADS));
+}
+
 TEST_F(BridgeTest, InitializeFailsWithArgsNoConfig) {
   CK_C_INITIALIZE_ARGS init_args = {0};
+  init_args.flags = CKF_OS_LOCKING_OK;
+
   EXPECT_THAT(Initialize(&init_args),
-              StatusIs(absl::StatusCode::kFailedPrecondition));
+              StatusIs(absl::StatusCode::kFailedPrecondition,
+                       HasSubstr("cannot load configuration")));
 }
 
 TEST_F(BridgeTest, FinalizeFailsWithoutInitialize) {

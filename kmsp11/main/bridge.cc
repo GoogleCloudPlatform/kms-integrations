@@ -58,6 +58,18 @@ absl::Status Initialize(CK_VOID_PTR pInitArgs) {
   }
 
   auto* init_args = static_cast<CK_C_INITIALIZE_ARGS*>(pInitArgs);
+  if (init_args) {
+    if ((init_args->flags & CKF_OS_LOCKING_OK) != CKF_OS_LOCKING_OK) {
+      return NewInvalidArgumentError("library requires os locking",
+                                     CKR_CANT_LOCK, SOURCE_LOCATION);
+    }
+    if ((init_args->flags & CKF_LIBRARY_CANT_CREATE_OS_THREADS) ==
+        CKF_LIBRARY_CANT_CREATE_OS_THREADS) {
+      return NewInvalidArgumentError("library requires thread creation",
+                                     CKR_NEED_TO_CREATE_THREADS,
+                                     SOURCE_LOCATION);
+    }
+  }
 
   LibraryConfig config;
   if (init_args && init_args->pReserved) {
