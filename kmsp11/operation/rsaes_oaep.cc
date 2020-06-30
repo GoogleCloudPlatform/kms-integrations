@@ -134,14 +134,7 @@ absl::Span<const uint8_t> RsaOaepDecryptResult::plaintext() const {
 
 void ZeroDelete::operator()(std::string* value) const {
   if (value) {
-    // TODO(b/156502733): discussion options with ISE
-    // See http://b/156502733#comment23
-    // https://wiki.sei.cmu.edu/confluence/display/c/MSC06-C.+Beware+of+compiler+optimizations
-    volatile char* p = &*value->begin();
-    size_t s = value->size();
-    while (s--) {
-      *p++ = 0;
-    }
+    SafeZeroMemory(&*value->begin(), value->size());
   }
   delete value;
 }

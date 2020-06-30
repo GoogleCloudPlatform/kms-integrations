@@ -94,6 +94,18 @@ absl::Status RsaVerifyPss(RSA* public_key, const EVP_MD* hash,
                           absl::Span<const uint8_t> digest,
                           absl::Span<const uint8_t> signature);
 
+// Clear the memory at the provided location, taking care to avoid letting the
+// compiler optimize this out.
+//
+// More resources:
+// https://wiki.sei.cmu.edu/confluence/display/c/MSC06-C.+Beware+of+compiler+optimizations
+// https://github.com/google/tink/blob/040ac621b3e9ff7a240b1e596a423a30d32f9013/cc/util/secret_data_internal.h#L67
+inline void SafeZeroMemory(volatile char* ptr, size_t size) {
+  while (size--) {
+    *ptr++ = 0;
+  }
+}
+
 // Retrieves the contents of BoringSSL's error stack, and dumps it to a string.
 std::string SslErrorToString();
 
