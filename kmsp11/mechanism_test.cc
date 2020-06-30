@@ -19,9 +19,20 @@ TEST(MechanismTest, DecryptFlag) {
   EXPECT_EQ(info.flags & CKF_DECRYPT, CKF_DECRYPT);
 }
 
+TEST(MechanismTest, EncryptFlag) {
+  ASSERT_OK_AND_ASSIGN(CK_MECHANISM_INFO info,
+                       MechanismInfo(CKM_RSA_PKCS_OAEP));
+  EXPECT_EQ(info.flags & CKF_ENCRYPT, CKF_ENCRYPT);
+}
+
 TEST(MechanismTest, SignFlag) {
   ASSERT_OK_AND_ASSIGN(CK_MECHANISM_INFO info, MechanismInfo(CKM_RSA_PKCS_PSS));
   EXPECT_EQ(info.flags & CKF_SIGN, CKF_SIGN);
+}
+
+TEST(MechanismTest, VerifyFlag) {
+  ASSERT_OK_AND_ASSIGN(CK_MECHANISM_INFO info, MechanismInfo(CKM_RSA_PKCS));
+  EXPECT_EQ(info.flags & CKF_VERIFY, CKF_VERIFY);
 }
 
 TEST(MechanismTest, RsaMin2048) {

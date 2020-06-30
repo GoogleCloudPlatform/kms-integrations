@@ -500,7 +500,7 @@ TEST_F(BridgeTest, GetMechanismInfo) {
 
   EXPECT_EQ(info.ulMinKeySize, 2048);
   EXPECT_EQ(info.ulMaxKeySize, 4096);
-  EXPECT_EQ(info.flags, CKF_SIGN);
+  EXPECT_EQ(info.flags, CKF_SIGN | CKF_VERIFY);
 }
 
 TEST_F(BridgeTest, GetMechanismInfoFailsInvalidMechanism) {

@@ -19,7 +19,7 @@ static const absl::flat_hash_map<CK_MECHANISM_TYPE, CK_MECHANISM_INFO>
             {
                 256,  // ulMinKeySize
                 384,  // ulMaxKeySize
-                CKF_SIGN | CKF_EC_F_P | CKF_EC_NAMEDCURVE |
+                CKF_SIGN | CKF_VERIFY | CKF_EC_F_P | CKF_EC_NAMEDCURVE |
                     CKF_EC_UNCOMPRESS  // flags
             },
 
@@ -27,26 +27,26 @@ static const absl::flat_hash_map<CK_MECHANISM_TYPE, CK_MECHANISM_INFO>
         {
             CKM_RSA_PKCS,
             {
-                2048,     // ulMinKeySize
-                4096,     // ulMaxKeySize
-                CKF_SIGN  // flags
+                2048,                  // ulMinKeySize
+                4096,                  // ulMaxKeySize
+                CKF_SIGN | CKF_VERIFY  // flags
             },
 
         },
         {
             CKM_RSA_PKCS_OAEP,
             {
-                2048,        // ulMinKeySize
-                4096,        // ulMaxKeySize
-                CKF_DECRYPT  // flags
+                2048,                      // ulMinKeySize
+                4096,                      // ulMaxKeySize
+                CKF_DECRYPT | CKF_ENCRYPT  // flags
             },
         },
         {
             CKM_RSA_PKCS_PSS,
             {
-                2048,     // ulMinKeySize
-                4096,     // ulMaxKeySize
-                CKF_SIGN  // flags
+                2048,                  // ulMinKeySize
+                4096,                  // ulMaxKeySize
+                CKF_SIGN | CKF_VERIFY  // flags
             },
         },
 };
