@@ -201,6 +201,9 @@ absl::Status OpenSession(CK_SLOT_ID slotID, CK_FLAGS flags,
                     "this library does not support read-write sessions",
                     CKR_TOKEN_WRITE_PROTECTED, SOURCE_LOCATION);
   }
+  if (!phSession) {
+    return NullArgumentError("phSession", SOURCE_LOCATION);
+  }
 
   ASSIGN_OR_RETURN(*phSession, provider->OpenSession(slotID));
   return absl::OkStatus();
@@ -220,6 +223,10 @@ absl::Status GetSessionInfo(CK_SESSION_HANDLE hSession,
   ASSIGN_OR_RETURN(Provider * provider, GetProvider());
   ASSIGN_OR_RETURN(std::shared_ptr<Session> session,
                    provider->GetSession(hSession));
+  if (!pInfo) {
+    return NullArgumentError("pInfo", SOURCE_LOCATION);
+  }
+
   *pInfo = session->token()->session_info();
   return absl::OkStatus();
 }
