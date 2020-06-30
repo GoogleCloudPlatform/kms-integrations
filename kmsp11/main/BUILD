@@ -27,6 +27,7 @@ cc_library(
         "//kmsp11/config",
         "//kmsp11/util:cleanup",
         "//kmsp11/util:errors",
+        "//kmsp11/util:logging",
         "@com_google_absl//absl/status",
     ],
     alwayslink = 1,

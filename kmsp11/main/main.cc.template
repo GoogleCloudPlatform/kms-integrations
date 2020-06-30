@@ -1,6 +1,6 @@
 #include "kmsp11/cryptoki.h"
 #include "kmsp11/main/bridge.h"
-#include "kmsp11/util/status_utils.h"
+#include "kmsp11/util/logging.h"
 
 {{/* Iterate over all the functions. */ -}}
 {{range .Functions}}
@@ -24,9 +24,8 @@ CK_RV {{.Name}} (
 {{- end -}}
 );
 
-{{- /* Convert the retrieved status into a CK_RV. */}}
-{{- /* TODO(bdhess): Log the returned status if it's an error. */}}
-  return kmsp11::GetCkRv(status);
+  // Convert the returned status to a CK_RV, logging error info if it's not OK.
+  return kmsp11::LogAndResolve("{{.Name}}", status);
 }
 
 {{end}}

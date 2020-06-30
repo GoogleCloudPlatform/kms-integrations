@@ -7,6 +7,7 @@
 #include "kmsp11/provider.h"
 #include "kmsp11/util/cleanup.h"
 #include "kmsp11/util/errors.h"
+#include "kmsp11/util/logging.h"
 #include "kmsp11/util/status_macros.h"
 
 namespace kmsp11 {
@@ -71,6 +72,10 @@ absl::Status Initialize(CK_VOID_PTR pInitArgs) {
   }
 
   ASSIGN_OR_RETURN(provider, Provider::New(config));
+
+  // Keep this just before the OK return, so that we don't need to shut down
+  // logging if some other initialization procedure fails.
+  RETURN_IF_ERROR(InitializeLogging(config.log_directory()));
   return absl::OkStatus();
 }
 
@@ -80,6 +85,7 @@ absl::Status Finalize(CK_VOID_PTR pReserved) {
   if (!provider) {
     return NotInitializedError(SOURCE_LOCATION);
   }
+  ShutdownLogging();
   provider = nullptr;
   return absl::OkStatus();
 }

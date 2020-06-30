@@ -86,6 +86,20 @@ cc_test(
 )
 
 cc_library(
+    name = "logging",
+    srcs = ["logging.cc"],
+    hdrs = ["logging.h"],
+    deps = [
+        ":errors",
+        ":status_utils",
+        "@com_github_google_glog//:glog",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/synchronization",
+    ],
+)
+
+cc_library(
     name = "kms_client",
     srcs = ["kms_client.cc"],
     hdrs = ["kms_client.h"],

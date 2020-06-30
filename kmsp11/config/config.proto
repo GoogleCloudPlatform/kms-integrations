@@ -24,6 +24,10 @@ message LibraryConfig {
   // not stable between runs of this library. This functionality is intended for
   // compatibility with the SunPKCS11 JCA provider; other use is discouraged.
   bool generate_certs = 5;
+
+  // Optional. The directory in which log files should be emitted. An empty value
+  // means log to standard error.
+  string log_directory = 6;
 }
 
 message TokenConfig {
