@@ -117,13 +117,12 @@ absl::Status AddEcPrivateKeyAttributes(AttributeMap* attrs,
                                        const EC_KEY* public_key) {
   ASSIGN_OR_RETURN(std::string params, MarshalEcParametersDer(public_key));
 
-  // 2.3.4 Elliptic curve private key objects
-  attrs->Put(CKA_EC_PARAMS, params);
-  attrs->PutSensitive(CKA_VALUE);
+  // Some implementations seem to expect that EC private keys contain the EC
+  // public key attributes as well.
+  RETURN_IF_ERROR(AddEcPublicKeyAttributes(attrs, public_key));
 
-  // Not required by the spec, but some implementations seem to expect it.
-  ASSIGN_OR_RETURN(std::string ec_point, MarshalEcPointDer(public_key));
-  attrs->Put(CKA_EC_POINT, ec_point);
+  // 2.3.4 Elliptic curve private key objects
+  attrs->PutSensitive(CKA_VALUE);
 
   return absl::OkStatus();
 }
@@ -139,18 +138,17 @@ absl::Status AddRsaPublicKeyAttributes(AttributeMap* attrs,
 
 absl::Status AddRsaPrivateKeyAttributes(AttributeMap* attrs,
                                         const RSA* public_key) {
+  // Some implementations seem to expect that RSA private keys contain the RSA
+  // public key attributes as well.
+  RETURN_IF_ERROR(AddRsaPublicKeyAttributes(attrs, public_key));
+
   // 2.1.3 RSA private key objects
-  attrs->PutBigNum(CKA_MODULUS, RSA_get0_n(public_key));
-  attrs->PutULong(CKA_MODULUS_BITS, RSA_bits(public_key));
   attrs->PutSensitive(CKA_PRIVATE_EXPONENT);
   attrs->PutSensitive(CKA_PRIME_1);
   attrs->PutSensitive(CKA_PRIME_2);
   attrs->PutSensitive(CKA_EXPONENT_1);
   attrs->PutSensitive(CKA_EXPONENT_2);
   attrs->PutSensitive(CKA_COEFFICIENT);
-
-  // Not required by the spec, but some implementations seem to expect it.
-  attrs->PutBigNum(CKA_PUBLIC_EXPONENT, RSA_get0_e(public_key));
 
   return absl::OkStatus();
 }
