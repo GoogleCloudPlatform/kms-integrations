@@ -277,6 +277,10 @@ StatusOr<std::string> MarshalX509PublicKeyDer(const EVP_PKEY* key) {
   return result;
 }
 
+StatusOr<std::string> MarshalX509Sig(X509_SIG* value) {
+  return MarshalDer(value, &i2d_X509_SIG);
+}
+
 StatusOr<bssl::UniquePtr<EVP_PKEY>> ParsePkcs8PrivateKeyPem(
     absl::string_view private_key_pem) {
   bssl::UniquePtr<BIO> bio(
@@ -338,6 +342,34 @@ std::string RandBytes(size_t len) {
   result.resize(len);
   RAND_bytes(reinterpret_cast<uint8_t*>(const_cast<char*>(result.data())), len);
   return result;
+}
+
+absl::Status RsaVerifyPkcs1(RSA* public_key, const EVP_MD* hash,
+                            absl::Span<const uint8_t> digest,
+                            absl::Span<const uint8_t> signature) {
+  if (digest.length() != EVP_MD_size(hash)) {
+    return NewInvalidArgumentError(
+        absl::StrFormat("digest length mismatches expected (got %d, want %d)",
+                        digest.length(), EVP_MD_size(hash)),
+        CKR_DATA_LEN_RANGE, SOURCE_LOCATION);
+  }
+
+  if (signature.length() != RSA_size(public_key)) {
+    return NewInvalidArgumentError(
+        absl::StrFormat(
+            "signature length mismatches expected (got %d, want %d)",
+            signature.length(), RSA_size(public_key)),
+        CKR_SIGNATURE_LEN_RANGE, SOURCE_LOCATION);
+  }
+
+  if (!RSA_verify(EVP_MD_type(hash), digest.data(), digest.size(),
+                  signature.data(), signature.size(), public_key)) {
+    return NewInvalidArgumentError(
+        absl::StrCat("verification failed: ", SslErrorToString()),
+        CKR_SIGNATURE_INVALID, SOURCE_LOCATION);
+  }
+
+  return absl::OkStatus();
 }
 
 std::string SslErrorToString() {

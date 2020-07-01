@@ -65,6 +65,9 @@ StatusOr<std::string> MarshalX509PublicKeyDer(const EVP_PKEY* key);
 StatusOr<bssl::UniquePtr<EVP_PKEY>> ParsePkcs8PrivateKeyPem(
     absl::string_view private_key_pem);
 
+// Marshals an ASN.1 DigestInfo in DER format.
+StatusOr<std::string> MarshalX509Sig(X509_SIG* value);
+
 // Parses a public key in X.509 SubjectPublicKeyInfo DER format. Returns
 // InvalidArgument if the provided key is malformed.
 StatusOr<bssl::UniquePtr<EVP_PKEY>> ParseX509PublicKeyDer(
@@ -78,6 +81,11 @@ StatusOr<bssl::UniquePtr<EVP_PKEY>> ParseX509PublicKeyPem(
 
 // Retrieves len bytes of randomness from Boring's CSPRNG.
 std::string RandBytes(size_t len);
+
+// Verifies that the provided RSA PKCS1 signature is valid over digest.
+absl::Status RsaVerifyPkcs1(RSA* public_key, const EVP_MD* hash,
+                            absl::Span<const uint8_t> digest,
+                            absl::Span<const uint8_t> signature);
 
 // Retrieves the contents of BoringSSL's error stack, and dumps it to a string.
 std::string SslErrorToString();
