@@ -83,9 +83,6 @@ absl::Status EnsureMgf1HashMatches(CK_RSA_PKCS_MGF_TYPE actual,
     case NID_sha256:
       expected_mgf = CKG_MGF1_SHA256;
       break;
-    case NID_sha384:
-      expected_mgf = CKG_MGF1_SHA384;
-      break;
     case NID_sha512:
       expected_mgf = CKG_MGF1_SHA512;
       break;
