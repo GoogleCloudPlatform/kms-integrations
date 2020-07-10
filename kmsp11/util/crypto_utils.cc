@@ -400,6 +400,12 @@ absl::Status RsaVerifyPss(RSA* public_key, const EVP_MD* hash,
   return absl::OkStatus();
 }
 
+void SafeZeroMemory(volatile char* ptr, size_t size) {
+  while (size--) {
+    *ptr++ = 0;
+  }
+}
+
 std::string SslErrorToString() {
   bssl::UniquePtr<BIO> bio(BIO_new(BIO_s_mem()));
   ERR_print_errors(bio.get());
