@@ -17,6 +17,7 @@ cc_library(
 
 cc_test(
     name = "config_test",
+    size = "small",
     srcs = ["config_test.cc"],
     deps = [
         ":config",

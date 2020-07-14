@@ -10,6 +10,7 @@ cc_library(
 
 cc_test(
     name = "cleanup_test",
+    size = "small",
     srcs = ["cleanup_test.cc"],
     deps = [
         ":cleanup",
@@ -77,6 +78,7 @@ cc_library(
 
 cc_test(
     name = "handle_map_test",
+    size = "small",
     srcs = ["handle_map_test.cc"],
     deps = [
         ":handle_map",

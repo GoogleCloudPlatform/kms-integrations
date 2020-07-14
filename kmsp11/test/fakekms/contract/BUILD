@@ -2,6 +2,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_test")
 
 go_test(
     name = "contract_test",
+    size = "small",
     srcs = glob(["*.go"]),
     deps = [
         "//kmsp11/test/fakekms",

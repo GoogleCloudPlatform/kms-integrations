@@ -21,6 +21,7 @@ go_library(
 
 go_test(
     name = "fakekms_test",
+    size = "small",
     srcs = glob(["*_test.go"]),
     embed = [":fakekms"],
     deps = [
