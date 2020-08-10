@@ -219,6 +219,10 @@ cc_test(
         ":status_or",
         "@com_google_googletest//:gtest_main",
     ],
+    linkopts = select({
+      "//:freebsd": ["-lm"],
+      "//conditions:default": [],
+    }),
 )
 
 cc_library(

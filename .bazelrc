@@ -4,24 +4,41 @@ build --announce_rc
 build --enable_platform_specific_config
 
 # C++ Version (note that MSVC doesn't need a directive like this)
+build:freebsd --cxxopt=-std=c++11
 build:linux --cxxopt=-std=c++11
 build:macos --cxxopt=-std=c++11
 
+# FreeBSD-specific options
+# Position-independent code
+build:freebsd --copt=-fPIC
 # Java Version
-build --host_javabase=@bazel_tools//tools/jdk:remote_jdk11
-build --javabase=@bazel_tools//tools/jdk:remote_jdk11
-build --host_java_toolchain=@bazel_tools//tools/jdk:toolchain_java11
-build --java_toolchain=@bazel_tools//tools/jdk:toolchain_java11
+# The Bazel remote_jdk11 target doesn't exist for FreeBSD, so we rely on a
+# locally installed JDK.
+build:freebsd --define=ABSOLUTE_JAVABASE=/usr/local/openjdk11
+build:freebsd --host_javabase=@bazel_tools//tools/jdk:absolute_javabase
+build:freebsd --javabase=@bazel_tools//tools/jdk:absolute_javabase
+build:freebsd --host_java_toolchain=@bazel_tools//tools/jdk:toolchain_vanilla
+build:freebsd --java_toolchain=@bazel_tools//tools/jdk:toolchain_vanilla
 
 # Linux-specific options
 # Position-independent code
 build:linux --copt=-fPIC
+# Java Version
+build:linux --host_javabase=@bazel_tools//tools/jdk:remote_jdk11
+build:linux --javabase=@bazel_tools//tools/jdk:remote_jdk11
+build:linux --host_java_toolchain=@bazel_tools//tools/jdk:toolchain_java11
+build:linux --java_toolchain=@bazel_tools//tools/jdk:toolchain_java11
 
 # macOS-specific options
 # Ensure compatibility with all macOS versions that still get security updates.
 build:macos --copt=-mmacosx-version-min=10.13
 # Workaround for build issue: https://github.com/bazelbuild/bazel/issues/4341
 build:macos --copt=-DGRPC_BAZEL_BUILD
+# Java Version
+build:macos --host_javabase=@bazel_tools//tools/jdk:remote_jdk11
+build:macos --javabase=@bazel_tools//tools/jdk:remote_jdk11
+build:macos --host_java_toolchain=@bazel_tools//tools/jdk:toolchain_java11
+build:macos --java_toolchain=@bazel_tools//tools/jdk:toolchain_java11
 
 # Windows-specific options
 # Prevent glog symbols from being exported with `__declspec(dllexport)`
@@ -29,6 +46,11 @@ build:windows --cxxopt=/DGOOGLE_GLOG_DLL_DECL=
 # Prevent glog from conflicting with windows.h
 # https://code.google.com/archive/p/google-glog/issues/33
 build:windows --cxxopt=/DGLOG_NO_ABBREVIATED_SEVERITIES
+# Java Version
+build:windows --host_javabase=@bazel_tools//tools/jdk:remote_jdk11
+build:windows --javabase=@bazel_tools//tools/jdk:remote_jdk11
+build:windows --host_java_toolchain=@bazel_tools//tools/jdk:toolchain_java11
+build:windows --java_toolchain=@bazel_tools//tools/jdk:toolchain_java11
 
 # Import from .bazelrc.local if it exists. Keep this at the end of the file so
 # that local options can override options that are declared in this file.

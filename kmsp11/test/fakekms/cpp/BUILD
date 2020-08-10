@@ -21,6 +21,11 @@ cc_library(
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/strings",
     ],
+    defines = select({
+        # https://www.freebsd.org/cgi/man.cgi?query=getline&manpath=FreeBSD+11.4-RELEASE
+        "//:freebsd": ["_WITH_GETLINE"],
+        "//conditions:default": [],
+    })
 )
 
 cc_test(

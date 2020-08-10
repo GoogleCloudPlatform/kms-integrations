@@ -121,6 +121,12 @@ function_def_template(
 cc_binary(
     name = "libkmsp11.so",
     linkopts = select({
+        "//:freebsd": [
+            # Make all symbols hidden, except those that are specifially exported.
+            "-Wl,--version-script,$(location :linux_exports.lds)",
+            # Disallow undefined symbols in object files.
+            "-z defs",
+        ],
         "//:linux": [
             # Make all symbols hidden, except those that are specifially exported.
             "-Wl,--version-script,$(location :linux_exports.lds)",
@@ -144,6 +150,7 @@ cc_binary(
     }),
     deps = [":bridge"] +
            select({
+               "//:freebsd": [":linux_exports.lds"],
                "//:linux": [":linux_exports.lds"],
                "//:macos": [":macos_exports.lds"],
                "//conditions:default": [],

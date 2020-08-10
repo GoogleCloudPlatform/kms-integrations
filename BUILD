@@ -1,4 +1,9 @@
 config_setting(
+    name = "freebsd",
+    constraint_values = ["@platforms//os:freebsd"],
+)
+
+config_setting(
     name = "linux",
     constraint_values = ["@platforms//os:linux"],
 )
