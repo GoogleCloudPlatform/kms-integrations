@@ -32,11 +32,11 @@ static StatusOr<CK_TOKEN_INFO> NewTokenInfo(absl::string_view token_label) {
       {0},  // manufacturerID (set with ' ' padding below)
       {0},  // model (set with ' ' padding below)
       {0},  // serialNumber (set below)
-      CKF_WRITE_PROTECTED | CKF_USER_PIN_INITIALIZED |  // flags
-          CKF_TOKEN_INITIALIZED | CKF_SO_PIN_LOCKED,
+      CKF_USER_PIN_INITIALIZED | CKF_TOKEN_INITIALIZED |
+          CKF_SO_PIN_LOCKED,       // flags
       CK_EFFECTIVELY_INFINITE,     // ulMaxSessionCount
       CK_UNAVAILABLE_INFORMATION,  // ulSessionCount
-      0,                           // ulMaxRwSessionCount
+      CK_EFFECTIVELY_INFINITE,     // ulMaxRwSessionCount
       CK_UNAVAILABLE_INFORMATION,  // ulRwSessionCount
       0,                           // ulMaxPinLen
       0,                           // ulMinPinLen
@@ -166,20 +166,12 @@ StatusOr<std::unique_ptr<Token>> Token::New(CK_SLOT_ID slot_id,
       new Token(slot_id, slot_info, token_info, std::move(objects)));
 }
 
-CK_SESSION_INFO Token::session_info() const {
-  absl::ReaderMutexLock l(&session_mutex_);
-
-  return CK_SESSION_INFO{
-      slot_id_,            // slotID
-      session_state_,      // state
-      CKF_SERIAL_SESSION,  // flags
-      0,                   // ulDeviceError
-  };
+bool Token::is_logged_in() const {
+  absl::ReaderMutexLock l(&login_mutex_);
+  return is_logged_in_;
 }
 
 absl::Status Token::Login(CK_USER_TYPE user) {
-  absl::WriterMutexLock l(&session_mutex_);
-
   switch (user) {
     case CKU_USER:
       break;
@@ -199,34 +191,22 @@ absl::Status Token::Login(CK_USER_TYPE user) {
           CKR_USER_TYPE_INVALID, SOURCE_LOCATION);
   }
 
-  if (session_state_ == CKS_RO_USER_FUNCTIONS) {
+  absl::WriterMutexLock l(&login_mutex_);
+  if (is_logged_in_) {
     return FailedPreconditionError("user is already logged in",
                                    CKR_USER_ALREADY_LOGGED_IN, SOURCE_LOCATION);
   }
-  if (session_state_ != CKS_RO_PUBLIC_SESSION) {
-    return NewInternalError(
-        absl::StrFormat("unexpected state %#x", session_state_),
-        SOURCE_LOCATION);
-  }
-
-  session_state_ = CKS_RO_USER_FUNCTIONS;
+  is_logged_in_ = true;
   return absl::OkStatus();
 }
 
 absl::Status Token::Logout() {
-  absl::WriterMutexLock l(&session_mutex_);
-
-  if (session_state_ == CKS_RO_PUBLIC_SESSION) {
+  absl::WriterMutexLock l(&login_mutex_);
+  if (!is_logged_in_) {
     return FailedPreconditionError("user is not logged in",
                                    CKR_USER_NOT_LOGGED_IN, SOURCE_LOCATION);
   }
-  if (session_state_ != CKS_RO_USER_FUNCTIONS) {
-    return NewInternalError(
-        absl::StrFormat("unexpected state %#x", session_state_),
-        SOURCE_LOCATION);
-  }
-
-  session_state_ = CKS_RO_PUBLIC_SESSION;
+  is_logged_in_ = false;
   return absl::OkStatus();
 }
 

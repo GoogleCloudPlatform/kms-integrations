@@ -29,7 +29,8 @@ class Provider {
 
   StatusOr<Token*> TokenAt(CK_SLOT_ID slot_id);
 
-  StatusOr<CK_SESSION_HANDLE> OpenSession(CK_SLOT_ID slot_id);
+  StatusOr<CK_SESSION_HANDLE> OpenSession(CK_SLOT_ID slot_id,
+                                          SessionType session_type);
   StatusOr<std::shared_ptr<Session>> GetSession(
       CK_SESSION_HANDLE session_handle);
   absl::Status CloseSession(CK_SESSION_HANDLE session_handle);

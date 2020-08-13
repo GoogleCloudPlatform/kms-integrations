@@ -6,15 +6,18 @@
 
 namespace kmsp11 {
 
+enum class SessionType { kReadOnly, kReadWrite };
+
 // Session models a PKCS #11 Session and an optional ongoing operation.
 //
 // See go/kms-pkcs11-model
 class Session {
  public:
-  Session(Token* token, KmsClient* kms_client)
-      : token_(token), kms_client_(kms_client) {}
+  Session(Token* token, SessionType session_type, KmsClient* kms_client)
+      : token_(token), session_type_(session_type), kms_client_(kms_client) {}
 
-  Token* token() { return token_; }
+  Token* token() const { return token_; }
+  CK_SESSION_INFO info() const;
 
   void ReleaseOperation();
 
@@ -43,6 +46,7 @@ class Session {
 
  private:
   Token* token_;
+  const SessionType session_type_;
   KmsClient* kms_client_;
 
   absl::Mutex op_mutex_;

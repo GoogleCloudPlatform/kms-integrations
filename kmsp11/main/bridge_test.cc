@@ -275,14 +275,19 @@ TEST_F(BridgeTest, OpenSessionFailsNotSerial) {
               StatusRvIs(CKR_SESSION_PARALLEL_NOT_SUPPORTED));
 }
 
-TEST_F(BridgeTest, OpenSessionFailsReadWrite) {
+TEST_F(BridgeTest, OpenSessionReadWrite) {
   EXPECT_OK(Initialize(&init_args_));
   Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
 
   CK_SESSION_HANDLE handle;
-  EXPECT_THAT(OpenSession(0, CKF_SERIAL_SESSION | CKF_RW_SESSION, nullptr,
-                          nullptr, &handle),
-              StatusRvIs(CKR_TOKEN_WRITE_PROTECTED));
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION | CKF_RW_SESSION, nullptr,
+                        nullptr, &handle));
+
+  CK_SESSION_INFO info;
+  EXPECT_OK(GetSessionInfo(handle, &info));
+
+  EXPECT_EQ(info.state, CKS_RW_PUBLIC_SESSION);
+  EXPECT_EQ(info.flags & CKF_RW_SESSION, CKF_RW_SESSION);
 }
 
 TEST_F(BridgeTest, CloseSessionSuccess) {

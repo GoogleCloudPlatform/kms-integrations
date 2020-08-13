@@ -26,8 +26,8 @@ class Token {
   CK_SLOT_ID slot_id() const { return slot_id_; }
   const CK_SLOT_INFO& slot_info() const { return slot_info_; }
   const CK_TOKEN_INFO& token_info() const { return token_info_; }
-  CK_SESSION_INFO session_info() const;
 
+  bool is_logged_in() const;
   absl::Status Login(CK_USER_TYPE user_type);
   absl::Status Logout();
 
@@ -45,18 +45,18 @@ class Token {
         slot_info_(slot_info),
         token_info_(token_info),
         objects_(std::move(objects)),
-        session_state_(CKS_RO_PUBLIC_SESSION) {}
+        is_logged_in_(false) {}
 
   const CK_SLOT_ID slot_id_;
   const CK_SLOT_INFO slot_info_;
   const CK_TOKEN_INFO token_info_;
   std::unique_ptr<HandleMap<Object>> objects_;
 
-  // All sessions with the same token have the same state (rather than session
-  // state being per-session, which seems like the more obvious choice.)
+  // All sessions with the same token have the same login state (rather than
+  // login state being per-session, which seems like the more obvious choice.)
   // http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc235002343
-  mutable absl::Mutex session_mutex_;
-  CK_STATE session_state_ ABSL_GUARDED_BY(session_mutex_);
+  mutable absl::Mutex login_mutex_;
+  bool is_logged_in_ ABSL_GUARDED_BY(login_mutex_);
 };
 
 }  // namespace kmsp11

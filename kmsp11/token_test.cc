@@ -129,26 +129,19 @@ TEST_F(TokenTest, FlagValues) {
                        Token::New(0, config_, client_.get()));
   const CK_TOKEN_INFO& info = token->token_info();
 
-  EXPECT_EQ(info.flags & CKF_WRITE_PROTECTED, CKF_WRITE_PROTECTED);
+  EXPECT_EQ(info.flags & CKF_WRITE_PROTECTED, 0);
   EXPECT_EQ(info.flags & CKF_USER_PIN_INITIALIZED, CKF_USER_PIN_INITIALIZED);
   EXPECT_EQ(info.flags & CKF_TOKEN_INITIALIZED, CKF_TOKEN_INITIALIZED);
   EXPECT_EQ(info.flags & CKF_SO_PIN_LOCKED, CKF_SO_PIN_LOCKED);
 }
 
-TEST_F(TokenTest, MaxSessionCountIsEffectivelyInfinite) {
+TEST_F(TokenTest, MaxSessionCountsAreEffectivelyInfinite) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
                        Token::New(0, config_, client_.get()));
   const CK_TOKEN_INFO& info = token->token_info();
 
   EXPECT_EQ(info.ulMaxSessionCount, CK_EFFECTIVELY_INFINITE);
-}
-
-TEST_F(TokenTest, MaxRwSessionCountIsZero) {
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
-                       Token::New(0, config_, client_.get()));
-  const CK_TOKEN_INFO& info = token->token_info();
-
-  EXPECT_EQ(info.ulMaxRwSessionCount, 0);
+  EXPECT_EQ(info.ulMaxRwSessionCount, CK_EFFECTIVELY_INFINITE);
 }
 
 TEST_F(TokenTest, SessionCountsUnavailable) {
@@ -207,40 +200,12 @@ TEST_F(TokenTest, UtcTimeIsSet) {
   EXPECT_EQ(StrFromBytes(info.utcTime), "0000000000000000");
 }
 
-TEST_F(TokenTest, InfoContainsSlotId) {
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
-                       Token::New(0, config_, client_.get()));
-  EXPECT_EQ(token->session_info().slotID, 0);
-}
-
-TEST_F(TokenTest, DefaultStateRoPublicSession) {
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
-                       Token::New(0, config_, client_.get()));
-
-  EXPECT_EQ(token->session_info().state, CKS_RO_PUBLIC_SESSION);
-}
-
-TEST_F(TokenTest, SessionFlagsSerial) {
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
-                       Token::New(0, config_, client_.get()));
-
-  EXPECT_EQ(token->session_info().flags & CKF_SERIAL_SESSION,
-            CKF_SERIAL_SESSION);
-}
-
-TEST_F(TokenTest, SessionErrorIsZero) {
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
-                       Token::New(0, config_, client_.get()));
-
-  EXPECT_EQ(token->session_info().ulDeviceError, 0);
-}
-
 TEST_F(TokenTest, LoginAsUserSuccess) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
                        Token::New(0, config_, client_.get()));
 
   EXPECT_OK(token->Login(CKU_USER));
-  EXPECT_EQ(token->session_info().state, CKS_RO_USER_FUNCTIONS);
+  EXPECT_TRUE(token->is_logged_in());
 }
 
 TEST_F(TokenTest, LoginAsUserFailsOnRelogin) {
@@ -271,8 +236,9 @@ TEST_F(TokenTest, LoginLogoutSucceeds) {
                        Token::New(0, config_, client_.get()));
 
   EXPECT_OK(token->Login(CKU_USER));
+  EXPECT_TRUE(token->is_logged_in());
   EXPECT_OK(token->Logout());
-  EXPECT_EQ(token->session_info().state, CKS_RO_PUBLIC_SESSION);
+  EXPECT_FALSE(token->is_logged_in());
 }
 
 TEST_F(TokenTest, LogoutWithoutLoginFails) {

@@ -5,6 +5,29 @@
 
 namespace kmsp11 {
 
+CK_SESSION_INFO Session::info() const {
+  bool is_read_write = session_type_ == SessionType::kReadWrite;
+
+  CK_STATE state;
+  if (token_->is_logged_in()) {
+    state = is_read_write ? CKS_RW_USER_FUNCTIONS : CKS_RO_USER_FUNCTIONS;
+  } else {
+    state = is_read_write ? CKS_RW_PUBLIC_SESSION : CKS_RO_PUBLIC_SESSION;
+  }
+
+  CK_FLAGS flags = CKF_SERIAL_SESSION;
+  if (is_read_write) {
+    flags |= CKF_RW_SESSION;
+  }
+
+  return CK_SESSION_INFO{
+      token_->slot_id(),  // slotID
+      state,              // state
+      flags,              // flags
+      0,                  // ulDeviceError
+  };
+}
+
 void Session::ReleaseOperation() {
   absl::MutexLock l(&op_mutex_);
   op_ = absl::nullopt;

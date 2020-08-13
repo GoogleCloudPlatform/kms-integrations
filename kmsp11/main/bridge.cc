@@ -221,16 +221,14 @@ absl::Status OpenSession(CK_SLOT_ID slotID, CK_FLAGS flags,
                     "parallel sessions are not supported",
                     CKR_SESSION_PARALLEL_NOT_SUPPORTED, SOURCE_LOCATION);
   }
-  if ((flags & CKF_RW_SESSION) == CKF_RW_SESSION) {
-    return NewError(absl::StatusCode::kInvalidArgument,
-                    "this library does not support read-write sessions",
-                    CKR_TOKEN_WRITE_PROTECTED, SOURCE_LOCATION);
-  }
   if (!phSession) {
     return NullArgumentError("phSession", SOURCE_LOCATION);
   }
 
-  ASSIGN_OR_RETURN(*phSession, provider->OpenSession(slotID));
+  SessionType session_type = (flags & CKF_RW_SESSION) == CKF_RW_SESSION
+                                 ? SessionType::kReadWrite
+                                 : SessionType::kReadOnly;
+  ASSIGN_OR_RETURN(*phSession, provider->OpenSession(slotID, session_type));
   return absl::OkStatus();
 }
 
@@ -252,7 +250,7 @@ absl::Status GetSessionInfo(CK_SESSION_HANDLE hSession,
     return NullArgumentError("pInfo", SOURCE_LOCATION);
   }
 
-  *pInfo = session->token()->session_info();
+  *pInfo = session->info();
   return absl::OkStatus();
 }
 

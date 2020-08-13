@@ -36,10 +36,95 @@ class SessionTest : public testing::Test {
   std::unique_ptr<KmsClient> client_;
 };
 
+TEST_F(SessionTest, InfoContainsSlotId) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
+
+  EXPECT_EQ(s.info().slotID, 0);
+}
+
+TEST_F(SessionTest, ReadOnlySession) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
+
+  EXPECT_EQ(s.info().state, CKS_RO_PUBLIC_SESSION);
+  EXPECT_EQ(s.info().flags & CKF_RW_SESSION, 0);
+}
+
+TEST_F(SessionTest, ReadWriteSession) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadWrite, client_.get());
+
+  EXPECT_EQ(s.info().state, CKS_RW_PUBLIC_SESSION);
+  EXPECT_EQ(s.info().flags & CKF_RW_SESSION, CKF_RW_SESSION);
+}
+
+TEST_F(SessionTest, SessionFlagsSerial) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
+
+  EXPECT_EQ(s.info().flags & CKF_SERIAL_SESSION, CKF_SERIAL_SESSION);
+}
+
+TEST_F(SessionTest, SessionErrorIsZero) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
+
+  EXPECT_EQ(s.info().ulDeviceError, 0);
+}
+
+TEST_F(SessionTest, NewSessionInheritsLoginState) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  EXPECT_OK(token->Login(CKU_USER));
+
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
+  EXPECT_EQ(s.info().state, CKS_RO_USER_FUNCTIONS);
+}
+
+TEST_F(SessionTest, ReadOnlyStateUpdatedAfterLoginAndLogout) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
+
+  EXPECT_EQ(s.info().state, CKS_RO_PUBLIC_SESSION);
+  EXPECT_EQ(s.info().flags & CKF_RW_SESSION, 0);
+
+  EXPECT_OK(token->Login(CKU_USER));
+  EXPECT_EQ(s.info().state, CKS_RO_USER_FUNCTIONS);
+  EXPECT_EQ(s.info().flags & CKF_RW_SESSION, 0);
+
+  EXPECT_OK(token->Logout());
+  EXPECT_EQ(s.info().state, CKS_RO_PUBLIC_SESSION);
+  EXPECT_EQ(s.info().flags & CKF_RW_SESSION, 0);
+}
+
+TEST_F(SessionTest, ReadWriteStateUpdatedAfterLoginAndLogout) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadWrite, client_.get());
+
+  EXPECT_EQ(s.info().state, CKS_RW_PUBLIC_SESSION);
+  EXPECT_EQ(s.info().flags & CKF_RW_SESSION, CKF_RW_SESSION);
+
+  EXPECT_OK(token->Login(CKU_USER));
+  EXPECT_EQ(s.info().state, CKS_RW_USER_FUNCTIONS);
+  EXPECT_EQ(s.info().flags & CKF_RW_SESSION, CKF_RW_SESSION);
+
+  EXPECT_OK(token->Logout());
+  EXPECT_EQ(s.info().state, CKS_RW_PUBLIC_SESSION);
+  EXPECT_EQ(s.info().flags & CKF_RW_SESSION, CKF_RW_SESSION);
+}
+
 TEST_F(SessionTest, FindEmptyTokenSuccess) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
                        Token::New(0, config_, client_.get()));
-  Session s(token.get(), client_.get());
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
 
   EXPECT_OK(s.FindObjectsInit(std::vector<CK_ATTRIBUTE>()));
   EXPECT_THAT(s.FindObjects(1), IsOkAndHolds(IsEmpty()));
@@ -63,7 +148,7 @@ TEST_F(SessionTest, FindAllSinglePage) {
 
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
                        Token::New(0, config_, client_.get()));
-  Session s(token.get(), client_.get());
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
 
   EXPECT_OK(s.FindObjectsInit(std::vector<CK_ATTRIBUTE>()));
   ASSERT_OK_AND_ASSIGN(absl::Span<const CK_OBJECT_HANDLE> handles,
@@ -102,7 +187,7 @@ TEST_F(SessionTest, FindIgnoreResults) {
 
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
                        Token::New(0, config_, client_.get()));
-  Session s(token.get(), client_.get());
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
 
   EXPECT_OK(s.FindObjectsInit(std::vector<CK_ATTRIBUTE>()));
   EXPECT_OK(s.FindObjectsFinal());
@@ -129,7 +214,7 @@ TEST_F(SessionTest, FindPublicKeysMultiPage) {
 
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
                        Token::New(0, config_, client_.get()));
-  Session s(token.get(), client_.get());
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
 
   CK_OBJECT_CLASS want_class = CKO_PUBLIC_KEY;
   std::vector<CK_ATTRIBUTE> attr_template = {
@@ -164,7 +249,7 @@ TEST_F(SessionTest, FindPublicKeysMultiPage) {
 TEST_F(SessionTest, FindInitAlreadyActive) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
                        Token::New(0, config_, client_.get()));
-  Session s(token.get(), client_.get());
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
 
   EXPECT_OK(s.FindObjectsInit(std::vector<CK_ATTRIBUTE>()));
 
@@ -175,7 +260,7 @@ TEST_F(SessionTest, FindInitAlreadyActive) {
 TEST_F(SessionTest, FindNotInitialized) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
                        Token::New(0, config_, client_.get()));
-  Session s(token.get(), client_.get());
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
 
   EXPECT_THAT(s.FindObjects(1), StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
@@ -183,7 +268,7 @@ TEST_F(SessionTest, FindNotInitialized) {
 TEST_F(SessionTest, FindFinalNotInitialized) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
                        Token::New(0, config_, client_.get()));
-  Session s(token.get(), client_.get());
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
 
   EXPECT_THAT(s.FindObjectsFinal(), StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
@@ -214,7 +299,7 @@ TEST_F(SessionTest, Decrypt) {
 
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
                        Token::New(0, config_, client_.get()));
-  Session s(token.get(), client_.get());
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
 
   std::vector<CK_OBJECT_HANDLE> handles =
       s.token()->FindObjects([&](const Object& o) -> bool {
@@ -250,7 +335,7 @@ TEST_F(SessionTest, DecryptInitAlreadyActive) {
 
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
                        Token::New(0, config_, client_.get()));
-  Session s(token.get(), client_.get());
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
 
   std::vector<CK_OBJECT_HANDLE> handles =
       s.token()->FindObjects([&](const Object& o) -> bool {
@@ -272,7 +357,7 @@ TEST_F(SessionTest, DecryptInitAlreadyActive) {
 TEST_F(SessionTest, DecryptNotInitialized) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
                        Token::New(0, config_, client_.get()));
-  Session s(token.get(), client_.get());
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
 
   uint8_t ciphertext[32];
   EXPECT_THAT(s.Decrypt(ciphertext), StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
@@ -295,7 +380,7 @@ TEST_F(SessionTest, Encrypt) {
 
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
                        Token::New(0, config_, client_.get()));
-  Session s(token.get(), client_.get());
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
 
   std::vector<CK_OBJECT_HANDLE> handles =
       s.token()->FindObjects([&](const Object& o) -> bool {
@@ -333,7 +418,7 @@ TEST_F(SessionTest, EncryptInitAlreadyActive) {
 
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
                        Token::New(0, config_, client_.get()));
-  Session s(token.get(), client_.get());
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
 
   std::vector<CK_OBJECT_HANDLE> handles =
       s.token()->FindObjects([&](const Object& o) -> bool {
@@ -355,7 +440,7 @@ TEST_F(SessionTest, EncryptInitAlreadyActive) {
 TEST_F(SessionTest, EncryptNotInitialized) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
                        Token::New(0, config_, client_.get()));
-  Session s(token.get(), client_.get());
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
 
   uint8_t plaintext[256];
   EXPECT_THAT(s.Encrypt(plaintext), StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
@@ -382,7 +467,7 @@ TEST_F(SessionTest, Sign) {
 
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
                        Token::New(0, config_, client_.get()));
-  Session s(token.get(), client_.get());
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
 
   std::vector<CK_OBJECT_HANDLE> handles =
       s.token()->FindObjects([&](const Object& o) -> bool {
@@ -420,7 +505,7 @@ TEST_F(SessionTest, SignInitAlreadyActive) {
 
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
                        Token::New(0, config_, client_.get()));
-  Session s(token.get(), client_.get());
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
 
   std::vector<CK_OBJECT_HANDLE> handles =
       s.token()->FindObjects([&](const Object& o) -> bool {
@@ -454,7 +539,7 @@ TEST_F(SessionTest, SignatureLength) {
 
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
                        Token::New(0, config_, client_.get()));
-  Session s(token.get(), client_.get());
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
 
   std::vector<CK_OBJECT_HANDLE> handles =
       s.token()->FindObjects([&](const Object& o) -> bool {
@@ -474,7 +559,7 @@ TEST_F(SessionTest, SignatureLength) {
 TEST_F(SessionTest, SignatureLengthNotInitialized) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
                        Token::New(0, config_, client_.get()));
-  Session s(token.get(), client_.get());
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
 
   EXPECT_THAT(s.SignatureLength(), StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
@@ -482,7 +567,7 @@ TEST_F(SessionTest, SignatureLengthNotInitialized) {
 TEST_F(SessionTest, SignNotInitialized) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
                        Token::New(0, config_, client_.get()));
-  Session s(token.get(), client_.get());
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
 
   uint8_t digest[32], signature[64];
   EXPECT_THAT(s.Sign(digest, absl::MakeSpan(signature)),
@@ -506,7 +591,7 @@ TEST_F(SessionTest, SignVerify) {
 
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
                        Token::New(0, config_, client_.get()));
-  Session s(token.get(), client_.get());
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
 
   std::vector<CK_OBJECT_HANDLE> handles =
       s.token()->FindObjects([&](const Object& o) -> bool {
@@ -552,7 +637,7 @@ TEST_F(SessionTest, VerifyInitAlreadyActive) {
 
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
                        Token::New(0, config_, client_.get()));
-  Session s(token.get(), client_.get());
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
 
   std::vector<CK_OBJECT_HANDLE> handles =
       s.token()->FindObjects([&](const Object& o) -> bool {
@@ -572,7 +657,7 @@ TEST_F(SessionTest, VerifyInitAlreadyActive) {
 TEST_F(SessionTest, VerifyNotInitialized) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
                        Token::New(0, config_, client_.get()));
-  Session s(token.get(), client_.get());
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
 
   uint8_t digest[32], signature[64];
   EXPECT_THAT(s.Verify(digest, signature),
