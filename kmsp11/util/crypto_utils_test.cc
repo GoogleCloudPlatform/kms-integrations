@@ -450,6 +450,12 @@ TEST(RandBytesTest, SmokeTest) {
   EXPECT_NE(rand, std::string("\x00", 8));
 }
 
+TEST(RandomHandleTest, SmokeTest) {
+  CK_ULONG generated = RandomHandle();
+  EXPECT_GT(generated, 0);
+  EXPECT_LE(generated, std::numeric_limits<CK_ULONG>::max());
+}
+
 TEST(RsaVerifyPkcs1Test, ValidSignature) {
   ASSERT_OK_AND_ASSIGN(std::string pub_pem,
                        LoadTestRunfile("rsa_2048_public.pem"));
@@ -621,13 +627,6 @@ TEST(SslErrorToStringTest, EmptyStringOnNoError) {
       EC_KEY_new_by_curve_name(NID_X9_62_prime256v1));
   EXPECT_THAT(ec_key, Not(IsNull()));
   EXPECT_THAT(SslErrorToString(), IsEmpty());
-}
-
-TEST(BoringBitGeneratorTest, SmokeTest) {
-  BoringBitGenerator bbg;
-  uint16_t generated = absl::Uniform<uint16_t>(bbg, 12, 24);
-  EXPECT_GE(generated, 12);
-  EXPECT_LT(generated, 24);
 }
 
 }  // namespace

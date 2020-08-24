@@ -24,8 +24,11 @@ cc_library(
     hdrs = ["crypto_utils.h"],
     deps = [
         ":errors",
+        "//kmsp11:cryptoki_headers",
         "@boringssl//:crypto",
+        "@com_google_absl//absl/random",
         "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/synchronization",
     ],
 )
 
@@ -71,7 +74,6 @@ cc_library(
         ":errors",
         "//kmsp11:cryptoki_headers",
         "@com_google_absl//absl/container:flat_hash_map",
-        "@com_google_absl//absl/random",
         "@com_google_absl//absl/status:statusor",
     ],
 )

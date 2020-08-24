@@ -1,10 +1,7 @@
 #ifndef KMSP11_UTIL_HANDLE_MAP_H_
 #define KMSP11_UTIL_HANDLE_MAP_H_
 
-#include <limits>
-
 #include "absl/container/flat_hash_map.h"
-#include "absl/random/random.h"
 #include "absl/status/statusor.h"
 #include "kmsp11/cryptoki.h"
 #include "kmsp11/util/crypto_utils.h"
@@ -26,14 +23,11 @@ class HandleMap {
   inline CK_ULONG Add(std::shared_ptr<T> item) {
     absl::WriterMutexLock lock(&mutex_);
 
-    // Generate a new handle by picking a random number in the range [1,
-    // max(ULONG)] and ensuring that it is not already in use. Repeat this
-    // process until we have a useable handle. We start from 1 because 0 is
-    // CK_INVALID_HANDLE.
+    // Generate a new handle by picking a random handle and ensuring that it is
+    // not already in use. Repeat this process until we have a useable handle.
     CK_ULONG handle;
     do {
-      handle = absl::Uniform<CK_ULONG>(bit_gen_, 1,
-                                       std::numeric_limits<CK_ULONG>::max());
+      handle = RandomHandle();
     } while (items_.contains(handle));
 
     items_.try_emplace(handle, item);
@@ -80,7 +74,7 @@ class HandleMap {
 
     auto it = items_.find(handle);
     if (it == items_.end()) {
-      return HandleNotFoundError(handle, SOURCE_LOCATION);
+      return HandleNotFoundError(handle, not_found_rv_, SOURCE_LOCATION);
     }
 
     return it->second;
@@ -93,7 +87,7 @@ class HandleMap {
 
     auto it = items_.find(handle);
     if (it == items_.end()) {
-      return HandleNotFoundError(handle, SOURCE_LOCATION);
+      return HandleNotFoundError(handle, not_found_rv_, SOURCE_LOCATION);
     }
 
     items_.erase(it);
@@ -103,16 +97,8 @@ class HandleMap {
  private:
   CK_RV not_found_rv_;
   mutable absl::Mutex mutex_;
-  BoringBitGenerator bit_gen_ ABSL_GUARDED_BY(mutex_);
   absl::flat_hash_map<CK_ULONG, std::shared_ptr<T>> items_
       ABSL_GUARDED_BY(mutex_);
-
-  inline absl::Status HandleNotFoundError(
-      CK_ULONG handle, const SourceLocation& source_location) const {
-    return NewError(absl::StatusCode::kNotFound,
-                    absl::StrFormat("handle not found: %#x", handle),
-                    not_found_rv_, SOURCE_LOCATION);
-  }
 };
 
 }  // namespace kmsp11

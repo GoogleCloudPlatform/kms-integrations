@@ -1,5 +1,9 @@
 #include "kmsp11/util/crypto_utils.h"
 
+#include <limits>
+
+#include "absl/random/random.h"
+#include "absl/synchronization/mutex.h"
 #include "absl/time/time.h"
 #include "kmsp11/util/errors.h"
 #include "openssl/bn.h"
@@ -45,6 +49,27 @@ absl::StatusOr<std::string> MarshalDer(T* obj,
 
   return result;
 }
+
+// A UniformRandomBitGenerator backed by Boring's CSPRNG.
+// https://en.cppreference.com/w/cpp/named_req/UniformRandomBitGenerator
+class BoringBitGenerator {
+ public:
+  using result_type = uint64_t;
+
+  static constexpr uint64_t min() {
+    return std::numeric_limits<uint64_t>::min();
+  }
+
+  static constexpr uint64_t max() {
+    return std::numeric_limits<uint64_t>::max();
+  }
+
+  uint64_t operator()() {
+    uint64_t result;
+    RAND_bytes(reinterpret_cast<uint8_t*>(&result), sizeof(result));
+    return result;
+  }
+};
 
 }  // namespace
 
@@ -345,6 +370,15 @@ std::string RandBytes(size_t len) {
   return result;
 }
 
+CK_ULONG RandomHandle() {
+  static absl::Mutex bit_generator_mutex;
+  static BoringBitGenerator bit_generator ABSL_GUARDED_BY(bit_generator_mutex);
+
+  absl::MutexLock lock(&bit_generator_mutex);
+  return absl::Uniform<CK_ULONG>(bit_generator, 1,
+                                 std::numeric_limits<CK_ULONG>::max());
+}
+
 absl::Status RsaVerifyPkcs1(RSA* public_key, const EVP_MD* hash,
                             absl::Span<const uint8_t> digest,
                             absl::Span<const uint8_t> signature) {
@@ -413,12 +447,6 @@ std::string SslErrorToString() {
   char* buf;
   size_t len = BIO_get_mem_data(bio.get(), &buf);
   return std::string(buf, len);
-}
-
-uint64_t BoringBitGenerator::operator()() {
-  uint64_t result;
-  RAND_bytes(reinterpret_cast<uint8_t*>(&result), sizeof(result));
-  return result;
 }
 
 }  // namespace kmsp11

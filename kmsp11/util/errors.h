@@ -22,6 +22,14 @@ ABSL_MUST_USE_RESULT inline absl::Status FailedPreconditionError(
                   source_location);
 }
 
+// Creates a new NotFound error for a missing handle with the provided CK_RV.
+ABSL_MUST_USE_RESULT inline absl::Status HandleNotFoundError(
+    CK_ULONG handle, CK_RV rv, const SourceLocation& source_location) {
+  return NewError(absl::StatusCode::kNotFound,
+                  absl::StrFormat("handle not found: %#x", handle), rv,
+                  SOURCE_LOCATION);
+}
+
 // Creates a new InvalidArgument error with ck_rv = CKR_MECHANISM_INVALID.
 ABSL_MUST_USE_RESULT inline absl::Status InvalidMechanismError(
     CK_MECHANISM_TYPE mechanism_type, absl::string_view operation,

@@ -6,6 +6,7 @@
 
 #include "absl/status/statusor.h"
 #include "absl/time/time.h"
+#include "kmsp11/cryptoki.h"
 #include "openssl/evp.h"
 
 namespace kmsp11 {
@@ -85,6 +86,10 @@ absl::StatusOr<bssl::UniquePtr<EVP_PKEY>> ParseX509PublicKeyPem(
 // Retrieves len bytes of randomness from Boring's CSPRNG.
 std::string RandBytes(size_t len);
 
+// Uses Boring's CSPRNG to generate a random CK_ULONG for use as a Cryptoki
+// handle. Note that 0 is never returned, since 0 is CK_INVALID_HANDLE.
+CK_ULONG RandomHandle();
+
 // Verifies that the provided RSA PKCS1 signature is valid over digest.
 absl::Status RsaVerifyPkcs1(RSA* public_key, const EVP_MD* hash,
                             absl::Span<const uint8_t> digest,
@@ -107,23 +112,6 @@ void SafeZeroMemory(volatile char* ptr, size_t size);
 
 // Retrieves the contents of BoringSSL's error stack, and dumps it to a string.
 std::string SslErrorToString();
-
-// A UniformRandomBitGenerator backed by Boring's CSPRNG.
-// https://en.cppreference.com/w/cpp/named_req/UniformRandomBitGenerator
-class BoringBitGenerator {
- public:
-  using result_type = uint64_t;
-
-  inline static constexpr uint64_t min() {
-    return std::numeric_limits<uint64_t>::min();
-  }
-
-  inline static constexpr uint64_t max() {
-    return std::numeric_limits<uint64_t>::max();
-  }
-
-  uint64_t operator()();
-};
 
 }  // namespace kmsp11
 
