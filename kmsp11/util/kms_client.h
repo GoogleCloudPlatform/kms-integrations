@@ -1,12 +1,12 @@
 #ifndef KMSP11_UTIL_KMS_CLIENT_H_
 #define KMSP11_UTIL_KMS_CLIENT_H_
 
+#include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
 #include "google/cloud/internal/pagination_range.h"
 #include "grpcpp/security/credentials.h"
 #include "kmsp11/util/kms_v1.h"
-#include "kmsp11/util/status_or.h"
 
 namespace kmsp11 {
 
@@ -27,13 +27,13 @@ class KmsClient {
 
   kms_v1::KeyManagementService::Stub* kms_stub() { return kms_stub_.get(); }
 
-  StatusOr<kms_v1::AsymmetricDecryptResponse> AsymmetricDecrypt(
+  absl::StatusOr<kms_v1::AsymmetricDecryptResponse> AsymmetricDecrypt(
       const kms_v1::AsymmetricDecryptRequest& request) const;
 
-  StatusOr<kms_v1::AsymmetricSignResponse> AsymmetricSign(
+  absl::StatusOr<kms_v1::AsymmetricSignResponse> AsymmetricSign(
       const kms_v1::AsymmetricSignRequest& request) const;
 
-  StatusOr<kms_v1::PublicKey> GetPublicKey(
+  absl::StatusOr<kms_v1::PublicKey> GetPublicKey(
       const kms_v1::GetPublicKeyRequest& request) const;
 
   CryptoKeysRange ListCryptoKeys(

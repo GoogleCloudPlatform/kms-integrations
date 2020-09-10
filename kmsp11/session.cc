@@ -55,7 +55,7 @@ absl::Status Session::FindObjectsInit(
   return absl::OkStatus();
 }
 
-StatusOr<absl::Span<const CK_OBJECT_HANDLE>> Session::FindObjects(
+absl::StatusOr<absl::Span<const CK_OBJECT_HANDLE>> Session::FindObjects(
     size_t max_count) {
   absl::MutexLock l(&op_mutex_);
 
@@ -90,7 +90,7 @@ absl::Status Session::DecryptInit(std::shared_ptr<Object> key,
   return absl::OkStatus();
 }
 
-StatusOr<absl::Span<const uint8_t>> Session::Decrypt(
+absl::StatusOr<absl::Span<const uint8_t>> Session::Decrypt(
     absl::Span<const uint8_t> ciphertext) {
   absl::MutexLock l(&op_mutex_);
 
@@ -113,7 +113,7 @@ absl::Status Session::EncryptInit(std::shared_ptr<Object> key,
   return absl::OkStatus();
 }
 
-StatusOr<absl::Span<const uint8_t>> Session::Encrypt(
+absl::StatusOr<absl::Span<const uint8_t>> Session::Encrypt(
     absl::Span<const uint8_t> plaintext) {
   absl::MutexLock l(&op_mutex_);
 
@@ -147,7 +147,7 @@ absl::Status Session::Sign(absl::Span<const uint8_t> digest,
   return absl::get<SignOp>(op_.value())->Sign(kms_client_, digest, signature);
 }
 
-StatusOr<size_t> Session::SignatureLength() {
+absl::StatusOr<size_t> Session::SignatureLength() {
   absl::MutexLock l(&op_mutex_);
 
   if (!op_.has_value() || !absl::holds_alternative<SignOp>(op_.value())) {

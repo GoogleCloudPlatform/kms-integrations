@@ -109,7 +109,7 @@ std::string RandomId(absl::string_view prefix) {
                          absl::BytesToHexString(RandBytes(12)));
 }
 
-StatusOr<KeyPair> NewMockKeyPair(
+absl::StatusOr<KeyPair> NewMockKeyPair(
     kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm,
     absl::string_view public_key_runfile) {
   kms_v1::CryptoKeyVersion ckv;

@@ -2,8 +2,8 @@
 #define KMSP11_CONFIG_PROTOYAML_H_
 
 #include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "google/protobuf/message.h"
-#include "kmsp11/util/status_or.h"
 #include "yaml-cpp/yaml.h"
 
 namespace kmsp11 {

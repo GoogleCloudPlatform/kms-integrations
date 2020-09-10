@@ -171,7 +171,7 @@ static const auto* kAlgorithmDetails = new absl::flat_hash_map<
      }},
 };
 
-StatusOr<AlgorithmDetails> GetDetails(
+absl::StatusOr<AlgorithmDetails> GetDetails(
     kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm) {
   auto it = kAlgorithmDetails->find(algorithm);
   if (it == kAlgorithmDetails->end()) {

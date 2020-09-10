@@ -55,7 +55,7 @@ kms_v1::PublicKey GetPublicKey(
 std::string RandomId(absl::string_view prefix = "test-");
 
 // Returns a mock KeyPair with the provided algorithm and public key.
-StatusOr<KeyPair> NewMockKeyPair(
+absl::StatusOr<KeyPair> NewMockKeyPair(
     google::cloud::kms::v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm
         algorithm,
     absl::string_view public_key_runfile);

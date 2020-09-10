@@ -20,7 +20,8 @@ static const bssl::UniquePtr<ASN1_TIME> kUnixEpoch(
 // A helper for invoking an OpenSSL function of the form i2d_FOO, and returning
 // the DER output as a string.
 template <typename T>
-StatusOr<std::string> MarshalDer(T* obj, int i2d_function(T*, uint8_t**)) {
+absl::StatusOr<std::string> MarshalDer(T* obj,
+                                       int i2d_function(T*, uint8_t**)) {
   int len = i2d_function(obj, nullptr);
   if (len <= 0) {
     return NewInternalError(
@@ -47,7 +48,7 @@ StatusOr<std::string> MarshalDer(T* obj, int i2d_function(T*, uint8_t**)) {
 
 }  // namespace
 
-StatusOr<absl::Time> Asn1TimeToAbsl(const ASN1_TIME* time) {
+absl::StatusOr<absl::Time> Asn1TimeToAbsl(const ASN1_TIME* time) {
   int diff_days, diff_secs;
   if (ASN1_TIME_diff(&diff_days, &diff_secs, kUnixEpoch.get(), time) != 1) {
     return NewInternalError(
@@ -61,8 +62,8 @@ StatusOr<absl::Time> Asn1TimeToAbsl(const ASN1_TIME* time) {
   return absl::FromCivil(second, absl::UTCTimeZone());
 }
 
-StatusOr<std::vector<uint8_t>> EcdsaSigAsn1ToP1363(absl::string_view asn1_sig,
-                                                   const EC_GROUP* group) {
+absl::StatusOr<std::vector<uint8_t>> EcdsaSigAsn1ToP1363(
+    absl::string_view asn1_sig, const EC_GROUP* group) {
   bssl::UniquePtr<ECDSA_SIG> sig(ECDSA_SIG_from_bytes(
       reinterpret_cast<const uint8_t*>(asn1_sig.data()), asn1_sig.size()));
   if (!sig) {
@@ -203,11 +204,11 @@ absl::Status EncryptRsaOaep(EVP_PKEY* key, const EVP_MD* hash,
   return absl::OkStatus();
 }
 
-StatusOr<std::string> MarshalAsn1Integer(ASN1_INTEGER* value) {
+absl::StatusOr<std::string> MarshalAsn1Integer(ASN1_INTEGER* value) {
   return MarshalDer(value, &i2d_ASN1_INTEGER);
 }
 
-StatusOr<std::string> MarshalEcParametersDer(const EC_KEY* key) {
+absl::StatusOr<std::string> MarshalEcParametersDer(const EC_KEY* key) {
   CBB cbb;
   CBB_zero(&cbb);
 
@@ -227,7 +228,7 @@ StatusOr<std::string> MarshalEcParametersDer(const EC_KEY* key) {
   return result;
 }
 
-StatusOr<std::string> MarshalEcPointDer(const EC_KEY* key) {
+absl::StatusOr<std::string> MarshalEcPointDer(const EC_KEY* key) {
   bssl::UniquePtr<BN_CTX> bn_ctx(BN_CTX_new());
   CBB cbb;
   CBB_zero(&cbb);
@@ -250,15 +251,15 @@ StatusOr<std::string> MarshalEcPointDer(const EC_KEY* key) {
   return result;
 }
 
-StatusOr<std::string> MarshalX509CertificateDer(X509* cert) {
+absl::StatusOr<std::string> MarshalX509CertificateDer(X509* cert) {
   return MarshalDer(cert, &i2d_X509);
 }
 
-StatusOr<std::string> MarshalX509Name(X509_NAME* value) {
+absl::StatusOr<std::string> MarshalX509Name(X509_NAME* value) {
   return MarshalDer(value, &i2d_X509_NAME);
 }
 
-StatusOr<std::string> MarshalX509PublicKeyDer(const EVP_PKEY* key) {
+absl::StatusOr<std::string> MarshalX509PublicKeyDer(const EVP_PKEY* key) {
   CBB cbb;
   CBB_zero(&cbb);
 
@@ -277,11 +278,11 @@ StatusOr<std::string> MarshalX509PublicKeyDer(const EVP_PKEY* key) {
   return result;
 }
 
-StatusOr<std::string> MarshalX509Sig(X509_SIG* value) {
+absl::StatusOr<std::string> MarshalX509Sig(X509_SIG* value) {
   return MarshalDer(value, &i2d_X509_SIG);
 }
 
-StatusOr<bssl::UniquePtr<EVP_PKEY>> ParsePkcs8PrivateKeyPem(
+absl::StatusOr<bssl::UniquePtr<EVP_PKEY>> ParsePkcs8PrivateKeyPem(
     absl::string_view private_key_pem) {
   bssl::UniquePtr<BIO> bio(
       BIO_new_mem_buf(private_key_pem.data(), private_key_pem.size()));
@@ -302,7 +303,7 @@ StatusOr<bssl::UniquePtr<EVP_PKEY>> ParsePkcs8PrivateKeyPem(
   return std::move(result);
 }
 
-StatusOr<bssl::UniquePtr<EVP_PKEY>> ParseX509PublicKeyDer(
+absl::StatusOr<bssl::UniquePtr<EVP_PKEY>> ParseX509PublicKeyDer(
     absl::string_view public_key_der) {
   const uint8_t* der_bytes =
       reinterpret_cast<const uint8_t*>(public_key_der.data());
@@ -317,7 +318,7 @@ StatusOr<bssl::UniquePtr<EVP_PKEY>> ParseX509PublicKeyDer(
   return std::move(result);
 }
 
-StatusOr<bssl::UniquePtr<EVP_PKEY>> ParseX509PublicKeyPem(
+absl::StatusOr<bssl::UniquePtr<EVP_PKEY>> ParseX509PublicKeyPem(
     absl::string_view public_key_pem) {
   bssl::UniquePtr<BIO> bio(
       BIO_new_mem_buf(public_key_pem.data(), public_key_pem.size()));

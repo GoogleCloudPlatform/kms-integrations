@@ -1,17 +1,18 @@
 #include "kmsp11/token.h"
 
+#include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
+#include "glog/logging.h"
 #include "kmsp11/algorithm_details.h"
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/kms_client.h"
 #include "kmsp11/util/status_macros.h"
-#include "kmsp11/util/status_or.h"
 #include "kmsp11/util/string_utils.h"
 
 namespace kmsp11 {
 namespace {
 
-static StatusOr<CK_SLOT_INFO> NewSlotInfo() {
+static absl::StatusOr<CK_SLOT_INFO> NewSlotInfo() {
   CK_SLOT_INFO info = {
       {0},                // slotDescription (set with ' ' padding below)
       {0},                // manufacturerID (set with ' ' padding below)
@@ -26,7 +27,8 @@ static StatusOr<CK_SLOT_INFO> NewSlotInfo() {
   return info;
 }
 
-static StatusOr<CK_TOKEN_INFO> NewTokenInfo(absl::string_view token_label) {
+static absl::StatusOr<CK_TOKEN_INFO> NewTokenInfo(
+    absl::string_view token_label) {
   CK_TOKEN_INFO info = {
       {0},  // label (set with ' ' padding below)
       {0},  // manufacturerID (set with ' ' padding below)
@@ -104,7 +106,7 @@ static absl::Status AddAsymmetricKeyPair(const LoadContext& ctx,
   return absl::OkStatus();
 }
 
-static StatusOr<std::unique_ptr<HandleMap<Object>>> LoadObjects(
+static absl::StatusOr<std::unique_ptr<HandleMap<Object>>> LoadObjects(
     const LoadContext& ctx, absl::string_view key_ring_name) {
   auto objects =
       absl::make_unique<HandleMap<Object>>(CKR_OBJECT_HANDLE_INVALID);
@@ -140,10 +142,10 @@ static StatusOr<std::unique_ptr<HandleMap<Object>>> LoadObjects(
 
 }  // namespace
 
-StatusOr<std::unique_ptr<Token>> Token::New(CK_SLOT_ID slot_id,
-                                            TokenConfig token_config,
-                                            KmsClient* kms_client,
-                                            bool generate_certs) {
+absl::StatusOr<std::unique_ptr<Token>> Token::New(CK_SLOT_ID slot_id,
+                                                  TokenConfig token_config,
+                                                  KmsClient* kms_client,
+                                                  bool generate_certs) {
   ASSIGN_OR_RETURN(CK_SLOT_INFO slot_info, NewSlotInfo());
   ASSIGN_OR_RETURN(CK_TOKEN_INFO token_info,
                    NewTokenInfo(token_config.label()));

@@ -12,7 +12,7 @@ namespace kmsp11 {
 
 namespace {
 
-static StatusOr<std::vector<uint8_t>> ExtractDigest(
+static absl::StatusOr<std::vector<uint8_t>> ExtractDigest(
     absl::Span<const uint8_t> digest_info_der, int expected_digest_nid) {
   const uint8_t* data = digest_info_der.data();
 
@@ -39,7 +39,7 @@ static StatusOr<std::vector<uint8_t>> ExtractDigest(
 
 }  // namespace
 
-StatusOr<std::unique_ptr<SignerInterface>> RsaPkcs1Signer::New(
+absl::StatusOr<std::unique_ptr<SignerInterface>> RsaPkcs1Signer::New(
     std::shared_ptr<Object> key, const CK_MECHANISM* mechanism) {
   RETURN_IF_ERROR(
       CheckKeyPreconditions(CKK_RSA, CKO_PRIVATE_KEY, CKM_RSA_PKCS, key.get()));
@@ -65,7 +65,7 @@ absl::Status RsaPkcs1Signer::Sign(KmsClient* client,
   return KmsSigner::Sign(client, digest, signature);
 }
 
-StatusOr<std::unique_ptr<VerifierInterface>> RsaPkcs1Verifier::New(
+absl::StatusOr<std::unique_ptr<VerifierInterface>> RsaPkcs1Verifier::New(
     std::shared_ptr<Object> key, const CK_MECHANISM* mechanism) {
   RETURN_IF_ERROR(
       CheckKeyPreconditions(CKK_RSA, CKO_PUBLIC_KEY, CKM_RSA_PKCS, key.get()));

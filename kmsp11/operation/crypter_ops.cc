@@ -8,8 +8,8 @@
 
 namespace kmsp11 {
 
-StatusOr<DecryptOp> NewDecryptOp(std::shared_ptr<Object> key,
-                                 const CK_MECHANISM* mechanism) {
+absl::StatusOr<DecryptOp> NewDecryptOp(std::shared_ptr<Object> key,
+                                       const CK_MECHANISM* mechanism) {
   switch (mechanism->mechanism) {
     case CKM_RSA_PKCS_OAEP:
       return RsaOaepDecrypter::New(key, mechanism);
@@ -19,8 +19,8 @@ StatusOr<DecryptOp> NewDecryptOp(std::shared_ptr<Object> key,
   }
 }
 
-StatusOr<EncryptOp> NewEncryptOp(std::shared_ptr<Object> key,
-                                 const CK_MECHANISM* mechanism) {
+absl::StatusOr<EncryptOp> NewEncryptOp(std::shared_ptr<Object> key,
+                                       const CK_MECHANISM* mechanism) {
   switch (mechanism->mechanism) {
     case CKM_RSA_PKCS_OAEP:
       return RsaOaepEncrypter::New(key, mechanism);
@@ -30,8 +30,8 @@ StatusOr<EncryptOp> NewEncryptOp(std::shared_ptr<Object> key,
   }
 }
 
-StatusOr<SignOp> NewSignOp(std::shared_ptr<Object> key,
-                           const CK_MECHANISM* mechanism) {
+absl::StatusOr<SignOp> NewSignOp(std::shared_ptr<Object> key,
+                                 const CK_MECHANISM* mechanism) {
   switch (mechanism->mechanism) {
     case CKM_ECDSA:
       return EcdsaSigner::New(key, mechanism);
@@ -45,8 +45,8 @@ StatusOr<SignOp> NewSignOp(std::shared_ptr<Object> key,
   }
 }
 
-StatusOr<VerifyOp> NewVerifyOp(std::shared_ptr<Object> key,
-                               const CK_MECHANISM* mechanism) {
+absl::StatusOr<VerifyOp> NewVerifyOp(std::shared_ptr<Object> key,
+                                     const CK_MECHANISM* mechanism) {
   switch (mechanism->mechanism) {
     case CKM_ECDSA:
       return EcdsaVerifier::New(key, mechanism);

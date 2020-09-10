@@ -22,23 +22,24 @@ class Session {
   void ReleaseOperation();
 
   absl::Status FindObjectsInit(absl::Span<const CK_ATTRIBUTE> attributes);
-  StatusOr<absl::Span<const CK_OBJECT_HANDLE>> FindObjects(size_t max_count);
+  absl::StatusOr<absl::Span<const CK_OBJECT_HANDLE>> FindObjects(
+      size_t max_count);
   absl::Status FindObjectsFinal();
 
   absl::Status DecryptInit(std::shared_ptr<Object> key,
                            CK_MECHANISM* mechanism);
-  StatusOr<absl::Span<const uint8_t>> Decrypt(
+  absl::StatusOr<absl::Span<const uint8_t>> Decrypt(
       absl::Span<const uint8_t> ciphertext);
 
   absl::Status EncryptInit(std::shared_ptr<Object> key,
                            CK_MECHANISM* mechanism);
-  StatusOr<absl::Span<const uint8_t>> Encrypt(
+  absl::StatusOr<absl::Span<const uint8_t>> Encrypt(
       absl::Span<const uint8_t> plaintext);
 
   absl::Status SignInit(std::shared_ptr<Object> key, CK_MECHANISM* mechanism);
   absl::Status Sign(absl::Span<const uint8_t> digest,
                     absl::Span<uint8_t> signature);
-  StatusOr<size_t> SignatureLength();
+  absl::StatusOr<size_t> SignatureLength();
 
   absl::Status VerifyInit(std::shared_ptr<Object> key, CK_MECHANISM* mechanism);
   absl::Status Verify(absl::Span<const uint8_t> digest,

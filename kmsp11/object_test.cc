@@ -24,17 +24,16 @@ kms_v1::CryptoKeyVersion NewTestCkv() {
   v.set_name(
       "projects/foo/locations/global/keyRings/bar/cryptoKeys/baz/"
       "cryptoKeyVersions/1");
-  v.set_algorithm(
-      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+  v.set_algorithm(kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
   return v;
 }
 
-StatusOr<bssl::UniquePtr<EVP_PKEY>> GetTestP256Key() {
+absl::StatusOr<bssl::UniquePtr<EVP_PKEY>> GetTestP256Key() {
   ASSIGN_OR_RETURN(std::string test_key, LoadTestRunfile("ec_p256_public.pem"));
   return ParseX509PublicKeyPem(test_key);
 }
 
-StatusOr<bssl::UniquePtr<EVP_PKEY>> GetTestRsa2048Key() {
+absl::StatusOr<bssl::UniquePtr<EVP_PKEY>> GetTestRsa2048Key() {
   ASSIGN_OR_RETURN(std::string test_key,
                    LoadTestRunfile("rsa_2048_public.pem"));
   return ParseX509PublicKeyPem(test_key);
@@ -150,9 +149,7 @@ TEST(NewKeyPairTest, EcKeyAttributes) {
 
 TEST(NewKeyPairTest, RsaKeyAttributes) {
   kms_v1::CryptoKeyVersion ckv = NewTestCkv();
-  ckv.set_algorithm(
-      kms_v1::
-          CryptoKeyVersion::RSA_SIGN_PKCS1_2048_SHA256);
+  ckv.set_algorithm(kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_2048_SHA256);
 
   ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub, GetTestRsa2048Key());
   const RSA* rsa_key = EVP_PKEY_get0_RSA(pub.get());

@@ -27,7 +27,8 @@ bool AttributeMap::Contains(const CK_ATTRIBUTE& attribute) const {
                            attribute.ulValueLen);
 }
 
-StatusOr<absl::string_view> AttributeMap::Value(CK_ATTRIBUTE_TYPE type) const {
+absl::StatusOr<absl::string_view> AttributeMap::Value(
+    CK_ATTRIBUTE_TYPE type) const {
   auto it = attrs_.find(type);
   if (it == attrs_.end()) {
     return NewError(absl::StatusCode::kNotFound,

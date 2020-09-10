@@ -39,7 +39,7 @@ static absl::Status ValidateRsaOaepParameters(Object* key, void* parameters,
 
 }  // namespace
 
-StatusOr<std::unique_ptr<EncrypterInterface>> RsaOaepEncrypter::New(
+absl::StatusOr<std::unique_ptr<EncrypterInterface>> RsaOaepEncrypter::New(
     std::shared_ptr<Object> key, const CK_MECHANISM* mechanism) {
   RETURN_IF_ERROR(CheckKeyPreconditions(CKK_RSA, CKO_PUBLIC_KEY,
                                         CKM_RSA_PKCS_OAEP, key.get()));
@@ -55,14 +55,14 @@ StatusOr<std::unique_ptr<EncrypterInterface>> RsaOaepEncrypter::New(
       new RsaOaepEncrypter(key, std::move(parsed_key)));
 }
 
-StatusOr<absl::Span<const uint8_t>> RsaOaepEncrypter::Encrypt(
+absl::StatusOr<absl::Span<const uint8_t>> RsaOaepEncrypter::Encrypt(
     KmsClient* client, absl::Span<const uint8_t> plaintext) {
   RETURN_IF_ERROR(EncryptRsaOaep(key_.get(), object_->algorithm().digest,
                                  plaintext, absl::MakeSpan(ciphertext_)));
   return absl::MakeConstSpan(ciphertext_);
 }
 
-StatusOr<std::unique_ptr<DecrypterInterface>> RsaOaepDecrypter::New(
+absl::StatusOr<std::unique_ptr<DecrypterInterface>> RsaOaepDecrypter::New(
     std::shared_ptr<Object> key, const CK_MECHANISM* mechanism) {
   RETURN_IF_ERROR(CheckKeyPreconditions(CKK_RSA, CKO_PRIVATE_KEY,
                                         CKM_RSA_PKCS_OAEP, key.get()));
@@ -71,7 +71,7 @@ StatusOr<std::unique_ptr<DecrypterInterface>> RsaOaepDecrypter::New(
   return std::unique_ptr<DecrypterInterface>(new RsaOaepDecrypter(key));
 }
 
-StatusOr<absl::Span<const uint8_t>> RsaOaepDecrypter::Decrypt(
+absl::StatusOr<absl::Span<const uint8_t>> RsaOaepDecrypter::Decrypt(
     KmsClient* client, absl::Span<const uint8_t> ciphertext) {
   if (result_ && result_->Matches(ciphertext)) {
     return result_->plaintext();
@@ -90,7 +90,7 @@ StatusOr<absl::Span<const uint8_t>> RsaOaepDecrypter::Decrypt(
   req.set_ciphertext(ciphertext.data(), ciphertext.size());
   Cleanup c([&req]() -> void { ZeroDelete()(req.release_ciphertext()); });
 
-  StatusOr<kms_v1::AsymmetricDecryptResponse> resp_or =
+  absl::StatusOr<kms_v1::AsymmetricDecryptResponse> resp_or =
       client->AsymmetricDecrypt(req);
   if (!resp_or.ok()) {
     switch (resp_or.status().code()) {

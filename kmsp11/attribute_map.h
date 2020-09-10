@@ -2,9 +2,9 @@
 #define KMSP11_ATTRIBUTE_MAP_H_
 
 #include "absl/container/flat_hash_map.h"
+#include "absl/status/statusor.h"
 #include "absl/types/variant.h"
 #include "kmsp11/cryptoki.h"
-#include "kmsp11/util/status_or.h"
 #include "kmsp11/util/string_utils.h"
 #include "openssl/bn.h"
 
@@ -39,7 +39,7 @@ class AttributeMap {
   }
 
   bool Contains(const CK_ATTRIBUTE& attribute) const;
-  StatusOr<absl::string_view> Value(CK_ATTRIBUTE_TYPE type) const;
+  absl::StatusOr<absl::string_view> Value(CK_ATTRIBUTE_TYPE type) const;
 
  private:
   class SensitiveValue {};

@@ -1,12 +1,12 @@
 #ifndef KMSP11_TEST_FAKEKMS_CPP_FAKEKMS_H_
 #define KMSP11_TEST_FAKEKMS_CPP_FAKEKMS_H_
 
+#include "absl/status/statusor.h"
 #include "absl/strings/str_split.h"
 #include "absl/strings/strip.h"
 #include "grpcpp/create_channel.h"
 #include "grpcpp/security/credentials.h"
 #include "kmsp11/util/kms_v1.h"
-#include "kmsp11/util/status_or.h"
 
 namespace kmsp11 {
 
@@ -24,7 +24,7 @@ namespace kmsp11 {
 // resources associated with the fake.
 class FakeKms {
  public:
-  static StatusOr<std::unique_ptr<FakeKms>> New();
+  static absl::StatusOr<std::unique_ptr<FakeKms>> New();
 
   virtual ~FakeKms() {}
 

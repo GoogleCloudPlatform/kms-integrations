@@ -2,13 +2,13 @@
 #define KMSP11_TOKEN_H_
 
 #include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "absl/synchronization/mutex.h"
 #include "kmsp11/config/config.pb.h"
 #include "kmsp11/cryptoki.h"
 #include "kmsp11/object.h"
 #include "kmsp11/util/handle_map.h"
 #include "kmsp11/util/kms_client.h"
-#include "kmsp11/util/status_or.h"
 
 namespace kmsp11 {
 
@@ -18,10 +18,9 @@ namespace kmsp11 {
 // See go/kms-pkcs11-model
 class Token {
  public:
-  static StatusOr<std::unique_ptr<Token>> New(CK_SLOT_ID slot_id,
-                                              TokenConfig token_config,
-                                              KmsClient* kms_client,
-                                              bool generate_certs = false);
+  static absl::StatusOr<std::unique_ptr<Token>> New(
+      CK_SLOT_ID slot_id, TokenConfig token_config, KmsClient* kms_client,
+      bool generate_certs = false);
 
   CK_SLOT_ID slot_id() const { return slot_id_; }
   const CK_SLOT_INFO& slot_info() const { return slot_info_; }
@@ -31,7 +30,7 @@ class Token {
   absl::Status Login(CK_USER_TYPE user_type);
   absl::Status Logout();
 
-  inline StatusOr<std::shared_ptr<Object>> GetObject(
+  inline absl::StatusOr<std::shared_ptr<Object>> GetObject(
       CK_OBJECT_HANDLE object_handle) const {
     return objects_->Get(object_handle);
   }

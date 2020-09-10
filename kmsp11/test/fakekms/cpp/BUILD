@@ -11,21 +11,21 @@ cc_library(
     }),
     hdrs = ["fakekms.h"],
     data = ["//kmsp11/test/fakekms/main:fakekms"],
+    defines = select({
+        # https://www.freebsd.org/cgi/man.cgi?query=getline&manpath=FreeBSD+11.4-RELEASE
+        "//:freebsd": ["_WITH_GETLINE"],
+        "//conditions:default": [],
+    }),
     deps = [
         "//kmsp11/test",
         "//kmsp11/util:cleanup",
         "//kmsp11/util:kms_v1",
         "//kmsp11/util:status_macros",
-        "//kmsp11/util:status_or",
         "@com_github_google_glog//:glog",
         "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
     ],
-    defines = select({
-        # https://www.freebsd.org/cgi/man.cgi?query=getline&manpath=FreeBSD+11.4-RELEASE
-        "//:freebsd": ["_WITH_GETLINE"],
-        "//conditions:default": [],
-    })
 )
 
 cc_test(

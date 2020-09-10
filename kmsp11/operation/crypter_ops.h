@@ -7,23 +7,23 @@ namespace kmsp11 {
 
 using DecryptOp = std::unique_ptr<DecrypterInterface>;
 
-StatusOr<DecryptOp> NewDecryptOp(std::shared_ptr<Object> key,
-                                 const CK_MECHANISM* mechanism);
+absl::StatusOr<DecryptOp> NewDecryptOp(std::shared_ptr<Object> key,
+                                       const CK_MECHANISM* mechanism);
 
 using EncryptOp = std::unique_ptr<EncrypterInterface>;
 
-StatusOr<EncryptOp> NewEncryptOp(std::shared_ptr<Object> key,
-                                 const CK_MECHANISM* mechanism);
+absl::StatusOr<EncryptOp> NewEncryptOp(std::shared_ptr<Object> key,
+                                       const CK_MECHANISM* mechanism);
 
 using SignOp = std::unique_ptr<SignerInterface>;
 
-StatusOr<SignOp> NewSignOp(std::shared_ptr<Object> key,
-                           const CK_MECHANISM* mechanism);
+absl::StatusOr<SignOp> NewSignOp(std::shared_ptr<Object> key,
+                                 const CK_MECHANISM* mechanism);
 
 using VerifyOp = std::unique_ptr<VerifierInterface>;
 
-StatusOr<VerifyOp> NewVerifyOp(std::shared_ptr<Object> key,
-                               const CK_MECHANISM* mechanism);
+absl::StatusOr<VerifyOp> NewVerifyOp(std::shared_ptr<Object> key,
+                                     const CK_MECHANISM* mechanism);
 
 }  // namespace kmsp11
 

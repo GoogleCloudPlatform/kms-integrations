@@ -11,7 +11,7 @@
 namespace kmsp11 {
 namespace {
 
-StatusOr<std::string> GetKeyId(absl::string_view version_name) {
+absl::StatusOr<std::string> GetKeyId(absl::string_view version_name) {
   std::vector<std::string> parts = absl::StrSplit(version_name, '/');
   if (parts.size() != 10 || parts[0] != "projects" || parts[2] != "locations" ||
       parts[4] != "keyRings" || parts[6] != "cryptoKeys" ||
@@ -202,7 +202,7 @@ absl::Status AddX509CertificateAttributes(AttributeMap* attrs,
 
 }  // namespace
 
-StatusOr<KeyPair> Object::NewKeyPair(
+absl::StatusOr<KeyPair> Object::NewKeyPair(
     const google::cloud::kms::v1::CryptoKeyVersion& ckv,
     const EVP_PKEY* public_key) {
   ASSIGN_OR_RETURN(std::string pub_der, MarshalX509PublicKeyDer(public_key));
@@ -244,7 +244,7 @@ StatusOr<KeyPair> Object::NewKeyPair(
                  Object(ckv.name(), CKO_PRIVATE_KEY, algorithm, prv_attrs)};
 }
 
-StatusOr<Object> Object::NewCertificate(
+absl::StatusOr<Object> Object::NewCertificate(
     const google::cloud::kms::v1::CryptoKeyVersion& ckv, EVP_PKEY* public_key,
     const CertAuthority* cert_authority) {
   ASSIGN_OR_RETURN(std::string key_id, GetKeyId(ckv.name()));

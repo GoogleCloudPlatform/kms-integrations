@@ -37,7 +37,7 @@ TEST(GetAlgorithmDetailsTest, AlgorithmRsaOaep) {
 }
 
 TEST(GetAlgorithmDetailsTest, AlgorithmNotFound) {
-  StatusOr<AlgorithmDetails> details =
+  absl::StatusOr<AlgorithmDetails> details =
       GetDetails(kms_v1::CryptoKeyVersion::EXTERNAL_SYMMETRIC_ENCRYPTION);
   EXPECT_FALSE(details.ok());
   EXPECT_THAT(details.status(), StatusIs(absl::StatusCode::kInternal));

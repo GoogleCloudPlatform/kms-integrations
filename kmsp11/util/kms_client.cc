@@ -43,7 +43,7 @@ KmsClient::KmsClient(absl::string_view endpoint_address,
   kms_stub_ = kms_v1::KeyManagementService::NewStub(channel);
 }
 
-StatusOr<kms_v1::AsymmetricDecryptResponse> KmsClient::AsymmetricDecrypt(
+absl::StatusOr<kms_v1::AsymmetricDecryptResponse> KmsClient::AsymmetricDecrypt(
     const kms_v1::AsymmetricDecryptRequest& request) const {
   grpc::ClientContext ctx;
   AddContextSettings(&ctx, "name", request.name(), rpc_timeout_);
@@ -53,7 +53,7 @@ StatusOr<kms_v1::AsymmetricDecryptResponse> KmsClient::AsymmetricDecrypt(
   return response;
 }
 
-StatusOr<kms_v1::AsymmetricSignResponse> KmsClient::AsymmetricSign(
+absl::StatusOr<kms_v1::AsymmetricSignResponse> KmsClient::AsymmetricSign(
     const kms_v1::AsymmetricSignRequest& request) const {
   grpc::ClientContext ctx;
   AddContextSettings(&ctx, "name", request.name(), rpc_timeout_);
@@ -63,7 +63,7 @@ StatusOr<kms_v1::AsymmetricSignResponse> KmsClient::AsymmetricSign(
   return response;
 }
 
-StatusOr<kms_v1::PublicKey> KmsClient::GetPublicKey(
+absl::StatusOr<kms_v1::PublicKey> KmsClient::GetPublicKey(
     const kms_v1::GetPublicKeyRequest& request) const {
   grpc::ClientContext ctx;
   AddContextSettings(&ctx, "name", request.name(), rpc_timeout_);

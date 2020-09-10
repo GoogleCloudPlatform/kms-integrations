@@ -2,10 +2,10 @@
 #define KMSP11_UTIL_STATUS_UTILS_H_
 
 #include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "google/cloud/status_or.h"
 #include "grpcpp/support/status.h"
 #include "kmsp11/cryptoki.h"
-#include "kmsp11/util/status_or.h"
 
 namespace kmsp11 {
 
@@ -30,7 +30,7 @@ inline const absl::Status& ToStatus(const absl::Status& status) {
 }
 
 template <typename T>
-inline const absl::Status& ToStatus(const kmsp11::StatusOr<T>& status_or) {
+inline const absl::Status& ToStatus(const absl::StatusOr<T>& status_or) {
   return status_or.status();
 }
 

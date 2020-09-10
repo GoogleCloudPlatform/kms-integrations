@@ -1,11 +1,11 @@
 #ifndef KMSP11_ALGORITHM_DETAILS_H_
 #define KMSP11_ALGORITHM_DETAILS_H_
 
+#include "absl/status/statusor.h"
 #include "google/cloud/kms/v1/resources.pb.h"
 #include "google/cloud/kms/v1/service.pb.h"
 #include "kmsp11/cryptoki.h"
 #include "kmsp11/util/kms_v1.h"
-#include "kmsp11/util/status_or.h"
 #include "openssl/evp.h"
 
 namespace kmsp11 {
@@ -21,7 +21,7 @@ struct AlgorithmDetails {
   const EVP_MD* digest;
 };
 
-StatusOr<AlgorithmDetails> GetDetails(
+absl::StatusOr<AlgorithmDetails> GetDetails(
     kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm);
 
 }  // namespace kmsp11

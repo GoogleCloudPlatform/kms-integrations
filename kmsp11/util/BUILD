@@ -24,8 +24,8 @@ cc_library(
     hdrs = ["crypto_utils.h"],
     deps = [
         ":errors",
-        ":status_or",
         "@boringssl//:crypto",
+        "@com_google_absl//absl/status:statusor",
     ],
 )
 
@@ -69,10 +69,10 @@ cc_library(
     deps = [
         ":crypto_utils",
         ":errors",
-        ":status_or",
         "//kmsp11:cryptoki_headers",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/random",
+        "@com_google_absl//absl/status:statusor",
     ],
 )
 
@@ -108,11 +108,11 @@ cc_library(
     deps = [
         ":kms_v1",
         ":status_macros",
-        ":status_or",
         ":status_utils",
         "//kmsp11:version",
         "@com_github_googleapis_google_cloud_cpp//google/cloud:google_cloud_cpp_grpc_utils",
         "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/status:statusor",
     ],
 )
 
@@ -183,9 +183,9 @@ cc_library(
     name = "status_macros",
     hdrs = ["status_macros.h"],
     deps = [
-        ":status_or",
         ":status_utils",
         "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
     ],
 )
 
@@ -195,34 +195,10 @@ cc_test(
     srcs = ["status_macros_test.cc"],
     deps = [
         ":status_macros",
-        ":status_or",
         "//kmsp11/test",
+        "@com_google_absl//absl/status:statusor",
         "@com_google_googletest//:gtest_main",
     ],
-)
-
-cc_library(
-    name = "status_or",
-    hdrs = ["status_or.h"],
-    deps = [
-        "@com_github_google_glog//:glog",
-        "@com_google_absl//absl/status",
-        "@com_google_absl//absl/types:variant",
-    ],
-)
-
-cc_test(
-    name = "status_or_test",
-    size = "small",
-    srcs = ["status_or_test.cc"],
-    deps = [
-        ":status_or",
-        "@com_google_googletest//:gtest_main",
-    ],
-    linkopts = select({
-      "//:freebsd": ["-lm"],
-      "//conditions:default": [],
-    }),
 )
 
 cc_library(
@@ -231,12 +207,12 @@ cc_library(
     hdrs = ["status_utils.h"],
     deps = [
         ":status_details_cc_proto",
-        ":status_or",
         "//kmsp11:cryptoki_headers",
         "@com_github_google_glog//:glog",
         "@com_github_googleapis_google_cloud_cpp//google/cloud:google_cloud_cpp_grpc_utils",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
     ],
 )
 

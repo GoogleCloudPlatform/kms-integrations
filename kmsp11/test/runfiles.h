@@ -3,7 +3,7 @@
 
 #include <string>
 
-#include "kmsp11/util/status_or.h"
+#include "absl/status/statusor.h"
 
 namespace kmsp11 {
 
@@ -11,7 +11,7 @@ namespace kmsp11 {
 std::string RunfileLocation(absl::string_view filename);
 
 // Loads the testdata file with the provided filename into a string.
-StatusOr<std::string> LoadTestRunfile(absl::string_view filename);
+absl::StatusOr<std::string> LoadTestRunfile(absl::string_view filename);
 
 }  // namespace kmsp11
 

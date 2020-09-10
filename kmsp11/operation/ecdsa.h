@@ -12,7 +12,7 @@ namespace kmsp11 {
 // KMS.
 class EcdsaSigner : public KmsSigner {
  public:
-  static StatusOr<std::unique_ptr<SignerInterface>> New(
+  static absl::StatusOr<std::unique_ptr<SignerInterface>> New(
       std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
 
   size_t signature_length() override;
@@ -31,7 +31,7 @@ class EcdsaSigner : public KmsSigner {
 
 class EcdsaVerifier : public VerifierInterface {
  public:
-  static StatusOr<std::unique_ptr<VerifierInterface>> New(
+  static absl::StatusOr<std::unique_ptr<VerifierInterface>> New(
       std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
 
   absl::Status Verify(KmsClient* client, absl::Span<const uint8_t> digest,

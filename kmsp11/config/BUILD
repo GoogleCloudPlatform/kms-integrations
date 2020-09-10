@@ -45,9 +45,9 @@ cc_library(
     deps = [
         "//kmsp11/util:errors",
         "//kmsp11/util:status_macros",
-        "//kmsp11/util:status_or",
         "@com_github_jbeder_yaml_cpp//:yaml-cpp",
         "@com_google_absl//absl/container:flat_hash_set",
+        "@com_google_absl//absl/status:statusor",
     ],
 )
 

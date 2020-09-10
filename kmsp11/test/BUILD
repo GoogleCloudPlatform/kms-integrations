@@ -20,9 +20,9 @@ cc_library(
     testonly = 1,
     hdrs = ["matchers.h"],
     deps = [
-        "//kmsp11/util:status_or",
         "//kmsp11/util:status_utils",
         "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings:str_format",
     ],
 )
@@ -84,9 +84,9 @@ cc_library(
     hdrs = ["runfiles.h"],
     data = [":testdata"],
     deps = [
-        "//kmsp11/util:status_or",
         "@bazel_tools//tools/cpp/runfiles",
         "@com_google_absl//absl/base",
+        "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest",
     ],
@@ -116,8 +116,8 @@ cc_library(
     deps = [
         ":matchers",
         "//kmsp11/util:status_macros",
-        "//kmsp11/util:status_or",
         "//kmsp11/util:status_utils",
+        "@com_google_absl//absl/status:statusor",
         "@com_google_googletest//:gtest",
     ],
 )

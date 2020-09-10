@@ -1,6 +1,7 @@
 #include <csignal>
 
 #include "absl/strings/str_format.h"
+#include "glog/logging.h"
 #include "gtest/gtest.h"
 #include "kmsp11/test/fakekms/cpp/fakekms.h"
 #include "kmsp11/test/runfiles.h"
@@ -13,7 +14,7 @@ namespace {
 
 class PosixFakeKms : public FakeKms {
  public:
-  static StatusOr<std::unique_ptr<PosixFakeKms>> New();
+  static absl::StatusOr<std::unique_ptr<PosixFakeKms>> New();
 
   PosixFakeKms(std::string listen_addr, pid_t pid)
       : FakeKms(listen_addr), pid_(pid) {}
@@ -29,7 +30,7 @@ static absl::Status PosixErrorToStatus(absl::string_view prefix) {
       absl::StrFormat("%s: %s", prefix, strerror(errno)));
 }
 
-StatusOr<std::unique_ptr<PosixFakeKms>> PosixFakeKms::New() {
+absl::StatusOr<std::unique_ptr<PosixFakeKms>> PosixFakeKms::New() {
   int fd[2];
   if (pipe(fd) == -1) {
     return PosixErrorToStatus("unable to create output pipe");
@@ -87,7 +88,7 @@ StatusOr<std::unique_ptr<PosixFakeKms>> PosixFakeKms::New() {
 
 }  // namespace
 
-StatusOr<std::unique_ptr<FakeKms>> FakeKms::New() {
+absl::StatusOr<std::unique_ptr<FakeKms>> FakeKms::New() {
   ASSIGN_OR_RETURN(std::unique_ptr<PosixFakeKms> fake, PosixFakeKms::New());
   return std::unique_ptr<FakeKms>(std::move(fake));
 }

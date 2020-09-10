@@ -4,11 +4,11 @@
 #include <regex>
 
 #include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "gmock/gmock.h"
 #include "google/protobuf/util/message_differencer.h"
-#include "kmsp11/util/status_or.h"
 #include "kmsp11/util/status_utils.h"
 
 namespace kmsp11 {
@@ -73,7 +73,7 @@ MATCHER_P(EqualsProto, proto,
   return google::protobuf::util::MessageDifferencer::Equals(arg, proto);
 }
 
-// Tests that the supplied StatusOr is OK and has a value that matches the
+// Tests that the supplied absl::StatusOr is OK and has a value that matches the
 // provided matcher.
 MATCHER_P(IsOkAndHolds, matcher, "") {
   if (!arg.ok()) {

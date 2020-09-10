@@ -11,9 +11,9 @@ namespace kmsp11 {
 // certificates suitable for lookup in JCA.
 class CertAuthority {
  public:
-  static StatusOr<std::unique_ptr<CertAuthority>> New();
+  static absl::StatusOr<std::unique_ptr<CertAuthority>> New();
 
-  StatusOr<bssl::UniquePtr<X509>> GenerateCert(
+  absl::StatusOr<bssl::UniquePtr<X509>> GenerateCert(
       absl::string_view subject_cn, EVP_PKEY* public_key,
       kms_v1::CryptoKey::CryptoKeyPurpose purpose) const;
 

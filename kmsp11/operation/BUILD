@@ -51,8 +51,8 @@ cc_library(
         "//kmsp11/util:crypto_utils",
         "//kmsp11/util:kms_client",
         "//kmsp11/util:status_macros",
-        "//kmsp11/util:status_or",
         "//kmsp11/util:string_utils",
+        "@com_google_absl//absl/status:statusor",
     ],
 )
 
@@ -87,7 +87,7 @@ cc_library(
         "//kmsp11/util:crypto_utils",
         "//kmsp11/util:kms_client",
         "//kmsp11/util:status_macros",
-        "//kmsp11/util:status_or",
+        "@com_google_absl//absl/status:statusor",
     ],
 )
 
@@ -135,8 +135,8 @@ cc_library(
         "//kmsp11/util:crypto_utils",
         "//kmsp11/util:kms_client",
         "//kmsp11/util:status_macros",
-        "//kmsp11/util:status_or",
         "//kmsp11/util:string_utils",
+        "@com_google_absl//absl/status:statusor",
     ],
 )
 
@@ -165,8 +165,8 @@ cc_library(
         "//kmsp11/util:crypto_utils",
         "//kmsp11/util:kms_client",
         "//kmsp11/util:status_macros",
-        "//kmsp11/util:status_or",
         "//kmsp11/util:string_utils",
+        "@com_google_absl//absl/status:statusor",
     ],
 )
 
@@ -195,8 +195,8 @@ cc_library(
         "//kmsp11/util:crypto_utils",
         "//kmsp11/util:kms_client",
         "//kmsp11/util:status_macros",
-        "//kmsp11/util:status_or",
         "//kmsp11/util:string_utils",
+        "@com_google_absl//absl/status:statusor",
     ],
 )
 

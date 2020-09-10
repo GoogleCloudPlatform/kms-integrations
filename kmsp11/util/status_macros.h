@@ -24,8 +24,8 @@
   if (ABSL_PREDICT_FALSE(!var.ok())) return ::kmsp11::ToStatus(var.status()); \
   lhs = std::move(var).value();
 
-// Executes an expression that returns a StatusOr, extracting its value into the
-// variable defined by lhs (or returning on error).
+// Executes an expression that returns a absl::StatusOr, extracting its value
+// into the variable defined by lhs (or returning on error).
 //
 // Example: Assigning to an existing value
 //   ValueType value;

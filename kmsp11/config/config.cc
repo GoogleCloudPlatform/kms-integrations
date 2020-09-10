@@ -14,7 +14,7 @@ namespace {
 // Exceptions are disallowed by our style guide. Wrap YAML::LoadFile (which may
 // throw) in a noexcept function, and convert thrown exceptions to a reasonable
 // absl::Status.
-static StatusOr<YAML::Node> ParseYamlFile(
+static absl::StatusOr<YAML::Node> ParseYamlFile(
     const std::string& file_path) noexcept {
   try {
     return YAML::LoadFile(file_path);
@@ -27,7 +27,7 @@ static StatusOr<YAML::Node> ParseYamlFile(
 
 }  // namespace
 
-StatusOr<LibraryConfig> LoadConfigFromEnvironment() {
+absl::StatusOr<LibraryConfig> LoadConfigFromEnvironment() {
   char* env_value = std::getenv(kConfigEnvVariable);
   if (!env_value) {
     return FailedPreconditionError(
@@ -39,7 +39,8 @@ StatusOr<LibraryConfig> LoadConfigFromEnvironment() {
   return LoadConfigFromFile(env_value);
 }
 
-StatusOr<LibraryConfig> LoadConfigFromFile(const std::string& config_path) {
+absl::StatusOr<LibraryConfig> LoadConfigFromFile(
+    const std::string& config_path) {
   ASSIGN_OR_RETURN(YAML::Node node, ParseYamlFile(config_path));
   LibraryConfig config;
   RETURN_IF_ERROR(YamlToProto(node, &config));

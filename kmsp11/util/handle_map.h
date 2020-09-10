@@ -5,10 +5,10 @@
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/random/random.h"
+#include "absl/status/statusor.h"
 #include "kmsp11/cryptoki.h"
 #include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/errors.h"
-#include "kmsp11/util/status_or.h"
 
 namespace kmsp11 {
 
@@ -75,7 +75,7 @@ class HandleMap {
 
   // Gets the map element with the provided handle, or returns NotFound if there
   // is no element with the provided handle.
-  inline StatusOr<std::shared_ptr<T>> Get(CK_ULONG handle) const {
+  inline absl::StatusOr<std::shared_ptr<T>> Get(CK_ULONG handle) const {
     absl::ReaderMutexLock lock(&mutex_);
 
     auto it = items_.find(handle);

@@ -45,7 +45,7 @@ absl::Status AddExtension(X509V3_CTX* ctx, int nid, const char* value) {
 
 }  // namespace
 
-StatusOr<std::unique_ptr<CertAuthority>> CertAuthority::New() {
+absl::StatusOr<std::unique_ptr<CertAuthority>> CertAuthority::New() {
   bssl::UniquePtr<EVP_PKEY_CTX> ctx(EVP_PKEY_CTX_new_id(EVP_PKEY_EC, nullptr));
 
   // Generate a new P-256 key for certificate signing.
@@ -70,7 +70,7 @@ CertAuthority::CertAuthority(bssl::UniquePtr<EVP_PKEY> signing_key)
           absl::StrFormat("cloud-kms-pkcs11-%s",
                           absl::BytesToHexString(RandBytes(4)))) {}
 
-StatusOr<bssl::UniquePtr<X509>> CertAuthority::GenerateCert(
+absl::StatusOr<bssl::UniquePtr<X509>> CertAuthority::GenerateCert(
     absl::string_view subject_cn, EVP_PKEY* public_key,
     kms_v1::CryptoKey::CryptoKeyPurpose purpose) const {
   bssl::UniquePtr<X509> cert(X509_new());

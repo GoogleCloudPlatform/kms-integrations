@@ -10,7 +10,7 @@
 namespace kmsp11 {
 namespace {
 
-static StatusOr<KeyPair> NewMockKeyPair(
+static absl::StatusOr<KeyPair> NewMockKeyPair(
     kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm,
     absl::string_view public_key_runfile) {
   kms_v1::CryptoKeyVersion ckv;

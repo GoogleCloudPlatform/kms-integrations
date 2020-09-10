@@ -1,9 +1,9 @@
 #ifndef KMSP11_MECHANISM_H_
 #define KMSP11_MECHANISM_H_
 
+#include "absl/status/statusor.h"
 #include "absl/types/span.h"
 #include "kmsp11/cryptoki.h"
-#include "kmsp11/util/status_or.h"
 
 namespace kmsp11 {
 
@@ -11,7 +11,7 @@ namespace kmsp11 {
 absl::Span<const CK_MECHANISM_TYPE> Mechanisms();
 
 // Returns details about the provided mechanism type.
-StatusOr<CK_MECHANISM_INFO> MechanismInfo(CK_MECHANISM_TYPE type);
+absl::StatusOr<CK_MECHANISM_INFO> MechanismInfo(CK_MECHANISM_TYPE type);
 
 }  // namespace kmsp11
 

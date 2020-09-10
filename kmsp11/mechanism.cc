@@ -55,7 +55,7 @@ static const absl::flat_hash_map<CK_MECHANISM_TYPE, CK_MECHANISM_INFO>
 
 absl::Span<const CK_MECHANISM_TYPE> Mechanisms() { return kMechanismTypes; }
 
-StatusOr<CK_MECHANISM_INFO> MechanismInfo(CK_MECHANISM_TYPE type) {
+absl::StatusOr<CK_MECHANISM_INFO> MechanismInfo(CK_MECHANISM_TYPE type) {
   auto entry = kMechanisms.find(type);
   if (entry == kMechanisms.end()) {
     return NewError(absl::StatusCode::kNotFound,

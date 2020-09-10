@@ -19,27 +19,27 @@ static CK_FUNCTION_LIST function_list = NewFunctionList();
 static std::unique_ptr<Provider> provider;
 static absl::once_flag grpc_fork_handler_once;
 
-StatusOr<Provider*> GetProvider() {
+absl::StatusOr<Provider*> GetProvider() {
   if (!provider) {
     return NotInitializedError(SOURCE_LOCATION);
   }
   return provider.get();
 }
 
-StatusOr<Token*> GetToken(CK_SLOT_ID slot_id) {
+absl::StatusOr<Token*> GetToken(CK_SLOT_ID slot_id) {
   ASSIGN_OR_RETURN(Provider * provider, GetProvider());
   return provider->TokenAt(slot_id);
 }
 
-StatusOr<std::shared_ptr<Session>> GetSession(
+absl::StatusOr<std::shared_ptr<Session>> GetSession(
     CK_SESSION_HANDLE session_handle) {
   ASSIGN_OR_RETURN(Provider * provider, GetProvider());
   return provider->GetSession(session_handle);
 }
 
-StatusOr<std::shared_ptr<Object>> GetKey(Session* session,
-                                         CK_OBJECT_HANDLE key_handle) {
-  StatusOr<std::shared_ptr<Object>> key_or =
+absl::StatusOr<std::shared_ptr<Object>> GetKey(Session* session,
+                                               CK_OBJECT_HANDLE key_handle) {
+  absl::StatusOr<std::shared_ptr<Object>> key_or =
       session->token()->GetObject(key_handle);
   if (!key_or.ok()) {
     if (GetCkRv(key_or.status()) == CKR_OBJECT_HANDLE_INVALID) {
@@ -333,7 +333,7 @@ absl::Status GetAttributeValue(CK_SESSION_HANDLE hSession,
 
   absl::Status result = absl::OkStatus();
   for (CK_ATTRIBUTE& attr : absl::MakeSpan(pTemplate, ulCount)) {
-    StatusOr<absl::string_view> value_or =
+    absl::StatusOr<absl::string_view> value_or =
         object->attributes().Value(attr.type);
 
     // C_GetAttributeValue cases 1 and 2

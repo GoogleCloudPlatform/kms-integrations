@@ -14,7 +14,7 @@ namespace {
 
 class WindowsFakeKms : public FakeKms {
  public:
-  static StatusOr<std::unique_ptr<WindowsFakeKms>> New();
+  static absl::StatusOr<std::unique_ptr<WindowsFakeKms>> New();
 
   WindowsFakeKms(std::string listen_addr, HANDLE process_handle)
       : FakeKms(listen_addr), process_handle_(process_handle) {}
@@ -41,7 +41,7 @@ absl::Status Win32ErrorToStatus(absl::string_view message) {
       absl::StrFormat("%s: code %d: %s", message, error_code, error_text));
 }
 
-StatusOr<std::unique_ptr<WindowsFakeKms>> WindowsFakeKms::New() {
+absl::StatusOr<std::unique_ptr<WindowsFakeKms>> WindowsFakeKms::New() {
   // https://docs.microsoft.com/en-us/windows/win32/procthread/creating-a-child-process-with-redirected-input-and-output
   SECURITY_ATTRIBUTES security_attrs{
       sizeof(SECURITY_ATTRIBUTES),  // nLength
@@ -89,7 +89,7 @@ StatusOr<std::unique_ptr<WindowsFakeKms>> WindowsFakeKms::New() {
 
 }  // namespace
 
-StatusOr<std::unique_ptr<FakeKms>> FakeKms::New() {
+absl::StatusOr<std::unique_ptr<FakeKms>> FakeKms::New() {
   ASSIGN_OR_RETURN(std::unique_ptr<WindowsFakeKms> fake, WindowsFakeKms::New());
   return std::unique_ptr<FakeKms>(std::move(fake));
 }

@@ -14,12 +14,12 @@ class RsaOaepDecryptResult;
 // using Cloud KMS.
 class RsaOaepDecrypter : public DecrypterInterface {
  public:
-  static StatusOr<std::unique_ptr<DecrypterInterface>> New(
+  static absl::StatusOr<std::unique_ptr<DecrypterInterface>> New(
       std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
 
   // Decrypt returns a span whose underlying bytes are bound to the lifetime of
   // this decrypter.
-  StatusOr<absl::Span<const uint8_t>> Decrypt(
+  absl::StatusOr<absl::Span<const uint8_t>> Decrypt(
       KmsClient* client, absl::Span<const uint8_t> ciphertext) override;
 
   virtual ~RsaOaepDecrypter() {}
@@ -61,12 +61,12 @@ class RsaOaepDecryptResult {
 // using BoringSSL.
 class RsaOaepEncrypter : public EncrypterInterface {
  public:
-  static StatusOr<std::unique_ptr<EncrypterInterface>> New(
+  static absl::StatusOr<std::unique_ptr<EncrypterInterface>> New(
       std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
 
   // Encrypt returns a span whose underlying bytes are bound to the lifetime of
   // this encrypter.
-  StatusOr<absl::Span<const uint8_t>> Encrypt(
+  absl::StatusOr<absl::Span<const uint8_t>> Encrypt(
       KmsClient* client, absl::Span<const uint8_t> ciphertext) override;
 
   virtual ~RsaOaepEncrypter() {}

@@ -1,6 +1,7 @@
 #ifndef KMSP11_PROVIDER_H_
 #define KMSP11_PROVIDER_H_
 
+#include "absl/status/statusor.h"
 #include "kmsp11/config/config.pb.h"
 #include "kmsp11/cryptoki.h"
 #include "kmsp11/session.h"
@@ -8,7 +9,6 @@
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/handle_map.h"
 #include "kmsp11/util/platform.h"
-#include "kmsp11/util/status_or.h"
 
 namespace kmsp11 {
 
@@ -18,7 +18,7 @@ namespace kmsp11 {
 // See go/kms-pkcs11-model
 class Provider {
  public:
-  static StatusOr<std::unique_ptr<Provider>> New(LibraryConfig config);
+  static absl::StatusOr<std::unique_ptr<Provider>> New(LibraryConfig config);
 
   // Returns the PID of the process that created this Provider.
   int64_t creation_process_id() { return creation_process_id_; }
@@ -27,11 +27,11 @@ class Provider {
   const unsigned long token_count() const { return tokens_.size(); }
   KmsClient* kms_client() { return kms_client_.get(); }
 
-  StatusOr<Token*> TokenAt(CK_SLOT_ID slot_id);
+  absl::StatusOr<Token*> TokenAt(CK_SLOT_ID slot_id);
 
-  StatusOr<CK_SESSION_HANDLE> OpenSession(CK_SLOT_ID slot_id,
-                                          SessionType session_type);
-  StatusOr<std::shared_ptr<Session>> GetSession(
+  absl::StatusOr<CK_SESSION_HANDLE> OpenSession(CK_SLOT_ID slot_id,
+                                                SessionType session_type);
+  absl::StatusOr<std::shared_ptr<Session>> GetSession(
       CK_SESSION_HANDLE session_handle);
   absl::Status CloseSession(CK_SESSION_HANDLE session_handle);
 

@@ -12,7 +12,7 @@ namespace {
 static const char* kDefaultKmsEndpoint = "cloudkms.googleapis.com:443";
 constexpr absl::Duration kDefaultRpcTimeout = absl::Seconds(30);
 
-StatusOr<CK_INFO> NewCkInfo() {
+absl::StatusOr<CK_INFO> NewCkInfo() {
   CK_INFO info = {
       {CRYPTOKI_VERSION_MAJOR, CRYPTOKI_VERSION_MINOR},  // cryptokiVersion
       {0},              // manufacturerID (set with ' ' padding below)
@@ -45,7 +45,7 @@ std::unique_ptr<KmsClient> NewKmsClient(const LibraryConfig& config) {
 
 }  // namespace
 
-StatusOr<std::unique_ptr<Provider>> Provider::New(LibraryConfig config) {
+absl::StatusOr<std::unique_ptr<Provider>> Provider::New(LibraryConfig config) {
   ASSIGN_OR_RETURN(CK_INFO info, NewCkInfo());
   std::unique_ptr<KmsClient> client = NewKmsClient(config);
 
@@ -63,7 +63,7 @@ StatusOr<std::unique_ptr<Provider>> Provider::New(LibraryConfig config) {
       new Provider(info, std::move(tokens), std::move(client)));
 }
 
-StatusOr<Token*> Provider::TokenAt(CK_SLOT_ID slot_id) {
+absl::StatusOr<Token*> Provider::TokenAt(CK_SLOT_ID slot_id) {
   if (slot_id >= tokens_.size()) {
     return NewError(absl::StatusCode::kNotFound,
                     absl::StrFormat("slot with ID %d does not exist", slot_id),
@@ -72,13 +72,13 @@ StatusOr<Token*> Provider::TokenAt(CK_SLOT_ID slot_id) {
   return tokens_[slot_id].get();
 }
 
-StatusOr<CK_SESSION_HANDLE> Provider::OpenSession(CK_SLOT_ID slot_id,
-                                                  SessionType session_type) {
+absl::StatusOr<CK_SESSION_HANDLE> Provider::OpenSession(
+    CK_SLOT_ID slot_id, SessionType session_type) {
   ASSIGN_OR_RETURN(Token * token, TokenAt(slot_id));
   return sessions_.Add(token, session_type, kms_client_.get());
 }
 
-StatusOr<std::shared_ptr<Session>> Provider::GetSession(
+absl::StatusOr<std::shared_ptr<Session>> Provider::GetSession(
     CK_SESSION_HANDLE session_handle) {
   return sessions_.Get(session_handle);
 }

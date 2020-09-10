@@ -84,7 +84,7 @@ tokens:
   - fake_field: oops
 )";
 
-  StatusOr<LibraryConfig> result = LoadConfigFromFile(config_path_);
+  absl::StatusOr<LibraryConfig> result = LoadConfigFromFile(config_path_);
   EXPECT_THAT(result.status().message(), HasSubstr("line 3, column 4"));
 }
 
@@ -109,7 +109,7 @@ tokens:
 }
 
 TEST_F(ConfigFileTest, LoadConfigFromEnvironmentMissing) {
-  StatusOr<LibraryConfig> result = LoadConfigFromEnvironment();
+  absl::StatusOr<LibraryConfig> result = LoadConfigFromEnvironment();
   EXPECT_THAT(result, StatusIs(absl::StatusCode::kFailedPrecondition));
   EXPECT_THAT(result.status().message(), HasSubstr(kConfigEnvVariable));
 }
@@ -122,7 +122,7 @@ tokens:
   SetEnvVariable(kConfigEnvVariable, config);
   Cleanup c([]() { ClearEnvVariable(kConfigEnvVariable); });
 
-  StatusOr<LibraryConfig> result = LoadConfigFromEnvironment();
+  absl::StatusOr<LibraryConfig> result = LoadConfigFromEnvironment();
   EXPECT_THAT(result.status(), StatusIs(absl::StatusCode::kInvalidArgument));
   EXPECT_THAT(result.status().message(), HasSubstr("bad file"));
 }
@@ -139,7 +139,7 @@ tokens:
 )";
   EXPECT_OK(SetMode(config_path_.c_str(), 0777));
 
-  StatusOr<LibraryConfig> result = LoadConfigFromFile(config_path_);
+  absl::StatusOr<LibraryConfig> result = LoadConfigFromFile(config_path_);
   EXPECT_THAT(result.status(), StatusIs(absl::StatusCode::kFailedPrecondition));
   EXPECT_THAT(result.status().message(),
               HasSubstr("excessive write permissions"));

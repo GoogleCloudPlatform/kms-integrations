@@ -10,9 +10,9 @@ cc_library(
         ":cryptoki_headers",
         "//kmsp11/util:errors",
         "//kmsp11/util:kms_v1",
-        "//kmsp11/util:status_or",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/container:flat_hash_set",
+        "@com_google_absl//absl/status:statusor",
     ],
 )
 
@@ -34,10 +34,10 @@ cc_library(
     deps = [
         ":cryptoki_headers",
         "//kmsp11/util:errors",
-        "//kmsp11/util:status_or",
         "//kmsp11/util:string_utils",
         "@boringssl//:crypto",
         "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/types:variant",
     ],
 )
@@ -61,8 +61,8 @@ cc_library(
         "//kmsp11/util:crypto_utils",
         "//kmsp11/util:errors",
         "//kmsp11/util:kms_client",
-        "//kmsp11/util:status_or",
         "@boringssl//:crypto",
+        "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
     ],
 )
@@ -112,8 +112,8 @@ cc_library(
     deps = [
         ":cryptoki_headers",
         "//kmsp11/util:errors",
-        "//kmsp11/util:status_or",
         "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/status:statusor",
     ],
 )
 
@@ -170,8 +170,8 @@ cc_library(
         "//kmsp11/util:handle_map",
         "//kmsp11/util:platform",
         "//kmsp11/util:status_macros",
-        "//kmsp11/util:status_or",
         "//kmsp11/util:string_utils",
+        "@com_google_absl//absl/status:statusor",
     ],
 )
 
@@ -222,8 +222,8 @@ cc_library(
         "//kmsp11/util:handle_map",
         "//kmsp11/util:kms_client",
         "//kmsp11/util:status_macros",
-        "//kmsp11/util:status_or",
         "//kmsp11/util:string_utils",
+        "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/synchronization",
     ],
 )

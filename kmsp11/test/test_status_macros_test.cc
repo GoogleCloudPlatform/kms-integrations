@@ -8,46 +8,48 @@ namespace {
 
 TEST(ExpectOkTest, OkStatus) { EXPECT_OK(absl::OkStatus()); }
 
-TEST(ExpectOkTest, OkStatusOr) { EXPECT_OK(StatusOr<int>(3)); }
+TEST(ExpectOkTest, OkStatusOr) { EXPECT_OK(absl::StatusOr<int>(3)); }
 
 TEST(ExpectOkTest, NotOkStatus) {
   EXPECT_NONFATAL_FAILURE(EXPECT_OK(absl::UnknownError("foo")), "UNKNOWN: foo");
 }
 
 TEST(ExpectOkTest, NotOkStatusOr) {
-  EXPECT_NONFATAL_FAILURE(EXPECT_OK(StatusOr<int>(absl::UnknownError("foo"))),
-                          "UNKNOWN: foo");
+  EXPECT_NONFATAL_FAILURE(
+      EXPECT_OK(absl::StatusOr<int>(absl::UnknownError("foo"))),
+      "UNKNOWN: foo");
 }
 
 TEST(AssertOkTest, OkStatus) { ASSERT_OK(absl::OkStatus()); }
 
-TEST(AssertOkTest, OkStatusOr) { ASSERT_OK(StatusOr<int>(3)); }
+TEST(AssertOkTest, OkStatusOr) { ASSERT_OK(absl::StatusOr<int>(3)); }
 
 TEST(AssertOkTest, NotOkStatus) {
   EXPECT_FATAL_FAILURE(ASSERT_OK(absl::NotFoundError("foo")), "NOT_FOUND: foo");
 }
 
 TEST(AssertOkTest, NotOkStatusOr) {
-  EXPECT_FATAL_FAILURE(ASSERT_OK(StatusOr<int>(absl::NotFoundError("foo"))),
-                       "NOT_FOUND: foo");
+  EXPECT_FATAL_FAILURE(
+      ASSERT_OK(absl::StatusOr<int>(absl::NotFoundError("foo"))),
+      "NOT_FOUND: foo");
 }
 
 TEST(AssertOkAndAssignTest, OkCopyableExistingVar) {
   int i = 0;
-  auto f = []() -> StatusOr<int> { return 3; };
+  auto f = []() -> absl::StatusOr<int> { return 3; };
   ASSERT_OK_AND_ASSIGN(i, f());
   EXPECT_EQ(i, 3);
 }
 
 TEST(AssertOkAndAssignTest, OkCopyableNewVar) {
-  auto f = []() -> StatusOr<int> { return 3; };
+  auto f = []() -> absl::StatusOr<int> { return 3; };
   ASSERT_OK_AND_ASSIGN(int i, f());
   EXPECT_EQ(i, 3);
 }
 
 TEST(AssertOkAndAssignTest, OkMovableExistingVar) {
   std::unique_ptr<int> i;
-  auto f = []() -> StatusOr<std::unique_ptr<int>> {
+  auto f = []() -> absl::StatusOr<std::unique_ptr<int>> {
     return absl::make_unique<int>(3);
   };
   ASSERT_OK_AND_ASSIGN(i, f());
@@ -55,7 +57,7 @@ TEST(AssertOkAndAssignTest, OkMovableExistingVar) {
 }
 
 TEST(AssertOkAndAssignTest, OkMovableNewVar) {
-  auto f = []() -> StatusOr<std::unique_ptr<int>> {
+  auto f = []() -> absl::StatusOr<std::unique_ptr<int>> {
     return absl::make_unique<int>(3);
   };
   ASSERT_OK_AND_ASSIGN(auto i, f());
@@ -65,7 +67,7 @@ TEST(AssertOkAndAssignTest, OkMovableNewVar) {
 TEST(AssertOkAndAssignTest, NotOkCopyableExistingVar) {
   EXPECT_FATAL_FAILURE(
       []() -> void {
-        auto f = []() -> StatusOr<int> {
+        auto f = []() -> absl::StatusOr<int> {
           return absl::UnknownError("unknown");
         };
         int i;
@@ -78,7 +80,7 @@ TEST(AssertOkAndAssignTest, NotOkCopyableExistingVar) {
 TEST(AssertOkAndAssignTest, NotOkCopyableNewVar) {
   EXPECT_FATAL_FAILURE(
       []() -> void {
-        auto f = []() -> StatusOr<int> {
+        auto f = []() -> absl::StatusOr<int> {
           return absl::ResourceExhaustedError("no quota");
         };
         ASSERT_OK_AND_ASSIGN(int i, f());
@@ -90,7 +92,7 @@ TEST(AssertOkAndAssignTest, NotOkCopyableNewVar) {
 TEST(AssertOkAndAssignTest, NotOkMovableExistingVar) {
   EXPECT_FATAL_FAILURE(
       []() -> void {
-        auto f = []() -> StatusOr<std::unique_ptr<int>> {
+        auto f = []() -> absl::StatusOr<std::unique_ptr<int>> {
           return absl::FailedPreconditionError("foo");
         };
         std::unique_ptr<int> i;
@@ -103,7 +105,7 @@ TEST(AssertOkAndAssignTest, NotOkMovableExistingVar) {
 TEST(AssertOkAndAssignTest, NotOkMovableNewVar) {
   EXPECT_FATAL_FAILURE(
       []() -> void {
-        auto f = []() -> StatusOr<std::unique_ptr<int>> {
+        auto f = []() -> absl::StatusOr<std::unique_ptr<int>> {
           return absl::UnauthenticatedError("bar");
         };
         ASSERT_OK_AND_ASSIGN(std::unique_ptr<int> i, f());

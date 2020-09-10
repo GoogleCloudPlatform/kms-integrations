@@ -1,9 +1,9 @@
 #include "kmsp11/util/status_macros.h"
 
 #include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "gmock/gmock.h"
 #include "kmsp11/test/test_status_macros.h"
-#include "kmsp11/util/status_or.h"
 
 namespace kmsp11 {
 namespace {
@@ -36,7 +36,7 @@ TEST(ReturnIfErrorTest, InvalidArgumentStatus) {
 
 TEST(ReturnIfErrorTest, ReturnsFromStatusOr) {
   absl::Status s = absl::UnknownError("unknown");
-  StatusOr<int> result = [&s]() -> StatusOr<int> {
+  absl::StatusOr<int> result = [&s]() -> absl::StatusOr<int> {
     RETURN_IF_ERROR(s);
     return 3;
   }();
@@ -49,7 +49,7 @@ TEST(ReturnIfErrorTest, ReturnsFromStatusOr) {
 TEST(AssignOrReturnTest, MutateStateOnOkStatus) {
   int i = 0;
   absl::Status s = [&i]() -> absl::Status {
-    ASSIGN_OR_RETURN(i, StatusOr<int>(3));
+    ASSIGN_OR_RETURN(i, absl::StatusOr<int>(3));
     return absl::OkStatus();
   }();
   EXPECT_OK(s);
@@ -57,8 +57,8 @@ TEST(AssignOrReturnTest, MutateStateOnOkStatus) {
 }
 
 TEST(AssignOrReturnTest, InitializeStateOnOkStatus) {
-  StatusOr<int> s = []() -> StatusOr<int> {
-    ASSIGN_OR_RETURN(int j, StatusOr<int>(3));
+  absl::StatusOr<int> s = []() -> absl::StatusOr<int> {
+    ASSIGN_OR_RETURN(int j, absl::StatusOr<int>(3));
     return j + 1;
   }();
   EXPECT_OK(s);
@@ -66,10 +66,10 @@ TEST(AssignOrReturnTest, InitializeStateOnOkStatus) {
 }
 
 TEST(AssignOrReturnTest, MoveConstructibleIsMoved) {
-  auto f = []() -> StatusOr<std::unique_ptr<int>> {
+  auto f = []() -> absl::StatusOr<std::unique_ptr<int>> {
     return absl::make_unique<int>(3);
   };
-  StatusOr<int> s = [&f]() -> StatusOr<int> {
+  absl::StatusOr<int> s = [&f]() -> absl::StatusOr<int> {
     ASSIGN_OR_RETURN(std::unique_ptr<int> i, f());
     return *i;
   }();
@@ -79,8 +79,8 @@ TEST(AssignOrReturnTest, MoveConstructibleIsMoved) {
 
 TEST(AssignOrReturnTest, ReturnOnNonOkStatus) {
   absl::Status s = absl::AbortedError("aborted");
-  StatusOr<int> s_or = [&s]() -> StatusOr<int> {
-    ASSIGN_OR_RETURN(int i, StatusOr<int>(s));
+  absl::StatusOr<int> s_or = [&s]() -> absl::StatusOr<int> {
+    ASSIGN_OR_RETURN(int i, absl::StatusOr<int>(s));
     return i;
   }();
   EXPECT_THAT(s_or, StatusIs(absl::StatusCode::kAborted));

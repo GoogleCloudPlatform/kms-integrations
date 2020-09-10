@@ -1,19 +1,22 @@
 #ifndef KMSP11_UTIL_CRYPTO_UTILS_H_
 #define KMSP11_UTIL_CRYPTO_UTILS_H_
 
+#include <string>
+#include <vector>
+
+#include "absl/status/statusor.h"
 #include "absl/time/time.h"
-#include "kmsp11/util/status_or.h"
 #include "openssl/evp.h"
 
 namespace kmsp11 {
 
 // Convert an ASN1_TIME structure to an absl::Time.
-StatusOr<absl::Time> Asn1TimeToAbsl(const ASN1_TIME* time);
+absl::StatusOr<absl::Time> Asn1TimeToAbsl(const ASN1_TIME* time);
 
 // Converts a signature in ASN.1 format (as returned by OpenSSL and Cloud KMS)
 // into IEEE P-1363 format (as required by PKCS #11).
-StatusOr<std::vector<uint8_t>> EcdsaSigAsn1ToP1363(absl::string_view asn1_sig,
-                                                   const EC_GROUP* group);
+absl::StatusOr<std::vector<uint8_t>> EcdsaSigAsn1ToP1363(
+    absl::string_view asn1_sig, const EC_GROUP* group);
 
 // Returns the length of a signature in IEEE P-1363 format (with leading zeroes)
 // for the provided group.
@@ -33,50 +36,50 @@ absl::Status EncryptRsaOaep(EVP_PKEY* key, const EVP_MD* hash,
                             absl::Span<uint8_t> ciphertext);
 
 // Marshals an ASN.1 integer in DER format.
-StatusOr<std::string> MarshalAsn1Integer(ASN1_INTEGER* value);
+absl::StatusOr<std::string> MarshalAsn1Integer(ASN1_INTEGER* value);
 
 // Marshals EC Parameters (always of choice NamedCurve) in DER format for the
 // provided key.
 //
 // Required to populate the attribute CKA_EC_PARAMS:
 // http://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/errata01/os/pkcs11-curr-v2.40-errata01-os-complete.html#_Toc468937842
-StatusOr<std::string> MarshalEcParametersDer(const EC_KEY* key);
+absl::StatusOr<std::string> MarshalEcParametersDer(const EC_KEY* key);
 
 // Marshals the provided EC public key in DER format.
 //
 // Required to populate the attribute CKA_EC_POINT:
 // http://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/errata01/os/pkcs11-curr-v2.40-errata01-os-complete.html#_Toc416960012
-StatusOr<std::string> MarshalEcPointDer(const EC_KEY* key);
+absl::StatusOr<std::string> MarshalEcPointDer(const EC_KEY* key);
 
 // Marshals an X.509 certificate in DER format.
-StatusOr<std::string> MarshalX509CertificateDer(X509* cert);
+absl::StatusOr<std::string> MarshalX509CertificateDer(X509* cert);
 
 // Marshals an X.509 name (subject or issuer) in DER format.
-StatusOr<std::string> MarshalX509Name(X509_NAME* value);
+absl::StatusOr<std::string> MarshalX509Name(X509_NAME* value);
 
 // Marshals a public key to X.509 SubjectPublicKeyInfo DER format.
 //
 // Required to populate the attribute CKA_PUBLIC_KEY_INFO:
 // http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/errata01/os/pkcs11-base-v2.40-errata01-os-complete.html#_Toc441755781
-StatusOr<std::string> MarshalX509PublicKeyDer(const EVP_PKEY* key);
+absl::StatusOr<std::string> MarshalX509PublicKeyDer(const EVP_PKEY* key);
 
 // Parses a private key in PKCS #8 PrivateKey PEM format. Returns
 // InvalidArgument if the provided key is malformed.
-StatusOr<bssl::UniquePtr<EVP_PKEY>> ParsePkcs8PrivateKeyPem(
+absl::StatusOr<bssl::UniquePtr<EVP_PKEY>> ParsePkcs8PrivateKeyPem(
     absl::string_view private_key_pem);
 
 // Marshals an ASN.1 DigestInfo in DER format.
-StatusOr<std::string> MarshalX509Sig(X509_SIG* value);
+absl::StatusOr<std::string> MarshalX509Sig(X509_SIG* value);
 
 // Parses a public key in X.509 SubjectPublicKeyInfo DER format. Returns
 // InvalidArgument if the provided key is malformed.
-StatusOr<bssl::UniquePtr<EVP_PKEY>> ParseX509PublicKeyDer(
+absl::StatusOr<bssl::UniquePtr<EVP_PKEY>> ParseX509PublicKeyDer(
     absl::string_view public_key_der);
 
 // Parses a public key in X.509 SubjectPublicKeyInfo PEM format. Returns
 // InvalidArgument if the provided key is malformed.
 // Required to parse PEM public keys retrieved from Cloud KMS.
-StatusOr<bssl::UniquePtr<EVP_PKEY>> ParseX509PublicKeyPem(
+absl::StatusOr<bssl::UniquePtr<EVP_PKEY>> ParseX509PublicKeyPem(
     absl::string_view public_key_pem);
 
 // Retrieves len bytes of randomness from Boring's CSPRNG.

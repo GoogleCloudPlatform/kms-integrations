@@ -1,10 +1,10 @@
 #include "kmsp11/test/matchers.h"
 
+#include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "gmock/gmock.h"
 #include "kmsp11/cryptoki.h"
 #include "kmsp11/test/test_message.pb.h"
-#include "kmsp11/util/status_or.h"
 
 namespace kmsp11 {
 namespace {
@@ -31,14 +31,14 @@ TEST(MatchesStdRegexTest, StringView) {
 
 TEST(IsOkTest, OkStatus) { EXPECT_THAT(absl::OkStatus(), IsOk()); }
 
-TEST(IsOkTest, OkStatusOr) { EXPECT_THAT(StatusOr<int>(3), IsOk()); }
+TEST(IsOkTest, OkStatusOr) { EXPECT_THAT(absl::StatusOr<int>(3), IsOk()); }
 
 TEST(IsOkTest, NotOkStatus) {
   EXPECT_THAT(absl::AbortedError("aborted"), Not(IsOk()));
 }
 
 TEST(IsOkTest, NotOkStatusOr) {
-  EXPECT_THAT(StatusOr<int>(absl::AbortedError("aborted")), Not(IsOk()));
+  EXPECT_THAT(absl::StatusOr<int>(absl::AbortedError("aborted")), Not(IsOk()));
 }
 
 TEST(StatusIsTest, OkStatus) {
@@ -46,7 +46,7 @@ TEST(StatusIsTest, OkStatus) {
 }
 
 TEST(StatusIsTest, OkStatusOr) {
-  EXPECT_THAT(StatusOr<int>(3), StatusIs(absl::StatusCode::kOk));
+  EXPECT_THAT(absl::StatusOr<int>(3), StatusIs(absl::StatusCode::kOk));
 }
 
 TEST(StatusIsTest, NotOkStatus) {
@@ -60,7 +60,7 @@ TEST(StatusIsTest, NotOkStatusWithMessage) {
 }
 
 TEST(StatusIsTest, NotOkStatusOr) {
-  EXPECT_THAT(StatusOr<int>(absl::CancelledError("cancelled")),
+  EXPECT_THAT(absl::StatusOr<int>(absl::CancelledError("cancelled")),
               StatusIs(absl::StatusCode::kCancelled));
 }
 TEST(StatusIsTest, NotOkStatusOrWithMessage) {
@@ -73,7 +73,7 @@ TEST(StatusRvIsTest, OkStatus) {
 }
 
 TEST(StatusRvIsTest, OkStatusOr) {
-  EXPECT_THAT(StatusOr<int>(3), StatusRvIs(CKR_OK));
+  EXPECT_THAT(absl::StatusOr<int>(3), StatusRvIs(CKR_OK));
 }
 
 TEST(StatusRvIsTest, DefaultNotOkStatus) {
@@ -81,7 +81,7 @@ TEST(StatusRvIsTest, DefaultNotOkStatus) {
 }
 
 TEST(StatusRvIsTest, DefaultNotOkStatusOr) {
-  EXPECT_THAT(StatusOr<int>(absl::CancelledError("cancelled")),
+  EXPECT_THAT(absl::StatusOr<int>(absl::CancelledError("cancelled")),
               StatusRvIs(kDefaultErrorCkRv));
 }
 
@@ -94,7 +94,7 @@ TEST(StatusRvIsTest, CustomNotOkStatus) {
 TEST(StatusRvIsTest, CustomNotOkStatusOr) {
   absl::Status s = absl::CancelledError("cancelled");
   SetErrorRv(s, CKR_HOST_MEMORY);
-  EXPECT_THAT(StatusOr<int>(s), StatusRvIs(CKR_HOST_MEMORY));
+  EXPECT_THAT(absl::StatusOr<int>(s), StatusRvIs(CKR_HOST_MEMORY));
 }
 
 TEST(StatusRvIsTest, InnerMatcher) {
@@ -125,22 +125,22 @@ TEST(EqualsProtoTest, NotEquals) {
 }
 
 TEST(IsOkAndHoldsTest, MatchesValue) {
-  StatusOr<int> s(3);
+  absl::StatusOr<int> s(3);
   EXPECT_THAT(s, IsOkAndHolds(3));
 }
 
 TEST(IsOkAndHoldsTest, MatchesMatcher) {
-  StatusOr<int> s(3);
+  absl::StatusOr<int> s(3);
   EXPECT_THAT(s, IsOkAndHolds(AllOf(Gt(2), Lt(5))));
 }
 
 TEST(IsOkAndHoldsTest, DoesNotMatch) {
-  StatusOr<int> s(3);
+  absl::StatusOr<int> s(3);
   EXPECT_THAT(s, Not(IsOkAndHolds(4)));
 }
 
 TEST(IsOkAndHoldsTest, IsNotOk) {
-  StatusOr<int> s(absl::AbortedError("aborted"));
+  absl::StatusOr<int> s(absl::AbortedError("aborted"));
   EXPECT_THAT(s, Not(IsOkAndHolds(3)));
 }
 

@@ -9,6 +9,8 @@ build:linux --cxxopt=-std=c++11
 build:macos --cxxopt=-std=c++11
 
 # FreeBSD-specific options
+# Link with libm, which is separated from libc on FreeBSD
+build:freebsd --linkopt=-lm
 # Position-independent code
 build:freebsd --copt=-fPIC
 # Java Version

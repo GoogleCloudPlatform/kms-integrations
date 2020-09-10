@@ -10,7 +10,7 @@
 
 namespace kmsp11 {
 
-StatusOr<std::unique_ptr<SignerInterface>> EcdsaSigner::New(
+absl::StatusOr<std::unique_ptr<SignerInterface>> EcdsaSigner::New(
     std::shared_ptr<Object> key, const CK_MECHANISM* mechanism) {
   RETURN_IF_ERROR(
       CheckKeyPreconditions(CKK_EC, CKO_PRIVATE_KEY, CKM_ECDSA, key.get()));
@@ -43,7 +43,7 @@ absl::Status EcdsaSigner::CopySignature(absl::string_view src,
   return absl::OkStatus();
 }
 
-StatusOr<std::unique_ptr<VerifierInterface>> EcdsaVerifier::New(
+absl::StatusOr<std::unique_ptr<VerifierInterface>> EcdsaVerifier::New(
     std::shared_ptr<Object> key, const CK_MECHANISM* mechanism) {
   RETURN_IF_ERROR(
       CheckKeyPreconditions(CKK_EC, CKO_PUBLIC_KEY, CKM_ECDSA, key.get()));

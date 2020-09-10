@@ -38,7 +38,7 @@ static absl::Status ValidatePssParameters(Object* key, void* parameters,
 
 }  // namespace
 
-StatusOr<std::unique_ptr<SignerInterface>> RsaPssSigner::New(
+absl::StatusOr<std::unique_ptr<SignerInterface>> RsaPssSigner::New(
     std::shared_ptr<Object> key, const CK_MECHANISM* mechanism) {
   RETURN_IF_ERROR(CheckKeyPreconditions(CKK_RSA, CKO_PRIVATE_KEY,
                                         CKM_RSA_PKCS_PSS, key.get()));
@@ -56,7 +56,7 @@ StatusOr<std::unique_ptr<SignerInterface>> RsaPssSigner::New(
 
 size_t RsaPssSigner::signature_length() { return RSA_size(key_.get()); }
 
-StatusOr<std::unique_ptr<VerifierInterface>> RsaPssVerifier::New(
+absl::StatusOr<std::unique_ptr<VerifierInterface>> RsaPssVerifier::New(
     std::shared_ptr<Object> key, const CK_MECHANISM* mechanism) {
   RETURN_IF_ERROR(CheckKeyPreconditions(CKK_RSA, CKO_PUBLIC_KEY,
                                         CKM_RSA_PKCS_PSS, key.get()));

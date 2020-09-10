@@ -2,11 +2,12 @@
 #define KMSP11_TEST_TEST_STATUS_MACROS_H_
 
 #include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "absl/strings/str_format.h"
+#include "glog/logging.h"
 #include "gmock/gmock.h"
 #include "kmsp11/test/matchers.h"
 #include "kmsp11/util/status_macros.h"
-#include "kmsp11/util/status_or.h"
 #include "kmsp11/util/status_utils.h"
 
 // Macros for testing the results of functions that return a status.
@@ -24,7 +25,7 @@
   ASSERT_OK(var.status());                         \
   lhs = std::move(var).value();
 
-// Executes an expression that returns a StatusOr, and assigns the
+// Executes an expression that returns a absl::StatusOr, and assigns the
 // contained variable to lhs if the error code is OK.
 // If the Status is non-OK, generates a test failure and returns from the
 // current function, which must have a void return type.
