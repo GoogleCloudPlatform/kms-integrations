@@ -4,6 +4,7 @@
 #include <cstdint>
 
 #include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
 #include "absl/types/span.h"
@@ -54,6 +55,11 @@ std::string MarshalULong(unsigned long int value);
 // char* conversion of a CK_ULONG*.
 // http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc225305959
 std::string MarshalULongList(absl::Span<const unsigned long int> value);
+
+// Extracts the CryptoKey ID component from the provided CryptoKeyVersion name.
+// For example, returns "baz" if provided an input of
+// "projects/foo/locations/us/keyRings/bar/cryptoKeys/baz/cryptoKeyVersions/1".
+absl::StatusOr<std::string> ExtractKeyId(absl::string_view version_name);
 
 }  // namespace kmsp11
 

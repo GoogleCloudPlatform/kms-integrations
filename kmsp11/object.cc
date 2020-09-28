@@ -4,6 +4,7 @@
 #include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/status_macros.h"
+#include "kmsp11/util/string_utils.h"
 #include "openssl/ec_key.h"
 #include "openssl/rsa.h"
 #include "openssl/x509.h"
@@ -11,21 +12,9 @@
 namespace kmsp11 {
 namespace {
 
-absl::StatusOr<std::string> GetKeyId(absl::string_view version_name) {
-  std::vector<std::string> parts = absl::StrSplit(version_name, '/');
-  if (parts.size() != 10 || parts[0] != "projects" || parts[2] != "locations" ||
-      parts[4] != "keyRings" || parts[6] != "cryptoKeys" ||
-      parts[8] != "cryptoKeyVersions") {
-    return NewInternalError(
-        absl::StrCat("invalid CryptoKeyVersion name: ", version_name),
-        SOURCE_LOCATION);
-  }
-  return parts[7];
-}
-
 absl::Status AddStorageAttributes(AttributeMap* attrs,
                                   const kms_v1::CryptoKeyVersion& ckv) {
-  ASSIGN_OR_RETURN(std::string key_id, GetKeyId(ckv.name()));
+  ASSIGN_OR_RETURN(std::string key_id, ExtractKeyId(ckv.name()));
 
   // 4.4 Storage objects
   attrs->PutBool(CKA_TOKEN, true);
@@ -202,9 +191,8 @@ absl::Status AddX509CertificateAttributes(AttributeMap* attrs,
 
 }  // namespace
 
-absl::StatusOr<KeyPair> Object::NewKeyPair(
-    const google::cloud::kms::v1::CryptoKeyVersion& ckv,
-    const EVP_PKEY* public_key) {
+absl::StatusOr<KeyPair> Object::NewKeyPair(const kms_v1::CryptoKeyVersion& ckv,
+                                           const EVP_PKEY* public_key) {
   ASSIGN_OR_RETURN(std::string pub_der, MarshalX509PublicKeyDer(public_key));
 
   AttributeMap pub_attrs;
@@ -245,18 +233,13 @@ absl::StatusOr<KeyPair> Object::NewKeyPair(
 }
 
 absl::StatusOr<Object> Object::NewCertificate(
-    const google::cloud::kms::v1::CryptoKeyVersion& ckv, EVP_PKEY* public_key,
-    const CertAuthority* cert_authority) {
-  ASSIGN_OR_RETURN(std::string key_id, GetKeyId(ckv.name()));
+    const kms_v1::CryptoKeyVersion& ckv, X509* certificate) {
   ASSIGN_OR_RETURN(AlgorithmDetails algorithm, GetDetails(ckv.algorithm()));
-  ASSIGN_OR_RETURN(
-      bssl::UniquePtr<X509> cert,
-      cert_authority->GenerateCert(key_id, public_key, algorithm.purpose));
 
   AttributeMap cert_attrs;
   cert_attrs.PutULong(CKA_CLASS, CKO_CERTIFICATE);
   RETURN_IF_ERROR(AddStorageAttributes(&cert_attrs, ckv));
-  RETURN_IF_ERROR(AddX509CertificateAttributes(&cert_attrs, ckv, cert.get()));
+  RETURN_IF_ERROR(AddX509CertificateAttributes(&cert_attrs, ckv, certificate));
 
   return Object(ckv.name(), CKO_CERTIFICATE, algorithm, cert_attrs);
 }

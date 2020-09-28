@@ -14,8 +14,7 @@ class CertAuthority {
   static absl::StatusOr<std::unique_ptr<CertAuthority>> New();
 
   absl::StatusOr<bssl::UniquePtr<X509>> GenerateCert(
-      absl::string_view subject_cn, EVP_PKEY* public_key,
-      kms_v1::CryptoKey::CryptoKeyPurpose purpose) const;
+      const kms_v1::CryptoKeyVersion& ckv, EVP_PKEY* public_key) const;
 
  private:
   CertAuthority(bssl::UniquePtr<EVP_PKEY> signing_key);

@@ -4,6 +4,7 @@
 #include "absl/strings/string_view.h"
 #include "glog/logging.h"
 #include "kmsp11/algorithm_details.h"
+#include "kmsp11/cert_authority.h"
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/kms_client.h"
 #include "kmsp11/util/status_macros.h"
@@ -96,9 +97,9 @@ static absl::Status AddAsymmetricKeyPair(const LoadContext& ctx,
     objects->Add(std::move(key_pair.private_key));
 
     if (ctx.cert_authority.has_value()) {
-      ASSIGN_OR_RETURN(
-          Object cert,
-          Object::NewCertificate(ckv, pub.get(), ctx.cert_authority.value()));
+      ASSIGN_OR_RETURN(bssl::UniquePtr<X509> x509,
+                       (*ctx.cert_authority)->GenerateCert(ckv, pub.get()));
+      ASSIGN_OR_RETURN(Object cert, Object::NewCertificate(ckv, x509.get()));
       objects->Add(std::move(cert));
     }
   }

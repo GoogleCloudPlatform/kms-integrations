@@ -58,9 +58,11 @@ cc_library(
     srcs = ["cert_authority.cc"],
     hdrs = ["cert_authority.h"],
     deps = [
+        ":algorithm_details",
         "//kmsp11/util:crypto_utils",
         "//kmsp11/util:errors",
         "//kmsp11/util:kms_client",
+        "//kmsp11/util:string_utils",
         "@boringssl//:crypto",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
@@ -135,7 +137,6 @@ cc_library(
     deps = [
         ":algorithm_details",
         ":attribute_map",
-        ":cert_authority",
         ":cryptoki_headers",
         "//kmsp11/util:crypto_utils",
         "//kmsp11/util:kms_v1",
@@ -149,6 +150,7 @@ cc_test(
     size = "small",
     srcs = ["object_test.cc"],
     deps = [
+        ":cert_authority",
         ":object",
         "//kmsp11/test",
         "//kmsp11/util:crypto_utils",
@@ -218,6 +220,7 @@ cc_library(
         ":cryptoki_headers",
         ":object",
         "//kmsp11:algorithm_details",
+        "//kmsp11:cert_authority",
         "//kmsp11/config:config_cc_proto",
         "//kmsp11/util:handle_map",
         "//kmsp11/util:kms_client",

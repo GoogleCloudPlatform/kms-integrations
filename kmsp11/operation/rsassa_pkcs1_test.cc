@@ -7,6 +7,7 @@
 #include "kmsp11/util/crypto_utils.h"
 #include "openssl/rand.h"
 #include "openssl/sha.h"
+#include "openssl/x509.h"
 
 namespace kmsp11 {
 namespace {

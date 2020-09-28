@@ -1,6 +1,7 @@
 #include "kmsp11/object.h"
 
 #include "gmock/gmock.h"
+#include "kmsp11/cert_authority.h"
 #include "kmsp11/test/matchers.h"
 #include "kmsp11/test/runfiles.h"
 #include "kmsp11/test/test_status_macros.h"
@@ -184,8 +185,9 @@ TEST(NewCertificateTest, CertificateAttributes) {
 
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<CertAuthority> authority,
                        CertAuthority::New());
-  ASSERT_OK_AND_ASSIGN(Object cert,
-                       Object::NewCertificate(ckv, pub.get(), authority.get()));
+  ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<X509> x509,
+                       authority->GenerateCert(ckv, pub.get()));
+  ASSERT_OK_AND_ASSIGN(Object cert, Object::NewCertificate(ckv, x509.get()));
 
   const AttributeMap& attrs = cert.attributes();
 

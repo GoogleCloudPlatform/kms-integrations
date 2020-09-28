@@ -2,9 +2,11 @@
 
 #include "absl/strings/escaping.h"
 #include "absl/time/clock.h"
+#include "kmsp11/algorithm_details.h"
 #include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/status_macros.h"
+#include "kmsp11/util/string_utils.h"
 
 namespace kmsp11 {
 namespace {
@@ -71,8 +73,7 @@ CertAuthority::CertAuthority(bssl::UniquePtr<EVP_PKEY> signing_key)
                           absl::BytesToHexString(RandBytes(4)))) {}
 
 absl::StatusOr<bssl::UniquePtr<X509>> CertAuthority::GenerateCert(
-    absl::string_view subject_cn, EVP_PKEY* public_key,
-    kms_v1::CryptoKey::CryptoKeyPurpose purpose) const {
+    const kms_v1::CryptoKeyVersion& ckv, EVP_PKEY* public_key) const {
   bssl::UniquePtr<X509> cert(X509_new());
 
   // Set certificate version = 0x02 (x509 v3)
@@ -107,6 +108,7 @@ absl::StatusOr<bssl::UniquePtr<X509>> CertAuthority::GenerateCert(
         SOURCE_LOCATION);
   }
 
+  ASSIGN_OR_RETURN(std::string subject_cn, ExtractKeyId(ckv.name()));
   X509_NAME* subj = X509_get_subject_name(cert.get());
   if (X509_NAME_add_entry_by_NID(
           subj, NID_commonName, MBSTRING_ASC,
@@ -141,7 +143,8 @@ absl::StatusOr<bssl::UniquePtr<X509>> CertAuthority::GenerateCert(
   // complicated by the fact that we don't actually generate a self-signed CA
   // cert for the signing key (maybe we should?).
 
-  switch (purpose) {
+  ASSIGN_OR_RETURN(AlgorithmDetails algorithm, GetDetails(ckv.algorithm()));
+  switch (algorithm.purpose) {
     case kms_v1::CryptoKey::ASYMMETRIC_SIGN:
       RETURN_IF_ERROR(
           AddExtension(&ctx, NID_key_usage, "critical,digitalSignature"));
@@ -152,7 +155,7 @@ absl::StatusOr<bssl::UniquePtr<X509>> CertAuthority::GenerateCert(
       break;
     default:
       return NewInternalError(
-          absl::StrFormat("unexpected key purpose: %d", purpose),
+          absl::StrFormat("unexpected key purpose: %d", algorithm.purpose),
           SOURCE_LOCATION);
   }
 

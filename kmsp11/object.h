@@ -6,7 +6,6 @@
 #include "google/cloud/kms/v1/resources.pb.h"
 #include "kmsp11/algorithm_details.h"
 #include "kmsp11/attribute_map.h"
-#include "kmsp11/cert_authority.h"
 #include "kmsp11/cryptoki.h"
 #include "kmsp11/util/kms_v1.h"
 
@@ -24,8 +23,7 @@ class Object {
                                             const EVP_PKEY* public_key);
 
   static absl::StatusOr<Object> NewCertificate(
-      const kms_v1::CryptoKeyVersion& ckv, EVP_PKEY* public_key,
-      const CertAuthority* cert_authority);
+      const kms_v1::CryptoKeyVersion& ckv, X509* certificate);
 
   absl::string_view kms_key_name() const { return kms_key_name_; }
   CK_OBJECT_CLASS object_class() const { return object_class_; }

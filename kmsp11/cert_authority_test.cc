@@ -6,6 +6,7 @@
 #include "kmsp11/test/runfiles.h"
 #include "kmsp11/test/test_status_macros.h"
 #include "kmsp11/util/crypto_utils.h"
+#include "kmsp11/util/string_utils.h"
 #include "openssl/x509_vfy.h"
 
 namespace kmsp11 {
@@ -18,29 +19,31 @@ class CertAuthorityTest : public testing::Test {
   void SetUp() override {
     ASSERT_OK_AND_ASSIGN(authority_, CertAuthority::New());
 
+    ckv_.set_name(
+        "projects/foo/locations/global/keyRings/bar/cryptoKeys/baz/"
+        "cryptoKeyVersions/1");
+    ckv_.set_algorithm(kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+
     ASSERT_OK_AND_ASSIGN(std::string test_key,
                          LoadTestRunfile("ec_p256_private.pem"));
     ASSERT_OK_AND_ASSIGN(test_key_, ParsePkcs8PrivateKeyPem(test_key));
   }
 
   std::unique_ptr<CertAuthority> authority_;
+  kms_v1::CryptoKeyVersion ckv_;
   bssl::UniquePtr<EVP_PKEY> test_key_;
 };
 
 TEST_F(CertAuthorityTest, CertMatchesPrivateKey) {
-  ASSERT_OK_AND_ASSIGN(
-      bssl::UniquePtr<X509> cert,
-      authority_->GenerateCert("foo", test_key_.get(),
-                               kms_v1::CryptoKey::ASYMMETRIC_SIGN));
+  ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<X509> cert,
+                       authority_->GenerateCert(ckv_, test_key_.get()));
 
   EXPECT_EQ(X509_check_private_key(cert.get(), test_key_.get()), 1);
 }
 
 TEST_F(CertAuthorityTest, CertSelfVerifies) {
-  ASSERT_OK_AND_ASSIGN(
-      bssl::UniquePtr<X509> cert,
-      authority_->GenerateCert("foo", test_key_.get(),
-                               kms_v1::CryptoKey::ASYMMETRIC_DECRYPT));
+  ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<X509> cert,
+                       authority_->GenerateCert(ckv_, test_key_.get()));
 
   bssl::UniquePtr<X509_STORE> store(X509_STORE_new());
   EXPECT_EQ(X509_STORE_add_cert(store.get(), cert.get()), 1);
@@ -55,19 +58,15 @@ TEST_F(CertAuthorityTest, CertSelfVerifies) {
 }
 
 TEST_F(CertAuthorityTest, CertVersionIs2) {
-  ASSERT_OK_AND_ASSIGN(
-      bssl::UniquePtr<X509> cert,
-      authority_->GenerateCert("foo", test_key_.get(),
-                               kms_v1::CryptoKey::ASYMMETRIC_DECRYPT));
+  ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<X509> cert,
+                       authority_->GenerateCert(ckv_, test_key_.get()));
   // https://tools.ietf.org/html/rfc5280#section-4.1.2.1
   EXPECT_EQ(X509_get_version(cert.get()), 0x02);
 }
 
 TEST_F(CertAuthorityTest, CertSerialIs20Bytes) {
-  ASSERT_OK_AND_ASSIGN(
-      bssl::UniquePtr<X509> cert,
-      authority_->GenerateCert("foo", test_key_.get(),
-                               kms_v1::CryptoKey::ASYMMETRIC_DECRYPT));
+  ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<X509> cert,
+                       authority_->GenerateCert(ckv_, test_key_.get()));
   // https://tools.ietf.org/html/rfc5280#section-4.1.2.2
   bssl::UniquePtr<BIGNUM> serial_bn(
       ASN1_INTEGER_to_BN(X509_get_serialNumber(cert.get()), nullptr));
@@ -75,10 +74,8 @@ TEST_F(CertAuthorityTest, CertSerialIs20Bytes) {
 }
 
 TEST_F(CertAuthorityTest, StartDateBeforeNow) {
-  ASSERT_OK_AND_ASSIGN(
-      bssl::UniquePtr<X509> cert,
-      authority_->GenerateCert("foo", test_key_.get(),
-                               kms_v1::CryptoKey::ASYMMETRIC_DECRYPT));
+  ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<X509> cert,
+                       authority_->GenerateCert(ckv_, test_key_.get()));
 
   EXPECT_THAT(ASN1_UTCTIME_cmp_time_t(X509_get0_notBefore(cert.get()),
                                       absl::ToTimeT(absl::Now())),
@@ -89,10 +86,8 @@ TEST_F(CertAuthorityTest, StartDateBeforeNow) {
 }
 
 TEST_F(CertAuthorityTest, EndDateMatchesRFC) {
-  ASSERT_OK_AND_ASSIGN(
-      bssl::UniquePtr<X509> cert,
-      authority_->GenerateCert("foo", test_key_.get(),
-                               kms_v1::CryptoKey::ASYMMETRIC_DECRYPT));
+  ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<X509> cert,
+                       authority_->GenerateCert(ckv_, test_key_.get()));
 
   bssl::UniquePtr<BIO> bio(BIO_new(BIO_s_mem()));
   EXPECT_EQ(ASN1_TIME_print(bio.get(), X509_get0_notAfter(cert.get())), 1);
@@ -105,21 +100,19 @@ TEST_F(CertAuthorityTest, EndDateMatchesRFC) {
   EXPECT_EQ(absl::string_view(buf, len), "Dec 31 23:59:59 9999 GMT");
 }
 
-TEST_F(CertAuthorityTest, SubjectCnEqualsKeyName) {
-  std::string ckv_name = "baz";
-  ASSERT_OK_AND_ASSIGN(
-      bssl::UniquePtr<X509> cert,
-      authority_->GenerateCert(ckv_name, test_key_.get(),
-                               kms_v1::CryptoKey::ASYMMETRIC_DECRYPT));
+TEST_F(CertAuthorityTest, SubjectCnEqualsKeyId) {
+  ASSERT_OK_AND_ASSIGN(std::string expected_cn, ExtractKeyId(ckv_.name()));
+  ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<X509> cert,
+                       authority_->GenerateCert(ckv_, test_key_.get()));
 
-  std::string received_name(ckv_name.size(), ' ');
+  std::string actual_cn(expected_cn.size(), ' ');
   EXPECT_EQ(X509_NAME_get_text_by_NID(
                 X509_get_subject_name(cert.get()), NID_commonName,
-                const_cast<char*>(received_name.data()),
-                received_name.size() + 1 /* account for trailing NUL */),
-            ckv_name.size());
+                const_cast<char*>(actual_cn.data()),
+                actual_cn.size() + 1 /* account for trailing NUL */),
+            expected_cn.size());
 
-  EXPECT_EQ(ckv_name, received_name);
+  EXPECT_EQ(expected_cn, actual_cn);
 }
 
 }  // namespace

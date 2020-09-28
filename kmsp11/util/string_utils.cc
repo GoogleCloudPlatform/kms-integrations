@@ -42,4 +42,16 @@ std::string MarshalULongList(absl::Span<const unsigned long int> value) {
                      value.size() * sizeof(unsigned long int));
 }
 
+absl::StatusOr<std::string> ExtractKeyId(absl::string_view version_name) {
+  std::vector<std::string> parts = absl::StrSplit(version_name, '/');
+  if (parts.size() != 10 || parts[0] != "projects" || parts[2] != "locations" ||
+      parts[4] != "keyRings" || parts[6] != "cryptoKeys" ||
+      parts[8] != "cryptoKeyVersions") {
+    return NewInternalError(
+        absl::StrCat("invalid CryptoKeyVersion name: ", version_name),
+        SOURCE_LOCATION);
+  }
+  return parts[7];
+}
+
 }  // namespace kmsp11
