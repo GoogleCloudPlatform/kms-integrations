@@ -34,6 +34,12 @@ class Token {
       CK_OBJECT_HANDLE object_handle) const {
     return objects_.GetObject(object_handle);
   }
+
+  inline absl::StatusOr<std::shared_ptr<Object>> GetKey(
+      CK_OBJECT_HANDLE handle) const {
+    return objects_.GetKey(handle);
+  }
+
   inline std::vector<CK_OBJECT_HANDLE> FindObjects(
       std::function<bool(const Object&)> predicate) const {
     return objects_.Find(predicate);

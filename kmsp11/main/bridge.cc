@@ -35,21 +35,6 @@ absl::StatusOr<std::shared_ptr<Session>> GetSession(
   return provider->GetSession(session_handle);
 }
 
-absl::StatusOr<std::shared_ptr<Object>> GetKey(Session* session,
-                                               CK_OBJECT_HANDLE key_handle) {
-  absl::StatusOr<std::shared_ptr<Object>> key_or =
-      session->token()->GetObject(key_handle);
-  if (!key_or.ok()) {
-    if (GetCkRv(key_or.status()) == CKR_OBJECT_HANDLE_INVALID) {
-      absl::Status result(key_or.status());
-      SetErrorRv(result, CKR_KEY_HANDLE_INVALID);
-      return result;
-    }
-    return key_or.status();
-  }
-  return key_or.value();
-}
-
 static absl::Status ShutdownInternal() {
   RETURN_IF_ERROR(ReleaseGlobalProvider());
   grpc_shutdown_blocking();
@@ -423,7 +408,7 @@ absl::Status FindObjectsFinal(CK_SESSION_HANDLE hSession) {
 absl::Status DecryptInit(CK_SESSION_HANDLE hSession,
                          CK_MECHANISM_PTR pMechanism, CK_OBJECT_HANDLE hKey) {
   ASSIGN_OR_RETURN(std::shared_ptr<Session> session, GetSession(hSession));
-  ASSIGN_OR_RETURN(std::shared_ptr<Object> key, GetKey(session.get(), hKey));
+  ASSIGN_OR_RETURN(std::shared_ptr<Object> key, session->token()->GetKey(hKey));
 
   if (!pMechanism) {
     return NullArgumentError("pMechanism", SOURCE_LOCATION);
@@ -475,7 +460,7 @@ absl::Status Decrypt(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pEncryptedData,
 absl::Status EncryptInit(CK_SESSION_HANDLE hSession,
                          CK_MECHANISM_PTR pMechanism, CK_OBJECT_HANDLE hKey) {
   ASSIGN_OR_RETURN(std::shared_ptr<Session> session, GetSession(hSession));
-  ASSIGN_OR_RETURN(std::shared_ptr<Object> key, GetKey(session.get(), hKey));
+  ASSIGN_OR_RETURN(std::shared_ptr<Object> key, session->token()->GetKey(hKey));
 
   if (!pMechanism) {
     return NullArgumentError("pMechanism", SOURCE_LOCATION);
@@ -526,7 +511,7 @@ absl::Status Encrypt(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pData,
 absl::Status SignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechanism,
                       CK_OBJECT_HANDLE hKey) {
   ASSIGN_OR_RETURN(std::shared_ptr<Session> session, GetSession(hSession));
-  ASSIGN_OR_RETURN(std::shared_ptr<Object> key, GetKey(session.get(), hKey));
+  ASSIGN_OR_RETURN(std::shared_ptr<Object> key, session->token()->GetKey(hKey));
 
   if (!pMechanism) {
     return NullArgumentError("pMechanism", SOURCE_LOCATION);
@@ -578,7 +563,7 @@ absl::Status Sign(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pData,
 absl::Status VerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechanism,
                         CK_OBJECT_HANDLE hKey) {
   ASSIGN_OR_RETURN(std::shared_ptr<Session> session, GetSession(hSession));
-  ASSIGN_OR_RETURN(std::shared_ptr<Object> key, GetKey(session.get(), hKey));
+  ASSIGN_OR_RETURN(std::shared_ptr<Object> key, session->token()->GetKey(hKey));
 
   if (!pMechanism) {
     return NullArgumentError("pMechanism", SOURCE_LOCATION);

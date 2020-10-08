@@ -100,6 +100,24 @@ absl::StatusOr<std::shared_ptr<Object>> ObjectStore::GetObject(
   return it->second;
 }
 
+absl::StatusOr<std::shared_ptr<Object>> ObjectStore::GetKey(
+    CK_OBJECT_HANDLE handle) const {
+  ObjectStoreMap::const_iterator it = entries_.find(handle);
+  if (it == entries_.end()) {
+    return HandleNotFoundError(handle, CKR_KEY_HANDLE_INVALID, SOURCE_LOCATION);
+  }
+
+  switch (it->second->object_class()) {
+    case CKO_PRIVATE_KEY:
+    case CKO_PUBLIC_KEY:
+    case CKO_SECRET_KEY:
+      return it->second;
+    default:
+      return HandleNotFoundError(handle, CKR_KEY_HANDLE_INVALID,
+                                 SOURCE_LOCATION);
+  }
+}
+
 std::vector<CK_OBJECT_HANDLE> ObjectStore::Find(
     std::function<bool(const Object&)> predicate) const {
   std::vector<std::reference_wrapper<const ObjectStoreEntry>> matches;

@@ -22,6 +22,11 @@ class ObjectStore {
   absl::StatusOr<std::shared_ptr<Object>> GetObject(
       CK_OBJECT_HANDLE handle) const;
 
+  // GetKey retrieves the key with the provided handle, or returns
+  // CKR_KEY_HANDLE_INVALID if the handle is not valid or does not refer to a
+  // key object.
+  absl::StatusOr<std::shared_ptr<Object>> GetKey(CK_OBJECT_HANDLE handle) const;
+
   // Find retrieves a list of handles whose objects match the provided
   // predicate.
   std::vector<CK_OBJECT_HANDLE> Find(

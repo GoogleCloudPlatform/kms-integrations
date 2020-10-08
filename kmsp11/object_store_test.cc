@@ -269,14 +269,10 @@ TEST(ObjectStoreTest, GetObjectSuccessCertificate) {
 }
 
 TEST(ObjectStoreTest, GetObjectFailsInvalidHandle) {
-  ObjectStoreState s;
+  ASSERT_OK_AND_ASSIGN(ObjectStore store, ObjectStore::New(ObjectStoreState()));
 
-  AsymmetricKey* key = s.add_asymmetric_keys();
-  ASSERT_OK_AND_ASSIGN(*key, NewAsymmetricEcKeyAndCert());
-
-  ASSERT_OK_AND_ASSIGN(ObjectStore store, ObjectStore::New(s));
-
-  EXPECT_THAT(store.GetObject(1), StatusRvIs(CKR_OBJECT_HANDLE_INVALID));
+  EXPECT_THAT(store.GetObject(CK_INVALID_HANDLE),
+              StatusRvIs(CKR_OBJECT_HANDLE_INVALID));
 }
 
 TEST(ObjectStoreTest, GetObjectFailsUnusedHandle) {
@@ -284,10 +280,79 @@ TEST(ObjectStoreTest, GetObjectFailsUnusedHandle) {
 
   AsymmetricKey* key = s.add_asymmetric_keys();
   ASSERT_OK_AND_ASSIGN(*key, NewAsymmetricEcKeyAndCert());
+  ASSERT_NE(key->public_key_handle(), 1);
+  ASSERT_NE(key->private_key_handle(), 1);
 
   ASSERT_OK_AND_ASSIGN(ObjectStore store, ObjectStore::New(s));
 
   EXPECT_THAT(store.GetObject(1), StatusRvIs(CKR_OBJECT_HANDLE_INVALID));
+}
+
+TEST(ObjectStoreTest, GetKeySuccessPublicKey) {
+  ObjectStoreState s;
+
+  AsymmetricKey* key = s.add_asymmetric_keys();
+  ASSERT_OK_AND_ASSIGN(*key, NewAsymmetricRsaKey());
+  key->set_public_key_handle(1);
+
+  ASSERT_OK_AND_ASSIGN(ObjectStore store, ObjectStore::New(s));
+
+  EXPECT_THAT(
+      store.GetKey(1),
+      IsOkAndHolds(Pointee(AllOf(
+          Property("kms_key_name", &Object::kms_key_name,
+                   key->crypto_key_version().name()),
+          Property("object_class", &Object::object_class, CKO_PUBLIC_KEY)))));
+}
+
+TEST(ObjectStoreTest, GetKeySuccessPrivateKey) {
+  ObjectStoreState s;
+
+  AsymmetricKey* key = s.add_asymmetric_keys();
+  ASSERT_OK_AND_ASSIGN(*key, NewAsymmetricRsaKey());
+  key->set_private_key_handle(1);
+
+  ASSERT_OK_AND_ASSIGN(ObjectStore store, ObjectStore::New(s));
+
+  EXPECT_THAT(
+      store.GetKey(1),
+      IsOkAndHolds(Pointee(AllOf(
+          Property("kms_key_name", &Object::kms_key_name,
+                   key->crypto_key_version().name()),
+          Property("object_class", &Object::object_class, CKO_PRIVATE_KEY)))));
+}
+
+TEST(ObjectStoreTest, GetKeyFailsCertificate) {
+  ObjectStoreState s;
+
+  AsymmetricKey* key = s.add_asymmetric_keys();
+  ASSERT_OK_AND_ASSIGN(*key, NewAsymmetricEcKeyAndCert());
+  key->mutable_certificate()->set_handle(1);
+
+  ASSERT_OK_AND_ASSIGN(ObjectStore store, ObjectStore::New(s));
+
+  // It's a valid /Object/ handle, but it doesn't refer to a key.
+  EXPECT_THAT(store.GetKey(1), StatusRvIs(CKR_KEY_HANDLE_INVALID));
+}
+
+TEST(ObjectStoreTest, GetKeyFailsInvalidHandle) {
+  ASSERT_OK_AND_ASSIGN(ObjectStore store, ObjectStore::New(ObjectStoreState()));
+
+  EXPECT_THAT(store.GetKey(CK_INVALID_HANDLE),
+              StatusRvIs(CKR_KEY_HANDLE_INVALID));
+}
+
+TEST(ObjectStoreTest, GetKeyFailsUnusedHandle) {
+  ObjectStoreState s;
+
+  AsymmetricKey* key = s.add_asymmetric_keys();
+  ASSERT_OK_AND_ASSIGN(*key, NewAsymmetricEcKeyAndCert());
+  ASSERT_NE(key->public_key_handle(), 1);
+  ASSERT_NE(key->private_key_handle(), 1);
+
+  ASSERT_OK_AND_ASSIGN(ObjectStore store, ObjectStore::New(s));
+
+  EXPECT_THAT(store.GetKey(1), StatusRvIs(CKR_KEY_HANDLE_INVALID));
 }
 
 TEST(ObjectStoreTest, FindPublicKeysSuccess) {
