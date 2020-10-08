@@ -50,6 +50,24 @@ absl::StatusOr<std::string> MarshalDer(T* obj,
   return result;
 }
 
+// A helper for invoking an OpenSSL function of the form d2i_FOO, and returning
+// the deserialized object.
+template <typename T>
+absl::StatusOr<bssl::UniquePtr<T>> ParseDer(
+    absl::string_view der_string, T* d2i_function(T**, const uint8_t**, long)) {
+  const uint8_t* der_bytes =
+      reinterpret_cast<const uint8_t*>(der_string.data());
+
+  bssl::UniquePtr<T> result(
+      d2i_function(nullptr, &der_bytes, der_string.size()));
+  if (!result) {
+    return NewInvalidArgumentError(
+        absl::StrCat("error parsing DER: ", SslErrorToString()),
+        CKR_DEVICE_ERROR, SOURCE_LOCATION);
+  }
+  return std::move(result);
+}
+
 // A UniformRandomBitGenerator backed by Boring's CSPRNG.
 // https://en.cppreference.com/w/cpp/named_req/UniformRandomBitGenerator
 class BoringBitGenerator {
@@ -328,19 +346,14 @@ absl::StatusOr<bssl::UniquePtr<EVP_PKEY>> ParsePkcs8PrivateKeyPem(
   return std::move(result);
 }
 
+absl::StatusOr<bssl::UniquePtr<X509>> ParseX509CertificateDer(
+    absl::string_view certificate_der) {
+  return ParseDer(certificate_der, &d2i_X509);
+}
+
 absl::StatusOr<bssl::UniquePtr<EVP_PKEY>> ParseX509PublicKeyDer(
     absl::string_view public_key_der) {
-  const uint8_t* der_bytes =
-      reinterpret_cast<const uint8_t*>(public_key_der.data());
-  bssl::UniquePtr<EVP_PKEY> result(
-      d2i_PUBKEY(nullptr, &der_bytes, public_key_der.size()));
-
-  if (!result) {
-    return NewInvalidArgumentError(
-        absl::StrCat("error parsing public key: ", SslErrorToString()),
-        CKR_DEVICE_ERROR, SOURCE_LOCATION);
-  }
-  return std::move(result);
+  return ParseDer(public_key_der, &d2i_PUBKEY);
 }
 
 absl::StatusOr<bssl::UniquePtr<EVP_PKEY>> ParseX509PublicKeyPem(

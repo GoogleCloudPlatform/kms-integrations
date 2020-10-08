@@ -8,6 +8,7 @@
 #include "absl/time/time.h"
 #include "kmsp11/cryptoki.h"
 #include "openssl/evp.h"
+#include "openssl/x509.h"
 
 namespace kmsp11 {
 
@@ -71,6 +72,11 @@ absl::StatusOr<bssl::UniquePtr<EVP_PKEY>> ParsePkcs8PrivateKeyPem(
 
 // Marshals an ASN.1 DigestInfo in DER format.
 absl::StatusOr<std::string> MarshalX509Sig(X509_SIG* value);
+
+// Parses an X.509 certificate in DER format. Returns InvalidArgument if
+// the provided certificate is malformed.
+absl::StatusOr<bssl::UniquePtr<X509>> ParseX509CertificateDer(
+    absl::string_view certificate_der);
 
 // Parses a public key in X.509 SubjectPublicKeyInfo DER format. Returns
 // InvalidArgument if the provided key is malformed.

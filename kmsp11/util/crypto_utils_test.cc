@@ -351,7 +351,7 @@ TEST(MarshalEcPointTest, PointMarshaled) {
             0);
 }
 
-TEST(MarshalX509CertificateTest, MarshalPemToDer) {
+TEST(ParseAndMarshalX509CertificateTest, MarshalPemToDerSuccess) {
   ASSERT_OK_AND_ASSIGN(std::string pem, LoadTestRunfile("ec_p256_cert.pem"));
   ASSERT_OK_AND_ASSIGN(std::string der, LoadTestRunfile("ec_p256_cert.der"));
 
@@ -361,6 +361,28 @@ TEST(MarshalX509CertificateTest, MarshalPemToDer) {
       PEM_read_bio_X509(bio.get(), nullptr, nullptr, nullptr));
 
   EXPECT_THAT(MarshalX509CertificateDer(cert.get()), IsOkAndHolds(der));
+}
+
+TEST(ParseAndMarshalX509CertificateTest, ParseDerSuccess) {
+  ASSERT_OK_AND_ASSIGN(std::string pem, LoadTestRunfile("ec_p256_cert.pem"));
+
+  bssl::UniquePtr<BIO> bio(BIO_new(BIO_s_mem()));
+  EXPECT_EQ(BIO_write(bio.get(), pem.data(), pem.size()), pem.size());
+  bssl::UniquePtr<X509> cert(
+      PEM_read_bio_X509(bio.get(), nullptr, nullptr, nullptr));
+
+  ASSERT_OK_AND_ASSIGN(std::string der, MarshalX509CertificateDer(cert.get()));
+
+  ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<X509> recovered_cert,
+                       ParseX509CertificateDer(der));
+  EXPECT_EQ(X509_cmp(cert.get(), recovered_cert.get()), 0);
+}
+
+TEST(ParseAndMarshalX509CertificateTest, ParseMalformedCertificateInvalid) {
+  ASSERT_OK_AND_ASSIGN(std::string public_key_der,
+                       LoadTestRunfile("rsa_2048_public.der"));
+  EXPECT_THAT(ParseX509CertificateDer(public_key_der),
+              StatusIs(absl::StatusCode::kInvalidArgument));
 }
 
 TEST(ParseAndMarshalPublicKeyTest, EcKey) {
@@ -442,6 +464,13 @@ TEST(ParsePublicKeyTest, RsaKey) {
   EXPECT_TRUE(RSA_get0_e(rsa));
   EXPECT_TRUE(RSA_check_key(rsa));
   EXPECT_TRUE(RSA_check_fips(rsa));
+}
+
+TEST(ParsePublicKeyTest, MalformedKey) {
+  ASSERT_OK_AND_ASSIGN(std::string cert_pem,
+                       LoadTestRunfile("ec_p256_cert.pem"));
+  EXPECT_THAT(ParseX509PublicKeyDer(cert_pem),
+              StatusIs(absl::StatusCode::kInvalidArgument));
 }
 
 TEST(RandBytesTest, SmokeTest) {
