@@ -41,8 +41,24 @@ class HandleMap {
     return Add(std::make_shared<T>(std::forward<Args>(args)...));
   }
 
-  // Finds all keys in the map whose value matches the provided predicate. If
-  // sort_compare is provided, the results are sorted before being returned.
+  // Adds an item to the map using the provided handle. Returns
+  // absl::InternalError if the provided handle is already in use.
+  // TODO(bdhess): Remove this overload when ObjectStore is implemented.
+  inline absl::Status AddDirect(CK_ULONG handle, std::shared_ptr<T> item) {
+    absl::WriterMutexLock lock(&mutex_);
+
+    if (items_.find(handle) != items_.end()) {
+      return NewInternalError(
+          absl::StrFormat("handle %#x is already in use", handle),
+          SOURCE_LOCATION);
+    }
+    items_[handle] = item;
+    return absl::OkStatus();
+  }
+
+  // Finds all keys in the map whose value matches the provided predicate.
+  // If sort_compare is provided, the results are sorted before being
+  // returned.
   inline std::vector<CK_ULONG> Find(
       std::function<bool(const T&)> predicate,
       std::function<bool(const T&, const T&)> sort_compare = nullptr) const {

@@ -1,4 +1,5 @@
-load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_proto_library", "cc_test")
+load("@rules_proto//proto:defs.bzl", "proto_library")
 
 package(default_visibility = ["//kmsp11:__subpackages__"])
 
@@ -158,6 +159,17 @@ cc_test(
     ],
 )
 
+proto_library(
+    name = "object_store_state_proto",
+    srcs = ["object_store_state.proto"],
+    deps = ["@com_google_googleapis//google/cloud/kms/v1:kms_proto"],
+)
+
+cc_proto_library(
+    name = "object_store_state_cc_proto",
+    deps = [":object_store_state_proto"],
+)
+
 cc_library(
     name = "provider",
     srcs = ["provider.cc"],
@@ -217,10 +229,10 @@ cc_library(
     srcs = ["token.cc"],
     hdrs = ["token.h"],
     deps = [
+        ":cert_authority",
         ":cryptoki_headers",
         ":object",
-        "//kmsp11:algorithm_details",
-        "//kmsp11:cert_authority",
+        ":object_store_state_cc_proto",
         "//kmsp11/config:config_cc_proto",
         "//kmsp11/util:handle_map",
         "//kmsp11/util:kms_client",

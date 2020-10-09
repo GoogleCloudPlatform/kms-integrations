@@ -37,6 +37,26 @@ TEST(HandleMapTest, AllItemsAdded) {
               UnorderedElementsAre(handle1, handle2, handle3));
 }
 
+TEST(HandleMapTest, AddDirectSuccess) {
+  HandleMap<int> map(CKR_SESSION_HANDLE_INVALID);
+
+  EXPECT_OK(map.AddDirect(1, std::make_shared<int>(3)));
+  EXPECT_OK(map.AddDirect(2, std::make_shared<int>(2)));
+  EXPECT_OK(map.AddDirect(3, std::make_shared<int>(1)));
+
+  EXPECT_THAT(map.Find([](int) { return true; }),
+              UnorderedElementsAre(1, 2, 3));
+}
+
+TEST(HandleMapTest, AddDirectInternalErrorOnDuplicateHandle) {
+  HandleMap<int> map(CKR_SESSION_HANDLE_INVALID);
+
+  EXPECT_OK(map.AddDirect(1, std::make_shared<int>(1)));
+  EXPECT_THAT(map.AddDirect(1, std::make_shared<int>(2)),
+              StatusIs(absl::StatusCode::kInternal,
+                       testing::HasSubstr("handle 0x1 is already in use")));
+}
+
 TEST(HandleMapTest, FindPredicate) {
   HandleMap<int> map(CKR_SESSION_HANDLE_INVALID);
 
