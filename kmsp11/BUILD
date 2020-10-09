@@ -159,6 +159,31 @@ cc_test(
     ],
 )
 
+cc_library(
+    name = "object_store",
+    srcs = ["object_store.cc"],
+    hdrs = ["object_store.h"],
+    deps = [
+        ":cryptoki_headers",
+        ":object",
+        ":object_store_state_cc_proto",
+        "//kmsp11/util:crypto_utils",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/status:statusor",
+    ],
+)
+
+cc_test(
+    name = "object_store_test",
+    size = "small",
+    srcs = ["object_store_test.cc"],
+    deps = [
+        ":object_store",
+        "//kmsp11/test",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
 proto_library(
     name = "object_store_state_proto",
     srcs = ["object_store_state.proto"],
