@@ -323,5 +323,36 @@ TEST(ObjectStoreTest, FindWithoutMatchesReturnsEmptyVector) {
               IsEmpty());
 }
 
+TEST(ObjectStoreTest, FindSortsByNameThenClass) {
+  ObjectStoreState s;
+
+  AsymmetricKey* ec_key_1 = s.add_asymmetric_keys();
+  ASSERT_OK_AND_ASSIGN(*ec_key_1, NewAsymmetricEcKeyAndCert());
+  ec_key_1->mutable_crypto_key_version()->set_name(
+      "projects/a/locations/b/keyRings/c/cryptoKeys/e/cryptoKeyVersions/1");
+  ec_key_1->mutable_certificate()->set_handle(1);
+  ec_key_1->set_private_key_handle(2);
+  ec_key_1->set_public_key_handle(3);
+
+  AsymmetricKey* ec_key_2 = s.add_asymmetric_keys();
+  ASSERT_OK_AND_ASSIGN(*ec_key_2, NewAsymmetricEcKeyAndCert());
+  ec_key_2->mutable_crypto_key_version()->set_name(
+      "projects/a/locations/b/keyRings/c/cryptoKeys/d/cryptoKeyVersions/1");
+  ec_key_2->set_public_key_handle(4);
+  ec_key_2->mutable_certificate()->set_handle(5);
+  ec_key_2->set_private_key_handle(6);
+
+  ASSERT_OK_AND_ASSIGN(ObjectStore store, ObjectStore::New(s));
+
+  EXPECT_THAT(store.Find([](const kmsp11::Object& o) -> bool { return true; }),
+              ElementsAre(5,  // (d, CKO_CERTIFICATE==1)
+                          4,  // (d, CKO_PUBLIC_KEY==2)
+                          6,  // (d, CKO_PRIVATE_KEY==3)
+                          1,  // (e, CKO_CERTIFICATE==1)
+                          3,  // (e, CKO_PUBLIC_KEY==2)
+                          2   // (e, CKO_PRIVATE_KEY==3)
+                          ));
+}
+
 }  // namespace
 }  // namespace kmsp11

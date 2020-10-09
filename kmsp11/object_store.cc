@@ -55,6 +55,16 @@ absl::StatusOr<std::vector<ObjectStoreEntry>> ParseStoreEntries(
   return entries;
 }
 
+// A comparison function for ObjectStore entries that sorts by KMS key name,
+// followed by object class.
+bool EntryCompare(const ObjectStoreEntry& e1, const ObjectStoreEntry& e2) {
+  int name_cmp = e1.second->kms_key_name().compare(e2.second->kms_key_name());
+  if (name_cmp == 0) {
+    return e1.second->object_class() < e2.second->object_class();
+  }
+  return name_cmp < 0;
+}
+
 }  // namespace
 
 absl::StatusOr<ObjectStore> ObjectStore::New(const ObjectStoreState& state) {
@@ -92,11 +102,18 @@ absl::StatusOr<std::shared_ptr<Object>> ObjectStore::GetObject(
 
 std::vector<CK_OBJECT_HANDLE> ObjectStore::Find(
     std::function<bool(const Object&)> predicate) const {
-  std::vector<CK_OBJECT_HANDLE> handles;
+  std::vector<std::reference_wrapper<const ObjectStoreEntry>> matches;
   for (const ObjectStoreEntry& entry : entries_) {
     if (predicate(*entry.second)) {
-      handles.push_back(entry.first);
+      matches.push_back(entry);
     }
+  }
+
+  std::sort(matches.begin(), matches.end(), &EntryCompare);
+
+  std::vector<CK_OBJECT_HANDLE> handles(matches.size());
+  for (size_t i = 0; i < matches.size(); i++) {
+    handles[i] = matches[i].get().first;
   }
   return handles;
 }
