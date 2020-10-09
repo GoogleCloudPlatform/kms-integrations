@@ -181,36 +181,6 @@ absl::StatusOr<ObjectStoreState> LoadState(const KmsClient& client,
   return builder.state();
 }
 
-absl::StatusOr<std::unique_ptr<HandleMap<Object>>> LoadObjects(
-    const ObjectStoreState& state) {
-  auto objects =
-      absl::make_unique<HandleMap<Object>>(CKR_OBJECT_HANDLE_INVALID);
-  for (const AsymmetricKey& key : state.asymmetric_keys()) {
-    ASSIGN_OR_RETURN(bssl::UniquePtr<EVP_PKEY> pub,
-                     ParseX509PublicKeyDer(key.public_key_der()));
-    ASSIGN_OR_RETURN(KeyPair key_pair,
-                     Object::NewKeyPair(key.crypto_key_version(), pub.get()));
-
-    RETURN_IF_ERROR(objects->AddDirect(
-        key.public_key_handle(),
-        std::make_shared<Object>(std::move(key_pair.public_key))));
-    RETURN_IF_ERROR(objects->AddDirect(
-        key.private_key_handle(),
-        std::make_shared<Object>(std::move(key_pair.private_key))));
-
-    if (key.has_certificate()) {
-      ASSIGN_OR_RETURN(bssl::UniquePtr<X509> x509,
-                       ParseX509CertificateDer(key.certificate().x509_der()));
-      ASSIGN_OR_RETURN(Object cert, Object::NewCertificate(
-                                        key.crypto_key_version(), x509.get()));
-      RETURN_IF_ERROR(
-          objects->AddDirect(key.certificate().handle(),
-                             std::make_shared<Object>(std::move(cert))));
-    }
-  }
-  return std::move(objects);
-}
-
 }  // namespace
 
 absl::StatusOr<std::unique_ptr<Token>> Token::New(CK_SLOT_ID slot_id,
@@ -224,12 +194,11 @@ absl::StatusOr<std::unique_ptr<Token>> Token::New(CK_SLOT_ID slot_id,
   ASSIGN_OR_RETURN(
       ObjectStoreState state,
       LoadState(*kms_client, token_config.key_ring(), generate_certs));
-  ASSIGN_OR_RETURN(std::unique_ptr<HandleMap<Object>> objects,
-                   LoadObjects(state));
+  ASSIGN_OR_RETURN(ObjectStore store, ObjectStore::New(state));
 
   // using `new` to invoke a private constructor
   return std::unique_ptr<Token>(
-      new Token(slot_id, slot_info, token_info, std::move(objects)));
+      new Token(slot_id, slot_info, token_info, store));
 }
 
 bool Token::is_logged_in() const {
@@ -274,17 +243,6 @@ absl::Status Token::Logout() {
   }
   is_logged_in_ = false;
   return absl::OkStatus();
-}
-
-std::vector<CK_OBJECT_HANDLE> Token::FindObjects(
-    std::function<bool(const Object&)> predicate) const {
-  return objects_->Find(predicate,
-                        [](const Object& o1, const Object& o2) -> bool {
-                          if (o1.kms_key_name() == o2.kms_key_name()) {
-                            return o1.object_class() < o2.object_class();
-                          }
-                          return o1.kms_key_name() < o2.kms_key_name();
-                        });
 }
 
 }  // namespace kmsp11

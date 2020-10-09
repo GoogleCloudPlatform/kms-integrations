@@ -7,7 +7,7 @@
 #include "kmsp11/config/config.pb.h"
 #include "kmsp11/cryptoki.h"
 #include "kmsp11/object.h"
-#include "kmsp11/util/handle_map.h"
+#include "kmsp11/object_store.h"
 #include "kmsp11/util/kms_client.h"
 
 namespace kmsp11 {
@@ -32,24 +32,26 @@ class Token {
 
   inline absl::StatusOr<std::shared_ptr<Object>> GetObject(
       CK_OBJECT_HANDLE object_handle) const {
-    return objects_->Get(object_handle);
+    return objects_.GetObject(object_handle);
   }
-  std::vector<CK_OBJECT_HANDLE> FindObjects(
-      std::function<bool(const Object&)> predicate) const;
+  inline std::vector<CK_OBJECT_HANDLE> FindObjects(
+      std::function<bool(const Object&)> predicate) const {
+    return objects_.Find(predicate);
+  }
 
  private:
   Token(CK_SLOT_ID slot_id, CK_SLOT_INFO slot_info, CK_TOKEN_INFO token_info,
-        std::unique_ptr<HandleMap<Object>> objects)
+        ObjectStore objects)
       : slot_id_(slot_id),
         slot_info_(slot_info),
         token_info_(token_info),
-        objects_(std::move(objects)),
+        objects_(objects),
         is_logged_in_(false) {}
 
   const CK_SLOT_ID slot_id_;
   const CK_SLOT_INFO slot_info_;
   const CK_TOKEN_INFO token_info_;
-  std::unique_ptr<HandleMap<Object>> objects_;
+  const ObjectStore objects_;
 
   // All sessions with the same token have the same login state (rather than
   // login state being per-session, which seems like the more obvious choice.)
