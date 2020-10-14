@@ -33,13 +33,13 @@ static absl::Status SetScalarField(Message* dest, const FieldDescriptor* field,
       reflect->SetString(dest, field, string_value);
       return absl::OkStatus();
 
-    case FieldDescriptor::Type::TYPE_INT32:
-      int32_t int_value;
+    case FieldDescriptor::Type::TYPE_UINT32:
+      uint32_t int_value;
       if (!absl::SimpleAtoi(string_value, &int_value)) {
         return YamlError(absl::StrCat("unexpected int value: ", string_value),
                          value.Mark(), SOURCE_LOCATION);
       }
-      reflect->SetInt32(dest, field, int_value);
+      reflect->SetUInt32(dest, field, int_value);
       return absl::OkStatus();
 
     case FieldDescriptor::Type::TYPE_BOOL:

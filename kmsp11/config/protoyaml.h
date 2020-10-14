@@ -11,7 +11,7 @@ namespace kmsp11 {
 // Parse the supplied YAML node into the provided protobuf message. The message
 // descriptor of the supplied protobuf message supplies the parsing rules.
 //
-// The protobuf scalar types string, int32, and bool are supported. Message
+// The protobuf scalar types string, uint32, and bool are supported. Message
 // fields and repeated message fields are also supported.
 //
 // For example, given these protobuf message descriptors:
@@ -23,7 +23,7 @@ namespace kmsp11 {
 // }
 //
 // message KeyValue {
-//   int32 key = 1;
+//   uint32 key = 1;
 //   string value = 2;
 // }
 //
