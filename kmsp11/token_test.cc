@@ -413,6 +413,43 @@ TEST_F(TokenTest, DisabledKeyUnavailable) {
           Property("object_class", &Object::object_class, CKO_PRIVATE_KEY)))));
 }
 
+TEST_F(TokenTest, DisabledKeyUnavailableAfterRefresh) {
+  auto kms_client = fake_kms_->NewClient();
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM);
+  ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), "ck", ck, true);
+
+  kms_v1::CryptoKeyVersion ckv;
+  ckv = CreateCryptoKeyVersionOrDie(kms_client.get(), ck.name(), ckv);
+  ckv = WaitForEnablement(kms_client.get(), ckv);
+
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+
+  std::vector<CK_ULONG> handles;
+
+  // On initial load, we should see both handles.
+  handles = token->FindObjects([](const Object& o) -> bool { return true; });
+  EXPECT_EQ(handles.size(), 2);
+
+  // Disable ckv
+  ckv.set_state(kms_v1::CryptoKeyVersion::DISABLED);
+  google::protobuf::FieldMask update_mask;
+  update_mask.add_paths("state");
+  ckv = UpdateCryptoKeyVersionOrDie(kms_client.get(), ckv, update_mask);
+
+  EXPECT_OK(token->RefreshState(*client_));
+
+  // After refresh, there should be no objects.
+  handles = token->FindObjects([](const Object& o) -> bool { return true; });
+  EXPECT_EQ(handles.size(), 0);
+}
+
 TEST_F(TokenTest, CertGeneratedWhenConfigIsSet) {
   auto kms_client = fake_kms_->NewClient();
 

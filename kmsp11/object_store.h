@@ -15,7 +15,8 @@ using ObjectStoreMap =
 class ObjectStore {
  public:
   // Create a new ObjectStore with the provided state.
-  static absl::StatusOr<ObjectStore> New(const ObjectStoreState& state);
+  static absl::StatusOr<std::unique_ptr<ObjectStore>> New(
+      const ObjectStoreState& state);
 
   // GetObject retrieves the object with the provided handle, or returns
   // CKR_OBJECT_HANDLE_INVALID if the handle is not valid.

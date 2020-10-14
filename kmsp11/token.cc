@@ -72,11 +72,11 @@ absl::StatusOr<std::unique_ptr<Token>> Token::New(CK_SLOT_ID slot_id,
   ASSIGN_OR_RETURN(std::unique_ptr<ObjectLoader> loader,
                    ObjectLoader::New(token_config.key_ring(), generate_certs));
   ASSIGN_OR_RETURN(ObjectStoreState state, loader->BuildState(*kms_client));
-  ASSIGN_OR_RETURN(ObjectStore store, ObjectStore::New(state));
+  ASSIGN_OR_RETURN(std::unique_ptr<ObjectStore> store, ObjectStore::New(state));
 
   // using `new` to invoke a private constructor
-  return std::unique_ptr<Token>(
-      new Token(slot_id, slot_info, token_info, std::move(loader), store));
+  return std::unique_ptr<Token>(new Token(slot_id, slot_info, token_info,
+                                          std::move(loader), std::move(store)));
 }
 
 bool Token::is_logged_in() const {
@@ -120,6 +120,15 @@ absl::Status Token::Logout() {
                                    CKR_USER_NOT_LOGGED_IN, SOURCE_LOCATION);
   }
   is_logged_in_ = false;
+  return absl::OkStatus();
+}
+
+absl::Status Token::RefreshState(const KmsClient& client) {
+  ASSIGN_OR_RETURN(ObjectStoreState state, object_loader_->BuildState(client));
+  ASSIGN_OR_RETURN(std::unique_ptr<ObjectStore> store, ObjectStore::New(state));
+
+  absl::WriterMutexLock lock(&objects_mutex_);
+  objects_.swap(store);
   return absl::OkStatus();
 }
 

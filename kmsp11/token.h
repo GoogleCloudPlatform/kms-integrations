@@ -33,27 +33,33 @@ class Token {
 
   inline absl::StatusOr<std::shared_ptr<Object>> GetObject(
       CK_OBJECT_HANDLE object_handle) const {
-    return objects_.GetObject(object_handle);
+    absl::ReaderMutexLock lock(&objects_mutex_);
+    return objects_->GetObject(object_handle);
   }
 
   inline absl::StatusOr<std::shared_ptr<Object>> GetKey(
       CK_OBJECT_HANDLE handle) const {
-    return objects_.GetKey(handle);
+    absl::ReaderMutexLock lock(&objects_mutex_);
+    return objects_->GetKey(handle);
   }
 
   inline std::vector<CK_OBJECT_HANDLE> FindObjects(
       std::function<bool(const Object&)> predicate) const {
-    return objects_.Find(predicate);
+    absl::ReaderMutexLock lock(&objects_mutex_);
+    return objects_->Find(predicate);
   }
+
+  absl::Status RefreshState(const KmsClient& client);
 
  private:
   Token(CK_SLOT_ID slot_id, CK_SLOT_INFO slot_info, CK_TOKEN_INFO token_info,
-        std::unique_ptr<ObjectLoader> object_loader, ObjectStore objects)
+        std::unique_ptr<ObjectLoader> object_loader,
+        std::unique_ptr<ObjectStore> objects)
       : slot_id_(slot_id),
         slot_info_(slot_info),
         token_info_(token_info),
         object_loader_(std::move(object_loader)),
-        objects_(objects),
+        objects_(std::move(objects)),
         is_logged_in_(false) {}
 
   const CK_SLOT_ID slot_id_;
@@ -61,7 +67,8 @@ class Token {
   const CK_TOKEN_INFO token_info_;
 
   std::unique_ptr<ObjectLoader> object_loader_;
-  const ObjectStore objects_;
+  mutable absl::Mutex objects_mutex_;
+  std::unique_ptr<ObjectStore> objects_ ABSL_GUARDED_BY(objects_mutex_);
 
   // All sessions with the same token have the same login state (rather than
   // login state being per-session, which seems like the more obvious choice.)

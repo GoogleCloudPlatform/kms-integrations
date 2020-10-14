@@ -67,7 +67,8 @@ bool EntryCompare(const ObjectStoreEntry& e1, const ObjectStoreEntry& e2) {
 
 }  // namespace
 
-absl::StatusOr<ObjectStore> ObjectStore::New(const ObjectStoreState& state) {
+absl::StatusOr<std::unique_ptr<ObjectStore>> ObjectStore::New(
+    const ObjectStoreState& state) {
   absl::StatusOr<std::vector<ObjectStoreEntry>> entries =
       ParseStoreEntries(state);
   if (!entries.ok()) {
@@ -77,16 +78,17 @@ absl::StatusOr<ObjectStore> ObjectStore::New(const ObjectStoreState& state) {
         CKR_DEVICE_ERROR, SOURCE_LOCATION);
   }
 
-  ObjectStore store(ObjectStoreMap(entries->begin(), entries->end()));
-  if (store.entries_.size() != entries->size()) {
+  std::unique_ptr<ObjectStore> store = absl::WrapUnique(
+      new ObjectStore(ObjectStoreMap(entries->begin(), entries->end())));
+  if (store->entries_.size() != entries->size()) {
     return NewInvalidArgumentError(
         absl::StrFormat("duplicate handle detected: "
                         "store.entries_.size()=%d; entries.size()=%d",
-                        store.entries_.size(), entries->size()),
+                        store->entries_.size(), entries->size()),
         CKR_DEVICE_ERROR, SOURCE_LOCATION);
   }
 
-  return store;
+  return std::move(store);
 }
 
 absl::StatusOr<std::shared_ptr<Object>> ObjectStore::GetObject(

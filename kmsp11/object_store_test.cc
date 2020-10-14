@@ -224,10 +224,10 @@ TEST(ObjectStoreTest, GetObjectSuccessPublicKey) {
   ASSERT_OK_AND_ASSIGN(*key, NewAsymmetricRsaKey());
   key->set_public_key_handle(1);
 
-  ASSERT_OK_AND_ASSIGN(ObjectStore store, ObjectStore::New(s));
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectStore> store, ObjectStore::New(s));
 
   EXPECT_THAT(
-      store.GetObject(1),
+      store->GetObject(1),
       IsOkAndHolds(Pointee(AllOf(
           Property("kms_key_name", &Object::kms_key_name,
                    key->crypto_key_version().name()),
@@ -241,10 +241,10 @@ TEST(ObjectStoreTest, GetObjectSuccessPrivateKey) {
   ASSERT_OK_AND_ASSIGN(*key, NewAsymmetricRsaKey());
   key->set_private_key_handle(1);
 
-  ASSERT_OK_AND_ASSIGN(ObjectStore store, ObjectStore::New(s));
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectStore> store, ObjectStore::New(s));
 
   EXPECT_THAT(
-      store.GetObject(1),
+      store->GetObject(1),
       IsOkAndHolds(Pointee(AllOf(
           Property("kms_key_name", &Object::kms_key_name,
                    key->crypto_key_version().name()),
@@ -258,10 +258,10 @@ TEST(ObjectStoreTest, GetObjectSuccessCertificate) {
   ASSERT_OK_AND_ASSIGN(*key, NewAsymmetricEcKeyAndCert());
   key->mutable_certificate()->set_handle(1);
 
-  ASSERT_OK_AND_ASSIGN(ObjectStore store, ObjectStore::New(s));
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectStore> store, ObjectStore::New(s));
 
   EXPECT_THAT(
-      store.GetObject(1),
+      store->GetObject(1),
       IsOkAndHolds(Pointee(AllOf(
           Property("kms_key_name", &Object::kms_key_name,
                    key->crypto_key_version().name()),
@@ -269,9 +269,10 @@ TEST(ObjectStoreTest, GetObjectSuccessCertificate) {
 }
 
 TEST(ObjectStoreTest, GetObjectFailsInvalidHandle) {
-  ASSERT_OK_AND_ASSIGN(ObjectStore store, ObjectStore::New(ObjectStoreState()));
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectStore> store,
+                       ObjectStore::New(ObjectStoreState()));
 
-  EXPECT_THAT(store.GetObject(CK_INVALID_HANDLE),
+  EXPECT_THAT(store->GetObject(CK_INVALID_HANDLE),
               StatusRvIs(CKR_OBJECT_HANDLE_INVALID));
 }
 
@@ -283,9 +284,9 @@ TEST(ObjectStoreTest, GetObjectFailsUnusedHandle) {
   ASSERT_NE(key->public_key_handle(), 1);
   ASSERT_NE(key->private_key_handle(), 1);
 
-  ASSERT_OK_AND_ASSIGN(ObjectStore store, ObjectStore::New(s));
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectStore> store, ObjectStore::New(s));
 
-  EXPECT_THAT(store.GetObject(1), StatusRvIs(CKR_OBJECT_HANDLE_INVALID));
+  EXPECT_THAT(store->GetObject(1), StatusRvIs(CKR_OBJECT_HANDLE_INVALID));
 }
 
 TEST(ObjectStoreTest, GetKeySuccessPublicKey) {
@@ -295,10 +296,10 @@ TEST(ObjectStoreTest, GetKeySuccessPublicKey) {
   ASSERT_OK_AND_ASSIGN(*key, NewAsymmetricRsaKey());
   key->set_public_key_handle(1);
 
-  ASSERT_OK_AND_ASSIGN(ObjectStore store, ObjectStore::New(s));
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectStore> store, ObjectStore::New(s));
 
   EXPECT_THAT(
-      store.GetKey(1),
+      store->GetKey(1),
       IsOkAndHolds(Pointee(AllOf(
           Property("kms_key_name", &Object::kms_key_name,
                    key->crypto_key_version().name()),
@@ -312,10 +313,10 @@ TEST(ObjectStoreTest, GetKeySuccessPrivateKey) {
   ASSERT_OK_AND_ASSIGN(*key, NewAsymmetricRsaKey());
   key->set_private_key_handle(1);
 
-  ASSERT_OK_AND_ASSIGN(ObjectStore store, ObjectStore::New(s));
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectStore> store, ObjectStore::New(s));
 
   EXPECT_THAT(
-      store.GetKey(1),
+      store->GetKey(1),
       IsOkAndHolds(Pointee(AllOf(
           Property("kms_key_name", &Object::kms_key_name,
                    key->crypto_key_version().name()),
@@ -329,16 +330,17 @@ TEST(ObjectStoreTest, GetKeyFailsCertificate) {
   ASSERT_OK_AND_ASSIGN(*key, NewAsymmetricEcKeyAndCert());
   key->mutable_certificate()->set_handle(1);
 
-  ASSERT_OK_AND_ASSIGN(ObjectStore store, ObjectStore::New(s));
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectStore> store, ObjectStore::New(s));
 
   // It's a valid /Object/ handle, but it doesn't refer to a key.
-  EXPECT_THAT(store.GetKey(1), StatusRvIs(CKR_KEY_HANDLE_INVALID));
+  EXPECT_THAT(store->GetKey(1), StatusRvIs(CKR_KEY_HANDLE_INVALID));
 }
 
 TEST(ObjectStoreTest, GetKeyFailsInvalidHandle) {
-  ASSERT_OK_AND_ASSIGN(ObjectStore store, ObjectStore::New(ObjectStoreState()));
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectStore> store,
+                       ObjectStore::New(ObjectStoreState()));
 
-  EXPECT_THAT(store.GetKey(CK_INVALID_HANDLE),
+  EXPECT_THAT(store->GetKey(CK_INVALID_HANDLE),
               StatusRvIs(CKR_KEY_HANDLE_INVALID));
 }
 
@@ -350,9 +352,9 @@ TEST(ObjectStoreTest, GetKeyFailsUnusedHandle) {
   ASSERT_NE(key->public_key_handle(), 1);
   ASSERT_NE(key->private_key_handle(), 1);
 
-  ASSERT_OK_AND_ASSIGN(ObjectStore store, ObjectStore::New(s));
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectStore> store, ObjectStore::New(s));
 
-  EXPECT_THAT(store.GetKey(1), StatusRvIs(CKR_KEY_HANDLE_INVALID));
+  EXPECT_THAT(store->GetKey(1), StatusRvIs(CKR_KEY_HANDLE_INVALID));
 }
 
 TEST(ObjectStoreTest, FindPublicKeysSuccess) {
@@ -366,9 +368,9 @@ TEST(ObjectStoreTest, FindPublicKeysSuccess) {
   ASSERT_OK_AND_ASSIGN(*rsa_key, NewAsymmetricRsaKey());
   rsa_key->set_public_key_handle(2);
 
-  ASSERT_OK_AND_ASSIGN(ObjectStore store, ObjectStore::New(s));
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectStore> store, ObjectStore::New(s));
 
-  EXPECT_THAT(store.Find([](const kmsp11::Object& o) -> bool {
+  EXPECT_THAT(store->Find([](const kmsp11::Object& o) -> bool {
     return o.object_class() == CKO_PUBLIC_KEY;
   }),
               UnorderedElementsAre(1, 2));
@@ -380,9 +382,9 @@ TEST(ObjectStoreTest, FindWithoutMatchesReturnsEmptyVector) {
   AsymmetricKey* ec_key = s.add_asymmetric_keys();
   ASSERT_OK_AND_ASSIGN(*ec_key, NewAsymmetricEcKeyAndCert());
 
-  ASSERT_OK_AND_ASSIGN(ObjectStore store, ObjectStore::New(s));
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectStore> store, ObjectStore::New(s));
 
-  EXPECT_THAT(store.Find([](const kmsp11::Object& o) -> bool {
+  EXPECT_THAT(store->Find([](const kmsp11::Object& o) -> bool {
     return o.algorithm().key_type == CKK_RSA;
   }),
               IsEmpty());
@@ -407,9 +409,9 @@ TEST(ObjectStoreTest, FindSortsByNameThenClass) {
   ec_key_2->mutable_certificate()->set_handle(5);
   ec_key_2->set_private_key_handle(6);
 
-  ASSERT_OK_AND_ASSIGN(ObjectStore store, ObjectStore::New(s));
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectStore> store, ObjectStore::New(s));
 
-  EXPECT_THAT(store.Find([](const kmsp11::Object& o) -> bool { return true; }),
+  EXPECT_THAT(store->Find([](const kmsp11::Object& o) -> bool { return true; }),
               ElementsAre(5,  // (d, CKO_CERTIFICATE==1)
                           4,  // (d, CKO_PUBLIC_KEY==2)
                           6,  // (d, CKO_PRIVATE_KEY==3)
