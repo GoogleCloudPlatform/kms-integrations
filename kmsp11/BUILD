@@ -281,9 +281,9 @@ cc_library(
     srcs = ["token.cc"],
     hdrs = ["token.h"],
     deps = [
-        ":cert_authority",
         ":cryptoki_headers",
         ":object",
+        ":object_loader",
         ":object_store",
         ":object_store_state_cc_proto",
         "//kmsp11/config:config_cc_proto",

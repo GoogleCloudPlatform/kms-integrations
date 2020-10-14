@@ -7,6 +7,7 @@
 #include "kmsp11/config/config.pb.h"
 #include "kmsp11/cryptoki.h"
 #include "kmsp11/object.h"
+#include "kmsp11/object_loader.h"
 #include "kmsp11/object_store.h"
 #include "kmsp11/util/kms_client.h"
 
@@ -47,16 +48,19 @@ class Token {
 
  private:
   Token(CK_SLOT_ID slot_id, CK_SLOT_INFO slot_info, CK_TOKEN_INFO token_info,
-        ObjectStore objects)
+        std::unique_ptr<ObjectLoader> object_loader, ObjectStore objects)
       : slot_id_(slot_id),
         slot_info_(slot_info),
         token_info_(token_info),
+        object_loader_(std::move(object_loader)),
         objects_(objects),
         is_logged_in_(false) {}
 
   const CK_SLOT_ID slot_id_;
   const CK_SLOT_INFO slot_info_;
   const CK_TOKEN_INFO token_info_;
+
+  std::unique_ptr<ObjectLoader> object_loader_;
   const ObjectStore objects_;
 
   // All sessions with the same token have the same login state (rather than

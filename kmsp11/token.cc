@@ -3,11 +3,8 @@
 #include "absl/container/flat_hash_set.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
-#include "glog/logging.h"
-#include "kmsp11/algorithm_details.h"
-#include "kmsp11/cert_authority.h"
+#include "kmsp11/object_loader.h"
 #include "kmsp11/object_store_state.pb.h"
-#include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/kms_client.h"
 #include "kmsp11/util/status_macros.h"
@@ -62,125 +59,6 @@ static absl::StatusOr<CK_TOKEN_INFO> NewTokenInfo(
   return info;
 }
 
-class ObjectStoreBuilder {
- public:
-  static absl::StatusOr<ObjectStoreBuilder> New(bool generate_certs) {
-    ObjectStoreBuilder builder;
-    if (generate_certs) {
-      ASSIGN_OR_RETURN(builder.cert_authority_, CertAuthority::New());
-    }
-    return std::move(builder);
-  }
-
-  const ObjectStoreState& state() { return state_; }
-
-  absl::Status AddAsymmetricKey(const kms_v1::CryptoKeyVersion& ckv,
-                                const kms_v1::PublicKey& public_key) {
-    ASSIGN_OR_RETURN(bssl::UniquePtr<EVP_PKEY> pub,
-                     ParseX509PublicKeyPem(public_key.pem()));
-
-    AsymmetricKey key;
-    *key.mutable_crypto_key_version() = ckv;
-    key.set_private_key_handle(NewHandle());
-    key.set_public_key_handle(NewHandle());
-    ASSIGN_OR_RETURN(*key.mutable_public_key_der(),
-                     MarshalX509PublicKeyDer(pub.get()));
-
-    if (cert_authority_) {
-      ASSIGN_OR_RETURN(bssl::UniquePtr<X509> x509,
-                       cert_authority_->GenerateCert(ckv, pub.get()));
-      ASSIGN_OR_RETURN(*key.mutable_certificate()->mutable_x509_der(),
-                       MarshalX509CertificateDer(x509.get()))
-      key.mutable_certificate()->set_handle(NewHandle());
-    }
-
-    *state_.add_asymmetric_keys() = key;
-    return absl::OkStatus();
-  }
-
- private:
-  CK_OBJECT_HANDLE NewHandle() {
-    CK_OBJECT_HANDLE handle;
-    do {
-      handle = RandomHandle();
-    } while (allocated_handles_.contains(handle));
-    allocated_handles_.insert(handle);
-    return handle;
-  }
-
-  ObjectStoreBuilder() {}
-
-  ObjectStoreState state_;
-  std::unique_ptr<CertAuthority> cert_authority_;
-  absl::flat_hash_set<CK_OBJECT_HANDLE> allocated_handles_;
-};
-
-absl::Status LoadVersions(const KmsClient& client, const kms_v1::CryptoKey& key,
-                          ObjectStoreBuilder* builder) {
-  kms_v1::ListCryptoKeyVersionsRequest req;
-  req.set_parent(key.name());
-  CryptoKeyVersionsRange v = client.ListCryptoKeyVersions(req);
-
-  for (CryptoKeyVersionsRange::iterator it = v.begin(); it != v.end(); it++) {
-    ASSIGN_OR_RETURN(kms_v1::CryptoKeyVersion ckv, *it);
-    if (ckv.state() != kms_v1::CryptoKeyVersion_CryptoKeyVersionState_ENABLED) {
-      LOG(INFO) << "skipping version " << ckv.name() << " with state "
-                << ckv.state();
-      continue;
-    }
-    if (!GetDetails(ckv.algorithm()).ok()) {
-      LOG(INFO) << "skipping version " << ckv.name()
-                << " with unsuported algorithm " << ckv.algorithm();
-      continue;
-    }
-
-    kms_v1::GetPublicKeyRequest pub_req;
-    pub_req.set_name(ckv.name());
-
-    ASSIGN_OR_RETURN(kms_v1::PublicKey pub, client.GetPublicKey(pub_req));
-    RETURN_IF_ERROR(builder->AddAsymmetricKey(ckv, pub));
-  }
-
-  return absl::OkStatus();
-}
-
-absl::StatusOr<ObjectStoreState> LoadState(const KmsClient& client,
-                                           absl::string_view key_ring_name,
-                                           bool generate_certs) {
-  std::unique_ptr<CertAuthority> cert_authority;
-
-  ASSIGN_OR_RETURN(ObjectStoreBuilder builder,
-                   ObjectStoreBuilder::New(generate_certs));
-
-  kms_v1::ListCryptoKeysRequest req;
-  req.set_parent(std::string(key_ring_name));
-  CryptoKeysRange keys = client.ListCryptoKeys(req);
-
-  for (CryptoKeysRange::iterator it = keys.begin(); it != keys.end(); it++) {
-    ASSIGN_OR_RETURN(kms_v1::CryptoKey key, *it);
-
-    if (key.version_template().protection_level() !=
-        kms_v1::ProtectionLevel::HSM) {
-      LOG(INFO) << "skipping key " << key.name()
-                << " with unsupported protection level "
-                << key.version_template().protection_level();
-      continue;
-    }
-
-    switch (key.purpose()) {
-      case kms_v1::CryptoKey::ASYMMETRIC_DECRYPT:
-      case kms_v1::CryptoKey::ASYMMETRIC_SIGN:
-        RETURN_IF_ERROR(LoadVersions(client, key, &builder));
-        break;
-      default:
-        LOG(INFO) << "skipping key " << key.name()
-                  << " with unsupported purpose " << key.purpose();
-        continue;
-    }
-  }
-  return builder.state();
-}
-
 }  // namespace
 
 absl::StatusOr<std::unique_ptr<Token>> Token::New(CK_SLOT_ID slot_id,
@@ -191,14 +69,14 @@ absl::StatusOr<std::unique_ptr<Token>> Token::New(CK_SLOT_ID slot_id,
   ASSIGN_OR_RETURN(CK_TOKEN_INFO token_info,
                    NewTokenInfo(token_config.label()));
 
-  ASSIGN_OR_RETURN(
-      ObjectStoreState state,
-      LoadState(*kms_client, token_config.key_ring(), generate_certs));
+  ASSIGN_OR_RETURN(std::unique_ptr<ObjectLoader> loader,
+                   ObjectLoader::New(token_config.key_ring(), generate_certs));
+  ASSIGN_OR_RETURN(ObjectStoreState state, loader->BuildState(*kms_client));
   ASSIGN_OR_RETURN(ObjectStore store, ObjectStore::New(state));
 
   // using `new` to invoke a private constructor
   return std::unique_ptr<Token>(
-      new Token(slot_id, slot_info, token_info, store));
+      new Token(slot_id, slot_info, token_info, std::move(loader), store));
 }
 
 bool Token::is_logged_in() const {
