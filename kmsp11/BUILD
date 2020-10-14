@@ -160,6 +160,33 @@ cc_test(
 )
 
 cc_library(
+    name = "object_loader",
+    srcs = ["object_loader.cc"],
+    hdrs = ["object_loader.h"],
+    deps = [
+        ":cert_authority",
+        ":cryptoki_headers",
+        ":object_store_state_cc_proto",
+        "//kmsp11/util:crypto_utils",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/container:flat_hash_set",
+        "@com_google_absl//absl/status:statusor",
+    ],
+)
+
+cc_test(
+    name = "object_loader_test",
+    size = "small",
+    srcs = ["object_loader_test.cc"],
+    deps = [
+        ":object_loader",
+        "//kmsp11/test",
+        "//kmsp11/test/fakekms/cpp:fakekms",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
     name = "object_store",
     srcs = ["object_store.cc"],
     hdrs = ["object_store.h"],

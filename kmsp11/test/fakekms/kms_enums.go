@@ -56,6 +56,12 @@ var algorithms = map[kmspb.CryptoKeyVersion_CryptoKeyVersionAlgorithm]algDef{
 	},
 
 	// ASYMMETRIC_SIGN
+	kmspb.CryptoKeyVersion_CryptoKeyVersionAlgorithm(11): // EC_SIGN_P224_SHA256
+	{
+		Purpose:    kmspb.CryptoKey_ASYMMETRIC_SIGN,
+		KeyFactory: &ecKeyFactory{elliptic.P224()},
+		Opts:       crypto.SHA256,
+	},
 	kmspb.CryptoKeyVersion_EC_SIGN_P256_SHA256: {
 		Purpose:    kmspb.CryptoKey_ASYMMETRIC_SIGN,
 		KeyFactory: &ecKeyFactory{elliptic.P256()},
@@ -66,7 +72,12 @@ var algorithms = map[kmspb.CryptoKeyVersion_CryptoKeyVersionAlgorithm]algDef{
 		KeyFactory: &ecKeyFactory{elliptic.P384()},
 		Opts:       crypto.SHA384,
 	},
-
+	kmspb.CryptoKeyVersion_CryptoKeyVersionAlgorithm(14): // EC_SIGN_P521_SHA512
+	{
+		Purpose:    kmspb.CryptoKey_ASYMMETRIC_SIGN,
+		KeyFactory: &ecKeyFactory{elliptic.P521()},
+		Opts:       crypto.SHA512,
+	},
 	kmspb.CryptoKeyVersion_RSA_SIGN_PKCS1_2048_SHA256: {
 		Purpose:    kmspb.CryptoKey_ASYMMETRIC_SIGN,
 		KeyFactory: rsaKeyFactory(2048),
