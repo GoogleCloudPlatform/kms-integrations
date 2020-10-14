@@ -26,6 +26,9 @@ class Token {
   CK_SLOT_ID slot_id() const { return slot_id_; }
   const CK_SLOT_INFO& slot_info() const { return slot_info_; }
   const CK_TOKEN_INFO& token_info() const { return token_info_; }
+  absl::string_view key_ring_name() const {
+    return object_loader_->key_ring_name();
+  }
 
   bool is_logged_in() const;
   absl::Status Login(CK_USER_TYPE user_type);

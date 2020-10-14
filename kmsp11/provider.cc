@@ -1,5 +1,6 @@
 #include "kmsp11/provider.h"
 
+#include "glog/logging.h"
 #include "kmsp11/cert_authority.h"
 #include "kmsp11/util/kms_client.h"
 #include "kmsp11/util/status_macros.h"
@@ -58,9 +59,14 @@ absl::StatusOr<std::unique_ptr<Provider>> Provider::New(LibraryConfig config) {
     tokens.emplace_back(std::move(token));
   }
 
+  absl::Duration refresh_interval =
+      config.refresh_interval_secs() > 0
+          ? absl::Seconds(config.refresh_interval_secs())
+          : absl::Seconds(300);
+
   // using `new` to invoke a private constructor
-  return std::unique_ptr<Provider>(
-      new Provider(info, std::move(tokens), std::move(client)));
+  return std::unique_ptr<Provider>(new Provider(
+      info, std::move(tokens), std::move(client), refresh_interval));
 }
 
 absl::StatusOr<Token*> Provider::TokenAt(CK_SLOT_ID slot_id) {
@@ -85,6 +91,19 @@ absl::StatusOr<std::shared_ptr<Session>> Provider::GetSession(
 
 absl::Status Provider::CloseSession(CK_SESSION_HANDLE session_handle) {
   return sessions_.Remove(session_handle);
+}
+
+void Provider::LoopRefresh() {
+  while (!shutdown_notification_.WaitForNotificationWithTimeout(
+      refresh_interval_)) {
+    for (const auto& token : tokens_) {
+      absl::Status refresh_result = token->RefreshState(*kms_client_);
+      if (!refresh_result.ok()) {
+        LOG(ERROR) << "error refreshing state for key ring "
+                   << token->key_ring_name() << ": " << refresh_result;
+      }
+    }
+  }
 }
 
 }  // namespace kmsp11

@@ -17,6 +17,8 @@ class ObjectLoader {
   static absl::StatusOr<std::unique_ptr<ObjectLoader>> New(
       absl::string_view key_ring_name, bool generate_certs);
 
+  inline absl::string_view key_ring_name() const { return key_ring_name_; }
+
   absl::StatusOr<ObjectStoreState> BuildState(const KmsClient& client);
 
  private:

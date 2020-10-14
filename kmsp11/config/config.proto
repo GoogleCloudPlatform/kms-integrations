@@ -25,9 +25,13 @@ message LibraryConfig {
   // compatibility with the SunPKCS11 JCA provider; other use is discouraged.
   bool generate_certs = 5;
 
-  // Optional. The directory in which log files should be emitted. An empty value
-  // means log to standard error.
+  // Optional. The directory in which log files should be emitted. An empty
+  // value means log to standard error.
   string log_directory = 6;
+
+  // Optional. The interval on which KMS state is refreshed. 0 or unset means
+  // the default (300 seconds).
+  uint32 refresh_interval_secs = 7;
 }
 
 message TokenConfig {

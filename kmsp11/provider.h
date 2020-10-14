@@ -1,7 +1,10 @@
 #ifndef KMSP11_PROVIDER_H_
 #define KMSP11_PROVIDER_H_
 
+#include <thread>
+
 #include "absl/status/statusor.h"
+#include "absl/synchronization/notification.h"
 #include "kmsp11/config/config.pb.h"
 #include "kmsp11/cryptoki.h"
 #include "kmsp11/session.h"
@@ -35,20 +38,33 @@ class Provider {
       CK_SESSION_HANDLE session_handle);
   absl::Status CloseSession(CK_SESSION_HANDLE session_handle);
 
+  virtual ~Provider() {
+    shutdown_notification_.Notify();
+    refresh_thread_.join();
+  }
+
  private:
   Provider(CK_INFO info, std::vector<std::unique_ptr<Token>>&& tokens,
-           std::unique_ptr<KmsClient> kms_client)
+           std::unique_ptr<KmsClient> kms_client,
+           const absl::Duration refresh_interval)
       : info_(info),
         tokens_(std::move(tokens)),
         sessions_(CKR_SESSION_HANDLE_INVALID),
         kms_client_(std::move(kms_client)),
-        creation_process_id_(GetProcessId()) {}
+        creation_process_id_(GetProcessId()),
+        refresh_interval_(refresh_interval),
+        refresh_thread_(&Provider::LoopRefresh, this) {}
+
+  void LoopRefresh();
 
   const CK_INFO info_;
   const std::vector<std::unique_ptr<Token>> tokens_;
   HandleMap<Session> sessions_;
   std::unique_ptr<KmsClient> kms_client_;
   int64_t creation_process_id_;
+  const absl::Duration refresh_interval_;
+  absl::Notification shutdown_notification_;
+  std::thread refresh_thread_;
 };
 
 }  // namespace kmsp11

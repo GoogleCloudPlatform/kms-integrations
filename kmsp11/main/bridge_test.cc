@@ -1144,6 +1144,45 @@ TEST_F(BridgeTest, FindObjectsFinalFailsOperationNotInitialized) {
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
+TEST_F(BridgeTest, FindObjectsContainsNewResultsAfterRefresh) {
+  std::ofstream(config_file_, std::ofstream::out | std::ofstream::app)
+      << "refresh_interval_secs: 1" << std::endl;
+
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
+
+  EXPECT_OK(FindObjectsInit(session, nullptr, 0));
+  CK_ULONG found_count;
+  std::vector<CK_OBJECT_HANDLE> objects(2);
+  EXPECT_OK(FindObjects(session, objects.data(), objects.size(), &found_count));
+  EXPECT_EQ(found_count, 0);
+  EXPECT_OK(FindObjectsFinal(session));
+
+  auto fake_client = fake_kms_->NewClient();
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM);
+  ck = CreateCryptoKeyOrDie(fake_client.get(), kr1_.name(), "ck", ck, true);
+
+  kms_v1::CryptoKeyVersion ckv;
+  ckv = CreateCryptoKeyVersionOrDie(fake_client.get(), ck.name(), ckv);
+  ckv = WaitForEnablement(fake_client.get(), ckv);
+
+  absl::SleepFor(absl::Seconds(2));
+
+  EXPECT_OK(FindObjectsInit(session, nullptr, 0));
+  EXPECT_OK(FindObjects(session, objects.data(), objects.size(), &found_count));
+  EXPECT_EQ(found_count, 2);
+  EXPECT_OK(FindObjectsFinal(session));
+}
+
 class AsymmetricCryptTest : public BridgeTest {
  protected:
   void SetUp() override {
