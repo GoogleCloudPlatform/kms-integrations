@@ -78,6 +78,28 @@ AsymmetricKey* ObjectLoader::Cache::Store(const kms_v1::CryptoKeyVersion& ckv,
   return key;
 }
 
+void ObjectLoader::Cache::EvictUnused(const ObjectStoreState& state) {
+  absl::flat_hash_set<std::string> items_to_retain;
+  for (const AsymmetricKey& key : state.asymmetric_keys()) {
+    items_to_retain.insert(key.crypto_key_version().name());
+  }
+
+  auto it = keys_.begin();
+  while (it != keys_.end()) {
+    if (items_to_retain.contains(it->first)) {
+      it++;
+      continue;
+    }
+
+    allocated_handles_.erase(it->second->public_key_handle());
+    allocated_handles_.erase(it->second->private_key_handle());
+    if (it->second->has_certificate()) {
+      allocated_handles_.erase(it->second->certificate().handle());
+    }
+    keys_.erase(it++);
+  }
+}
+
 CK_OBJECT_HANDLE ObjectLoader::Cache::NewHandle() {
   CK_OBJECT_HANDLE handle;
   do {
@@ -153,6 +175,7 @@ absl::StatusOr<ObjectStoreState> ObjectLoader::BuildState(
           *cache_.Store(ckv, public_key_der, cert_der);
     }
   }
+  cache_.EvictUnused(result);
   return result;
 }
 

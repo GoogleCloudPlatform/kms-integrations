@@ -34,6 +34,7 @@ class ObjectLoader {
     AsymmetricKey* Store(const kms_v1::CryptoKeyVersion& ckv,
                          absl::string_view public_key_der,
                          absl::string_view certificate_der);
+    void EvictUnused(const ObjectStoreState& state);
 
    private:
     CK_OBJECT_HANDLE NewHandle();
