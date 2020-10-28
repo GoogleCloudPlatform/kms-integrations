@@ -1,4 +1,3 @@
-#include "absl/base/call_once.h"
 #include "absl/status/status.h"
 #include "absl/types/optional.h"
 #include "grpc/fork.h"
@@ -7,23 +6,22 @@
 #include "kmsp11/main/function_list.h"
 #include "kmsp11/mechanism.h"
 #include "kmsp11/provider.h"
-#include "kmsp11/util/cleanup.h"
 #include "kmsp11/util/errors.h"
+#include "kmsp11/util/global_provider.h"
 #include "kmsp11/util/logging.h"
 #include "kmsp11/util/status_macros.h"
 
 namespace kmsp11 {
 namespace {
 
-static CK_FUNCTION_LIST function_list = NewFunctionList();
-static std::unique_ptr<Provider> provider;
-static absl::once_flag grpc_fork_handler_once;
+constexpr CK_FUNCTION_LIST kFunctionList = NewFunctionList();
 
 absl::StatusOr<Provider*> GetProvider() {
+  Provider* provider = GetGlobalProvider();
   if (!provider) {
     return NotInitializedError(SOURCE_LOCATION);
   }
-  return provider.get();
+  return provider;
 }
 
 absl::StatusOr<Token*> GetToken(CK_SLOT_ID slot_id) {
@@ -52,10 +50,11 @@ absl::StatusOr<std::shared_ptr<Object>> GetKey(Session* session,
   return key_or.value();
 }
 
-static void ShutdownInternal() {
-  provider = nullptr;
+static absl::Status ShutdownInternal() {
+  RETURN_IF_ERROR(ReleaseGlobalProvider());
   grpc_shutdown_blocking();
   ShutdownLogging();
+  return absl::OkStatus();
 }
 
 }  // namespace
@@ -77,8 +76,9 @@ absl::Status Initialize(CK_VOID_PTR pInitArgs) {
     }
   }
 
-  if (provider) {
-    if (provider->creation_process_id() == GetProcessId()) {
+  Provider* existing_provider = GetGlobalProvider();
+  if (existing_provider) {
+    if (existing_provider->creation_process_id() == GetProcessId()) {
       return FailedPreconditionError("the library is already initialized",
                                      CKR_CRYPTOKI_ALREADY_INITIALIZED,
                                      SOURCE_LOCATION);
@@ -87,10 +87,10 @@ absl::Status Initialize(CK_VOID_PTR pInitArgs) {
     // The PID has changed, which means this is Cryptoki re-Initialization in a
     // post-fork child, which is expected behavior:
     // http://docs.oasis-open.org/pkcs11/pkcs11-ug/v2.40/cn02/pkcs11-ug-v2.40-cn02.html#_Toc406759987
-
+    //
     // For now, we support this by releasing all of our existing state, and
     // starting over from scratch. This could be optimized.
-    ShutdownInternal();
+    RETURN_IF_ERROR(ShutdownInternal());
   }
 
   LibraryConfig config;
@@ -109,21 +109,26 @@ absl::Status Initialize(CK_VOID_PTR pInitArgs) {
   grpc_init();
   grpc_fork_handlers_auto_register();
 
-  ASSIGN_OR_RETURN(provider, Provider::New(config));
-
-  // Keep this just before the OK return, so that we don't need to shut down
-  // logging if some other initialization procedure fails.
+  // Provider::New emits info log messages (for example, noting that a CKV is
+  // being skipped due to state DISABLED), so logging should be initialized
+  // before Provider::New is invoked.
   RETURN_IF_ERROR(InitializeLogging(config.log_directory()));
-  return absl::OkStatus();
+
+  absl::StatusOr<std::unique_ptr<Provider>> new_provider =
+      Provider::New(config);
+  if (!new_provider.ok()) {
+    ShutdownLogging();
+    return new_provider.status();
+  }
+
+  return SetGlobalProvider(std::move(new_provider).value());
 }
 
 // Shut down the library.
 // http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc383864872
 absl::Status Finalize(CK_VOID_PTR pReserved) {
-  if (!provider) {
-    return NotInitializedError(SOURCE_LOCATION);
-  }
-  ShutdownInternal();
+  RETURN_IF_ERROR(GetProvider());
+  RETURN_IF_ERROR(ShutdownInternal());
   return absl::OkStatus();
 }
 
@@ -147,7 +152,7 @@ absl::Status GetFunctionList(CK_FUNCTION_LIST_PTR_PTR ppFunctionList) {
   if (!ppFunctionList) {
     return NullArgumentError("ppFunctionList", SOURCE_LOCATION);
   }
-  *ppFunctionList = &function_list;
+  *ppFunctionList = const_cast<CK_FUNCTION_LIST*>(&kFunctionList);
   return absl::OkStatus();
 }
 
@@ -559,10 +564,9 @@ absl::Status Sign(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pData,
     return result;
   }
 
-  Cleanup c([&session]() -> void { session->ReleaseOperation(); });
-
   absl::Status result = session->Sign(absl::MakeConstSpan(pData, ulDataLen),
                                       absl::MakeSpan(pSignature, sig_length));
+  session->ReleaseOperation();
   if (result.ok()) {
     *pulSignatureLen = sig_length;
   }
@@ -595,9 +599,11 @@ absl::Status Verify(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pData,
     return NullArgumentError("pSignature", SOURCE_LOCATION);
   }
 
-  Cleanup c([&session]() -> void { session->ReleaseOperation(); });
-  return session->Verify(absl::MakeConstSpan(pData, ulDataLen),
-                         absl::MakeConstSpan(pSignature, ulSignatureLen));
+  absl::Status result =
+      session->Verify(absl::MakeConstSpan(pData, ulDataLen),
+                      absl::MakeConstSpan(pSignature, ulSignatureLen));
+  session->ReleaseOperation();
+  return result;
 }
 
 }  // namespace kmsp11

@@ -3,7 +3,7 @@
 
 #include "kmsp11/cryptoki.h"
 
-inline CK_FUNCTION_LIST NewFunctionList() {
+inline constexpr CK_FUNCTION_LIST NewFunctionList() {
   return {CK_VERSION{CRYPTOKI_VERSION_MAJOR, CRYPTOKI_VERSION_MINOR},
 {{- range .Functions}}
           &{{.Name}},

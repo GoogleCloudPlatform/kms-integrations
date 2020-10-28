@@ -119,6 +119,42 @@ TEST_F(BridgeTest, InitializeFailsWithArgsNoConfig) {
                        HasSubstr("cannot load configuration")));
 }
 
+TEST_F(BridgeTest, InitializationWarningsAreLogged) {
+  // Create a key that will be skipped at init time (purpose==ENCRYPT_DECRYPT)
+  auto fake_client = fake_kms_->NewClient();
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::ENCRYPT_DECRYPT);
+  ck.mutable_version_template()->set_protection_level(kms_v1::HSM);
+  ck = CreateCryptoKeyOrDie(fake_client.get(), kr1_.name(), "ck", ck, true);
+
+  // TODO(b/160310720): Remove the use of gtest internals when we move to C++17.
+  testing::internal::CaptureStderr();
+
+  ASSERT_OK(Initialize(&init_args_));
+  ASSERT_OK(Finalize(nullptr));
+
+  EXPECT_THAT(testing::internal::GetCapturedStderr(),
+              HasSubstr("unsupported purpose"));
+}
+
+TEST_F(BridgeTest, LoggingIsInitializedBeforeKmsCallsAreMade) {
+  // Create a key that will be skipped at init time (purpose==ENCRYPT_DECRYPT)
+  auto fake_client = fake_kms_->NewClient();
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::ENCRYPT_DECRYPT);
+  ck.mutable_version_template()->set_protection_level(kms_v1::HSM);
+  ck = CreateCryptoKeyOrDie(fake_client.get(), kr1_.name(), "ck", ck, true);
+
+  // TODO(b/160310720): Remove the use of gtest internals when we move to C++17.
+  testing::internal::CaptureStderr();
+
+  ASSERT_OK(Initialize(&init_args_));
+  ASSERT_OK(Finalize(nullptr));
+
+  EXPECT_THAT(testing::internal::GetCapturedStderr(),
+              Not(HasSubstr("WARNING: Logging before InitGoogleLogging()")));
+}
+
 TEST_F(BridgeTest, FinalizeFailsWithoutInitialize) {
   EXPECT_THAT(Finalize(nullptr), StatusRvIs(CKR_CRYPTOKI_NOT_INITIALIZED));
 }

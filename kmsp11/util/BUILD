@@ -90,6 +90,29 @@ cc_test(
 )
 
 cc_library(
+    name = "global_provider",
+    srcs = ["global_provider.cc"],
+    hdrs = ["global_provider.h"],
+    deps = [
+        ":errors",
+        "//kmsp11:provider",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+    ],
+)
+
+cc_test(
+    name = "global_provider_test",
+    srcs = ["global_provider_test.cc"],
+    deps = [
+        ":global_provider",
+        "//kmsp11/test",
+        "//kmsp11/util:cleanup",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
     name = "logging",
     srcs = ["logging.cc"],
     hdrs = ["logging.h"],
