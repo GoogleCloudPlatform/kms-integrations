@@ -19,7 +19,7 @@ set BAZEL_VC=C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\VC\
 set PATH=C:\tools\msys64\usr\bin;%PATH%
 set BAZEL_SH=C:\tools\msys64\usr\bin\bash.exe
 
-bazel test ... --keep_going
+bazel test -c opt ... --keep_going
 set RV=%ERRORLEVEL%
 
 if exist "%PROJECT_ROOT%\bazel-bin\kmsp11\main\libkmsp11.so" copy ^

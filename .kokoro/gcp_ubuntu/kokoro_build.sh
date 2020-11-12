@@ -40,4 +40,4 @@ trap _upload_artifacts EXIT
 # See https://github.com/bazelbuild/bazel/pull/8660
 BAZEL_LINKOPTS="-static-libstdc++ -static-libgcc" \
   BAZEL_LINKLIBS="-l%:libstdc++.a -lm" \
-  bazel test ... --keep_going
+  bazel test -c opt ... --keep_going

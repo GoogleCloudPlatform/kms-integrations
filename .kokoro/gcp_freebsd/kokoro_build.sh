@@ -33,4 +33,4 @@ _upload_artifacts() {
 }
 trap _upload_artifacts EXIT
 
-bazel test ... --keep_going
+bazel test -c opt ... --keep_going
