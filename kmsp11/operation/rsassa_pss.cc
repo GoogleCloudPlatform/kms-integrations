@@ -20,10 +20,12 @@ static absl::Status ValidatePssParameters(Object* key, void* parameters,
   }
   CK_RSA_PKCS_PSS_PARAMS* params = (CK_RSA_PKCS_PSS_PARAMS*)parameters;
 
-  RETURN_IF_ERROR(EnsureHashMatches(params->hashAlg, key->algorithm().digest));
-  RETURN_IF_ERROR(EnsureMgf1HashMatches(params->mgf, key->algorithm().digest));
+  ASSIGN_OR_RETURN(const EVP_MD* digest,
+                   DigestForMechanism(*key->algorithm().digest_mechanism));
+  RETURN_IF_ERROR(EnsureHashMatches(params->hashAlg, digest));
+  RETURN_IF_ERROR(EnsureMgf1HashMatches(params->mgf, digest));
 
-  int expected_salt_length = EVP_MD_size(key->algorithm().digest);
+  int expected_salt_length = EVP_MD_size(digest);
   if (params->sLen != expected_salt_length) {
     return InvalidMechanismParamError(
         absl::StrFormat("expected salt length for key %s is %d, but %d "
@@ -75,8 +77,9 @@ absl::StatusOr<std::unique_ptr<VerifierInterface>> RsaPssVerifier::New(
 absl::Status RsaPssVerifier::Verify(KmsClient* client,
                                     absl::Span<const uint8_t> digest,
                                     absl::Span<const uint8_t> signature) {
-  return RsaVerifyPss(key_.get(), object_->algorithm().digest, digest,
-                      signature);
+  ASSIGN_OR_RETURN(const EVP_MD* md,
+                   DigestForMechanism(*object_->algorithm().digest_mechanism));
+  return RsaVerifyPss(key_.get(), md, digest, signature);
 }
 
 }  // namespace kmsp11

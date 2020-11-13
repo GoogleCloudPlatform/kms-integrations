@@ -2,6 +2,7 @@
 #define KMSP11_ALGORITHM_DETAILS_H_
 
 #include "absl/status/statusor.h"
+#include "absl/types/optional.h"
 #include "google/cloud/kms/v1/resources.pb.h"
 #include "google/cloud/kms/v1/service.pb.h"
 #include "kmsp11/cryptoki.h"
@@ -17,8 +18,7 @@ struct AlgorithmDetails {
   CK_KEY_TYPE key_type;
   size_t key_bit_length;
   CK_MECHANISM_TYPE key_gen_mechanism;
-  CK_MECHANISM_TYPE digest_mechanism;
-  const EVP_MD* digest;
+  absl::optional<CK_MECHANISM_TYPE> digest_mechanism;
 };
 
 absl::StatusOr<AlgorithmDetails> GetDetails(

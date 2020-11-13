@@ -22,8 +22,10 @@ static absl::Status ValidateRsaOaepParameters(Object* key, void* parameters,
   }
   CK_RSA_PKCS_OAEP_PARAMS* params = (CK_RSA_PKCS_OAEP_PARAMS*)parameters;
 
-  RETURN_IF_ERROR(EnsureHashMatches(params->hashAlg, key->algorithm().digest));
-  RETURN_IF_ERROR(EnsureMgf1HashMatches(params->mgf, key->algorithm().digest));
+  ASSIGN_OR_RETURN(const EVP_MD* digest,
+                   DigestForMechanism(*key->algorithm().digest_mechanism));
+  RETURN_IF_ERROR(EnsureHashMatches(params->hashAlg, digest));
+  RETURN_IF_ERROR(EnsureMgf1HashMatches(params->mgf, digest));
 
   if (params->source != CKZ_DATA_SPECIFIED) {
     return InvalidMechanismParamError(
@@ -57,8 +59,10 @@ absl::StatusOr<std::unique_ptr<EncrypterInterface>> RsaOaepEncrypter::New(
 
 absl::StatusOr<absl::Span<const uint8_t>> RsaOaepEncrypter::Encrypt(
     KmsClient* client, absl::Span<const uint8_t> plaintext) {
-  RETURN_IF_ERROR(EncryptRsaOaep(key_.get(), object_->algorithm().digest,
-                                 plaintext, absl::MakeSpan(ciphertext_)));
+  ASSIGN_OR_RETURN(const EVP_MD* digest,
+                   DigestForMechanism(*object_->algorithm().digest_mechanism));
+  RETURN_IF_ERROR(EncryptRsaOaep(key_.get(), digest, plaintext,
+                                 absl::MakeSpan(ciphertext_)));
   return absl::MakeConstSpan(ciphertext_);
 }
 

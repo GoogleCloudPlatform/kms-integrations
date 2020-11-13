@@ -15,6 +15,10 @@ namespace kmsp11 {
 // Convert an ASN1_TIME structure to an absl::Time.
 absl::StatusOr<absl::Time> Asn1TimeToAbsl(const ASN1_TIME* time);
 
+// Returns an EVP_MD* for the provided digest mechanism, or returns
+// InternalError if the provided mechanism is not a recognized digest.
+absl::StatusOr<const EVP_MD*> DigestForMechanism(CK_MECHANISM_TYPE mechanism);
+
 // Converts a signature in ASN.1 format (as returned by OpenSSL and Cloud KMS)
 // into IEEE P-1363 format (as required by PKCS #11).
 absl::StatusOr<std::vector<uint8_t>> EcdsaSigAsn1ToP1363(

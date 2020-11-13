@@ -59,10 +59,11 @@ size_t RsaPkcs1Signer::signature_length() { return RSA_size(key_.get()); }
 absl::Status RsaPkcs1Signer::Sign(KmsClient* client,
                                   absl::Span<const uint8_t> data,
                                   absl::Span<uint8_t> signature) {
-  ASSIGN_OR_RETURN(
-      std::vector<uint8_t> digest,
-      ExtractDigest(data, EVP_MD_type(object()->algorithm().digest)));
-  return KmsSigner::Sign(client, digest, signature);
+  ASSIGN_OR_RETURN(const EVP_MD* md,
+                   DigestForMechanism(*object()->algorithm().digest_mechanism));
+  ASSIGN_OR_RETURN(std::vector<uint8_t> digest,
+                   ExtractDigest(data, EVP_MD_type(md)));
+  return KmsDigestSigner::Sign(client, digest, signature);
 }
 
 absl::StatusOr<std::unique_ptr<VerifierInterface>> RsaPkcs1Verifier::New(
@@ -83,11 +84,11 @@ absl::StatusOr<std::unique_ptr<VerifierInterface>> RsaPkcs1Verifier::New(
 absl::Status RsaPkcs1Verifier::Verify(KmsClient* client,
                                       absl::Span<const uint8_t> data,
                                       absl::Span<const uint8_t> signature) {
-  ASSIGN_OR_RETURN(
-      std::vector<uint8_t> digest,
-      ExtractDigest(data, EVP_MD_type(object_->algorithm().digest)))
-  return RsaVerifyPkcs1(key_.get(), object_->algorithm().digest, digest,
-                        signature);
+  ASSIGN_OR_RETURN(const EVP_MD* md,
+                   DigestForMechanism(*object_->algorithm().digest_mechanism));
+  ASSIGN_OR_RETURN(std::vector<uint8_t> digest,
+                   ExtractDigest(data, EVP_MD_type(md)));
+  return RsaVerifyPkcs1(key_.get(), md, digest, signature);
 }
 
 }  // namespace kmsp11

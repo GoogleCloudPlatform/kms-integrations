@@ -25,7 +25,6 @@ class DecrypterInterface {
 
 class SignerInterface {
  public:
-  virtual const EVP_MD* digest_algorithm() = 0;
   virtual size_t signature_length() = 0;
 
   virtual absl::Status Sign(KmsClient* client, absl::Span<const uint8_t> data,

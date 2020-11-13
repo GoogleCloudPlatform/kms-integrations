@@ -8,19 +8,15 @@
 namespace kmsp11 {
 
 // An abstract SignerInterface that makes signatures using Cloud KMS.
-class KmsSigner : public SignerInterface {
+class KmsDigestSigner : public SignerInterface {
  public:
-  inline const EVP_MD* digest_algorithm() override {
-    return object_->algorithm().digest;
-  }
-
   virtual absl::Status Sign(KmsClient* client, absl::Span<const uint8_t> digest,
                             absl::Span<uint8_t> signature) override;
 
-  virtual ~KmsSigner() {}
+  virtual ~KmsDigestSigner() {}
 
  protected:
-  KmsSigner(std::shared_ptr<Object> object) : object_(object) {}
+  KmsDigestSigner(std::shared_ptr<Object> object) : object_(object) {}
 
   // Copy a signature from src to dest. Virtual in order to allow conversion
   // between signature types for ECDSA signatures.

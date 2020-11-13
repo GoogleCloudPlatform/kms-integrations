@@ -41,6 +41,16 @@ TEST(Asn1TimeToAbslTest, Now) {
   EXPECT_THAT(Asn1TimeToAbsl(asn1_time.get()), IsOkAndHolds(now_seconds));
 }
 
+TEST(DigestForMechanismTest, Sha256) {
+  EXPECT_THAT(DigestForMechanism(CKM_SHA256), IsOkAndHolds(EVP_sha256()));
+}
+
+TEST(DigestForMechanismTest, UnrecognizedMechanism) {
+  EXPECT_THAT(DigestForMechanism(CKM_RSA_PKCS),
+              StatusIs(absl::StatusCode::kInternal,
+                       HasSubstr("invalid digest mechanism")));
+}
+
 TEST(EcdsaSigAsn1ToP1363Test, ValidSignature) {
   bssl::UniquePtr<EC_GROUP> g(EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1));
 

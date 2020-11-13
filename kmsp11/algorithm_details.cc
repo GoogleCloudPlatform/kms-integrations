@@ -18,7 +18,6 @@ static const auto* kAlgorithmDetails = new absl::flat_hash_map<
          256,                                            // key_size
          CKM_EC_KEY_PAIR_GEN,                            // key_gen_mechanism
          CKM_SHA256,                                     // digest_mechanism
-         EVP_sha256(),                                   // digest
      }},
     {kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384,
      AlgorithmDetails{
@@ -29,7 +28,6 @@ static const auto* kAlgorithmDetails = new absl::flat_hash_map<
          384,                                            // key_size
          CKM_EC_KEY_PAIR_GEN,                            // key_gen_mechanism
          CKM_SHA384,                                     // digest_mechanism
-         EVP_sha384(),                                   // digest
      }},
 
     // RSA_DECRYPT_OAEP_*
@@ -42,7 +40,6 @@ static const auto* kAlgorithmDetails = new absl::flat_hash_map<
          2048,                       // key_size
          CKM_RSA_PKCS_KEY_PAIR_GEN,  // key_gen_mechanism
          CKM_SHA256,                 // digest_mechanism
-         EVP_sha256(),               // digest
      }},
     {kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_3072_SHA256,
      AlgorithmDetails{
@@ -53,7 +50,6 @@ static const auto* kAlgorithmDetails = new absl::flat_hash_map<
          3072,                       // key_size
          CKM_RSA_PKCS_KEY_PAIR_GEN,  // key_gen_mechanism
          CKM_SHA256,                 // digest_mechanism
-         EVP_sha256(),               // digest
      }},
     {kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_4096_SHA256,
      AlgorithmDetails{
@@ -64,7 +60,6 @@ static const auto* kAlgorithmDetails = new absl::flat_hash_map<
          4096,                       // key_size
          CKM_RSA_PKCS_KEY_PAIR_GEN,  // key_gen_mechanism
          CKM_SHA256,                 // digest_mechanism
-         EVP_sha256(),               // digest
      }},
     {kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_4096_SHA512,
      AlgorithmDetails{
@@ -75,7 +70,6 @@ static const auto* kAlgorithmDetails = new absl::flat_hash_map<
          4096,                       // key_size
          CKM_RSA_PKCS_KEY_PAIR_GEN,  // key_gen_mechanism
          CKM_SHA512,                 // digest_mechanism
-         EVP_sha512(),               // digest
      }},
 
     // RSA_SIGN_PKCS1_*
@@ -88,7 +82,6 @@ static const auto* kAlgorithmDetails = new absl::flat_hash_map<
          2048,                       // key_size
          CKM_RSA_PKCS_KEY_PAIR_GEN,  // key_gen_mechanism
          CKM_SHA256,                 // digest_mechanism
-         EVP_sha256(),               // digest
      }},
     {kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_3072_SHA256,
      AlgorithmDetails{
@@ -99,7 +92,6 @@ static const auto* kAlgorithmDetails = new absl::flat_hash_map<
          3072,                       // key_size
          CKM_RSA_PKCS_KEY_PAIR_GEN,  // key_gen_mechanism
          CKM_SHA256,                 // digest_mechanism
-         EVP_sha256(),               // digest
      }},
     {kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA256,
      AlgorithmDetails{
@@ -110,7 +102,6 @@ static const auto* kAlgorithmDetails = new absl::flat_hash_map<
          4096,                       // key_size
          CKM_RSA_PKCS_KEY_PAIR_GEN,  // key_gen_mechanism
          CKM_SHA256,                 // digest_mechanism
-         EVP_sha256(),               // digest
      }},
     {kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA512,
      AlgorithmDetails{
@@ -121,7 +112,6 @@ static const auto* kAlgorithmDetails = new absl::flat_hash_map<
          4096,                       // key_size
          CKM_RSA_PKCS_KEY_PAIR_GEN,  // key_gen_mechanism
          CKM_SHA512,                 // digest_mechanism
-         EVP_sha512(),               // digest
      }},
 
     // RSA_SIGN_PSS_*
@@ -134,7 +124,6 @@ static const auto* kAlgorithmDetails = new absl::flat_hash_map<
          2048,                       // key_size
          CKM_RSA_PKCS_KEY_PAIR_GEN,  // key_gen_mechanism
          CKM_SHA256,                 // digest_mechanism
-         EVP_sha256(),               // digest
      }},
     {kms_v1::CryptoKeyVersion::RSA_SIGN_PSS_3072_SHA256,
      AlgorithmDetails{
@@ -145,7 +134,6 @@ static const auto* kAlgorithmDetails = new absl::flat_hash_map<
          3072,                       // key_size
          CKM_RSA_PKCS_KEY_PAIR_GEN,  // key_gen_mechanism
          CKM_SHA256,                 // digest_mechanism
-         EVP_sha256(),               // digest
      }},
     {kms_v1::CryptoKeyVersion::RSA_SIGN_PSS_4096_SHA256,
      AlgorithmDetails{
@@ -156,7 +144,6 @@ static const auto* kAlgorithmDetails = new absl::flat_hash_map<
          4096,                       // key_size
          CKM_RSA_PKCS_KEY_PAIR_GEN,  // key_gen_mechanism
          CKM_SHA256,                 // digest_mechanism
-         EVP_sha256(),               // digest
      }},
     {kms_v1::CryptoKeyVersion::RSA_SIGN_PSS_4096_SHA512,
      AlgorithmDetails{
@@ -167,7 +154,6 @@ static const auto* kAlgorithmDetails = new absl::flat_hash_map<
          4096,                       // key_size
          CKM_RSA_PKCS_KEY_PAIR_GEN,  // key_gen_mechanism
          CKM_SHA512,                 // digest_mechanism
-         EVP_sha512(),               // digest
      }},
 };
 

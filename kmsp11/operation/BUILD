@@ -44,7 +44,7 @@ cc_library(
     hdrs = ["ecdsa.h"],
     deps = [
         ":crypter_interfaces",
-        ":kms_signer",
+        ":kms_digest_signer",
         ":preconditions",
         "//kmsp11:cryptoki_headers",
         "//kmsp11/util:cleanup",
@@ -78,9 +78,9 @@ cc_library(
 )
 
 cc_library(
-    name = "kms_signer",
-    srcs = ["kms_signer.cc"],
-    hdrs = ["kms_signer.h"],
+    name = "kms_digest_signer",
+    srcs = ["kms_digest_signer.cc"],
+    hdrs = ["kms_digest_signer.h"],
     deps = [
         ":crypter_interfaces",
         "//kmsp11:cryptoki_headers",
@@ -158,7 +158,7 @@ cc_library(
     hdrs = ["rsassa_pkcs1.h"],
     deps = [
         ":crypter_interfaces",
-        ":kms_signer",
+        ":kms_digest_signer",
         ":preconditions",
         "//kmsp11:cryptoki_headers",
         "//kmsp11/util:cleanup",
@@ -188,7 +188,7 @@ cc_library(
     hdrs = ["rsassa_pss.h"],
     deps = [
         ":crypter_interfaces",
-        ":kms_signer",
+        ":kms_digest_signer",
         ":preconditions",
         "//kmsp11:cryptoki_headers",
         "//kmsp11/util:cleanup",

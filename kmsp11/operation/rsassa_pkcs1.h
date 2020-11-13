@@ -2,7 +2,7 @@
 #define KMSP11_OPERATION_RSASSA_PKCS1_H_
 
 #include "absl/strings/string_view.h"
-#include "kmsp11/operation/kms_signer.h"
+#include "kmsp11/operation/kms_digest_signer.h"
 #include "kmsp11/util/string_utils.h"
 #include "openssl/rsa.h"
 
@@ -10,7 +10,7 @@ namespace kmsp11 {
 
 // An implementation of SignerInterface that makes RSASSA-PKCS1 signatures using
 // Cloud KMS.
-class RsaPkcs1Signer : public KmsSigner {
+class RsaPkcs1Signer : public KmsDigestSigner {
  public:
   static absl::StatusOr<std::unique_ptr<SignerInterface>> New(
       std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
@@ -24,7 +24,7 @@ class RsaPkcs1Signer : public KmsSigner {
 
  private:
   RsaPkcs1Signer(std::shared_ptr<Object> object, bssl::UniquePtr<RSA> key)
-      : KmsSigner(object), key_(std::move(key)) {}
+      : KmsDigestSigner(object), key_(std::move(key)) {}
 
   bssl::UniquePtr<RSA> key_;
 };

@@ -61,8 +61,9 @@ absl::StatusOr<std::unique_ptr<VerifierInterface>> EcdsaVerifier::New(
 absl::Status EcdsaVerifier::Verify(KmsClient* client,
                                    absl::Span<const uint8_t> digest,
                                    absl::Span<const uint8_t> signature) {
-  return EcdsaVerifyP1363(key_.get(), object_->algorithm().digest, digest,
-                          signature);
+  ASSIGN_OR_RETURN(const EVP_MD* md,
+                   DigestForMechanism(*object_->algorithm().digest_mechanism));
+  return EcdsaVerifyP1363(key_.get(), md, digest, signature);
 }
 
 }  // namespace kmsp11

@@ -1,18 +1,21 @@
-#include "kmsp11/operation/kms_signer.h"
+#include "kmsp11/operation/kms_digest_signer.h"
 
+#include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/status_macros.h"
 
 namespace kmsp11 {
 
-absl::Status KmsSigner::Sign(KmsClient* client,
-                             absl::Span<const uint8_t> digest,
-                             absl::Span<uint8_t> signature) {
-  size_t expected_digest_size = EVP_MD_size(digest_algorithm());
-  if (digest.size() != expected_digest_size) {
+absl::Status KmsDigestSigner::Sign(KmsClient* client,
+                                   absl::Span<const uint8_t> digest,
+                                   absl::Span<uint8_t> signature) {
+  ASSIGN_OR_RETURN(const EVP_MD* md,
+                   DigestForMechanism(*object_->algorithm().digest_mechanism));
+
+  if (digest.size() != EVP_MD_size(md)) {
     return NewInvalidArgumentError(
         absl::StrFormat("provided digest has incorrect size (got %d, want %d)",
-                        digest.size(), expected_digest_size),
+                        digest.size(), EVP_MD_size(md)),
         CKR_DATA_LEN_RANGE, SOURCE_LOCATION);
   }
 
@@ -27,7 +30,7 @@ absl::Status KmsSigner::Sign(KmsClient* client,
   kms_v1::AsymmetricSignRequest req;
   req.set_name(std::string(object_->kms_key_name()));
 
-  int digest_nid = EVP_MD_type(digest_algorithm());
+  int digest_nid = EVP_MD_type(md);
   switch (digest_nid) {
     case NID_sha256:
       req.mutable_digest()->set_sha256(digest.data(), digest.size());
@@ -50,8 +53,8 @@ absl::Status KmsSigner::Sign(KmsClient* client,
   return absl::OkStatus();
 }
 
-absl::Status KmsSigner::CopySignature(absl::string_view src,
-                                      absl::Span<uint8_t> dest) {
+absl::Status KmsDigestSigner::CopySignature(absl::string_view src,
+                                            absl::Span<uint8_t> dest) {
   if (src.size() != signature_length()) {
     return NewInternalError(
         absl::StrFormat("unexpected signature length (got %d, want %d)",

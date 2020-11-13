@@ -105,6 +105,21 @@ absl::StatusOr<absl::Time> Asn1TimeToAbsl(const ASN1_TIME* time) {
   return absl::FromCivil(second, absl::UTCTimeZone());
 }
 
+absl::StatusOr<const EVP_MD*> DigestForMechanism(CK_MECHANISM_TYPE mechanism) {
+  switch (mechanism) {
+    case CKM_SHA256:
+      return EVP_sha256();
+    case CKM_SHA384:
+      return EVP_sha384();
+    case CKM_SHA512:
+      return EVP_sha512();
+    default:
+      return NewInternalError(
+          absl::StrFormat("invalid digest mechanism: %#x", mechanism),
+          SOURCE_LOCATION);
+  }
+}
+
 absl::StatusOr<std::vector<uint8_t>> EcdsaSigAsn1ToP1363(
     absl::string_view asn1_sig, const EC_GROUP* group) {
   bssl::UniquePtr<ECDSA_SIG> sig(ECDSA_SIG_from_bytes(
