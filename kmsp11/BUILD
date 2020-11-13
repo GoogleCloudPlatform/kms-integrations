@@ -104,7 +104,10 @@ cc_library(
 
 cc_library(
     name = "cryptoki_headers",
-    hdrs = ["cryptoki.h"],
+    hdrs = [
+        "cryptoki.h",
+        "kmsp11.h",
+    ],
     deps = [":cryptoki_raw_headers"],
 )
 

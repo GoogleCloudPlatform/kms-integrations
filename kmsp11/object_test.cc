@@ -2,6 +2,7 @@
 
 #include "gmock/gmock.h"
 #include "kmsp11/cert_authority.h"
+#include "kmsp11/kmsp11.h"
 #include "kmsp11/test/matchers.h"
 #include "kmsp11/test/runfiles.h"
 #include "kmsp11/test/test_status_macros.h"
@@ -96,6 +97,11 @@ TEST(NewKeyPairTest, PublicKeyAttributes) {
   const AttributeMap& attrs = key_pair.public_key.attributes();
 
   // check a handful of the attributes to make sure they're consistent
+  EXPECT_THAT(attrs.Value(CKA_CLASS),
+              IsOkAndHolds(MarshalULong(CKO_PUBLIC_KEY)));
+  EXPECT_THAT(attrs.Value(CKA_KMS_ALGORITHM),
+              IsOkAndHolds(
+                  MarshalULong(kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256)));
   EXPECT_THAT(attrs.Value(CKA_TOKEN), IsOkAndHolds(MarshalBool(true)));
   EXPECT_THAT(attrs.Value(CKA_PRIVATE), IsOkAndHolds(MarshalBool(false)));
   EXPECT_THAT(attrs.Value(CKA_DERIVE), IsOkAndHolds(MarshalBool(false)));
@@ -115,6 +121,11 @@ TEST(NewKeyPairTest, PrivateKeyAttributes) {
   const AttributeMap& attrs = key_pair.private_key.attributes();
 
   // check a handful of the attributes to make sure they're consistent
+  EXPECT_THAT(attrs.Value(CKA_CLASS),
+              IsOkAndHolds(MarshalULong(CKO_PRIVATE_KEY)));
+  EXPECT_THAT(attrs.Value(CKA_KMS_ALGORITHM),
+              IsOkAndHolds(
+                  MarshalULong(kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256)));
   EXPECT_THAT(attrs.Value(CKA_SUBJECT), IsOkAndHolds(""));
   EXPECT_THAT(attrs.Value(CKA_MODIFIABLE), IsOkAndHolds(MarshalBool(false)));
   EXPECT_THAT(attrs.Value(CKA_DERIVE), IsOkAndHolds(MarshalBool(false)));
@@ -193,6 +204,8 @@ TEST(NewCertificateTest, CertificateAttributes) {
 
   EXPECT_THAT(attrs.Value(CKA_CLASS),
               IsOkAndHolds(MarshalULong(CKO_CERTIFICATE)));
+  EXPECT_THAT(attrs.Value(CKA_KMS_ALGORITHM),
+              IsOkAndHolds(MarshalULong(KMS_ALGORITHM_EC_SIGN_P256_SHA256)));
   EXPECT_THAT(attrs.Value(CKA_CERTIFICATE_TYPE),
               IsOkAndHolds(MarshalULong(CKC_X_509)));
   EXPECT_THAT(attrs.Value(CKA_TRUSTED), IsOkAndHolds(MarshalBool(false)));
