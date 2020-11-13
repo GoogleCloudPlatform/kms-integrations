@@ -457,9 +457,12 @@ void SafeZeroMemory(volatile char* ptr, size_t size) {
 std::string SslErrorToString() {
   bssl::UniquePtr<BIO> bio(BIO_new(BIO_s_mem()));
   ERR_print_errors(bio.get());
-  char* buf;
-  size_t len = BIO_get_mem_data(bio.get(), &buf);
-  return std::string(buf, len);
+  const uint8_t* buf;
+  size_t buf_len;
+  if (!BIO_mem_contents(bio.get(), &buf, &buf_len) || buf_len == 0) {
+    return "(error could not be retrieved from the SSL stack)";
+  }
+  return std::string(reinterpret_cast<const char*>(buf), buf_len);
 }
 
 }  // namespace kmsp11

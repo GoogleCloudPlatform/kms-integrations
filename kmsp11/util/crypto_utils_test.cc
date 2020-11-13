@@ -476,7 +476,7 @@ TEST(ParsePublicKeyTest, MalformedKey) {
 TEST(RandBytesTest, SmokeTest) {
   std::string rand = RandBytes(8);
   EXPECT_EQ(rand.size(), 8);
-  EXPECT_NE(rand, std::string("\x00", 8));
+  EXPECT_NE(rand, std::string(8, '\x00'));
 }
 
 TEST(RandomHandleTest, SmokeTest) {
@@ -651,11 +651,11 @@ TEST(SslErrorToStringTest, ErrorEmitted) {
   EXPECT_THAT(SslErrorToString(), HasSubstr("UNKNOWN_GROUP"));
 }
 
-TEST(SslErrorToStringTest, EmptyStringOnNoError) {
+TEST(SslErrorToStringTest, MessageEmittedOnNoError) {
   bssl::UniquePtr<EC_KEY> ec_key(
       EC_KEY_new_by_curve_name(NID_X9_62_prime256v1));
   EXPECT_THAT(ec_key, Not(IsNull()));
-  EXPECT_THAT(SslErrorToString(), IsEmpty());
+  EXPECT_THAT(SslErrorToString(), HasSubstr("error could not be retrieved"));
 }
 
 }  // namespace

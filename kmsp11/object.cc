@@ -149,8 +149,10 @@ absl::Status AddX509CertificateAttributes(AttributeMap* attrs,
                    Asn1TimeToAbsl(X509_get_notBefore(cert)));
   ASSIGN_OR_RETURN(absl::Time not_after,
                    Asn1TimeToAbsl(X509_get_notAfter(cert)));
+
+  bssl::UniquePtr<EVP_PKEY> pub(X509_get_pubkey(cert));
   ASSIGN_OR_RETURN(std::string public_key_info,
-                   MarshalX509PublicKeyDer(X509_get_pubkey(cert)));
+                   MarshalX509PublicKeyDer(pub.get()));
 
   ASSIGN_OR_RETURN(std::string subject_der,
                    MarshalX509Name(X509_get_subject_name(cert)));
