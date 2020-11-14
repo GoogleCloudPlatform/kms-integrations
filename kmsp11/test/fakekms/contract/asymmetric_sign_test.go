@@ -147,6 +147,63 @@ func TestRSASignPKCS1(t *testing.T) {
 	verifyCRC32C(t, got.Signature, got.SignatureCrc32C)
 }
 
+func TestRSASignRawPKCS1(t *testing.T) {
+	ctx := context.Background()
+	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
+	ck := client.CreateTestCK(ctx, t, &kmspb.CreateCryptoKeyRequest{
+		Parent: kr.Name,
+		CryptoKey: &kmspb.CryptoKey{
+			Purpose: kmspb.CryptoKey_ASYMMETRIC_SIGN,
+			VersionTemplate: &kmspb.CryptoKeyVersionTemplate{
+				Algorithm: kmspb.CryptoKeyVersion_RSA_SIGN_RAW_PKCS1_2048,
+			},
+		},
+		SkipInitialVersionCreation: true,
+	})
+	ckv := client.CreateTestCKVAndWait(ctx, t, &kmspb.CreateCryptoKeyVersionRequest{
+		Parent: ck.Name,
+	})
+
+	pubResp, err := client.GetPublicKey(ctx, &kmspb.GetPublicKeyRequest{
+		Name: ckv.Name,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	pub := unmarshalPublicKeyPem(t, pubResp.Pem).(*rsa.PublicKey)
+
+	data := []byte("Here is some data to authenticate")
+
+	got, err := client.AsymmetricSign(ctx, &kmspb.AsymmetricSignRequest{
+		Name: ckv.Name,
+		Data: data,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := &kmspb.AsymmetricSignResponse{
+		// Not yet emitted (cl/342265843)
+		// Name: ckv.Name,
+	}
+
+	opts := append(testutil.ProtoDiffOpts(), ignoreSignatureAndSignatureCRC)
+	if diff := cmp.Diff(want, got, opts...); diff != "" {
+		t.Errorf("proto mismatch (-want +got): %s", diff)
+	}
+
+	if err := rsa.VerifyPKCS1v15(pub, 0, data[:], got.Signature); err != nil {
+		t.Error(err)
+	}
+
+	verifyCRC32C(t, got.Signature, got.SignatureCrc32C)
+}
+
+// TODO(b/156736940): Implement additional contract tests for raw PKCS#1 signing:
+// * Ensuring our behavior is right when both `data` and `digest` are supplied.
+// * Ensuring our behavior is right when `data` is too large.
+
 func TestRSASignPSS(t *testing.T) {
 	ctx := context.Background()
 	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})

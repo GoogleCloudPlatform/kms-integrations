@@ -101,7 +101,7 @@ func (f *fakeKMS) AsymmetricDecrypt(ctx context.Context, req *kmspb.AsymmetricDe
 
 // AsymmetricSign fakes a Cloud KMS API function.
 func (f *fakeKMS) AsymmetricSign(ctx context.Context, req *kmspb.AsymmetricSignRequest) (*kmspb.AsymmetricSignResponse, error) {
-	if err := allowlist("name", "digest.sha256", "digest.sha384", "digest.sha512").check(req); err != nil {
+	if err := allowlist("name", "data", "digest.sha256", "digest.sha384", "digest.sha512").check(req); err != nil {
 		return nil, err
 	}
 
@@ -127,23 +127,27 @@ func (f *fakeKMS) AsymmetricSign(ctx context.Context, req *kmspb.AsymmetricSignR
 
 	opts := def.Opts.(crypto.SignerOpts)
 
-	var digest []byte
-	switch opts.HashFunc() {
-	case crypto.SHA256:
-		digest = req.Digest.GetSha256()
-	case crypto.SHA384:
-		digest = req.Digest.GetSha384()
-	case crypto.SHA512:
-		digest = req.Digest.GetSha512()
-	default:
-		return nil, errInternal("unsupported hash: %d", opts.HashFunc())
+	var data []byte
+	if opts.HashFunc() == crypto.Hash(0) {
+		data = req.Data
+	} else {
+		switch opts.HashFunc() {
+		case crypto.SHA256:
+			data = req.Digest.GetSha256()
+		case crypto.SHA384:
+			data = req.Digest.GetSha384()
+		case crypto.SHA512:
+			data = req.Digest.GetSha512()
+		default:
+			return nil, errInternal("unsupported hash: %d", opts.HashFunc())
+		}
+
+		if len(data) != opts.HashFunc().Size() {
+			return nil, errInvalidArgument("len(digest)=%d, want %d", len(data), opts.HashFunc().Size())
+		}
 	}
 
-	if len(digest) != opts.HashFunc().Size() {
-		return nil, errInvalidArgument("len(digest)=%d, want %d", len(digest), opts.HashFunc().Size())
-	}
-
-	sig, err := ckv.keyMaterial.(crypto.Signer).Sign(rand.Reader, digest, opts)
+	sig, err := ckv.keyMaterial.(crypto.Signer).Sign(rand.Reader, data, opts)
 	if err != nil {
 		return nil, errInternal("signing failed: %v", err)
 	}

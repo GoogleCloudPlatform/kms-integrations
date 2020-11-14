@@ -56,6 +56,8 @@ var algorithms = map[kmspb.CryptoKeyVersion_CryptoKeyVersionAlgorithm]algDef{
 	},
 
 	// ASYMMETRIC_SIGN
+
+	// ECDSA
 	kmspb.CryptoKeyVersion_CryptoKeyVersionAlgorithm(11): // EC_SIGN_P224_SHA256
 	{
 		Purpose:    kmspb.CryptoKey_ASYMMETRIC_SIGN,
@@ -78,6 +80,8 @@ var algorithms = map[kmspb.CryptoKeyVersion_CryptoKeyVersionAlgorithm]algDef{
 		KeyFactory: &ecKeyFactory{elliptic.P521()},
 		Opts:       crypto.SHA512,
 	},
+
+	// RSASSA-PKCS1-v1_5
 	kmspb.CryptoKeyVersion_RSA_SIGN_PKCS1_2048_SHA256: {
 		Purpose:    kmspb.CryptoKey_ASYMMETRIC_SIGN,
 		KeyFactory: rsaKeyFactory(2048),
@@ -99,6 +103,7 @@ var algorithms = map[kmspb.CryptoKeyVersion_CryptoKeyVersionAlgorithm]algDef{
 		Opts:       crypto.SHA512,
 	},
 
+	// RSASSA-PSS
 	kmspb.CryptoKeyVersion_RSA_SIGN_PSS_2048_SHA256: {
 		Purpose:    kmspb.CryptoKey_ASYMMETRIC_SIGN,
 		KeyFactory: rsaKeyFactory(2048),
@@ -118,6 +123,23 @@ var algorithms = map[kmspb.CryptoKeyVersion_CryptoKeyVersionAlgorithm]algDef{
 		Purpose:    kmspb.CryptoKey_ASYMMETRIC_SIGN,
 		KeyFactory: rsaKeyFactory(4096),
 		Opts:       &rsa.PSSOptions{Hash: crypto.SHA512, SaltLength: rsa.PSSSaltLengthEqualsHash},
+	},
+
+	// RSASSA-PKCS1-v1_5 (Raw)
+	kmspb.CryptoKeyVersion_RSA_SIGN_RAW_PKCS1_2048: {
+		Purpose:    kmspb.CryptoKey_ASYMMETRIC_SIGN,
+		KeyFactory: rsaKeyFactory(2048),
+		Opts:       crypto.Hash(0),
+	},
+	kmspb.CryptoKeyVersion_RSA_SIGN_RAW_PKCS1_3072: {
+		Purpose:    kmspb.CryptoKey_ASYMMETRIC_SIGN,
+		KeyFactory: rsaKeyFactory(3072),
+		Opts:       crypto.Hash(0),
+	},
+	kmspb.CryptoKeyVersion_RSA_SIGN_RAW_PKCS1_4096: {
+		Purpose:    kmspb.CryptoKey_ASYMMETRIC_SIGN,
+		KeyFactory: rsaKeyFactory(4096),
+		Opts:       crypto.Hash(0),
 	},
 }
 
