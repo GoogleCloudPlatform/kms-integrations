@@ -4,11 +4,11 @@ workspace(name = "com_google_kmstools")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_file")
 
 http_archive(
-    name = "bazel_gazelle",  # v0.20.0 / 2020-02-06
-    sha256 = "d8c45ee70ec39a57e7a05e5027c32b1576cc7f16d9dd37135b0eddde45cf1b10",
+    name = "bazel_gazelle",  # v0.22.0 / 2020-10-02
+    sha256 = "d4113967ab451dd4d2d767c3ca5f927fec4b30f3b2c6f8135a2033b9c05a5687",
     urls = [
-        "https://storage.googleapis.com/bazel-mirror/github.com/bazelbuild/bazel-gazelle/releases/download/v0.20.0/bazel-gazelle-v0.20.0.tar.gz",
-        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.20.0/bazel-gazelle-v0.20.0.tar.gz",
+        "https://storage.googleapis.com/bazel-mirror/github.com/bazelbuild/bazel-gazelle/releases/download/v0.22.0/bazel-gazelle-v0.22.0.tar.gz",
+        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.22.0/bazel-gazelle-v0.22.0.tar.gz",
     ],
 )
 
@@ -59,10 +59,10 @@ http_archive(
 )
 
 http_archive(
-    name = "com_github_googleapis_google_cloud_cpp",  # 2020-05-26
-    sha256 = "34caa64a89786248356c8289f4cdb7fd638fbcebf67cb80c02e3f999555fc9d1",
-    strip_prefix = "google-cloud-cpp-56c57f2a4547cf57b614913015359bd33b4b5fa6",
-    url = "https://github.com/googleapis/google-cloud-cpp/archive/56c57f2a4547cf57b614913015359bd33b4b5fa6.tar.gz",
+    name = "com_github_googleapis_google_cloud_cpp",  # v1.20.0 // 2020-11-03
+    sha256 = "128dc8aee54921cb6869c46d837c3f1810d18d669b82062fdc56e60b84a1bda2",
+    strip_prefix = "google-cloud-cpp-88d7735677a7a79757c8c69455cab2acd84eddb0",
+    url = "https://github.com/googleapis/google-cloud-cpp/archive/88d7735677a7a79757c8c69455cab2acd84eddb0.tar.gz",
 )
 
 http_archive(
@@ -80,11 +80,27 @@ http_archive(
 )
 
 http_archive(
-    name = "io_bazel_rules_go",  # v0.23.0 / 2020-05-13
-    sha256 = "6a68e269802911fa419abb940c850734086869d7fe9bc8e12aaf60a09641c818",
+    name = "io_bazel_rules_go",  # v0.24.7 / 2020-11-13
+    sha256 = "207fad3e6689135c5d8713e5a17ba9d1290238f47b9ba545b63d9303406209c6",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.23.0/rules_go-v0.23.0.tar.gz",
-        "https://github.com/bazelbuild/rules_go/releases/download/v0.23.0/rules_go-v0.23.0.tar.gz",
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.24.7/rules_go-v0.24.7.tar.gz",
+        "https://github.com/bazelbuild/rules_go/releases/download/v0.24.7/rules_go-v0.24.7.tar.gz",
+    ],
+)
+
+# Keep this sync'd to the version used in rules_go, above. Otherwise, we're
+# working with two versions of the same repo.
+# https://github.com/bazelbuild/rules_go/blob/v0.24.7/go/private/repositories.bzl#L243
+http_archive(
+    name = "com_google_googleapis",  # 2020-08-24
+    # A custom build_file is needed because google_cloud_cpp is using an ugly hack. :-(
+    # See https://github.com/googleapis/google-cloud-cpp/blob/v1.20.0/bazel/googleapis.BUILD
+    build_file = "@com_github_googleapis_google_cloud_cpp//bazel:googleapis.BUILD",
+    sha256 = "bba8988a57dc1d259d8e032f3858b52e9708fb863cd378322e703c79582bd064",
+    strip_prefix = "googleapis-079e09a64813291f71759d0e1b5f14b0794dc345",
+    urls = [
+        "https://mirror.bazel.build/github.com/googleapis/googleapis/archive/079e09a64813291f71759d0e1b5f14b0794dc345.zip",
+        "https://github.com/googleapis/googleapis/archive/079e09a64813291f71759d0e1b5f14b0794dc345.zip",
     ],
 )
 

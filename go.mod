@@ -1,16 +1,17 @@
 module oss-tools
 
-go 1.13
+go 1.15
 
 require (
-	cloud.google.com/go v0.56.0
+	cloud.google.com/go v0.72.0
+	github.com/bazelbuild/bazel-gazelle v0.22.2 // indirect
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e
-	github.com/golang/protobuf v1.4.1
-	github.com/google/go-cmp v0.4.0
-	github.com/google/uuid v1.1.1
-	golang.org/x/tools v0.0.0-20200610052024-8d7dbee4c8ae // indirect
-	google.golang.org/api v0.23.0
-	google.golang.org/genproto v0.0.0-20200331122359-1ee6d9798940
-	google.golang.org/grpc v1.29.1
-	google.golang.org/protobuf v1.22.0
+	github.com/golang/protobuf v1.4.3
+	github.com/google/go-cmp v0.5.2
+	github.com/google/uuid v1.1.2
+	golang.org/x/tools v0.0.0-20201113202037-1643af1435f3 // indirect
+	google.golang.org/api v0.35.0
+	google.golang.org/genproto v0.0.0-20201109203340-2640f1f9cdfb
+	google.golang.org/grpc v1.33.2
+	google.golang.org/protobuf v1.25.0
 )
