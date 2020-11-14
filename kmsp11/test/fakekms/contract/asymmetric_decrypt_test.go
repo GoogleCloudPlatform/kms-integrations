@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
+	"hash/crc32"
 	"testing"
 
 	"oss-tools/kmsp11/test/fakekms/testutil"
@@ -12,6 +13,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 	fmpb "google.golang.org/genproto/protobuf/field_mask"
@@ -58,7 +60,8 @@ func TestAsymmetricDecrypt(t *testing.T) {
 	}
 
 	want := &kmspb.AsymmetricDecryptResponse{
-		Plaintext: pt,
+		Plaintext:       pt,
+		PlaintextCrc32C: wrapperspb.Int64(int64(crc32.Checksum(pt, crc32CTable))),
 	}
 
 	if diff := cmp.Diff(want, got, testutil.ProtoDiffOpts()...); diff != "" {

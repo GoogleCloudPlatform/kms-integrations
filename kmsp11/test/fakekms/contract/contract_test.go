@@ -5,6 +5,7 @@ package contract
 import (
 	"context"
 	"flag"
+	"hash/crc32"
 	"log"
 	"os"
 	"testing"
@@ -16,6 +17,7 @@ import (
 	"oss-tools/kmsp11/test/fakekms"
 
 	kms "cloud.google.com/go/kms/apiv1"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 // variables used by test cases
@@ -85,4 +87,15 @@ func testFakeKMS(m *testing.M) {
 
 	client = &ContractTestClient{c}
 	os.Exit(m.Run())
+}
+
+var crc32CTable = crc32.MakeTable(crc32.Castagnoli)
+
+func verifyCRC32C(t *testing.T, data []byte, checksum *wrapperspb.Int64Value) {
+	t.Helper()
+
+	want := int64(crc32.Checksum(data, crc32CTable))
+	if checksum == nil || checksum.Value != want {
+		t.Errorf("checksum=%v, want %d", checksum, want)
+	}
 }

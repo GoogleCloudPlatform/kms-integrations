@@ -23,7 +23,8 @@ import (
 	fmpb "google.golang.org/genproto/protobuf/field_mask"
 )
 
-var ignoreSignature = protocmp.IgnoreFields(new(kmspb.AsymmetricSignResponse), protoreflect.Name("signature"))
+var ignoreSignatureAndSignatureCRC = protocmp.IgnoreFields(new(kmspb.AsymmetricSignResponse),
+	protoreflect.Name("signature"), protoreflect.Name("signature_crc32c"))
 
 func TestECSign(t *testing.T) {
 	ctx := context.Background()
@@ -66,11 +67,12 @@ func TestECSign(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Signature isn't predictable, but we want to compare to an empty message with
-	// signature ignored so that the contract test breaks when KMS emits new fields.
-	want := &kmspb.AsymmetricSignResponse{}
+	want := &kmspb.AsymmetricSignResponse{
+		// Not yet emitted (cl/342265843)
+		// Name: ckv.Name,
+	}
 
-	opts := append(testutil.ProtoDiffOpts(), ignoreSignature)
+	opts := append(testutil.ProtoDiffOpts(), ignoreSignatureAndSignatureCRC)
 	if diff := cmp.Diff(want, got, opts...); diff != "" {
 		t.Errorf("proto mismatch (-want +got): %s", diff)
 	}
@@ -83,6 +85,8 @@ func TestECSign(t *testing.T) {
 	if !ecdsa.Verify(pub, digest[:], sig.R, sig.S) {
 		t.Error("signature verification failed")
 	}
+
+	verifyCRC32C(t, got.Signature, got.SignatureCrc32C)
 }
 
 func TestRSASignPKCS1(t *testing.T) {
@@ -126,11 +130,12 @@ func TestRSASignPKCS1(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Signature isn't predictable, but we want to compare to an empty message with
-	// signature ignored so that the contract test breaks when KMS emits new fields.
-	want := &kmspb.AsymmetricSignResponse{}
+	want := &kmspb.AsymmetricSignResponse{
+		// Not yet emitted (cl/342265843)
+		// Name: ckv.Name,
+	}
 
-	opts := append(testutil.ProtoDiffOpts(), ignoreSignature)
+	opts := append(testutil.ProtoDiffOpts(), ignoreSignatureAndSignatureCRC)
 	if diff := cmp.Diff(want, got, opts...); diff != "" {
 		t.Errorf("proto mismatch (-want +got): %s", diff)
 	}
@@ -138,6 +143,8 @@ func TestRSASignPKCS1(t *testing.T) {
 	if err := rsa.VerifyPKCS1v15(pub, crypto.SHA256, digest[:], got.Signature); err != nil {
 		t.Error(err)
 	}
+
+	verifyCRC32C(t, got.Signature, got.SignatureCrc32C)
 }
 
 func TestRSASignPSS(t *testing.T) {
@@ -181,11 +188,12 @@ func TestRSASignPSS(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Signature isn't predictable, but we want to compare to an empty message with
-	// signature ignored so that the contract test breaks when KMS emits new fields.
-	want := &kmspb.AsymmetricSignResponse{}
+	want := &kmspb.AsymmetricSignResponse{
+		// Not yet emitted (cl/342265843)
+		// Name: ckv.Name,
+	}
 
-	opts := append(testutil.ProtoDiffOpts(), ignoreSignature)
+	opts := append(testutil.ProtoDiffOpts(), ignoreSignatureAndSignatureCRC)
 	if diff := cmp.Diff(want, got, opts...); diff != "" {
 		t.Errorf("proto mismatch (-want +got): %s", diff)
 	}
@@ -194,6 +202,8 @@ func TestRSASignPSS(t *testing.T) {
 	if err := rsa.VerifyPSS(pub, crypto.SHA512, digest[:], got.Signature, pssOpts); err != nil {
 		t.Error(err)
 	}
+
+	verifyCRC32C(t, got.Signature, got.SignatureCrc32C)
 }
 
 func TestAsymmetricSignMalformedName(t *testing.T) {

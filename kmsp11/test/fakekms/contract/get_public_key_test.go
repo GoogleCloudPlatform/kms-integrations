@@ -22,7 +22,8 @@ import (
 	fmpb "google.golang.org/genproto/protobuf/field_mask"
 )
 
-var ignorePem = protocmp.IgnoreFields(new(kmspb.PublicKey), protoreflect.Name("pem"))
+var ignorePEMAndPEMCRC = protocmp.IgnoreFields(new(kmspb.PublicKey),
+	protoreflect.Name("pem"), protoreflect.Name("pem_crc32c"))
 
 func unmarshalPublicKeyPem(t *testing.T, pubPem string) crypto.PublicKey {
 	t.Helper()
@@ -63,9 +64,12 @@ func TestGetPublicKeyEC(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := &kmspb.PublicKey{Algorithm: kmspb.CryptoKeyVersion_EC_SIGN_P256_SHA256}
+	want := &kmspb.PublicKey{
+		Name:      ckv.Name,
+		Algorithm: kmspb.CryptoKeyVersion_EC_SIGN_P256_SHA256,
+	}
 
-	opts := append(testutil.ProtoDiffOpts(), ignorePem)
+	opts := append(testutil.ProtoDiffOpts(), ignorePEMAndPEMCRC)
 	if diff := cmp.Diff(want, got, opts...); diff != "" {
 		t.Errorf("proto mismatch (-want +got): %s", diff)
 	}
@@ -74,6 +78,8 @@ func TestGetPublicKeyEC(t *testing.T) {
 	if !elliptic.P256().IsOnCurve(key.X, key.Y) {
 		t.Errorf("public key curve mismatch (got %s, want P-256)", key.Curve.Params().Name)
 	}
+
+	verifyCRC32C(t, []byte(got.Pem), got.PemCrc32C)
 }
 
 func TestGetPublicKeyRSA(t *testing.T) {
@@ -100,9 +106,12 @@ func TestGetPublicKeyRSA(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := &kmspb.PublicKey{Algorithm: kmspb.CryptoKeyVersion_RSA_DECRYPT_OAEP_2048_SHA256}
+	want := &kmspb.PublicKey{
+		Name:      ckv.Name,
+		Algorithm: kmspb.CryptoKeyVersion_RSA_DECRYPT_OAEP_2048_SHA256,
+	}
 
-	opts := append(testutil.ProtoDiffOpts(), ignorePem)
+	opts := append(testutil.ProtoDiffOpts(), ignorePEMAndPEMCRC)
 	if diff := cmp.Diff(want, got, opts...); diff != "" {
 		t.Errorf("proto mismatch (-want +got): %s", diff)
 	}
@@ -111,6 +120,8 @@ func TestGetPublicKeyRSA(t *testing.T) {
 	if key.Size()*8 != 2048 {
 		t.Errorf("public key length mismatch (got %d, want 2048)", key.Size()*8)
 	}
+
+	verifyCRC32C(t, []byte(got.Pem), got.PemCrc32C)
 }
 
 func TestGetPublicKeyMalformedName(t *testing.T) {

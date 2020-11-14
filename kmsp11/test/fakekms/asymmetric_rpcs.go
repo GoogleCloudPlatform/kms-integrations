@@ -6,9 +6,17 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"encoding/pem"
+	"hash/crc32"
 
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
+	wrapperspb "google.golang.org/protobuf/types/known/wrapperspb"
 )
+
+var crc32cTable = crc32.MakeTable(crc32.Castagnoli)
+
+func crc32c(data []byte) *wrapperspb.Int64Value {
+	return wrapperspb.Int64(int64(crc32.Checksum(data, crc32cTable)))
+}
 
 // GetPublicKey fakes a Cloud KMS API function.
 func (f *fakeKMS) GetPublicKey(ctx context.Context, req *kmspb.GetPublicKeyRequest) (*kmspb.PublicKey, error) {
@@ -47,8 +55,10 @@ func (f *fakeKMS) GetPublicKey(ctx context.Context, req *kmspb.GetPublicKeyReque
 	})
 
 	return &kmspb.PublicKey{
+		Name:      req.Name,
 		Algorithm: ckv.pb.Algorithm,
 		Pem:       string(pemPub),
+		PemCrc32C: crc32c(pemPub),
 	}, nil
 }
 
@@ -83,7 +93,10 @@ func (f *fakeKMS) AsymmetricDecrypt(ctx context.Context, req *kmspb.AsymmetricDe
 		return nil, errInvalidArgument("decryption failed: %v", err)
 	}
 
-	return &kmspb.AsymmetricDecryptResponse{Plaintext: pt}, nil
+	return &kmspb.AsymmetricDecryptResponse{
+		Plaintext:       pt,
+		PlaintextCrc32C: crc32c(pt),
+	}, nil
 }
 
 // AsymmetricSign fakes a Cloud KMS API function.
@@ -135,5 +148,10 @@ func (f *fakeKMS) AsymmetricSign(ctx context.Context, req *kmspb.AsymmetricSignR
 		return nil, errInternal("signing failed: %v", err)
 	}
 
-	return &kmspb.AsymmetricSignResponse{Signature: sig}, nil
+	return &kmspb.AsymmetricSignResponse{
+		// Not yet emitted (cl/342265843)
+		// Name:            req.Name,
+		Signature:       sig,
+		SignatureCrc32C: crc32c(sig),
+	}, nil
 }
