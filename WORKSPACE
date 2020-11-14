@@ -81,6 +81,12 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_go",  # v0.24.7 / 2020-11-13
+    # Patch raw PKCS #1 support into rules_go's copy of googleapis.
+    patch_args = [
+        "-E",
+        "-p1",
+    ],
+    patches = ["//:third_party/rules_go.patch"],
     sha256 = "207fad3e6689135c5d8713e5a17ba9d1290238f47b9ba545b63d9303406209c6",
     urls = [
         "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.24.7/rules_go-v0.24.7.tar.gz",
@@ -96,6 +102,12 @@ http_archive(
     # A custom build_file is needed because google_cloud_cpp is using an ugly hack. :-(
     # See https://github.com/googleapis/google-cloud-cpp/blob/v1.20.0/bazel/googleapis.BUILD
     build_file = "@com_github_googleapis_google_cloud_cpp//bazel:googleapis.BUILD",
+    # Patch raw PKCS #1 support into googleapis.
+    patch_args = [
+        "-E",
+        "-p1",
+    ],
+    patches = ["//:third_party/googleapis.patch"],
     sha256 = "bba8988a57dc1d259d8e032f3858b52e9708fb863cd378322e703c79582bd064",
     strip_prefix = "googleapis-079e09a64813291f71759d0e1b5f14b0794dc345",
     urls = [

@@ -1,0 +1,85 @@
+diff --git a/google/cloud/kms/v1/resources.proto b/google/cloud/kms/v1/resources.proto
+old mode 100644
+new mode 100755
+index 88e31bd95..4790142ae
+--- a/google/cloud/kms/v1/resources.proto
++++ b/google/cloud/kms/v1/resources.proto
+@@ -268,6 +268,15 @@ message CryptoKeyVersion {
+     // RSASSA-PKCS1-v1_5 with a 4096 bit key and a SHA512 digest.
+     RSA_SIGN_PKCS1_4096_SHA512 = 16;
+ 
++    // RSASSA-PKCS1-v1_5 signing without encoding, with a 2048 bit key.
++    RSA_SIGN_RAW_PKCS1_2048 = 28;
++
++    // RSASSA-PKCS1-v1_5 signing without encoding, with a 3072 bit key.
++    RSA_SIGN_RAW_PKCS1_3072 = 29;
++
++    // RSASSA-PKCS1-v1_5 signing without encoding, with a 4096 bit key.
++    RSA_SIGN_RAW_PKCS1_4096 = 30;
++
+     // RSAES-OAEP 2048 bit key with a SHA256 digest.
+     RSA_DECRYPT_OAEP_2048_SHA256 = 8;
+ 
+diff --git a/google/cloud/kms/v1/service.proto b/google/cloud/kms/v1/service.proto
+old mode 100644
+new mode 100755
+index 65d20771f..923802743
+--- a/google/cloud/kms/v1/service.proto
++++ b/google/cloud/kms/v1/service.proto
+@@ -837,7 +837,7 @@ message AsymmetricSignRequest {
+   // Required. The digest of the data to sign. The digest must be produced with
+   // the same digest algorithm as specified by the key version's
+   // [algorithm][google.cloud.kms.v1.CryptoKeyVersion.algorithm].
+-  Digest digest = 3 [(google.api.field_behavior) = REQUIRED];
++  Digest digest = 3 [(google.api.field_behavior) = OPTIONAL];
+ 
+   // Optional. An optional CRC32C checksum of the [AsymmetricSignRequest.digest][google.cloud.kms.v1.AsymmetricSignRequest.digest]. If
+   // specified, [KeyManagementService][google.cloud.kms.v1.KeyManagementService] will verify the integrity of the
+@@ -855,6 +855,28 @@ message AsymmetricSignRequest {
+   //
+   // NOTE: This field is in Beta.
+   google.protobuf.Int64Value digest_crc32c = 4 [(google.api.field_behavior) = OPTIONAL];
++
++  // This field will only be honored for RAW_PKCS1 keys.
++  // The data to sign. A digest is computed over the data that will be signed,
++  // PKCS #1 padding is applied to the digest directly and then encrypted.
++  bytes data = 6 [(google.api.field_behavior) = OPTIONAL];
++
++  // Optional. An optional CRC32C checksum of the [AsymmetricSignRequest.data][google.cloud.kms.v1.AsymmetricSignRequest.data]. If
++  // specified, [KeyManagementService][google.cloud.kms.v1.KeyManagementService] will verify the integrity of the
++  // received [AsymmetricSignRequest.data][google.cloud.kms.v1.AsymmetricSignRequest.data] using this checksum.
++  // [KeyManagementService][google.cloud.kms.v1.KeyManagementService] will report an error if the checksum verification
++  // fails. If you receive a checksum error, your client should verify that
++  // CRC32C([AsymmetricSignRequest.data][google.cloud.kms.v1.AsymmetricSignRequest.data]) is equal to
++  // [AsymmetricSignRequest.data_crc32c][google.cloud.kms.v1.AsymmetricSignRequest.data_crc32c], and if so, perform a limited
++  // number of retries. A persistent mismatch may indicate an issue in your
++  // computation of the CRC32C checksum.
++  // Note: This field is defined as int64 for reasons of compatibility across
++  // different languages. However, it is a non-negative integer, which will
++  // never exceed 2^32-1, and can be safely downconverted to uint32 in languages
++  // that support this type.
++  //
++  // NOTE: This field is in Beta.
++  google.protobuf.Int64Value data_crc32c = 7 [(google.api.field_behavior) = OPTIONAL];
+ }
+ 
+ // Request message for [KeyManagementService.AsymmetricDecrypt][google.cloud.kms.v1.KeyManagementService.AsymmetricDecrypt].
+@@ -1000,6 +1022,18 @@ message AsymmetricSignResponse {
+   //
+   // NOTE: This field is in Beta.
+   string name = 4;
++
++  // Integrity verification field. A flag indicating whether
++  // [AsymmetricSignRequest.data_crc32c][google.cloud.kms.v1.AsymmetricSignRequest.data_crc32c] was received by
++  // [KeyManagementService][google.cloud.kms.v1.KeyManagementService] and used for the integrity verification of the
++  // [data][google.cloud.kms.v1.AsymmetricSignRequest.data]. A false value of this field
++  // indicates either that [AsymmetricSignRequest.data_crc32c][google.cloud.kms.v1.AsymmetricSignRequest.data_crc32c] was left
++  // unset or that it was not delivered to [KeyManagementService][google.cloud.kms.v1.KeyManagementService]. If you've
++  // set [AsymmetricSignRequest.data_crc32c][google.cloud.kms.v1.AsymmetricSignRequest.data_crc32c] but this field is still false,
++  // discard the response and perform a limited number of retries.
++  //
++  // NOTE: This field is in Beta.
++  bool verified_data_crc32c = 5;
+ }
+ 
+ // Response message for [KeyManagementService.AsymmetricDecrypt][google.cloud.kms.v1.KeyManagementService.AsymmetricDecrypt].
