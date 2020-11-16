@@ -73,6 +73,48 @@ public class SignatureTest {
     signAndVerify(cryptoKeyId, "SHA512withRSA");
   }
 
+  @Test
+  public void testRsa2048RawPkcs1SignVerify() throws Exception {
+    String cryptoKeyId = "rsa-raw-pkcs1-2048-key";
+    // We use the publicly released Java client from maven.org, so we don't have the raw PKCS#1 enum
+    // values available in Java.
+    createCkv(cryptoKeyId, /* RSA_SIGN_RAW_PKCS1_2048 */ 28);
+
+    // The JCA provider does the hashing; we should be able to use any hash algorithm.
+    signAndVerify(cryptoKeyId, "SHA1withRSA");
+    signAndVerify(cryptoKeyId, "SHA256withRSA");
+    signAndVerify(cryptoKeyId, "SHA384withRSA");
+    signAndVerify(cryptoKeyId, "SHA512withRSA");
+  }
+
+  @Test
+  public void testRsa3072RawPkcs1SignVerify() throws Exception {
+    String cryptoKeyId = "rsa-raw-pkcs1-3072-key";
+    // We use the publicly released Java client from maven.org, so we don't have the raw PKCS#1 enum
+    // values available in Java.
+    createCkv(cryptoKeyId, /* RSA_SIGN_RAW_PKCS1_3072 */ 29);
+
+    // The JCA provider does the hashing; we should be able to use any hash algorithm.
+    signAndVerify(cryptoKeyId, "SHA1withRSA");
+    signAndVerify(cryptoKeyId, "SHA256withRSA");
+    signAndVerify(cryptoKeyId, "SHA384withRSA");
+    signAndVerify(cryptoKeyId, "SHA512withRSA");
+  }
+
+  @Test
+  public void testRsa4096RawPkcs1SignVerify() throws Exception {
+    String cryptoKeyId = "rsa-raw-pkcs1-4096-key";
+    // We use the publicly released Java client from maven.org, so we don't have the raw PKCS#1 enum
+    // values available in Java.
+    createCkv(cryptoKeyId, /* RSA_SIGN_RAW_PKCS1_4096 */ 30);
+
+    // The JCA provider does the hashing; we should be able to use any hash algorithm.
+    signAndVerify(cryptoKeyId, "SHA1withRSA");
+    signAndVerify(cryptoKeyId, "SHA256withRSA");
+    signAndVerify(cryptoKeyId, "SHA384withRSA");
+    signAndVerify(cryptoKeyId, "SHA512withRSA");
+  }
+
   private void signAndVerify(String keyLabel, String jcaAlgorithm) throws Exception {
     Provider provider = f.newProvider();
 
@@ -99,6 +141,10 @@ public class SignatureTest {
 
   private CryptoKeyVersion createCkv(
       String cryptoKeyId, CryptoKeyVersion.CryptoKeyVersionAlgorithm algorithm) throws Exception {
+    return createCkv(cryptoKeyId, algorithm.getNumber());
+  }
+
+  private CryptoKeyVersion createCkv(String cryptoKeyId, int algorithmID) throws Exception {
     CreateCryptoKeyRequest ckReq =
         CreateCryptoKeyRequest.newBuilder()
             .setParent(f.getKeyRing().getName())
@@ -108,7 +154,7 @@ public class SignatureTest {
                     .setPurpose(CryptoKey.CryptoKeyPurpose.ASYMMETRIC_SIGN)
                     .setVersionTemplate(
                         CryptoKeyVersionTemplate.newBuilder()
-                            .setAlgorithm(algorithm)
+                            .setAlgorithmValue(algorithmID)
                             .setProtectionLevel(ProtectionLevel.HSM)))
             .setSkipInitialVersionCreation(true)
             .build();

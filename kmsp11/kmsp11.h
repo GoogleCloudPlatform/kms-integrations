@@ -36,6 +36,13 @@ extern "C" {
 // RSASSA-PSS with a 4096 bit key and a SHA512 digest.
 #define KMS_ALGORITHM_RSA_SIGN_PSS_4096_SHA512 15UL
 
+// RSASSA-PKCS1-v1_5 signing without encoding, with a 2048 bit key.
+#define KMS_ALGORITHM_RSA_SIGN_RAW_PKCS1_2048 28UL
+// RSASSA-PKCS1-v1_5 signing without encoding, with a 3072 bit key.
+#define KMS_ALGORITHM_RSA_SIGN_RAW_PKCS1_3072 29UL
+// RSASSA-PKCS1-v1_5 signing without encoding, with a 4096 bit key.
+#define KMS_ALGORITHM_RSA_SIGN_RAW_PKCS1_4096 30UL
+
 #ifdef __cplusplus
 }
 #endif

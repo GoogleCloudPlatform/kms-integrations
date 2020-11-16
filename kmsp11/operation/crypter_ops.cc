@@ -4,6 +4,7 @@
 #include "kmsp11/operation/rsaes_oaep.h"
 #include "kmsp11/operation/rsassa_pkcs1.h"
 #include "kmsp11/operation/rsassa_pss.h"
+#include "kmsp11/operation/rsassa_raw_pkcs1.h"
 #include "kmsp11/util/errors.h"
 
 namespace kmsp11 {
@@ -36,6 +37,9 @@ absl::StatusOr<SignOp> NewSignOp(std::shared_ptr<Object> key,
     case CKM_ECDSA:
       return EcdsaSigner::New(key, mechanism);
     case CKM_RSA_PKCS:
+      if (!key->algorithm().digest_mechanism.has_value()) {
+        return RsaRawPkcs1Signer::New(key, mechanism);
+      }
       return RsaPkcs1Signer::New(key, mechanism);
     case CKM_RSA_PKCS_PSS:
       return RsaPssSigner::New(key, mechanism);
@@ -51,6 +55,9 @@ absl::StatusOr<VerifyOp> NewVerifyOp(std::shared_ptr<Object> key,
     case CKM_ECDSA:
       return EcdsaVerifier::New(key, mechanism);
     case CKM_RSA_PKCS:
+      if (!key->algorithm().digest_mechanism.has_value()) {
+        return RsaRawPkcs1Verifier::New(key, mechanism);
+      }
       return RsaPkcs1Verifier::New(key, mechanism);
     case CKM_RSA_PKCS_PSS:
       return RsaPssVerifier::New(key, mechanism);

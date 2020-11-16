@@ -155,6 +155,38 @@ static const auto* kAlgorithmDetails = new absl::flat_hash_map<
          CKM_RSA_PKCS_KEY_PAIR_GEN,  // key_gen_mechanism
          CKM_SHA512,                 // digest_mechanism
      }},
+
+    // RSA_SIGN_RAW_PKCS1_*
+    {kms_v1::CryptoKeyVersion::RSA_SIGN_RAW_PKCS1_2048,
+     AlgorithmDetails{
+         kms_v1::CryptoKeyVersion::RSA_SIGN_RAW_PKCS1_2048,  // algorithm
+         kms_v1::CryptoKey::ASYMMETRIC_SIGN,                 // purpose
+         {CKM_RSA_PKCS},             // allowed_mechanisms
+         CKK_RSA,                    // key_type
+         2048,                       // key_size
+         CKM_RSA_PKCS_KEY_PAIR_GEN,  // key_gen_mechanism
+         absl::nullopt,              // digest_mechanism
+     }},
+    {kms_v1::CryptoKeyVersion::RSA_SIGN_RAW_PKCS1_3072,
+     AlgorithmDetails{
+         kms_v1::CryptoKeyVersion::RSA_SIGN_RAW_PKCS1_3072,  // algorithm
+         kms_v1::CryptoKey::ASYMMETRIC_SIGN,                 // purpose
+         {CKM_RSA_PKCS},             // allowed_mechanisms
+         CKK_RSA,                    // key_type
+         3072,                       // key_size
+         CKM_RSA_PKCS_KEY_PAIR_GEN,  // key_gen_mechanism
+         absl::nullopt,              // digest_mechanism
+     }},
+    {kms_v1::CryptoKeyVersion::RSA_SIGN_RAW_PKCS1_4096,
+     AlgorithmDetails{
+         kms_v1::CryptoKeyVersion::RSA_SIGN_RAW_PKCS1_4096,  // algorithm
+         kms_v1::CryptoKey::ASYMMETRIC_SIGN,                 // purpose
+         {CKM_RSA_PKCS},             // allowed_mechanisms
+         CKK_RSA,                    // key_type
+         4096,                       // key_size
+         CKM_RSA_PKCS_KEY_PAIR_GEN,  // key_gen_mechanism
+         absl::nullopt,              // digest_mechanism
+     }},
 };
 
 absl::StatusOr<AlgorithmDetails> GetDetails(

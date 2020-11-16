@@ -12,6 +12,7 @@ import io.grpc.ManagedChannelBuilder;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 
 /** FakeKms provides a Java language binding to a fake Cloud KMS server. */
 public class FakeKms implements AutoCloseable {
@@ -22,19 +23,23 @@ public class FakeKms implements AutoCloseable {
 
   private final Process process;
   private final String serverAddress;
+  private ArrayList<GrpcTransportChannel> channels;
 
   /** Creates and starts a new Fake KMS server. */
   public FakeKms() throws IOException {
     String serverPath = Runfiles.create().rlocation(FAKEKMS_PATH);
     process = Runtime.getRuntime().exec(serverPath);
     serverAddress = new BufferedReader(new InputStreamReader(process.getInputStream())).readLine();
+    channels = new ArrayList<>();
   }
 
   /** Returns a new KMS client that is wired to this fake. */
   public KeyManagementServiceClient newClient() throws IOException {
-    ManagedChannel channel = ManagedChannelBuilder.forTarget(serverAddress).usePlaintext().build();
+    GrpcTransportChannel channel = GrpcTransportChannel.create(
+        ManagedChannelBuilder.forTarget(serverAddress).usePlaintext().build());
+    channels.add(channel);
     TransportChannelProvider channelProvider =
-        FixedTransportChannelProvider.create(GrpcTransportChannel.create(channel));
+        FixedTransportChannelProvider.create(channel);
 
     KeyManagementServiceSettings clientSettings =
         KeyManagementServiceSettings.newBuilder()
@@ -52,6 +57,10 @@ public class FakeKms implements AutoCloseable {
   /** Stops the fake server and releases all resources associated with it. */
   @Override
   public void close() {
+    for (GrpcTransportChannel c : channels) {
+      c.close();
+    }
+
     if (process.isAlive()) {
       process.destroy();
     }
