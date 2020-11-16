@@ -463,6 +463,57 @@ absl::Status RsaVerifyPss(RSA* public_key, const EVP_MD* hash,
   return absl::OkStatus();
 }
 
+absl::Status RsaVerifyRawPkcs1(RSA* public_key, absl::Span<const uint8_t> data,
+                               absl::Span<const uint8_t> signature) {
+  constexpr size_t kMinRsaKeyBitLength = 2048;
+  if (RSA_bits(public_key) < kMinRsaKeyBitLength) {
+    return NewInternalError(
+        absl::StrFormat("minimum RSA key size is %d bits (got %d)",
+                        kMinRsaKeyBitLength, RSA_bits(public_key)),
+        SOURCE_LOCATION);
+  }
+
+  constexpr size_t kPkcs1OverheadBytes = 11;  // per RFC 3447 section 9.2
+  size_t max_data_bytes = RSA_size(public_key) - kPkcs1OverheadBytes;
+  if (data.length() > max_data_bytes) {
+    return NewInvalidArgumentError(
+        absl::StrFormat("data is too large (got %d bytes, want <= %d bytes)",
+                        data.length(), max_data_bytes),
+        CKR_DATA_LEN_RANGE, SOURCE_LOCATION);
+  }
+
+  if (signature.length() != RSA_size(public_key)) {
+    return NewInvalidArgumentError(
+        absl::StrFormat(
+            "signature length mismatches expected (got %d, want %d)",
+            signature.length(), RSA_size(public_key)),
+        CKR_SIGNATURE_LEN_RANGE, SOURCE_LOCATION);
+  }
+
+  std::vector<uint8_t> recovered(RSA_size(public_key));
+  size_t out_length;
+  // Note that RSA_verify_raw is simply public key decryption. It's up to
+  // us to verify that `data` matches the decryption result.
+  if (!RSA_verify_raw(public_key, &out_length, recovered.data(),
+                      recovered.size(), signature.data(), signature.size(),
+                      RSA_PKCS1_PADDING)) {
+    return NewInvalidArgumentError(
+        absl::StrCat("verification failed: ", SslErrorToString()),
+        CKR_SIGNATURE_INVALID, SOURCE_LOCATION);
+  }
+
+  // TODO(b/160310720): Use a std::equal overload that considers out_length.
+  // (See internal version of raw_pkcs1.cc)
+  if (out_length != data.size() ||
+      !std::equal(data.begin(), data.end(), recovered.begin())) {
+    return NewInvalidArgumentError(
+        "verification failed: recovered data mismatches expected",
+        CKR_SIGNATURE_INVALID, SOURCE_LOCATION);
+  }
+
+  return absl::OkStatus();
+}
+
 void SafeZeroMemory(volatile char* ptr, size_t size) {
   while (size--) {
     *ptr++ = 0;

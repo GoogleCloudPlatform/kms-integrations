@@ -655,6 +655,114 @@ TEST(RsaVerifyPssTest, InvalidSignatureSigLength) {
               StatusRvIs(CKR_SIGNATURE_LEN_RANGE));
 }
 
+TEST(RsaVerifyRawPkcs1Test, ValidSignature) {
+  ASSERT_OK_AND_ASSIGN(std::string pub_pem,
+                       LoadTestRunfile("rsa_2048_public.pem"));
+  ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub_key,
+                       ParseX509PublicKeyPem(pub_pem));
+  RSA* rsa_pub = EVP_PKEY_get0_RSA(pub_key.get());
+  EXPECT_TRUE(rsa_pub);
+
+  std::string data = "This is a message to authenticate\n";
+  absl::Span<const uint8_t> data_bytes = absl::MakeConstSpan(
+      reinterpret_cast<const uint8_t*>(data.data()), data.size());
+
+  std::string sig;
+  EXPECT_TRUE(absl::Base64Unescape(R"(
+    cgiVqUGZbWrEp4F/kFO0n/lzGKYB3UjyoeErxcXgK74FxMYw6iAMH3mM5ncTxq0ZQgVflcML
+    2Q5Hkb2O2pr0o4qDh8l+0mWGVd8dCRglLv1aL029Gmu6HKvQQxScISlXuY066o4uJRcluQjE
+    ibEE6Ly4j8SMHrsZQ0n3RpiYVazWWsIBwxlUWXAwJ8crkas2IKzL9NrWOE+TCQoE1BZkAqos
+    5Rxu+67rUhedM/D2/im8dwUdf7+L8KVZkoVYI/NkDUouABqnDruyrz5n1pacx6ihCQ4fy0A1
+    sHlyq5CYbjbBXWEILw/4yddPKvHIiytiRMrkaRMwS2pfhHzeEWfSiw==)",
+                                   &sig));
+  absl::Span<const uint8_t> sig_bytes = absl::MakeConstSpan(
+      reinterpret_cast<const uint8_t*>(sig.data()), sig.size());
+
+  EXPECT_OK(RsaVerifyRawPkcs1(rsa_pub, data_bytes, sig_bytes));
+}
+
+TEST(RsaVerifyRawPkcs1Test, InvalidSignatureDataBitFlip) {
+  ASSERT_OK_AND_ASSIGN(std::string pub_pem,
+                       LoadTestRunfile("rsa_2048_public.pem"));
+  ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub_key,
+                       ParseX509PublicKeyPem(pub_pem));
+  RSA* rsa_pub = EVP_PKEY_get0_RSA(pub_key.get());
+  EXPECT_TRUE(rsa_pub);
+
+  std::string data = "This is a message to authenticate\n";
+  data[0] ^= 0x01;  // flip a bit
+  absl::Span<const uint8_t> data_bytes = absl::MakeConstSpan(
+      reinterpret_cast<const uint8_t*>(data.data()), data.size());
+
+  std::string sig;
+  EXPECT_TRUE(absl::Base64Unescape(R"(
+    cgiVqUGZbWrEp4F/kFO0n/lzGKYB3UjyoeErxcXgK74FxMYw6iAMH3mM5ncTxq0ZQgVflcML
+    2Q5Hkb2O2pr0o4qDh8l+0mWGVd8dCRglLv1aL029Gmu6HKvQQxScISlXuY066o4uJRcluQjE
+    ibEE6Ly4j8SMHrsZQ0n3RpiYVazWWsIBwxlUWXAwJ8crkas2IKzL9NrWOE+TCQoE1BZkAqos
+    5Rxu+67rUhedM/D2/im8dwUdf7+L8KVZkoVYI/NkDUouABqnDruyrz5n1pacx6ihCQ4fy0A1
+    sHlyq5CYbjbBXWEILw/4yddPKvHIiytiRMrkaRMwS2pfhHzeEWfSiw==)",
+                                   &sig));
+  absl::Span<const uint8_t> sig_bytes = absl::MakeConstSpan(
+      reinterpret_cast<const uint8_t*>(sig.data()), sig.size());
+
+  EXPECT_THAT(RsaVerifyRawPkcs1(rsa_pub, data_bytes, sig_bytes),
+              StatusRvIs(CKR_SIGNATURE_INVALID));
+}
+
+TEST(RsaVerifyRawPkcs1Test, InvalidSignatureSignatureBitFlip) {
+  ASSERT_OK_AND_ASSIGN(std::string pub_pem,
+                       LoadTestRunfile("rsa_2048_public.pem"));
+  ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub_key,
+                       ParseX509PublicKeyPem(pub_pem));
+  RSA* rsa_pub = EVP_PKEY_get0_RSA(pub_key.get());
+  EXPECT_TRUE(rsa_pub);
+
+  std::string data = "This is a message to authenticate\n";
+  absl::Span<const uint8_t> data_bytes = absl::MakeConstSpan(
+      reinterpret_cast<const uint8_t*>(data.data()), data.size());
+
+  std::string sig;
+  EXPECT_TRUE(absl::Base64Unescape(R"(
+    cgiVqUGZbWrEp4F/kFO0n/lzGKYB3UjyoeErxcXgK74FxMYw6iAMH3mM5ncTxq0ZQgVflcML
+    2Q5Hkb2O2pr0o4qDh8l+0mWGVd8dCRglLv1aL029Gmu6HKvQQxScISlXuY066o4uJRcluQjE
+    ibEE6Ly4j8SMHrsZQ0n3RpiYVazWWsIBwxlUWXAwJ8crkas2IKzL9NrWOE+TCQoE1BZkAqos
+    5Rxu+67rUhedM/D2/im8dwUdf7+L8KVZkoVYI/NkDUouABqnDruyrz5n1pacx6ihCQ4fy0A1
+    sHlyq5CYbjbBXWEILw/4yddPKvHIiytiRMrkaRMwS2pfhHzeEWfSiw==)",
+                                   &sig));
+  sig[0] ^= 0x01;  // flip a bit
+  absl::Span<const uint8_t> sig_bytes = absl::MakeConstSpan(
+      reinterpret_cast<const uint8_t*>(sig.data()), sig.size());
+
+  EXPECT_THAT(RsaVerifyRawPkcs1(rsa_pub, data_bytes, sig_bytes),
+              StatusRvIs(CKR_SIGNATURE_INVALID));
+}
+
+TEST(RsaVerifyRawPkcs1Test, InvalidSignatureDataLength) {
+  ASSERT_OK_AND_ASSIGN(std::string pub_pem,
+                       LoadTestRunfile("rsa_2048_public.pem"));
+  ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub_key,
+                       ParseX509PublicKeyPem(pub_pem));
+  RSA* rsa_pub = EVP_PKEY_get0_RSA(pub_key.get());
+  EXPECT_TRUE(rsa_pub);
+
+  uint8_t data[246], sig[256];
+  EXPECT_THAT(RsaVerifyRawPkcs1(rsa_pub, data, sig),
+              StatusRvIs(CKR_DATA_LEN_RANGE));
+}
+
+TEST(RsaVerifyRawPkcs1Test, InvalidSignatureSigLength) {
+  ASSERT_OK_AND_ASSIGN(std::string pub_pem,
+                       LoadTestRunfile("rsa_2048_public.pem"));
+  ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub_key,
+                       ParseX509PublicKeyPem(pub_pem));
+  RSA* rsa_pub = EVP_PKEY_get0_RSA(pub_key.get());
+  EXPECT_TRUE(rsa_pub);
+
+  uint8_t data[32], sig[255];
+  EXPECT_THAT(RsaVerifyRawPkcs1(rsa_pub, data, sig),
+              StatusRvIs(CKR_SIGNATURE_LEN_RANGE));
+}
+
 TEST(SslErrorToStringTest, ErrorEmitted) {
   bssl::UniquePtr<EC_KEY> ec_key(EC_KEY_new_by_curve_name(0));
   EXPECT_THAT(ec_key, IsNull());

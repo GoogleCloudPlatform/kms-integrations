@@ -112,6 +112,10 @@ absl::Status RsaVerifyPss(RSA* public_key, const EVP_MD* hash,
                           absl::Span<const uint8_t> digest,
                           absl::Span<const uint8_t> signature);
 
+// Verifies that the provided raw RSA PKCS #1 signature is valid over data.
+absl::Status RsaVerifyRawPkcs1(RSA* public_key, absl::Span<const uint8_t> data,
+                               absl::Span<const uint8_t> signature);
+
 // Clear the memory at the provided location, taking care to avoid letting the
 // compiler optimize this out.
 //
