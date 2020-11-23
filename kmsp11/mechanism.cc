@@ -4,16 +4,11 @@
 #include "kmsp11/util/errors.h"
 
 namespace kmsp11 {
-
 namespace {
 
-// the mechanisms supported in this library
-static const std::vector<CK_MECHANISM_TYPE> kMechanismTypes = {
-    CKM_RSA_PKCS, CKM_RSA_PKCS_OAEP, CKM_RSA_PKCS_PSS, CKM_ECDSA};
-
-// type info about the mechanisms supported in this library
-static const absl::flat_hash_map<CK_MECHANISM_TYPE, CK_MECHANISM_INFO>
-    kMechanisms = {
+static const absl::flat_hash_map<CK_MECHANISM_TYPE,
+                                 const CK_MECHANISM_INFO>* const kMechanisms =
+    new absl::flat_hash_map<CK_MECHANISM_TYPE, const CK_MECHANISM_INFO>({
         {
             CKM_ECDSA,
             {
@@ -49,15 +44,26 @@ static const absl::flat_hash_map<CK_MECHANISM_TYPE, CK_MECHANISM_INFO>
                 CKF_SIGN | CKF_VERIFY  // flags
             },
         },
-};
+    });
 
 }  // namespace
 
-absl::Span<const CK_MECHANISM_TYPE> Mechanisms() { return kMechanismTypes; }
+absl::Span<const CK_MECHANISM_TYPE> Mechanisms() {
+  static const std::vector<CK_MECHANISM_TYPE>* const kMechanismTypes = [] {
+    auto* types = new std::vector<CK_MECHANISM_TYPE>();
+    types->reserve(kMechanisms->size());
+    for (const auto& entry : *kMechanisms) {
+      types->push_back(entry.first);
+    }
+    std::sort(types->begin(), types->end());
+    return types;
+  }();
+  return *kMechanismTypes;
+}
 
 absl::StatusOr<CK_MECHANISM_INFO> MechanismInfo(CK_MECHANISM_TYPE type) {
-  auto entry = kMechanisms.find(type);
-  if (entry == kMechanisms.end()) {
+  const auto& entry = kMechanisms->find(type);
+  if (entry == kMechanisms->end()) {
     return NewError(absl::StatusCode::kNotFound,
                     absl::StrFormat("mechanism %#x not found", type),
                     CKR_MECHANISM_INVALID, SOURCE_LOCATION);
