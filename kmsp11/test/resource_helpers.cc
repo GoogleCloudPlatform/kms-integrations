@@ -59,6 +59,32 @@ kms_v1::CryptoKeyVersion CreateCryptoKeyVersionOrDie(
   return ckv;
 }
 
+kms_v1::CryptoKey GetCryptoKeyOrDie(
+    kms_v1::KeyManagementService::Stub* kms_stub,
+    absl::string_view crypto_key_name) {
+  kms_v1::GetCryptoKeyRequest req;
+  req.set_name(std::string(crypto_key_name));
+
+  kms_v1::CryptoKey ck;
+  grpc::ClientContext ctx;
+
+  CHECK_OK(kms_stub->GetCryptoKey(&ctx, req, &ck));
+  return ck;
+}
+
+kms_v1::CryptoKeyVersion GetCryptoKeyVersionOrDie(
+    kms_v1::KeyManagementService::Stub* kms_stub,
+    absl::string_view crypto_key_version_name) {
+  kms_v1::GetCryptoKeyVersionRequest req;
+  req.set_name(std::string(crypto_key_version_name));
+
+  kms_v1::CryptoKeyVersion ckv;
+  grpc::ClientContext ctx;
+
+  CHECK_OK(kms_stub->GetCryptoKeyVersion(&ctx, req, &ckv));
+  return ckv;
+}
+
 kms_v1::CryptoKeyVersion WaitForEnablement(
     kms_v1::KeyManagementService::Stub* kms_stub,
     const kms_v1::CryptoKeyVersion& crypto_key_version,

@@ -256,5 +256,149 @@ TEST(KmsClientTest, AsymmetricSignFailureInvalidName) {
               StatusIs(absl::StatusCode::kInvalidArgument));
 }
 
+TEST(KmsClientTest, CreateCryptoKeyCreatesCryptoKey) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake, FakeKms::New());
+  std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
+
+  kms_v1::KeyRing kr;
+  kr = CreateKeyRingOrDie(client->kms_stub(), kTestLocation, RandomId(), kr);
+
+  kms_v1::CreateCryptoKeyRequest req;
+  req.set_parent(kr.name());
+  req.set_crypto_key_id("ck");
+  req.mutable_crypto_key()->set_purpose(kms_v1::CryptoKey::ENCRYPT_DECRYPT);
+
+  ASSERT_OK_AND_ASSIGN(kms_v1::CryptoKey created, client->CreateCryptoKey(req));
+
+  EXPECT_THAT(
+      GetCryptoKeyOrDie(client->kms_stub(), kr.name() + "/cryptoKeys/ck"),
+      EqualsProto(created));
+}
+
+TEST(KmsClientTest, CreateCryptoKeyFailsOnExistingName) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake, FakeKms::New());
+  std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
+
+  kms_v1::KeyRing kr;
+  kr = CreateKeyRingOrDie(client->kms_stub(), kTestLocation, RandomId(), kr);
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+  ck = CreateCryptoKeyOrDie(client->kms_stub(), kr.name(), "ck", ck, true);
+
+  kms_v1::CreateCryptoKeyRequest req;
+  req.set_parent(kr.name());
+  req.set_crypto_key_id("ck");
+  req.mutable_crypto_key()->set_purpose(kms_v1::CryptoKey::ENCRYPT_DECRYPT);
+
+  EXPECT_THAT(client->CreateCryptoKey(req),
+              StatusIs(absl::StatusCode::kAlreadyExists));
+}
+
+TEST(KmsClientTest, CreateCryptoKeyInvalidArgumentOnInvalidName) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake, FakeKms::New());
+  std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
+
+  kms_v1::KeyRing kr;
+  kr = CreateKeyRingOrDie(client->kms_stub(), kTestLocation, RandomId(), kr);
+
+  kms_v1::CreateCryptoKeyRequest req;
+  req.set_parent(kr.name());
+  req.set_crypto_key_id("@123!");
+  req.mutable_crypto_key()->set_purpose(kms_v1::CryptoKey::ENCRYPT_DECRYPT);
+
+  EXPECT_THAT(client->CreateCryptoKey(req),
+              StatusIs(absl::StatusCode::kInvalidArgument));
+}
+
+TEST(KmsClientTest,
+     CreateCryptoKeyAndFirstVersionCreatesCryptoKeyAndFirstVersion) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake, FakeKms::New());
+  std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
+
+  kms_v1::KeyRing kr;
+  kr = CreateKeyRingOrDie(client->kms_stub(), kTestLocation, RandomId(), kr);
+
+  kms_v1::CreateCryptoKeyRequest req;
+  req.set_parent(kr.name());
+  req.set_crypto_key_id("ck");
+  req.mutable_crypto_key()->set_purpose(kms_v1::CryptoKey::ENCRYPT_DECRYPT);
+
+  ASSERT_OK_AND_ASSIGN(CryptoKeyAndVersion created,
+                       client->CreateCryptoKeyAndWaitForFirstVersion(req));
+
+  EXPECT_THAT(
+      GetCryptoKeyOrDie(client->kms_stub(), kr.name() + "/cryptoKeys/ck"),
+      EqualsProto(created.crypto_key));
+  EXPECT_THAT(
+      GetCryptoKeyVersionOrDie(
+          client->kms_stub(), kr.name() + "/cryptoKeys/ck/cryptoKeyVersions/1"),
+      EqualsProto(created.crypto_key_version));
+}
+
+TEST(KmsClientTest, CreateCryptoKeyAndFirstVersionFailsOnExistingName) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake, FakeKms::New());
+  std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
+
+  kms_v1::KeyRing kr;
+  kr = CreateKeyRingOrDie(client->kms_stub(), kTestLocation, RandomId(), kr);
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+  ck = CreateCryptoKeyOrDie(client->kms_stub(), kr.name(), "ck", ck, true);
+
+  kms_v1::CreateCryptoKeyRequest req;
+  req.set_parent(kr.name());
+  req.set_crypto_key_id("ck");
+  req.mutable_crypto_key()->set_purpose(kms_v1::CryptoKey::ENCRYPT_DECRYPT);
+
+  EXPECT_THAT(client->CreateCryptoKeyAndWaitForFirstVersion(req),
+              StatusIs(absl::StatusCode::kAlreadyExists));
+}
+
+TEST(KmsClientTest,
+     CreateCryptoKeyAndFirstVersionInvalidArgumentOnInvalidName) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake, FakeKms::New());
+  std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
+
+  kms_v1::KeyRing kr;
+  kr = CreateKeyRingOrDie(client->kms_stub(), kTestLocation, RandomId(), kr);
+
+  kms_v1::CreateCryptoKeyRequest req;
+  req.set_parent(kr.name());
+  req.set_crypto_key_id("@123!");
+  req.mutable_crypto_key()->set_purpose(kms_v1::CryptoKey::ENCRYPT_DECRYPT);
+
+  EXPECT_THAT(client->CreateCryptoKeyAndWaitForFirstVersion(req),
+              StatusIs(absl::StatusCode::kInvalidArgument));
+}
+
+TEST(KmsClientTest, CreateCryptoKeyAndFirstVersionTimesOutAtDeadline) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake,
+                       FakeKms::New("-delay=100ms"));
+  std::unique_ptr<KmsClient> client =
+      NewClient(fake->listen_addr(), absl::Milliseconds(150));
+
+  kms_v1::KeyRing kr;
+  kr = CreateKeyRingOrDie(client->kms_stub(), kTestLocation, RandomId(), kr);
+
+  kms_v1::CreateCryptoKeyRequest req;
+  req.set_parent(kr.name());
+  req.set_crypto_key_id("ck");
+  req.mutable_crypto_key()->set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
+  req.mutable_crypto_key()->mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+
+  // CreateCryptoKeyAndWaitForFirstVersion causes 2+ RPCs for asymmetric keys;
+  // if each RPC has 100ms of delay, then a 150ms deadline will always be
+  // exceeded.
+  EXPECT_THAT(client->CreateCryptoKeyAndWaitForFirstVersion(req),
+              StatusIs(absl::StatusCode::kDeadlineExceeded));
+}
+
 }  // namespace
 }  // namespace kmsp11

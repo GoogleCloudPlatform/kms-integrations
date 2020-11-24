@@ -33,6 +33,16 @@ kms_v1::CryptoKeyVersion CreateCryptoKeyVersionOrDie(
     absl::string_view crypto_key_name,
     const kms_v1::CryptoKeyVersion& crypto_key_version);
 
+// Gets a CryptoKey with the provided name, or CHECK-fails.
+kms_v1::CryptoKey GetCryptoKeyOrDie(
+    kms_v1::KeyManagementService::Stub* kms_stub,
+    absl::string_view crypto_key_name);
+
+// Gets a CryptoKeyVersion with the provided name, or CHECK-fails.
+kms_v1::CryptoKeyVersion GetCryptoKeyVersionOrDie(
+    kms_v1::KeyManagementService::Stub* kms_stub,
+    absl::string_view crypto_key_version_name);
+
 // Invokes GetCryptoKeyVersion in a loop, waiting poll_interval between each
 // request, until the specified CryptoKeyVersion's state is ENABLED.
 kms_v1::CryptoKeyVersion WaitForEnablement(

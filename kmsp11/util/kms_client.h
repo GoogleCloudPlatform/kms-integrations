@@ -19,6 +19,11 @@ using CryptoKeyVersionsRange = google::cloud::internal::PaginationRange<
     kms_v1::CryptoKeyVersion, kms_v1::ListCryptoKeyVersionsRequest,
     kms_v1::ListCryptoKeyVersionsResponse>;
 
+struct CryptoKeyAndVersion {
+  kms_v1::CryptoKey crypto_key;
+  kms_v1::CryptoKeyVersion crypto_key_version;
+};
+
 class KmsClient {
  public:
   KmsClient(absl::string_view endpoint_address,
@@ -32,6 +37,12 @@ class KmsClient {
 
   absl::StatusOr<kms_v1::AsymmetricSignResponse> AsymmetricSign(
       const kms_v1::AsymmetricSignRequest& request) const;
+
+  absl::StatusOr<kms_v1::CryptoKey> CreateCryptoKey(
+      const kms_v1::CreateCryptoKeyRequest& request) const;
+
+  absl::StatusOr<CryptoKeyAndVersion> CreateCryptoKeyAndWaitForFirstVersion(
+      const kms_v1::CreateCryptoKeyRequest& request) const;
 
   absl::StatusOr<kms_v1::PublicKey> GetPublicKey(
       const kms_v1::GetPublicKeyRequest& request) const;
