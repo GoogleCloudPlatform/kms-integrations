@@ -33,6 +33,12 @@ class ObjectStore {
   std::vector<CK_OBJECT_HANDLE> Find(
       std::function<bool(const Object&)> predicate) const;
 
+  // FindSingle retrieves the object that matches the provided predicate, or
+  // NotFound if no such object exists, or PreconditionFailed if multiple
+  // matching objects exist.
+  absl::StatusOr<CK_OBJECT_HANDLE> FindSingle(
+      std::function<bool(const Object&)> predicate) const;
+
  private:
   ObjectStore(ObjectStoreMap entries) : entries_(entries) {}
 

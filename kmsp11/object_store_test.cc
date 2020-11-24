@@ -421,5 +421,52 @@ TEST(ObjectStoreTest, FindSortsByNameThenClass) {
                           ));
 }
 
+TEST(ObjectStoreTest, FindSingleReturnsSingleMatch) {
+  ObjectStoreState s;
+
+  AsymmetricKey* ec_key = s.add_asymmetric_keys();
+  ASSERT_OK_AND_ASSIGN(*ec_key, NewAsymmetricEcKeyAndCert());
+
+  AsymmetricKey* rsa_key = s.add_asymmetric_keys();
+  ASSERT_OK_AND_ASSIGN(*rsa_key, NewAsymmetricRsaKey());
+
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectStore> store, ObjectStore::New(s));
+
+  EXPECT_THAT(store->FindSingle([](const kmsp11::Object& o) -> bool {
+    return o.object_class() == CKO_PUBLIC_KEY &&
+           o.algorithm().key_type == CKK_RSA;
+  }),
+              IsOkAndHolds(rsa_key->public_key_handle()));
+}
+
+TEST(ObjectStoreTest, FindSingleWithoutMatchReturnsNotFound) {
+  ObjectStoreState s;
+
+  AsymmetricKey* ec_key = s.add_asymmetric_keys();
+  ASSERT_OK_AND_ASSIGN(*ec_key, NewAsymmetricEcKeyAndCert());
+
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectStore> store, ObjectStore::New(s));
+
+  EXPECT_THAT(store->FindSingle([](const kmsp11::Object& o) -> bool {
+    return o.algorithm().key_type == CKK_RSA;
+  }),
+              StatusIs(absl::StatusCode::kNotFound));
+}
+
+TEST(ObjectStoreTest, FindSingleWithMultipleMatchesReturnsFailedPrecondition) {
+  ObjectStoreState s;
+
+  AsymmetricKey* ec_key = s.add_asymmetric_keys();
+  ASSERT_OK_AND_ASSIGN(*ec_key, NewAsymmetricEcKeyAndCert());
+
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectStore> store, ObjectStore::New(s));
+
+  EXPECT_THAT(store->FindSingle([&ec_key](const kmsp11::Object& o) -> bool {
+    // Both the public and private keys have the same CKV name.
+    return o.kms_key_name() == ec_key->crypto_key_version().name();
+  }),
+              StatusIs(absl::StatusCode::kFailedPrecondition));
+}
+
 }  // namespace
 }  // namespace kmsp11

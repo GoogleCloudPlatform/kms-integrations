@@ -52,6 +52,12 @@ class Token {
     return objects_->Find(predicate);
   }
 
+  inline absl::StatusOr<CK_OBJECT_HANDLE> FindSingleObject(
+      std::function<bool(const Object&)> predicate) const {
+    absl::ReaderMutexLock lock(&objects_mutex_);
+    return objects_->FindSingle(predicate);
+  }
+
   absl::Status RefreshState(const KmsClient& client);
 
  private:
