@@ -13,38 +13,33 @@
 namespace kmsp11 {
 namespace {
 
-class KmsClientTest : public testing::Test {
- protected:
-  void SetUp() override {
-    ASSERT_OK_AND_ASSIGN(fake_kms_, FakeKms::New());
-    client_ = absl::make_unique<KmsClient>(fake_kms_->listen_addr(),
-                                           grpc::InsecureChannelCredentials(),
-                                           absl::Milliseconds(500));
-  }
-  std::unique_ptr<KmsClient> client_;
+std::unique_ptr<KmsClient> NewClient(
+    absl::string_view listen_addr,
+    absl::Duration rpc_timeout = absl::Milliseconds(500)) {
+  return absl::make_unique<KmsClient>(
+      listen_addr, grpc::InsecureChannelCredentials(), rpc_timeout);
+}
 
- private:
-  std::unique_ptr<FakeKms> fake_kms_;
-};
+TEST(KmsClientTest, ListCryptoKeysSuccess) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake, FakeKms::New());
+  std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
 
-TEST_F(KmsClientTest, ListCryptoKeysSuccess) {
   kms_v1::KeyRing kr;
-  kr = CreateKeyRingOrDie(client_->kms_stub(), kTestLocation, RandomId(), kr);
+  kr = CreateKeyRingOrDie(client->kms_stub(), kTestLocation, RandomId(), kr);
 
   kms_v1::CryptoKey ck1;
   ck1.set_purpose(kms_v1::CryptoKey::ENCRYPT_DECRYPT);
-  ck1 = CreateCryptoKeyOrDie(client_->kms_stub(), kr.name(), "ck1", ck1, true);
+  ck1 = CreateCryptoKeyOrDie(client->kms_stub(), kr.name(), "ck1", ck1, true);
 
   kms_v1::CryptoKey ck2;
   ck2.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_DECRYPT);
   ck2.mutable_version_template()->set_algorithm(
-      kms_v1::
-          CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256);
-  ck2 = CreateCryptoKeyOrDie(client_->kms_stub(), kr.name(), "ck2", ck2, true);
+      kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256);
+  ck2 = CreateCryptoKeyOrDie(client->kms_stub(), kr.name(), "ck2", ck2, true);
 
   kms_v1::ListCryptoKeysRequest list_req;
   list_req.set_parent(kr.name());
-  CryptoKeysRange range = client_->ListCryptoKeys(list_req);
+  CryptoKeysRange range = client->ListCryptoKeys(list_req);
 
   CryptoKeysRange::iterator it = range.begin();
   ASSERT_OK_AND_ASSIGN(kms_v1::CryptoKey rck1, *it);
@@ -58,36 +53,42 @@ TEST_F(KmsClientTest, ListCryptoKeysSuccess) {
   EXPECT_EQ(it, range.end());
 }
 
-TEST_F(KmsClientTest, ListCryptoKeysFailureInvalidName) {
+TEST(KmsClientTest, ListCryptoKeysFailureInvalidName) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake, FakeKms::New());
+  std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
+
   kms_v1::ListCryptoKeysRequest list_req;
   list_req.set_parent("foo");
-  CryptoKeysRange range = client_->ListCryptoKeys(list_req);
+  CryptoKeysRange range = client->ListCryptoKeys(list_req);
 
   CryptoKeysRange::iterator it = range.begin();
   EXPECT_THAT(*it, StatusIs(absl::StatusCode::kInvalidArgument));
 }
 
-TEST_F(KmsClientTest, ListCryptoKeyVersionsSuccess) {
+TEST(KmsClientTest, ListCryptoKeyVersionsSuccess) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake, FakeKms::New());
+  std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
+
   kms_v1::KeyRing kr;
-  kr = CreateKeyRingOrDie(client_->kms_stub(), kTestLocation, RandomId(), kr);
+  kr = CreateKeyRingOrDie(client->kms_stub(), kTestLocation, RandomId(), kr);
 
   kms_v1::CryptoKey ck;
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
   ck.mutable_version_template()->set_algorithm(
       kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
-  ck = CreateCryptoKeyOrDie(client_->kms_stub(), kr.name(), "ck", ck, true);
+  ck = CreateCryptoKeyOrDie(client->kms_stub(), kr.name(), "ck", ck, true);
 
   kms_v1::CryptoKeyVersion ckv1;
-  ckv1 = CreateCryptoKeyVersionOrDie(client_->kms_stub(), ck.name(), ckv1);
-  ckv1 = WaitForEnablement(client_->kms_stub(), ckv1);
+  ckv1 = CreateCryptoKeyVersionOrDie(client->kms_stub(), ck.name(), ckv1);
+  ckv1 = WaitForEnablement(client->kms_stub(), ckv1);
 
   kms_v1::CryptoKeyVersion ckv2;
-  ckv2 = CreateCryptoKeyVersionOrDie(client_->kms_stub(), ck.name(), ckv2);
-  ckv2 = WaitForEnablement(client_->kms_stub(), ckv2);
+  ckv2 = CreateCryptoKeyVersionOrDie(client->kms_stub(), ck.name(), ckv2);
+  ckv2 = WaitForEnablement(client->kms_stub(), ckv2);
 
   kms_v1::ListCryptoKeyVersionsRequest list_req;
   list_req.set_parent(ck.name());
-  CryptoKeyVersionsRange range = client_->ListCryptoKeyVersions(list_req);
+  CryptoKeyVersionsRange range = client->ListCryptoKeyVersions(list_req);
 
   CryptoKeyVersionsRange::iterator it = range.begin();
   ASSERT_OK_AND_ASSIGN(kms_v1::CryptoKeyVersion rckv1, *it);
@@ -101,63 +102,74 @@ TEST_F(KmsClientTest, ListCryptoKeyVersionsSuccess) {
   EXPECT_EQ(it, range.end());
 }
 
-TEST_F(KmsClientTest, ListCryptoKeyVersionsFailureInvalidName) {
+TEST(KmsClientTest, ListCryptoKeyVersionsFailureInvalidName) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake, FakeKms::New());
+  std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
+
   kms_v1::ListCryptoKeyVersionsRequest list_req;
   list_req.set_parent("foo");
-  CryptoKeyVersionsRange range = client_->ListCryptoKeyVersions(list_req);
+  CryptoKeyVersionsRange range = client->ListCryptoKeyVersions(list_req);
 
   CryptoKeyVersionsRange::iterator it = range.begin();
   EXPECT_THAT(*it, StatusIs(absl::StatusCode::kInvalidArgument));
 }
 
-TEST_F(KmsClientTest, GetPublicKeySuccess) {
+TEST(KmsClientTest, GetPublicKeySuccess) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake, FakeKms::New());
+  std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
+
   kms_v1::KeyRing kr;
-  kr = CreateKeyRingOrDie(client_->kms_stub(), kTestLocation, RandomId(), kr);
+  kr = CreateKeyRingOrDie(client->kms_stub(), kTestLocation, RandomId(), kr);
 
   kms_v1::CryptoKey ck;
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
   ck.mutable_version_template()->set_algorithm(
       kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
-  ck = CreateCryptoKeyOrDie(client_->kms_stub(), kr.name(), "ck", ck, true);
+  ck = CreateCryptoKeyOrDie(client->kms_stub(), kr.name(), "ck", ck, true);
 
   kms_v1::CryptoKeyVersion ckv;
-  ckv = CreateCryptoKeyVersionOrDie(client_->kms_stub(), ck.name(), ckv);
-  ckv = WaitForEnablement(client_->kms_stub(), ckv);
+  ckv = CreateCryptoKeyVersionOrDie(client->kms_stub(), ck.name(), ckv);
+  ckv = WaitForEnablement(client->kms_stub(), ckv);
 
   kms_v1::GetPublicKeyRequest pub_req;
   pub_req.set_name(ckv.name());
-  ASSERT_OK_AND_ASSIGN(kms_v1::PublicKey pk, client_->GetPublicKey(pub_req));
+  ASSERT_OK_AND_ASSIGN(kms_v1::PublicKey pk, client->GetPublicKey(pub_req));
 
   ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub,
                        ParseX509PublicKeyPem(pk.pem()));
   EXPECT_TRUE(EVP_PKEY_get0_EC_KEY(pub.get()));
 }
 
-TEST_F(KmsClientTest, GetPublicKeyFailureInvalidName) {
+TEST(KmsClientTest, GetPublicKeyFailureInvalidName) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake, FakeKms::New());
+  std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
+
   kms_v1::GetPublicKeyRequest pub_req;
   pub_req.set_name("foo");
-  EXPECT_THAT(client_->GetPublicKey(pub_req),
+  EXPECT_THAT(client->GetPublicKey(pub_req),
               StatusIs(absl::StatusCode::kInvalidArgument));
 }
 
-TEST_F(KmsClientTest, AsymmetricDecryptSuccess) {
+TEST(KmsClientTest, AsymmetricDecryptSuccess) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake, FakeKms::New());
+  std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
+
   kms_v1::KeyRing kr;
-  kr = CreateKeyRingOrDie(client_->kms_stub(), kTestLocation, RandomId(), kr);
+  kr = CreateKeyRingOrDie(client->kms_stub(), kTestLocation, RandomId(), kr);
 
   kms_v1::CryptoKey ck;
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_DECRYPT);
   ck.mutable_version_template()->set_algorithm(
-      kms_v1::
-          CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256);
-  ck = CreateCryptoKeyOrDie(client_->kms_stub(), kr.name(), "ck", ck, true);
+      kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256);
+  ck = CreateCryptoKeyOrDie(client->kms_stub(), kr.name(), "ck", ck, true);
 
   kms_v1::CryptoKeyVersion ckv;
-  ckv = CreateCryptoKeyVersionOrDie(client_->kms_stub(), ck.name(), ckv);
-  ckv = WaitForEnablement(client_->kms_stub(), ckv);
+  ckv = CreateCryptoKeyVersionOrDie(client->kms_stub(), ck.name(), ckv);
+  ckv = WaitForEnablement(client->kms_stub(), ckv);
 
   kms_v1::GetPublicKeyRequest pub_req;
   pub_req.set_name(ckv.name());
-  ASSERT_OK_AND_ASSIGN(kms_v1::PublicKey pk, client_->GetPublicKey(pub_req));
+  ASSERT_OK_AND_ASSIGN(kms_v1::PublicKey pk, client->GetPublicKey(pub_req));
 
   ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub,
                        ParseX509PublicKeyPem(pk.pem()));
@@ -177,34 +189,40 @@ TEST_F(KmsClientTest, AsymmetricDecryptSuccess) {
   decrypt_req.set_ciphertext(ciphertext.data(), ciphertext.size());
 
   ASSERT_OK_AND_ASSIGN(kms_v1::AsymmetricDecryptResponse decrypt_resp,
-                       client_->AsymmetricDecrypt(decrypt_req));
+                       client->AsymmetricDecrypt(decrypt_req));
   EXPECT_EQ(decrypt_resp.plaintext(), plaintext_str);
 }
 
-TEST_F(KmsClientTest, AsymmetricDecryptFailureInvalidName) {
+TEST(KmsClientTest, AsymmetricDecryptFailureInvalidName) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake, FakeKms::New());
+  std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
+
   kms_v1::AsymmetricDecryptRequest req;
   req.set_name("foo");
-  EXPECT_THAT(client_->AsymmetricDecrypt(req),
+  EXPECT_THAT(client->AsymmetricDecrypt(req),
               StatusIs(absl::StatusCode::kInvalidArgument));
 }
 
-TEST_F(KmsClientTest, AsymmetricSignSuccess) {
+TEST(KmsClientTest, AsymmetricSignSuccess) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake, FakeKms::New());
+  std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
+
   kms_v1::KeyRing kr;
-  kr = CreateKeyRingOrDie(client_->kms_stub(), kTestLocation, RandomId(), kr);
+  kr = CreateKeyRingOrDie(client->kms_stub(), kTestLocation, RandomId(), kr);
 
   kms_v1::CryptoKey ck;
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
   ck.mutable_version_template()->set_algorithm(
       kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
-  ck = CreateCryptoKeyOrDie(client_->kms_stub(), kr.name(), "ck", ck, true);
+  ck = CreateCryptoKeyOrDie(client->kms_stub(), kr.name(), "ck", ck, true);
 
   kms_v1::CryptoKeyVersion ckv;
-  ckv = CreateCryptoKeyVersionOrDie(client_->kms_stub(), ck.name(), ckv);
-  ckv = WaitForEnablement(client_->kms_stub(), ckv);
+  ckv = CreateCryptoKeyVersionOrDie(client->kms_stub(), ck.name(), ckv);
+  ckv = WaitForEnablement(client->kms_stub(), ckv);
 
   kms_v1::GetPublicKeyRequest pub_req;
   pub_req.set_name(ckv.name());
-  ASSERT_OK_AND_ASSIGN(kms_v1::PublicKey pk, client_->GetPublicKey(pub_req));
+  ASSERT_OK_AND_ASSIGN(kms_v1::PublicKey pk, client->GetPublicKey(pub_req));
 
   ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub,
                        ParseX509PublicKeyPem(pk.pem()));
@@ -218,7 +236,7 @@ TEST_F(KmsClientTest, AsymmetricSignSuccess) {
   sign_req.mutable_digest()->set_sha256(digest, sizeof(digest));
 
   ASSERT_OK_AND_ASSIGN(kms_v1::AsymmetricSignResponse sign_resp,
-                       client_->AsymmetricSign(sign_req));
+                       client->AsymmetricSign(sign_req));
 
   EC_KEY* ec_key = EVP_PKEY_get0_EC_KEY(pub.get());
   ASSERT_OK_AND_ASSIGN(
@@ -228,10 +246,13 @@ TEST_F(KmsClientTest, AsymmetricSignSuccess) {
   EXPECT_OK(EcdsaVerifyP1363(ec_key, EVP_sha256(), digest, p1363_sig));
 }
 
-TEST_F(KmsClientTest, AsymmetricSignFailureInvalidName) {
+TEST(KmsClientTest, AsymmetricSignFailureInvalidName) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake, FakeKms::New());
+  std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
+
   kms_v1::AsymmetricSignRequest req;
   req.set_name("foo");
-  EXPECT_THAT(client_->AsymmetricSign(req),
+  EXPECT_THAT(client->AsymmetricSign(req),
               StatusIs(absl::StatusCode::kInvalidArgument));
 }
 
