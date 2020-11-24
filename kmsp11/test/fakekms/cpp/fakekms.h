@@ -24,7 +24,8 @@ namespace kmsp11 {
 // resources associated with the fake.
 class FakeKms {
  public:
-  static absl::StatusOr<std::unique_ptr<FakeKms>> New();
+  static absl::StatusOr<std::unique_ptr<FakeKms>> New(
+      absl::string_view flags = "");
 
   virtual ~FakeKms() {}
 

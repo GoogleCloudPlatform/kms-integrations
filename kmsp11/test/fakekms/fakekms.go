@@ -5,6 +5,7 @@ package fakekms
 import (
 	"net"
 	"sync"
+	"time"
 
 	"google.golang.org/grpc"
 
@@ -82,15 +83,28 @@ func (s *Server) Close() {
 	s.grpcServer.Stop()
 }
 
+// ServerOptions contains options for the FakeKMS server.
+type ServerOptions struct {
+	// The amount of time each request should be delayed before processing.
+	Delay time.Duration
+}
+
 // NewServer starts a new local Fake KMS server that is listening for gRPC requests.
 func NewServer() (*Server, error) {
+	return NewServerWithOptions(&ServerOptions{})
+}
+
+// NewServerWithOptions uses the provided options to start a new local Fake KMS server that is
+// listening for gRPC requests.
+func NewServerWithOptions(opts *ServerOptions) (*Server, error) {
 	lis, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
 		return nil, err
 	}
 
 	f := &fakeKMS{keyRings: make(map[keyRingName]*keyRing)}
-	s := grpc.NewServer(grpc.ChainUnaryInterceptor(newLockInterceptor(&f.mux)))
+	s := grpc.NewServer(grpc.ChainUnaryInterceptor(
+		newDelayInterceptor(opts.Delay), newLockInterceptor(&f.mux)))
 	kmspb.RegisterKeyManagementServiceServer(s, f)
 
 	go s.Serve(lis)
