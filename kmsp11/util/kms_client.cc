@@ -12,7 +12,7 @@
 namespace kmsp11 {
 namespace {
 
-static void AddContextSettings(grpc::ClientContext* ctx,
+void AddContextSettings(grpc::ClientContext* ctx,
                                absl::string_view relative_resource,
                                absl::string_view resource_name,
                                absl::Time rpc_deadline) {
@@ -25,7 +25,7 @@ static void AddContextSettings(grpc::ClientContext* ctx,
   ctx->set_idempotent(true);
 }
 
-static void AddContextSettings(grpc::ClientContext* ctx,
+void AddContextSettings(grpc::ClientContext* ctx,
                                absl::string_view relative_resource,
                                absl::string_view resource_name,
                                absl::Duration rpc_timeout) {

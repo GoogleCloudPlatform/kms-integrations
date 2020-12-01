@@ -5,8 +5,8 @@
 
 namespace kmsp11 {
 
-static const auto* kAlgorithmDetails = new absl::flat_hash_map<
-    kms_v1::CryptoKeyVersion_CryptoKeyVersionAlgorithm, AlgorithmDetails>{
+static const auto* const kAlgorithmDetails = new absl::flat_hash_map<
+    kms_v1::CryptoKeyVersion_CryptoKeyVersionAlgorithm, const AlgorithmDetails>{
 
     // EC_SIGN_*
     {kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256,

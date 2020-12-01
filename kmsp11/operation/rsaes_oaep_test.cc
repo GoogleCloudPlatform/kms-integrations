@@ -14,7 +14,7 @@
 namespace kmsp11 {
 namespace {
 
-static CK_RSA_PKCS_OAEP_PARAMS NewOaepParams() {
+CK_RSA_PKCS_OAEP_PARAMS NewOaepParams() {
   return CK_RSA_PKCS_OAEP_PARAMS{
       CKM_SHA256,          // hashAlg
       CKG_MGF1_SHA256,     // mgf
@@ -24,7 +24,7 @@ static CK_RSA_PKCS_OAEP_PARAMS NewOaepParams() {
   };
 }
 
-static CK_MECHANISM NewOaepMechanism(CK_RSA_PKCS_OAEP_PARAMS* params) {
+CK_MECHANISM NewOaepMechanism(CK_RSA_PKCS_OAEP_PARAMS* params) {
   return CK_MECHANISM{
       CKM_RSA_PKCS_OAEP,  // mechanism
       params,             // pParameter

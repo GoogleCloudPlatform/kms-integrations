@@ -2,8 +2,8 @@
 
 #include <fstream>
 
-#include "absl/base/call_once.h"
 #include "absl/strings/str_cat.h"
+#include "glog/logging.h"
 #include "gtest/gtest.h"
 #include "tools/cpp/runfiles/runfiles.h"
 
@@ -12,17 +12,13 @@ namespace {
 
 using ::bazel::tools::cpp::runfiles::Runfiles;
 
-static absl::once_flag runfiles_once;
-static Runfiles* runfiles;
-
-void LoadRunfiles() {
-  std::string error;
-  runfiles = Runfiles::CreateForTest(&error);
-  ASSERT_TRUE(runfiles) << "error creating runfiles: " << error;
-}
-
 Runfiles* GetRunfiles() {
-  absl::call_once(runfiles_once, &LoadRunfiles);
+  static Runfiles* runfiles = [] {
+    std::string error;
+    Runfiles* runfiles = Runfiles::CreateForTest(&error);
+    CHECK(runfiles != nullptr) << "error creating runfiles: " << error;
+    return runfiles;
+  }();
   return runfiles;
 }
 

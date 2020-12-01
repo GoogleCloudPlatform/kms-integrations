@@ -13,8 +13,8 @@ namespace kmsp11 {
 
 namespace {
 
-static absl::Status ValidateRsaOaepParameters(Object* key, void* parameters,
-                                              CK_ULONG parameters_size) {
+absl::Status ValidateRsaOaepParameters(Object* key, void* parameters,
+                                       CK_ULONG parameters_size) {
   if (parameters_size != sizeof(CK_RSA_PKCS_OAEP_PARAMS)) {
     return InvalidMechanismParamError(
         "mechanism parameters must be of type CK_RSA_PKCS_OAEP_PARAMS",

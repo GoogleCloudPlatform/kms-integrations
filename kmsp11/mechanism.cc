@@ -6,8 +6,7 @@
 namespace kmsp11 {
 namespace {
 
-static const absl::flat_hash_map<CK_MECHANISM_TYPE,
-                                 const CK_MECHANISM_INFO>* const kMechanisms =
+static const auto* const kMechanisms =
     new absl::flat_hash_map<CK_MECHANISM_TYPE, const CK_MECHANISM_INFO>({
         {
             CKM_ECDSA,

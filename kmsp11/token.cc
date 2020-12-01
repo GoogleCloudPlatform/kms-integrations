@@ -13,7 +13,7 @@
 namespace kmsp11 {
 namespace {
 
-static absl::StatusOr<CK_SLOT_INFO> NewSlotInfo() {
+absl::StatusOr<CK_SLOT_INFO> NewSlotInfo() {
   CK_SLOT_INFO info = {
       {0},                // slotDescription (set with ' ' padding below)
       {0},                // manufacturerID (set with ' ' padding below)
@@ -28,7 +28,7 @@ static absl::StatusOr<CK_SLOT_INFO> NewSlotInfo() {
   return info;
 }
 
-static absl::StatusOr<CK_TOKEN_INFO> NewTokenInfo(
+absl::StatusOr<CK_TOKEN_INFO> NewTokenInfo(
     absl::string_view token_label) {
   CK_TOKEN_INFO info = {
       {0},  // label (set with ' ' padding below)

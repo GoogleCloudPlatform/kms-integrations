@@ -85,7 +85,7 @@ cc_library(
     data = [":testdata"],
     deps = [
         "@bazel_tools//tools/cpp/runfiles",
-        "@com_google_absl//absl/base",
+        "@com_github_google_glog//:glog",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest",

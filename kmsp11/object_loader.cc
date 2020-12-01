@@ -8,7 +8,7 @@
 namespace kmsp11 {
 namespace {
 
-static bool IsLoadable(const kms_v1::CryptoKey& key) {
+bool IsLoadable(const kms_v1::CryptoKey& key) {
   switch (key.purpose()) {
     case kms_v1::CryptoKey::ASYMMETRIC_DECRYPT:
     case kms_v1::CryptoKey::ASYMMETRIC_SIGN:
@@ -31,7 +31,7 @@ static bool IsLoadable(const kms_v1::CryptoKey& key) {
   return true;
 }
 
-static bool IsLoadable(const kms_v1::CryptoKeyVersion& ckv) {
+bool IsLoadable(const kms_v1::CryptoKeyVersion& ckv) {
   if (ckv.state() != kms_v1::CryptoKeyVersion::ENABLED) {
     LOG(INFO) << "version " << ckv.name()
               << " is not loadable due to unsupported state " << ckv.state();

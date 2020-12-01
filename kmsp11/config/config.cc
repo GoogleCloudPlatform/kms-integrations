@@ -14,7 +14,7 @@ namespace {
 // Exceptions are disallowed by our style guide. Wrap YAML::LoadFile (which may
 // throw) in a noexcept function, and convert thrown exceptions to a reasonable
 // absl::Status.
-static absl::StatusOr<YAML::Node> ParseYamlFile(
+absl::StatusOr<YAML::Node> ParseYamlFile(
     const std::string& file_path) noexcept {
   try {
     return YAML::LoadFile(file_path);

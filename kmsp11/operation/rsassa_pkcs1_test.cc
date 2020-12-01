@@ -18,7 +18,7 @@ using ::testing::HasSubstr;
 // Build a DigestInfo structure, which is the expected input into a CKM_RSA_PKCS
 // signing operation.
 // http://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/errata01/os/pkcs11-curr-v2.40-errata01-os-complete.html#_Toc441850410
-static absl::StatusOr<std::vector<uint8_t>> BuildRsaDigestInfo(
+absl::StatusOr<std::vector<uint8_t>> BuildRsaDigestInfo(
     int digest_nid, absl::Span<const uint8_t> digest) {
   bssl::UniquePtr<X509_SIG> digest_info(X509_SIG_new());
   if (X509_ALGOR_set0(digest_info->algor, OBJ_nid2obj(digest_nid), V_ASN1_NULL,

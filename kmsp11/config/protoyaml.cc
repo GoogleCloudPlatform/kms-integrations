@@ -12,16 +12,16 @@ using google::protobuf::Message;
 using google::protobuf::MessageFactory;
 using google::protobuf::Reflection;
 
-static absl::Status YamlError(absl::string_view message, YAML::Mark mark,
-                              SourceLocation source_location) {
+absl::Status YamlError(absl::string_view message, YAML::Mark mark,
+                       SourceLocation source_location) {
   return NewInvalidArgumentError(
       absl::StrFormat("error in YAML document at line %d, column %d: %s",
                       mark.line, mark.column, message),
       CKR_GENERAL_ERROR, source_location);
 }
 
-static absl::Status SetScalarField(Message* dest, const FieldDescriptor* field,
-                                   const YAML::Node& value) {
+absl::Status SetScalarField(Message* dest, const FieldDescriptor* field,
+                            const YAML::Node& value) {
   if (!value.IsScalar()) {
     return YamlError("expected scalar node", value.Mark(), SOURCE_LOCATION);
   }
@@ -58,9 +58,8 @@ static absl::Status SetScalarField(Message* dest, const FieldDescriptor* field,
   }
 }
 
-static absl::Status SetRepeatedField(Message* dest,
-                                     const FieldDescriptor* field,
-                                     const YAML::Node& value) {
+absl::Status SetRepeatedField(Message* dest, const FieldDescriptor* field,
+                              const YAML::Node& value) {
   if (!value.IsSequence()) {
     return YamlError("expected a sequence", value.Mark(), SOURCE_LOCATION);
   }
@@ -100,8 +99,8 @@ static absl::Status SetRepeatedField(Message* dest,
   }
 }
 
-static absl::Status SetMessageField(Message* dest, const FieldDescriptor* field,
-                                    const YAML::Node& value) {
+absl::Status SetMessageField(Message* dest, const FieldDescriptor* field,
+                             const YAML::Node& value) {
   std::unique_ptr<Message> child_message(
       MessageFactory::generated_factory()
           ->GetPrototype(field->message_type())
@@ -113,8 +112,8 @@ static absl::Status SetMessageField(Message* dest, const FieldDescriptor* field,
   return absl::OkStatus();
 }
 
-static absl::Status SetField(Message* dest, const FieldDescriptor* field,
-                             const YAML::Node& value) {
+absl::Status SetField(Message* dest, const FieldDescriptor* field,
+                      const YAML::Node& value) {
   if (field->is_repeated()) {
     return SetRepeatedField(dest, field, value);
   }

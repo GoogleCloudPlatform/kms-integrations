@@ -12,7 +12,7 @@ namespace kmsp11 {
 
 namespace {
 
-static absl::StatusOr<std::vector<uint8_t>> ExtractDigest(
+absl::StatusOr<std::vector<uint8_t>> ExtractDigest(
     absl::Span<const uint8_t> digest_info_der, int expected_digest_nid) {
   const uint8_t* data = digest_info_der.data();
 

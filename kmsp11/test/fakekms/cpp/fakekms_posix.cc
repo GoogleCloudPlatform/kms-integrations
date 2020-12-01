@@ -26,7 +26,7 @@ class PosixFakeKms : public FakeKms {
   pid_t pid_;
 };
 
-static absl::Status PosixErrorToStatus(absl::string_view prefix) {
+absl::Status PosixErrorToStatus(absl::string_view prefix) {
   return absl::InternalError(
       absl::StrFormat("%s: %s", prefix, strerror(errno)));
 }

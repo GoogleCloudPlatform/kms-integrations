@@ -18,8 +18,12 @@
 
 namespace kmsp11 {
 namespace {
-static const bssl::UniquePtr<ASN1_TIME> kUnixEpoch(
-    ASN1_TIME_set(nullptr, absl::ToTimeT(absl::UnixEpoch())));
+
+static const ASN1_TIME kUnixEpoch = [] {
+  ASN1_TIME time;
+  ASN1_TIME_set(&time, absl::ToTimeT(absl::UnixEpoch()));
+  return time;
+}();
 
 // A helper for invoking an OpenSSL function of the form i2d_FOO, and returning
 // the DER output as a string.
@@ -93,7 +97,7 @@ class BoringBitGenerator {
 
 absl::StatusOr<absl::Time> Asn1TimeToAbsl(const ASN1_TIME* time) {
   int diff_days, diff_secs;
-  if (ASN1_TIME_diff(&diff_days, &diff_secs, kUnixEpoch.get(), time) != 1) {
+  if (ASN1_TIME_diff(&diff_days, &diff_secs, &kUnixEpoch, time) != 1) {
     return NewInternalError(
         absl::StrCat("error processing ASN1_TIME: ", SslErrorToString()),
         SOURCE_LOCATION);

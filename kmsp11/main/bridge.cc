@@ -35,7 +35,7 @@ absl::StatusOr<std::shared_ptr<Session>> GetSession(
   return provider->GetSession(session_handle);
 }
 
-static absl::Status ShutdownInternal() {
+absl::Status ShutdownInternal() {
   RETURN_IF_ERROR(ReleaseGlobalProvider());
   grpc_shutdown_blocking();
   ShutdownLogging();
