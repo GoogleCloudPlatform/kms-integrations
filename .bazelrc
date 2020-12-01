@@ -54,6 +54,7 @@ build:windows --javabase=@bazel_tools//tools/jdk:remote_jdk11
 build:windows --host_java_toolchain=@bazel_tools//tools/jdk:toolchain_java11
 build:windows --java_toolchain=@bazel_tools//tools/jdk:toolchain_java11
 
-# Import from .bazelrc.local if it exists. Keep this at the end of the file so
+# Import from user.bazelrc if it exists. Keep this at the end of the file so
 # that local options can override options that are declared in this file.
-try-import %workspace%/.bazelrc.local
+# https://docs.bazel.build/versions/master/best-practices.html#using-the-bazelrc-file
+try-import %workspace%/user.bazelrc
