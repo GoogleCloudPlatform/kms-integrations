@@ -4,6 +4,7 @@
 
 #include "gmock/gmock.h"
 #include "kmsp11/config/config.h"
+#include "kmsp11/kmsp11.h"
 #include "kmsp11/test/fakekms/cpp/fakekms.h"
 #include "kmsp11/test/matchers.h"
 #include "kmsp11/test/resource_helpers.h"
@@ -1181,6 +1182,161 @@ TEST_F(BridgeTest, FindObjectsContainsNewResultsAfterRefresh) {
   EXPECT_OK(FindObjects(session, objects.data(), objects.size(), &found_count));
   EXPECT_EQ(found_count, 2);
   EXPECT_OK(FindObjectsFinal(session));
+}
+
+TEST_F(BridgeTest, GenerateKeyPairFailsNotInitialized) {
+  EXPECT_THAT(
+      GenerateKeyPair(0, nullptr, nullptr, 0, nullptr, 0, nullptr, nullptr),
+      StatusRvIs(CKR_CRYPTOKI_NOT_INITIALIZED));
+}
+
+TEST_F(BridgeTest, GenerateKeyPairFailsInvalidSessionHandle) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  EXPECT_THAT(
+      GenerateKeyPair(0, nullptr, nullptr, 0, nullptr, 0, nullptr, nullptr),
+      StatusRvIs(CKR_SESSION_HANDLE_INVALID));
+}
+
+TEST_F(BridgeTest, GenerateKeyPairFailsMechanismNullptr) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION | CKF_RW_SESSION, nullptr,
+                        nullptr, &session));
+
+  std::string key_id = "my-great-id";
+  CK_ULONG algorithm = KMS_ALGORITHM_EC_SIGN_P256_SHA256;
+
+  CK_ATTRIBUTE tmpl[2] = {
+      {CKA_LABEL, const_cast<char*>(key_id.c_str()), key_id.size()},
+      {CKA_KMS_ALGORITHM, &algorithm, sizeof(algorithm)},
+  };
+  CK_OBJECT_HANDLE handles[2];
+
+  EXPECT_THAT(GenerateKeyPair(session, nullptr, nullptr, 0, &tmpl[0], 2,
+                              &handles[0], &handles[1]),
+              StatusRvIs(CKR_ARGUMENTS_BAD));
+}
+
+TEST_F(BridgeTest, GenerateKeyPairFailsPublicKeyTemplateMissingPointer) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION | CKF_RW_SESSION, nullptr,
+                        nullptr, &session));
+
+  CK_MECHANISM gen_mech = {CKM_EC_KEY_PAIR_GEN, nullptr, 0};
+  CK_OBJECT_HANDLE handles[2];
+
+  EXPECT_THAT(GenerateKeyPair(session, &gen_mech, nullptr, 1, nullptr, 0,
+                              &handles[0], &handles[1]),
+              StatusRvIs(CKR_ARGUMENTS_BAD));
+}
+
+TEST_F(BridgeTest, GenerateKeyPairFailsPrivateKeyTemplateMissingPointer) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION | CKF_RW_SESSION, nullptr,
+                        nullptr, &session));
+
+  CK_MECHANISM gen_mech = {CKM_EC_KEY_PAIR_GEN, nullptr, 0};
+  CK_OBJECT_HANDLE handles[2];
+
+  EXPECT_THAT(GenerateKeyPair(session, &gen_mech, nullptr, 0, nullptr, 1,
+                              &handles[0], &handles[1]),
+              StatusRvIs(CKR_ARGUMENTS_BAD));
+}
+
+TEST_F(BridgeTest, GenerateKeyPairFailsPublicKeyHandleNullptr) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION | CKF_RW_SESSION, nullptr,
+                        nullptr, &session));
+
+  std::string key_id = "my-great-id";
+  CK_ULONG algorithm = KMS_ALGORITHM_EC_SIGN_P256_SHA256;
+
+  CK_MECHANISM gen_mech = {CKM_EC_KEY_PAIR_GEN, nullptr, 0};
+  CK_ATTRIBUTE tmpl[2] = {
+      {CKA_LABEL, const_cast<char*>(key_id.c_str()), key_id.size()},
+      {CKA_KMS_ALGORITHM, &algorithm, sizeof(algorithm)},
+  };
+  CK_OBJECT_HANDLE handle;
+
+  EXPECT_THAT(GenerateKeyPair(session, &gen_mech, nullptr, 0, &tmpl[0], 2,
+                              nullptr, &handle),
+              StatusRvIs(CKR_ARGUMENTS_BAD));
+}
+
+TEST_F(BridgeTest, GenerateKeyPairFailsPrivateKeyHandleNullptr) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION | CKF_RW_SESSION, nullptr,
+                        nullptr, &session));
+
+  std::string key_id = "my-great-id";
+  CK_ULONG algorithm = KMS_ALGORITHM_EC_SIGN_P256_SHA256;
+
+  CK_MECHANISM gen_mech = {CKM_EC_KEY_PAIR_GEN, nullptr, 0};
+  CK_ATTRIBUTE tmpl[2] = {
+      {CKA_LABEL, const_cast<char*>(key_id.c_str()), key_id.size()},
+      {CKA_KMS_ALGORITHM, &algorithm, sizeof(algorithm)},
+  };
+  CK_OBJECT_HANDLE handle;
+
+  EXPECT_THAT(GenerateKeyPair(session, &gen_mech, nullptr, 0, &tmpl[0], 2,
+                              &handle, nullptr),
+              StatusRvIs(CKR_ARGUMENTS_BAD));
+}
+
+TEST_F(BridgeTest, GenerateKeyPairSuccess) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION | CKF_RW_SESSION, nullptr,
+                        nullptr, &session));
+
+  std::string key_id = "my-great-id";
+  CK_ULONG algorithm = KMS_ALGORITHM_EC_SIGN_P256_SHA256;
+
+  CK_MECHANISM gen_mech = {CKM_EC_KEY_PAIR_GEN, nullptr, 0};
+  CK_ATTRIBUTE tmpl[2] = {
+      {CKA_LABEL, const_cast<char*>(key_id.c_str()), key_id.size()},
+      {CKA_KMS_ALGORITHM, &algorithm, sizeof(algorithm)},
+  };
+  CK_OBJECT_HANDLE handles[2];
+
+  EXPECT_OK(GenerateKeyPair(session, &gen_mech, nullptr, 0, &tmpl[0], 2,
+                            &handles[0], &handles[1]));
+  EXPECT_NE(handles[0], CK_INVALID_HANDLE);
+  EXPECT_NE(handles[1], CK_INVALID_HANDLE);
+
+  // Ensure that the generated keypair can be found with C_FindObjects
+  CK_ULONG found_count;
+  CK_OBJECT_HANDLE found_handles[2];
+  EXPECT_OK(FindObjectsInit(session, &tmpl[0], 2));
+  EXPECT_OK(FindObjects(session, &found_handles[0], 2, &found_count));
+  EXPECT_EQ(found_count, 2);
+  EXPECT_OK(FindObjectsFinal(session));
+
+  EXPECT_THAT(found_handles, testing::UnorderedElementsAreArray(handles));
+
+  // Ensure that the CKV can be located with direct KMS API calls.
+  auto fake_client = fake_kms_->NewClient();
+  GetCryptoKeyVersionOrDie(
+      fake_client.get(),
+      kr1_.name() + "/cryptoKeys/" + key_id + "/cryptoKeyVersions/1");
 }
 
 class AsymmetricCryptTest : public BridgeTest {

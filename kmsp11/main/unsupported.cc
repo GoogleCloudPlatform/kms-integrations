@@ -195,14 +195,6 @@ absl::Status GenerateKey(CK_SESSION_HANDLE hSession,
   return UnsupportedError(SOURCE_LOCATION);
 }
 
-absl::Status GenerateKeyPair(
-    CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechanism,
-    CK_ATTRIBUTE_PTR pPublicKeyTemplate, CK_ULONG ulPublicKeyAttributeCount,
-    CK_ATTRIBUTE_PTR pPrivateKeyTemplate, CK_ULONG ulPrivateKeyAttributeCount,
-    CK_OBJECT_HANDLE_PTR phPublicKey, CK_OBJECT_HANDLE_PTR phPrivateKey) {
-  return UnsupportedError(SOURCE_LOCATION);
-}
-
 absl::Status WrapKey(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechanism,
                      CK_OBJECT_HANDLE hWrappingKey, CK_OBJECT_HANDLE hKey,
                      CK_BYTE_PTR pWrappedKey, CK_ULONG_PTR pulWrappedKeyLen) {

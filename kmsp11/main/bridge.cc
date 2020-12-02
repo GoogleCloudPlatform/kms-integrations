@@ -3,6 +3,7 @@
 #include "grpc/fork.h"
 #include "kmsp11/config/config.h"
 #include "kmsp11/cryptoki.h"
+#include "kmsp11/kmsp11.h"
 #include "kmsp11/main/function_list.h"
 #include "kmsp11/mechanism.h"
 #include "kmsp11/provider.h"
@@ -589,6 +590,52 @@ absl::Status Verify(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pData,
                       absl::MakeConstSpan(pSignature, ulSignatureLen));
   session->ReleaseOperation();
   return result;
+}
+
+// Generate a new asymmetric key pair.
+// http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/os/pkcs11-base-v2.40-os.html#_Toc323024157
+absl::Status GenerateKeyPair(
+    CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechanism,
+    CK_ATTRIBUTE_PTR pPublicKeyTemplate, CK_ULONG ulPublicKeyAttributeCount,
+    CK_ATTRIBUTE_PTR pPrivateKeyTemplate, CK_ULONG ulPrivateKeyAttributeCount,
+    CK_OBJECT_HANDLE_PTR phPublicKey, CK_OBJECT_HANDLE_PTR phPrivateKey) {
+  ASSIGN_OR_RETURN(std::shared_ptr<Session> session, GetSession(hSession));
+
+  if (!pMechanism) {
+    return NullArgumentError("pMechanism", SOURCE_LOCATION);
+  }
+  if (!phPublicKey) {
+    return NullArgumentError("phPublicKey", SOURCE_LOCATION);
+  }
+  if (!phPrivateKey) {
+    return NullArgumentError("phPrivateKey", SOURCE_LOCATION);
+  }
+
+  absl::Span<const CK_ATTRIBUTE> pub_attributes;
+  if (ulPublicKeyAttributeCount > 0) {
+    if (!pPublicKeyTemplate) {
+      return NullArgumentError("pPublicKeyTemplate", SOURCE_LOCATION);
+    }
+    pub_attributes =
+        absl::MakeConstSpan(pPublicKeyTemplate, ulPublicKeyAttributeCount);
+  }
+
+  absl::Span<const CK_ATTRIBUTE> prv_attributes;
+  if (ulPrivateKeyAttributeCount > 0) {
+    if (!pPrivateKeyTemplate) {
+      return NullArgumentError("pPrivateKeyTemplate", SOURCE_LOCATION);
+    }
+    prv_attributes =
+        absl::MakeConstSpan(pPrivateKeyTemplate, ulPrivateKeyAttributeCount);
+  }
+
+  ASSIGN_OR_RETURN(
+      AsymmetricHandleSet handles,
+      session->GenerateKeyPair(*pMechanism, pub_attributes, prv_attributes));
+
+  *phPublicKey = handles.public_key_handle;
+  *phPrivateKey = handles.private_key_handle;
+  return absl::OkStatus();
 }
 
 }  // namespace kmsp11
