@@ -40,6 +40,7 @@ cc_binary(
 java_test(
     name = "SignatureTest",
     srcs = ["SignatureTest.java"],
+    tags = ["no_m32"],
     test_class = "kmsp11.test.jca.SignatureTest",
     deps = [
         ":JcaTestFixture",

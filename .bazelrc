@@ -54,6 +54,9 @@ build:windows --javabase=@bazel_tools//tools/jdk:remote_jdk11
 build:windows --host_java_toolchain=@bazel_tools//tools/jdk:toolchain_java11
 build:windows --java_toolchain=@bazel_tools//tools/jdk:toolchain_java11
 
+# x86 builds on amd64
+build:m32 --copt=-m32 --linkopt=-m32 --test_tag_filters=-no_m32
+
 # Import from user.bazelrc if it exists. Keep this at the end of the file so
 # that local options can override options that are declared in this file.
 # https://docs.bazel.build/versions/master/best-practices.html#using-the-bazelrc-file

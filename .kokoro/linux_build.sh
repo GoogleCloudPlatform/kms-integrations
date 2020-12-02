@@ -28,7 +28,7 @@ use_bazel.sh 3.3.0
 _upload_artifacts() {
   if [ -e "${PROJECT_ROOT}/bazel-bin/kmsp11/main/libkmsp11.so" ]; then
     cp "${PROJECT_ROOT}/bazel-bin/kmsp11/main/libkmsp11.so" \
-      "${RESULTS_DIR}/libkmsp11.dylib"
+      "${RESULTS_DIR}/libkmsp11.so"
   fi
 
   python3 "${PROJECT_ROOT}/.kokoro/copy_test_outputs.py" \
@@ -36,4 +36,8 @@ _upload_artifacts() {
 }
 trap _upload_artifacts EXIT
 
-bazel test -c opt ... --keep_going
+# Force bazel to statically link libstdc++
+# See https://github.com/bazelbuild/bazel/pull/8660
+BAZEL_LINKOPTS="-static-libstdc++ -static-libgcc" \
+  BAZEL_LINKLIBS="-l%:libstdc++.a -lm" \
+  bazel test -c opt ${BAZEL_EXTRA_ARGS} ... --keep_going

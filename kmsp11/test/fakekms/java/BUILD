@@ -19,6 +19,7 @@ java_test(
     name = "FakeKmsTest",
     size = "small",
     srcs = ["FakeKmsTest.java"],
+    tags = ["no_m32"],
     test_class = "com.google.cloud.kms.pkcs11.fakekms.FakeKmsTest",
     deps = [
         ":FakeKms",
