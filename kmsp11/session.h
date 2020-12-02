@@ -8,6 +8,11 @@ namespace kmsp11 {
 
 enum class SessionType { kReadOnly, kReadWrite };
 
+struct AsymmetricHandleSet {
+  CK_OBJECT_HANDLE private_key_handle;
+  CK_OBJECT_HANDLE public_key_handle;
+};
+
 // Session models a PKCS #11 Session and an optional ongoing operation.
 //
 // See go/kms-pkcs11-model
@@ -44,6 +49,11 @@ class Session {
   absl::Status VerifyInit(std::shared_ptr<Object> key, CK_MECHANISM* mechanism);
   absl::Status Verify(absl::Span<const uint8_t> digest,
                       absl::Span<const uint8_t> signature);
+
+  absl::StatusOr<AsymmetricHandleSet> GenerateKeyPair(
+      const CK_MECHANISM& mechanism,
+      absl::Span<const CK_ATTRIBUTE> public_key_attrs,
+      absl::Span<const CK_ATTRIBUTE> private_key_attrs);
 
  private:
   Token* token_;

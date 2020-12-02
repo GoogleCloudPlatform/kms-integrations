@@ -6,17 +6,27 @@
 namespace kmsp11 {
 namespace {
 
+constexpr CK_FLAGS kEcFlags =
+    CKF_EC_F_P | CKF_EC_NAMEDCURVE | CKF_EC_UNCOMPRESS;
+
 static const auto* const kMechanisms =
     new absl::flat_hash_map<CK_MECHANISM_TYPE, const CK_MECHANISM_INFO>({
         {
             CKM_ECDSA,
             {
-                256,  // ulMinKeySize
-                384,  // ulMaxKeySize
-                CKF_SIGN | CKF_VERIFY | CKF_EC_F_P | CKF_EC_NAMEDCURVE |
-                    CKF_EC_UNCOMPRESS  // flags
+                256,                              // ulMinKeySize
+                384,                              // ulMaxKeySize
+                CKF_SIGN | CKF_VERIFY | kEcFlags  // flags
             },
 
+        },
+        {
+            CKM_EC_KEY_PAIR_GEN,
+            {
+                256,                                       // ulMinKeySize
+                384,                                       // ulMaxKeySize
+                CKF_HW | CKF_GENERATE_KEY_PAIR | kEcFlags  // flags
+            },
         },
         {
             CKM_RSA_PKCS,
@@ -41,6 +51,14 @@ static const auto* const kMechanisms =
                 2048,                  // ulMinKeySize
                 4096,                  // ulMaxKeySize
                 CKF_SIGN | CKF_VERIFY  // flags
+            },
+        },
+        {
+            CKM_RSA_PKCS_KEY_PAIR_GEN,
+            {
+                2048,                           // ulMinKeySize
+                4096,                           // ulMaxKeySize
+                CKF_HW | CKF_GENERATE_KEY_PAIR  // flags
             },
         },
     });

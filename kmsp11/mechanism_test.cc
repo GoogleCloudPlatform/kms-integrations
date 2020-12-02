@@ -7,10 +7,15 @@
 namespace kmsp11 {
 namespace {
 
+using ::testing::AllOf;
+using ::testing::Contains;
+
 TEST(MechanismTest, SupportedMechanisms) {
   EXPECT_THAT(Mechanisms(),
-              testing::ElementsAre(CKM_RSA_PKCS, CKM_RSA_PKCS_OAEP,
-                                   CKM_RSA_PKCS_PSS, CKM_ECDSA));
+              // Check a subset of the permitted mechanisms, to avoid having
+              // this test be a change detector.
+              AllOf(Contains(CKM_RSA_PKCS_KEY_PAIR_GEN),
+                    Contains(CKM_RSA_PKCS_PSS), Contains(CKM_ECDSA)));
 }
 
 TEST(MechanismTest, DecryptFlag) {

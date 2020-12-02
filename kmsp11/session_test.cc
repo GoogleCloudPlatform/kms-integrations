@@ -1,6 +1,7 @@
 #include "kmsp11/session.h"
 
 #include "gmock/gmock.h"
+#include "kmsp11/kmsp11.h"
 #include "kmsp11/test/fakekms/cpp/fakekms.h"
 #include "kmsp11/test/resource_helpers.h"
 #include "kmsp11/test/test_status_macros.h"
@@ -10,6 +11,7 @@ namespace kmsp11 {
 namespace {
 
 using ::testing::AllOf;
+using ::testing::HasSubstr;
 using ::testing::IsEmpty;
 using ::testing::Pointee;
 using ::testing::Property;
@@ -27,7 +29,7 @@ class SessionTest : public testing::Test {
     config_.set_key_ring(key_ring_.name());
     client_ = absl::make_unique<KmsClient>(fake_kms_->listen_addr(),
                                            grpc::InsecureChannelCredentials(),
-                                           absl::Seconds(1));
+                                           absl::Seconds(5));
   }
 
   std::unique_ptr<FakeKms> fake_kms_;
@@ -662,6 +664,252 @@ TEST_F(SessionTest, VerifyNotInitialized) {
   uint8_t digest[32], signature[64];
   EXPECT_THAT(s.Verify(digest, signature),
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
+}
+
+class GenerateKeyPairTest : public SessionTest {};
+
+TEST_F(GenerateKeyPairTest, ReadOnlySessionReturnsFailedPrecondition) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
+
+  EXPECT_THAT(s.GenerateKeyPair(CK_MECHANISM{}, {}, {}),
+              AllOf(StatusIs(absl::StatusCode::kFailedPrecondition),
+                    StatusRvIs(CKR_SESSION_READ_ONLY)));
+}
+
+TEST_F(GenerateKeyPairTest, InvalidMechanismReturnsInvalidArgument) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadWrite, client_.get());
+  CK_MECHANISM mech = {CKM_RSA_PKCS, nullptr, 0};
+
+  EXPECT_THAT(s.GenerateKeyPair(mech, {}, {}),
+              AllOf(StatusIs(absl::StatusCode::kInvalidArgument),
+                    StatusRvIs(CKR_MECHANISM_INVALID)));
+}
+
+TEST_F(GenerateKeyPairTest, MechanismParameterReturnsInvalidArgument) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadWrite, client_.get());
+
+  char dummy[128];
+  CK_MECHANISM mech = {CKM_RSA_PKCS_KEY_PAIR_GEN, dummy, sizeof(dummy)};
+
+  EXPECT_THAT(s.GenerateKeyPair(mech, {}, {}),
+              AllOf(StatusIs(absl::StatusCode::kInvalidArgument),
+                    StatusRvIs(CKR_MECHANISM_PARAM_INVALID)));
+}
+
+TEST_F(GenerateKeyPairTest, PublicKeyTemplateReturnsInvalidArgument) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadWrite, client_.get());
+
+  CK_MECHANISM mech = {CKM_RSA_PKCS_KEY_PAIR_GEN, nullptr, 0};
+  CK_KEY_TYPE key_type_value = CKK_RSA;
+  CK_ATTRIBUTE pub_template[] = {
+      {CKA_KEY_TYPE, &key_type_value, sizeof(key_type_value)},
+  };
+
+  EXPECT_THAT(
+      s.GenerateKeyPair(mech, pub_template, {}),
+      AllOf(StatusIs(absl::StatusCode::kInvalidArgument,
+                     HasSubstr("token does not accept public key attributes")),
+            StatusRvIs(CKR_TEMPLATE_INCONSISTENT)));
+}
+
+TEST_F(GenerateKeyPairTest,
+       PrivateKeyTemplateWithUnsupportedAttributeReturnsInvalidArgument) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadWrite, client_.get());
+
+  CK_MECHANISM mech = {CKM_RSA_PKCS_KEY_PAIR_GEN, nullptr, 0};
+  CK_OBJECT_CLASS object_class = CKO_PRIVATE_KEY;
+  CK_ULONG kms_algorithm = KMS_ALGORITHM_RSA_SIGN_PKCS1_2048_SHA256;
+  std::string label = "my-great-key";
+  CK_ATTRIBUTE prv_template[] = {
+      {CKA_CLASS, &object_class, sizeof(object_class)},
+      {CKA_KMS_ALGORITHM, &kms_algorithm, sizeof(kms_algorithm)},
+      {CKA_LABEL, const_cast<char*>(label.data()), label.size()},
+  };
+
+  EXPECT_THAT(
+      s.GenerateKeyPair(mech, {}, prv_template),
+      AllOf(StatusIs(absl::StatusCode::kInvalidArgument,
+                     HasSubstr("token does not permit specifying attribute")),
+            StatusRvIs(CKR_TEMPLATE_INCONSISTENT)));
+}
+
+TEST_F(GenerateKeyPairTest,
+       PrivateKeyTemplateMissingAlgorithmReturnsInvalidArgument) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadWrite, client_.get());
+
+  CK_MECHANISM mech = {CKM_RSA_PKCS_KEY_PAIR_GEN, nullptr, 0};
+  std::string label = "my-great-key";
+  CK_ATTRIBUTE prv_template[] = {
+      {CKA_LABEL, const_cast<char*>(label.data()), label.size()},
+  };
+
+  EXPECT_THAT(s.GenerateKeyPair(mech, {}, prv_template),
+              AllOf(StatusIs(absl::StatusCode::kInvalidArgument,
+                             HasSubstr("CKA_KMS_ALGORITHM must be specified")),
+                    StatusRvIs(CKR_TEMPLATE_INCOMPLETE)));
+}
+
+TEST_F(GenerateKeyPairTest,
+       PrivateKeyTemplateInvalidAlgorithmValueSizeReturnsInvalidArgument) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadWrite, client_.get());
+
+  CK_MECHANISM mech = {CKM_RSA_PKCS_KEY_PAIR_GEN, nullptr, 0};
+  std::string label = "my-great-key";
+  CK_BYTE bad_algorithm_datatype = 1;
+  CK_ATTRIBUTE prv_template[] = {
+      {CKA_KMS_ALGORITHM, &bad_algorithm_datatype,
+       sizeof(bad_algorithm_datatype)},
+      {CKA_LABEL, const_cast<char*>(label.data()), label.size()},
+  };
+
+  EXPECT_THAT(
+      s.GenerateKeyPair(mech, {}, prv_template),
+      AllOf(StatusIs(absl::StatusCode::kInvalidArgument,
+                     HasSubstr("CKA_KMS_ALGORITHM value should be CK_ULONG")),
+            StatusRvIs(CKR_ATTRIBUTE_VALUE_INVALID)));
+}
+
+TEST_F(GenerateKeyPairTest,
+       PrivateKeyTemplateMissingLabelReturnsInvalidArgument) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadWrite, client_.get());
+
+  CK_MECHANISM mech = {CKM_RSA_PKCS_KEY_PAIR_GEN, nullptr, 0};
+  CK_ULONG kms_algorithm = KMS_ALGORITHM_RSA_SIGN_PKCS1_2048_SHA256;
+  CK_ATTRIBUTE prv_template[] = {
+      {CKA_KMS_ALGORITHM, &kms_algorithm, sizeof(kms_algorithm)},
+  };
+
+  EXPECT_THAT(s.GenerateKeyPair(mech, {}, prv_template),
+              AllOf(StatusIs(absl::StatusCode::kInvalidArgument,
+                             HasSubstr("CKA_LABEL must be specified")),
+                    StatusRvIs(CKR_TEMPLATE_INCOMPLETE)));
+}
+
+TEST_F(GenerateKeyPairTest,
+       PrivateKeyTemplateBadLabelValueReturnsInvalidArgument) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadWrite, client_.get());
+
+  CK_MECHANISM mech = {CKM_RSA_PKCS_KEY_PAIR_GEN, nullptr, 0};
+  std::string label = "$invalid-label!";
+  CK_ULONG kms_algorithm = KMS_ALGORITHM_EC_SIGN_P256_SHA256;
+  CK_ATTRIBUTE prv_template[] = {
+      {CKA_KMS_ALGORITHM, &kms_algorithm, sizeof(kms_algorithm)},
+      {CKA_LABEL, const_cast<char*>(label.data()), label.size()},
+  };
+
+  EXPECT_THAT(
+      s.GenerateKeyPair(mech, {}, prv_template),
+      AllOf(StatusIs(absl::StatusCode::kInvalidArgument,
+                     HasSubstr("LABEL must be a valid Cloud KMS CryptoKey ID")),
+            StatusRvIs(CKR_ATTRIBUTE_VALUE_INVALID)));
+}
+
+TEST_F(GenerateKeyPairTest,
+       PrivateKeyTemplateBadAlgorithmValueReturnsInvalidArgument) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadWrite, client_.get());
+
+  CK_MECHANISM mech = {CKM_RSA_PKCS_KEY_PAIR_GEN, nullptr, 0};
+  std::string label = "my-great-key";
+  CK_ULONG kms_algorithm = 1337;
+  CK_ATTRIBUTE prv_template[] = {
+      {CKA_KMS_ALGORITHM, &kms_algorithm, sizeof(kms_algorithm)},
+      {CKA_LABEL, const_cast<char*>(label.data()), label.size()},
+  };
+
+  EXPECT_THAT(s.GenerateKeyPair(mech, {}, prv_template),
+              AllOf(StatusIs(absl::StatusCode::kInvalidArgument,
+                             HasSubstr("algorithm not found")),
+                    StatusRvIs(CKR_ATTRIBUTE_VALUE_INVALID)));
+}
+
+TEST_F(GenerateKeyPairTest,
+       MismatchedAlgorithmAndMechanismReturnsInvalidArgument) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadWrite, client_.get());
+
+  CK_MECHANISM mech = {CKM_RSA_PKCS_KEY_PAIR_GEN, nullptr, 0};
+  std::string label = "my-great-key";
+  CK_ULONG kms_algorithm = KMS_ALGORITHM_EC_SIGN_P256_SHA256;
+  CK_ATTRIBUTE prv_template[] = {
+      {CKA_KMS_ALGORITHM, &kms_algorithm, sizeof(kms_algorithm)},
+      {CKA_LABEL, const_cast<char*>(label.data()), label.size()},
+  };
+
+  EXPECT_THAT(
+      s.GenerateKeyPair(mech, {}, prv_template),
+      AllOf(StatusIs(absl::StatusCode::kInvalidArgument,
+                     HasSubstr("algorithm mismatches keygen mechanism")),
+            StatusRvIs(CKR_TEMPLATE_INCONSISTENT)));
+}
+
+TEST_F(GenerateKeyPairTest, DuplicateLabelReturnsAlreadyExists) {
+  std::string label = "my-great-key";
+
+  auto kms_client = fake_kms_->NewClient();
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM);
+  ck =
+      CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), label, ck, true);
+
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadWrite, client_.get());
+
+  CK_MECHANISM mech = {CKM_RSA_PKCS_KEY_PAIR_GEN, nullptr, 0};
+  CK_ULONG kms_algorithm = KMS_ALGORITHM_RSA_SIGN_PSS_2048_SHA256;
+  CK_ATTRIBUTE prv_template[] = {
+      {CKA_KMS_ALGORITHM, &kms_algorithm, sizeof(kms_algorithm)},
+      {CKA_LABEL, const_cast<char*>(label.data()), label.size()},
+  };
+
+  EXPECT_THAT(s.GenerateKeyPair(mech, {}, prv_template),
+              AllOf(StatusIs(absl::StatusCode::kAlreadyExists),
+                    StatusRvIs(CKR_ARGUMENTS_BAD)));
+}
+
+TEST_F(GenerateKeyPairTest, GeneratedKeyPairIsImmediatelyAvailable) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadWrite, client_.get());
+
+  CK_MECHANISM mech = {CKM_EC_KEY_PAIR_GEN, nullptr, 0};
+  std::string label = "my-great-key";
+  CK_ULONG kms_algorithm = KMS_ALGORITHM_EC_SIGN_P256_SHA256;
+  CK_ATTRIBUTE prv_template[] = {
+      {CKA_KMS_ALGORITHM, &kms_algorithm, sizeof(kms_algorithm)},
+      {CKA_LABEL, const_cast<char*>(label.data()), label.size()},
+  };
+
+  ASSERT_OK_AND_ASSIGN(AsymmetricHandleSet handles,
+                       s.GenerateKeyPair(mech, {}, prv_template));
+
+  EXPECT_OK(token->GetObject(handles.public_key_handle));
+  EXPECT_OK(token->GetObject(handles.private_key_handle));
 }
 
 }  // namespace

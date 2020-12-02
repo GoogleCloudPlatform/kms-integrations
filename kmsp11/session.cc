@@ -1,9 +1,85 @@
 #include "kmsp11/session.h"
 
+#include <regex>
+
+#include "kmsp11/kmsp11.h"
 #include "kmsp11/util/errors.h"
+#include "kmsp11/util/kms_client.h"
 #include "kmsp11/util/status_macros.h"
 
 namespace kmsp11 {
+namespace {
+
+absl::Status SessionReadOnlyError(const SourceLocation& source_location) {
+  return NewError(absl::StatusCode::kFailedPrecondition, "session is read-only",
+                  CKR_SESSION_READ_ONLY, source_location);
+}
+
+struct KeyGenerationParams {
+  std::string label;
+  AlgorithmDetails algorithm;
+};
+
+absl::StatusOr<KeyGenerationParams> ExtractKeyGenerationParams(
+    absl::Span<const CK_ATTRIBUTE> prv_template) {
+  absl::optional<std::string> label;
+  absl::optional<kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm> algorithm;
+
+  for (const CK_ATTRIBUTE& attr : prv_template) {
+    switch (attr.type) {
+      case CKA_LABEL:
+        label =
+            std::string(reinterpret_cast<char*>(attr.pValue), attr.ulValueLen);
+        static std::regex* label_regexp = new std::regex("[a-zA-Z0-9_-]{1,63}");
+        if (!std::regex_match(*label, *label_regexp)) {
+          return NewInvalidArgumentError(
+              "CKA_LABEL must be a valid Cloud KMS CryptoKey ID",
+              CKR_ATTRIBUTE_VALUE_INVALID, SOURCE_LOCATION);
+        }
+
+        break;
+      case CKA_KMS_ALGORITHM:
+        if (attr.ulValueLen != sizeof(CK_ULONG)) {
+          return NewInvalidArgumentError(
+              absl::StrFormat("CKA_KMS_ALGORITHM value should be CK_ULONG "
+                              "(size=%d, got=%d)",
+                              sizeof(CK_ULONG), attr.ulValueLen),
+              CKR_ATTRIBUTE_VALUE_INVALID, SOURCE_LOCATION);
+        }
+        algorithm = kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm(
+            *static_cast<CK_ULONG*>(attr.pValue));
+        break;
+      default:
+        return NewInvalidArgumentError(
+            absl::StrFormat(
+                "this token does not permit specifying attribute type %#x",
+                attr.type),
+            CKR_TEMPLATE_INCONSISTENT, SOURCE_LOCATION);
+    }
+  }
+
+  if (!label.has_value()) {
+    return NewInvalidArgumentError(
+        "CKA_LABEL must be specified for the private key",
+        CKR_TEMPLATE_INCOMPLETE, SOURCE_LOCATION);
+  }
+  if (!algorithm.has_value()) {
+    return NewInvalidArgumentError(
+        "CKA_KMS_ALGORITHM must be specified for the private key",
+        CKR_TEMPLATE_INCOMPLETE, SOURCE_LOCATION);
+  }
+
+  absl::StatusOr<AlgorithmDetails> algorithm_details = GetDetails(*algorithm);
+  if (!algorithm_details.ok()) {
+    return NewInvalidArgumentError(algorithm_details.status().message(),
+                                   CKR_ATTRIBUTE_VALUE_INVALID,
+                                   SOURCE_LOCATION);
+  }
+
+  return KeyGenerationParams{*label, *algorithm_details};
+}
+
+}  // namespace
 
 CK_SESSION_INFO Session::info() const {
   bool is_read_write = session_type_ == SessionType::kReadWrite;
@@ -179,6 +255,78 @@ absl::Status Session::Verify(absl::Span<const uint8_t> digest,
 
   return absl::get<VerifyOp>(op_.value())
       ->Verify(kms_client_, digest, signature);
+}
+
+absl::StatusOr<AsymmetricHandleSet> Session::GenerateKeyPair(
+    const CK_MECHANISM& mechanism,
+    absl::Span<const CK_ATTRIBUTE> public_key_attrs,
+    absl::Span<const CK_ATTRIBUTE> private_key_attrs) {
+  if (session_type_ == SessionType::kReadOnly) {
+    return SessionReadOnlyError(SOURCE_LOCATION);
+  }
+
+  switch (mechanism.mechanism) {
+    case CKM_RSA_PKCS_KEY_PAIR_GEN:
+    case CKM_EC_KEY_PAIR_GEN:
+      break;
+    default:
+      return InvalidMechanismError(mechanism.mechanism, "GenerateKeyPair",
+                                   SOURCE_LOCATION);
+  }
+  if (mechanism.pParameter || mechanism.ulParameterLen > 0) {
+    return InvalidMechanismParamError(
+        "key generation mechanisms do not take parameters", SOURCE_LOCATION);
+  }
+
+  if (!public_key_attrs.empty()) {
+    return NewInvalidArgumentError(
+        "this token does not accept public key attributes",
+        CKR_TEMPLATE_INCONSISTENT, SOURCE_LOCATION);
+  }
+
+  ASSIGN_OR_RETURN(KeyGenerationParams prv_gen_params,
+                   ExtractKeyGenerationParams(private_key_attrs));
+
+  if (prv_gen_params.algorithm.key_gen_mechanism != mechanism.mechanism) {
+    return NewInvalidArgumentError("algorithm mismatches keygen mechanism",
+                                   CKR_TEMPLATE_INCONSISTENT, SOURCE_LOCATION);
+  }
+
+  kms_v1::CreateCryptoKeyRequest req;
+  req.set_parent(std::string(token_->key_ring_name()));
+  req.set_crypto_key_id(prv_gen_params.label);
+  req.mutable_crypto_key()->set_purpose(prv_gen_params.algorithm.purpose);
+  req.mutable_crypto_key()->mutable_version_template()->set_algorithm(
+      prv_gen_params.algorithm.algorithm);
+  req.mutable_crypto_key()->mutable_version_template()->set_protection_level(
+      kms_v1::HSM);
+
+  absl::StatusOr<CryptoKeyAndVersion> key_and_version =
+      kms_client_->CreateCryptoKeyAndWaitForFirstVersion(req);
+  if (absl::IsAlreadyExists(key_and_version.status())) {
+    return NewError(absl::StatusCode::kAlreadyExists,
+                    absl::StrFormat("key with label %s already exists: %s",
+                                    prv_gen_params.label,
+                                    key_and_version.status().message()),
+                    CKR_ARGUMENTS_BAD, SOURCE_LOCATION);
+  }
+  RETURN_IF_ERROR(key_and_version.status());
+  RETURN_IF_ERROR(token_->RefreshState(*kms_client_));
+
+  AsymmetricHandleSet result;
+  ASSIGN_OR_RETURN(
+      result.public_key_handle,
+      token_->FindSingleObject([&key_and_version](const Object& o) -> bool {
+        return o.kms_key_name() == key_and_version->crypto_key_version.name() &&
+               o.object_class() == CKO_PUBLIC_KEY;
+      }));
+  ASSIGN_OR_RETURN(
+      result.private_key_handle,
+      token_->FindSingleObject([&key_and_version](const Object& o) -> bool {
+        return o.kms_key_name() == key_and_version->crypto_key_version.name() &&
+               o.object_class() == CKO_PRIVATE_KEY;
+      }));
+  return result;
 }
 
 }  // namespace kmsp11
