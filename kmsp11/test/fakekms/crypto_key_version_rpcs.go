@@ -168,3 +168,29 @@ func (f *fakeKMS) UpdateCryptoKeyVersion(ctx context.Context, req *kmspb.UpdateC
 
 	return ckv.pb, nil
 }
+
+// DestroyCryptoKeyVersion fakes a Cloud KMS API function.
+func (f *fakeKMS) DestroyCryptoKeyVersion(ctx context.Context, req *kmspb.DestroyCryptoKeyVersionRequest) (*kmspb.CryptoKeyVersion, error) {
+	if err := allowlist("name").check(req); err != nil {
+		return nil, err
+	}
+
+	name, err := parseCryptoKeyVersionName(req.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	ckv, err := f.cryptoKeyVersion(name)
+	if err != nil {
+		return nil, err
+	}
+
+	switch ckv.pb.State {
+	case kmspb.CryptoKeyVersion_ENABLED, kmspb.CryptoKeyVersion_DISABLED:
+		ckv.pb.State = kmspb.CryptoKeyVersion_DESTROY_SCHEDULED
+		ckv.pb.DestroyTime = ptypes.TimestampNow()
+		return ckv.pb, nil
+	default:
+		return nil, errFailedPrecondition("state must be one of ENABLED or DISABLED in order to destroy")
+	}
+}
