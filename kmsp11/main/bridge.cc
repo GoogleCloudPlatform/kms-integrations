@@ -638,4 +638,12 @@ absl::Status GenerateKeyPair(
   return absl::OkStatus();
 }
 
+absl::Status DestroyObject(CK_SESSION_HANDLE hSession,
+                           CK_OBJECT_HANDLE hObject) {
+  ASSIGN_OR_RETURN(std::shared_ptr<Session> session, GetSession(hSession));
+  ASSIGN_OR_RETURN(std::shared_ptr<Object> object,
+                   session->token()->GetObject(hObject));
+  return session->DestroyObject(object);
+}
+
 }  // namespace kmsp11

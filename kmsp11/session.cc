@@ -329,4 +329,23 @@ absl::StatusOr<AsymmetricHandleSet> Session::GenerateKeyPair(
   return result;
 }
 
+absl::Status Session::DestroyObject(std::shared_ptr<Object> key) {
+  if (session_type_ == SessionType::kReadOnly) {
+    return SessionReadOnlyError(SOURCE_LOCATION);
+  }
+
+  CK_BBOOL ck_true = CK_TRUE;
+  if (!key->attributes().Contains(
+          CK_ATTRIBUTE{CKA_DESTROYABLE, &ck_true, sizeof(ck_true)})) {
+    return FailedPreconditionError("the selected object is not destroyable",
+                                   CKR_ACTION_PROHIBITED, SOURCE_LOCATION);
+  }
+
+  kms_v1::DestroyCryptoKeyVersionRequest req;
+  req.set_name(std::string(key->kms_key_name()));
+  RETURN_IF_ERROR(kms_client_->DestroyCryptoKeyVersion(req));
+  RETURN_IF_ERROR(token_->RefreshState(*kms_client_));
+  return absl::OkStatus();
+}
+
 }  // namespace kmsp11

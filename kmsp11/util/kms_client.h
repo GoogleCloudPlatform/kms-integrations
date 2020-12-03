@@ -44,6 +44,9 @@ class KmsClient {
   absl::StatusOr<CryptoKeyAndVersion> CreateCryptoKeyAndWaitForFirstVersion(
       const kms_v1::CreateCryptoKeyRequest& request) const;
 
+  absl::StatusOr<kms_v1::CryptoKeyVersion> DestroyCryptoKeyVersion(
+      const kms_v1::DestroyCryptoKeyVersionRequest& request) const;
+
   absl::StatusOr<kms_v1::PublicKey> GetPublicKey(
       const kms_v1::GetPublicKeyRequest& request) const;
 

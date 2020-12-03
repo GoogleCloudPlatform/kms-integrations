@@ -55,6 +55,8 @@ class Session {
       absl::Span<const CK_ATTRIBUTE> public_key_attrs,
       absl::Span<const CK_ATTRIBUTE> private_key_attrs);
 
+  absl::Status DestroyObject(std::shared_ptr<Object> object);
+
  private:
   Token* token_;
   const SessionType session_type_;

@@ -13,9 +13,9 @@ namespace kmsp11 {
 namespace {
 
 void AddContextSettings(grpc::ClientContext* ctx,
-                               absl::string_view relative_resource,
-                               absl::string_view resource_name,
-                               absl::Time rpc_deadline) {
+                        absl::string_view relative_resource,
+                        absl::string_view resource_name,
+                        absl::Time rpc_deadline) {
   // See https://cloud.google.com/kms/docs/grpc
   ctx->AddMetadata("x-goog-request-params",
                    absl::StrCat(relative_resource, "=", resource_name));
@@ -26,9 +26,9 @@ void AddContextSettings(grpc::ClientContext* ctx,
 }
 
 void AddContextSettings(grpc::ClientContext* ctx,
-                               absl::string_view relative_resource,
-                               absl::string_view resource_name,
-                               absl::Duration rpc_timeout) {
+                        absl::string_view relative_resource,
+                        absl::string_view resource_name,
+                        absl::Duration rpc_timeout) {
   AddContextSettings(ctx, relative_resource, resource_name,
                      absl::Now() + rpc_timeout);
 }
@@ -113,6 +113,16 @@ KmsClient::CreateCryptoKeyAndWaitForFirstVersion(
   }
 
   return CryptoKeyAndVersion{ck, ckv};
+}
+
+absl::StatusOr<kms_v1::CryptoKeyVersion> KmsClient::DestroyCryptoKeyVersion(
+    const kms_v1::DestroyCryptoKeyVersionRequest& request) const {
+  grpc::ClientContext ctx;
+  AddContextSettings(&ctx, "name", request.name(), rpc_timeout_);
+
+  kms_v1::CryptoKeyVersion response;
+  RETURN_IF_ERROR(kms_stub_->DestroyCryptoKeyVersion(&ctx, request, &response));
+  return response;
 }
 
 absl::StatusOr<kms_v1::PublicKey> KmsClient::GetPublicKey(

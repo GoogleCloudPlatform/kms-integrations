@@ -61,6 +61,26 @@ TEST(NewKeyPairTest, ObjectClassMatches) {
   EXPECT_EQ(key_pair.private_key.object_class(), CKO_PRIVATE_KEY);
 }
 
+TEST(NewKeyPairTest, PrivateKeyIsDestroyable) {
+  kms_v1::CryptoKeyVersion ckv = NewTestCkv();
+  ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub, GetTestP256Key());
+
+  ASSERT_OK_AND_ASSIGN(KeyPair key_pair, Object::NewKeyPair(ckv, pub.get()));
+
+  EXPECT_THAT(key_pair.private_key.attributes().Value(CKA_DESTROYABLE),
+              IsOkAndHolds("\x01"));
+}
+
+TEST(NewKeyPairTest, PublicKeyIsNotDestroyable) {
+  kms_v1::CryptoKeyVersion ckv = NewTestCkv();
+  ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub, GetTestP256Key());
+
+  ASSERT_OK_AND_ASSIGN(KeyPair key_pair, Object::NewKeyPair(ckv, pub.get()));
+
+  EXPECT_THAT(key_pair.public_key.attributes().Value(CKA_DESTROYABLE),
+              IsOkAndHolds(std::string("\x00", 1)));
+}
+
 TEST(NewKeyPairTest, AlgorithmMatches) {
   kms_v1::CryptoKeyVersion ckv = NewTestCkv();
   ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub, GetTestP256Key());

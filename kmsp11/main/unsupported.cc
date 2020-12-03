@@ -53,11 +53,6 @@ absl::Status CopyObject(CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hObject,
   return UnsupportedError(SOURCE_LOCATION);
 }
 
-absl::Status DestroyObject(CK_SESSION_HANDLE hSession,
-                           CK_OBJECT_HANDLE hObject) {
-  return UnsupportedError(SOURCE_LOCATION);
-}
-
 absl::Status GetObjectSize(CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hObject,
                            CK_ULONG_PTR pulSize) {
   return UnsupportedError(SOURCE_LOCATION);

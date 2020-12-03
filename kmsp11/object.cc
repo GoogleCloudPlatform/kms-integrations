@@ -74,6 +74,9 @@ absl::Status AddPrivateKeyAttributes(AttributeMap* attrs,
                                      absl::string_view public_key_der) {
   ASSIGN_OR_RETURN(AlgorithmDetails algorithm, GetDetails(ckv.algorithm()));
 
+  // Override CKA_DESTROYABLE (from 4.4 Storage Objects)
+  attrs->PutBool(CKA_DESTROYABLE, true);
+
   // 4.9 Private key objects
   attrs->Put(CKA_SUBJECT, "");
   attrs->PutBool(CKA_SENSITIVE, true);

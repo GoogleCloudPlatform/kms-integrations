@@ -1339,6 +1339,63 @@ TEST_F(BridgeTest, GenerateKeyPairSuccess) {
       kr1_.name() + "/cryptoKeys/" + key_id + "/cryptoKeyVersions/1");
 }
 
+TEST_F(BridgeTest, DestroyObjectFailsNotInitialized) {
+  EXPECT_THAT(DestroyObject(0, 0), StatusRvIs(CKR_CRYPTOKI_NOT_INITIALIZED));
+}
+
+TEST_F(BridgeTest, DestroyObjectFailsInvalidSessionHandle) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  EXPECT_THAT(DestroyObject(0, 0), StatusRvIs(CKR_SESSION_HANDLE_INVALID));
+}
+
+TEST_F(BridgeTest, DestroyObjectFailsInvalidObjectHandle) {
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION | CKF_RW_SESSION, nullptr,
+                        nullptr, &session));
+
+  EXPECT_THAT(DestroyObject(session, 0), StatusRvIs(CKR_OBJECT_HANDLE_INVALID));
+}
+
+TEST_F(BridgeTest, DestroyObjectSuccessPrivateKey) {
+  auto fake_client = fake_kms_->NewClient();
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM);
+  ck = CreateCryptoKeyOrDie(fake_client.get(), kr1_.name(), "ck", ck, true);
+
+  kms_v1::CryptoKeyVersion ckv;
+  ckv = CreateCryptoKeyVersionOrDie(fake_client.get(), ck.name(), ckv);
+  ckv = WaitForEnablement(fake_client.get(), ckv);
+
+  EXPECT_OK(Initialize(&init_args_));
+  Cleanup c([]() { EXPECT_OK(Finalize(nullptr)); });
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION | CKF_RW_SESSION, nullptr,
+                        nullptr, &session));
+
+  CK_OBJECT_CLASS prv = CKO_PRIVATE_KEY;
+  CK_ATTRIBUTE tmpl = {CKA_CLASS, &prv, sizeof(prv)};
+  CK_OBJECT_HANDLE handle;
+
+  EXPECT_OK(FindObjectsInit(session, &tmpl, 1));
+  CK_ULONG found_count;
+  EXPECT_OK(FindObjects(session, &handle, 1, &found_count));
+  EXPECT_EQ(found_count, 1);
+  EXPECT_OK(FindObjectsFinal(session));
+
+  EXPECT_OK(DestroyObject(session, handle));
+}
+
 class AsymmetricCryptTest : public BridgeTest {
  protected:
   void SetUp() override {

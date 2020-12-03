@@ -400,5 +400,27 @@ TEST(KmsClientTest, CreateCryptoKeyAndFirstVersionTimesOutAtDeadline) {
               StatusIs(absl::StatusCode::kDeadlineExceeded));
 }
 
+TEST(KmsClientTest, DestroyCryptoKeyVersionSuccess) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake, FakeKms::New());
+  std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
+
+  kms_v1::KeyRing kr;
+  kr = CreateKeyRingOrDie(client->kms_stub(), kTestLocation, RandomId(), kr);
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::ENCRYPT_DECRYPT);
+  ck = CreateCryptoKeyOrDie(client->kms_stub(), kr.name(), "ck", ck, true);
+
+  kms_v1::CryptoKeyVersion ckv;
+  ckv = CreateCryptoKeyVersionOrDie(client->kms_stub(), ck.name(), ckv);
+  ASSERT_EQ(ckv.state(), kms_v1::CryptoKeyVersion::ENABLED);
+
+  kms_v1::DestroyCryptoKeyVersionRequest destroy_req;
+  destroy_req.set_name(ckv.name());
+  ASSERT_OK_AND_ASSIGN(ckv, client->DestroyCryptoKeyVersion(destroy_req));
+
+  EXPECT_EQ(ckv.state(), kms_v1::CryptoKeyVersion::DESTROY_SCHEDULED);
+}
+
 }  // namespace
 }  // namespace kmsp11
