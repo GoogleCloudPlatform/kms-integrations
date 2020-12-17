@@ -18,6 +18,15 @@ extern "C" {
 // ECDSA on the NIST P-384 curve with a SHA384 digest.
 #define KMS_ALGORITHM_EC_SIGN_P384_SHA384 13UL
 
+// RSAES-OAEP with a 2048 bit key and a SHA256 digest.
+#define KMS_ALGORITHM_RSA_DECRYPT_OAEP_2048_SHA256 8UL
+// RSAES-OAEP with a 3072 bit key and a SHA256 digest.
+#define KMS_ALGORITHM_RSA_DECRYPT_OAEP_3072_SHA256 9UL
+// RSAES-OAEP with a 4096 bit key and a SHA256 digest.
+#define KMS_ALGORITHM_RSA_DECRYPT_OAEP_4096_SHA256 10UL
+// RSAES-OAEP with a 4096 bit key and a SHA512 digest.
+#define KMS_ALGORITHM_RSA_DECRYPT_OAEP_4096_SHA512 17UL
+
 // RSASSA-PKCS1-v1_5 with a 2048 bit key and a SHA256 digest.
 #define KMS_ALGORITHM_RSA_SIGN_PKCS1_2048_SHA256 5UL
 // RSASSA-PKCS1-v1_5 with a 3072 bit key and a SHA256 digest.
