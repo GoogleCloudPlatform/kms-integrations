@@ -21,6 +21,11 @@ cd "${PROJECT_ROOT}"
 export RESULTS_DIR="${KOKORO_ARTIFACTS_DIR}/results"
 mkdir "${RESULTS_DIR}"
 
+# Pull in a more recent LLVM toolchain
+export LLVM_VERSION=10.0.1
+export LLVM_DIST="clang+llvm-${LLVM_VERSION}-x86_64-linux-gnu-ubuntu-16.04"
+sudo tar xf "${KOKORO_GFILE_DIR}/${LLVM_DIST}.tar.xz" -C /opt
+
 # Add the latest version of Bazel to the PATH
 use_bazel.sh 3.3.0
 
@@ -36,8 +41,7 @@ _upload_artifacts() {
 }
 trap _upload_artifacts EXIT
 
-# Force bazel to statically link libstdc++
-# See https://github.com/bazelbuild/bazel/pull/8660
-BAZEL_LINKOPTS="-static-libstdc++ -static-libgcc" \
-  BAZEL_LINKLIBS="-l%:libstdc++.a -lm" \
-  bazel test -c opt ${BAZEL_EXTRA_ARGS} ... --keep_going
+bazel test -c opt ${BAZEL_EXTRA_ARGS} //kmsp11/... --keep_going \
+  --crosstool_top=//toolchain:llvm_suite \
+  --//toolchain:llvm_root=/opt/${LLVM_DIST} \
+  --//toolchain:llvm_version=${LLVM_VERSION}
