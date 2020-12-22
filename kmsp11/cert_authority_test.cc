@@ -106,11 +106,11 @@ TEST_F(CertAuthorityTest, SubjectCnEqualsKeyId) {
                        authority_->GenerateCert(ckv_, test_key_.get()));
 
   std::string actual_cn(expected_cn.size(), ' ');
-  EXPECT_EQ(X509_NAME_get_text_by_NID(
-                X509_get_subject_name(cert.get()), NID_commonName,
-                const_cast<char*>(actual_cn.data()),
-                actual_cn.size() + 1 /* account for trailing NUL */),
-            expected_cn.size());
+  EXPECT_EQ(
+      X509_NAME_get_text_by_NID(
+          X509_get_subject_name(cert.get()), NID_commonName, actual_cn.data(),
+          actual_cn.size() + 1 /* account for trailing NUL */),
+      expected_cn.size());
 
   EXPECT_EQ(expected_cn, actual_cn);
 }

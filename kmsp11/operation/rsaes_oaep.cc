@@ -138,7 +138,7 @@ absl::Span<const uint8_t> RsaOaepDecryptResult::plaintext() const {
 
 void ZeroDelete::operator()(std::string* value) const {
   if (value) {
-    SafeZeroMemory(&*value->begin(), value->size());
+    SafeZeroMemory(value->data(), value->size());
   }
   delete value;
 }

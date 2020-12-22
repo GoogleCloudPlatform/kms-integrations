@@ -1211,7 +1211,7 @@ TEST_F(BridgeTest, GenerateKeyPairFailsMechanismNullptr) {
   CK_ULONG algorithm = KMS_ALGORITHM_EC_SIGN_P256_SHA256;
 
   CK_ATTRIBUTE tmpl[2] = {
-      {CKA_LABEL, const_cast<char*>(key_id.c_str()), key_id.size()},
+      {CKA_LABEL, key_id.data(), key_id.size()},
       {CKA_KMS_ALGORITHM, &algorithm, sizeof(algorithm)},
   };
   CK_OBJECT_HANDLE handles[2];
@@ -1266,7 +1266,7 @@ TEST_F(BridgeTest, GenerateKeyPairFailsPublicKeyHandleNullptr) {
 
   CK_MECHANISM gen_mech = {CKM_EC_KEY_PAIR_GEN, nullptr, 0};
   CK_ATTRIBUTE tmpl[2] = {
-      {CKA_LABEL, const_cast<char*>(key_id.c_str()), key_id.size()},
+      {CKA_LABEL, key_id.data(), key_id.size()},
       {CKA_KMS_ALGORITHM, &algorithm, sizeof(algorithm)},
   };
   CK_OBJECT_HANDLE handle;
@@ -1289,7 +1289,7 @@ TEST_F(BridgeTest, GenerateKeyPairFailsPrivateKeyHandleNullptr) {
 
   CK_MECHANISM gen_mech = {CKM_EC_KEY_PAIR_GEN, nullptr, 0};
   CK_ATTRIBUTE tmpl[2] = {
-      {CKA_LABEL, const_cast<char*>(key_id.c_str()), key_id.size()},
+      {CKA_LABEL, key_id.data(), key_id.size()},
       {CKA_KMS_ALGORITHM, &algorithm, sizeof(algorithm)},
   };
   CK_OBJECT_HANDLE handle;
@@ -1312,7 +1312,7 @@ TEST_F(BridgeTest, GenerateKeyPairSuccess) {
 
   CK_MECHANISM gen_mech = {CKM_EC_KEY_PAIR_GEN, nullptr, 0};
   CK_ATTRIBUTE tmpl[2] = {
-      {CKA_LABEL, const_cast<char*>(key_id.c_str()), key_id.size()},
+      {CKA_LABEL, key_id.data(), key_id.size()},
       {CKA_KMS_ALGORITHM, &algorithm, sizeof(algorithm)},
   };
   CK_OBJECT_HANDLE handles[2];

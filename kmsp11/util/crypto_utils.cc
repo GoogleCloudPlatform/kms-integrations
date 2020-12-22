@@ -39,8 +39,7 @@ absl::StatusOr<std::string> MarshalDer(T* obj,
   }
 
   std::string result(len, ' ');
-  uint8_t* result_data =
-      reinterpret_cast<uint8_t*>(const_cast<char*>(result.data()));
+  uint8_t* result_data = reinterpret_cast<uint8_t*>(result.data());
 
   len = i2d_function(obj, &result_data);
   if (len != result.size()) {
@@ -398,7 +397,7 @@ absl::StatusOr<bssl::UniquePtr<EVP_PKEY>> ParseX509PublicKeyPem(
 std::string RandBytes(size_t len) {
   std::string result;
   result.resize(len);
-  RAND_bytes(reinterpret_cast<uint8_t*>(const_cast<char*>(result.data())), len);
+  RAND_bytes(reinterpret_cast<uint8_t*>(result.data()), len);
   return result;
 }
 

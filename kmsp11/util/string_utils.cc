@@ -22,7 +22,7 @@ absl::Status CryptokiStrCopy(absl::string_view src, absl::Span<uint8_t> dest,
 std::string MarshalBigNum(const BIGNUM* value) {
   std::string s;
   s.resize(BN_num_bytes(value));
-  BN_bn2bin(value, reinterpret_cast<uint8_t*>(const_cast<char*>(s.data())));
+  BN_bn2bin(value, reinterpret_cast<uint8_t*>(s.data()));
   return s;
 }
 

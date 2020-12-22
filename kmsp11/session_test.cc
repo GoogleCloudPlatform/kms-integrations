@@ -733,7 +733,7 @@ TEST_F(GenerateKeyPairTest,
   CK_ATTRIBUTE prv_template[] = {
       {CKA_CLASS, &object_class, sizeof(object_class)},
       {CKA_KMS_ALGORITHM, &kms_algorithm, sizeof(kms_algorithm)},
-      {CKA_LABEL, const_cast<char*>(label.data()), label.size()},
+      {CKA_LABEL, label.data(), label.size()},
   };
 
   EXPECT_THAT(
@@ -752,7 +752,7 @@ TEST_F(GenerateKeyPairTest,
   CK_MECHANISM mech = {CKM_RSA_PKCS_KEY_PAIR_GEN, nullptr, 0};
   std::string label = "my-great-key";
   CK_ATTRIBUTE prv_template[] = {
-      {CKA_LABEL, const_cast<char*>(label.data()), label.size()},
+      {CKA_LABEL, label.data(), label.size()},
   };
 
   EXPECT_THAT(s.GenerateKeyPair(mech, {}, prv_template),
@@ -773,7 +773,7 @@ TEST_F(GenerateKeyPairTest,
   CK_ATTRIBUTE prv_template[] = {
       {CKA_KMS_ALGORITHM, &bad_algorithm_datatype,
        sizeof(bad_algorithm_datatype)},
-      {CKA_LABEL, const_cast<char*>(label.data()), label.size()},
+      {CKA_LABEL, label.data(), label.size()},
   };
 
   EXPECT_THAT(
@@ -812,7 +812,7 @@ TEST_F(GenerateKeyPairTest,
   CK_ULONG kms_algorithm = KMS_ALGORITHM_EC_SIGN_P256_SHA256;
   CK_ATTRIBUTE prv_template[] = {
       {CKA_KMS_ALGORITHM, &kms_algorithm, sizeof(kms_algorithm)},
-      {CKA_LABEL, const_cast<char*>(label.data()), label.size()},
+      {CKA_LABEL, label.data(), label.size()},
   };
 
   EXPECT_THAT(
@@ -833,7 +833,7 @@ TEST_F(GenerateKeyPairTest,
   CK_ULONG kms_algorithm = 1337;
   CK_ATTRIBUTE prv_template[] = {
       {CKA_KMS_ALGORITHM, &kms_algorithm, sizeof(kms_algorithm)},
-      {CKA_LABEL, const_cast<char*>(label.data()), label.size()},
+      {CKA_LABEL, label.data(), label.size()},
   };
 
   EXPECT_THAT(s.GenerateKeyPair(mech, {}, prv_template),
@@ -853,7 +853,7 @@ TEST_F(GenerateKeyPairTest,
   CK_ULONG kms_algorithm = KMS_ALGORITHM_EC_SIGN_P256_SHA256;
   CK_ATTRIBUTE prv_template[] = {
       {CKA_KMS_ALGORITHM, &kms_algorithm, sizeof(kms_algorithm)},
-      {CKA_LABEL, const_cast<char*>(label.data()), label.size()},
+      {CKA_LABEL, label.data(), label.size()},
   };
 
   EXPECT_THAT(
@@ -884,7 +884,7 @@ TEST_F(GenerateKeyPairTest, DuplicateLabelReturnsAlreadyExists) {
   CK_ULONG kms_algorithm = KMS_ALGORITHM_RSA_SIGN_PSS_2048_SHA256;
   CK_ATTRIBUTE prv_template[] = {
       {CKA_KMS_ALGORITHM, &kms_algorithm, sizeof(kms_algorithm)},
-      {CKA_LABEL, const_cast<char*>(label.data()), label.size()},
+      {CKA_LABEL, label.data(), label.size()},
   };
 
   EXPECT_THAT(s.GenerateKeyPair(mech, {}, prv_template),
@@ -902,7 +902,7 @@ TEST_F(GenerateKeyPairTest, GeneratedKeyPairIsImmediatelyAvailable) {
   CK_ULONG kms_algorithm = KMS_ALGORITHM_EC_SIGN_P256_SHA256;
   CK_ATTRIBUTE prv_template[] = {
       {CKA_KMS_ALGORITHM, &kms_algorithm, sizeof(kms_algorithm)},
-      {CKA_LABEL, const_cast<char*>(label.data()), label.size()},
+      {CKA_LABEL, label.data(), label.size()},
   };
 
   ASSERT_OK_AND_ASSIGN(AsymmetricHandleSet handles,

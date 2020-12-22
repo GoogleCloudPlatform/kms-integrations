@@ -106,7 +106,7 @@ TEST(AttributeMapTest, Contains) {
 
   CK_ATTRIBUTE attr;
   attr.type = CKA_ID;
-  attr.pValue = const_cast<char*>(id.data());
+  attr.pValue = id.data();
   attr.ulValueLen = id.size();
 
   EXPECT_TRUE(m.Contains(attr));
@@ -119,7 +119,7 @@ TEST(AttributeMapTest, DoesNotContain) {
   std::string want_id = "projects/foo/keys/baz";
   CK_ATTRIBUTE attr;
   attr.type = CKA_ID;
-  attr.pValue = const_cast<char*>(want_id.data());
+  attr.pValue = want_id.data();
   attr.ulValueLen = want_id.size();
 
   EXPECT_FALSE(m.Contains(attr));
