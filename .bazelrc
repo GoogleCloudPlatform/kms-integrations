@@ -3,10 +3,11 @@ build --announce_rc
 # Enable build:{linux,mac,windows} directives in the rc file
 build --enable_platform_specific_config
 
-# C++ Version (note that MSVC doesn't need a directive like this)
-build:freebsd --cxxopt=-std=c++11
-build:linux --cxxopt=-std=c++11
-build:macos --cxxopt=-std=c++11
+# C++ Version
+build:freebsd --cxxopt=-std=c++17 --linkopt=-std=c++17
+build:linux --cxxopt=-std=c++17 --linkopt=-std=c++17
+build:macos --cxxopt=-std=c++17 --linkopt=-std=c++17
+build:windows --cxxopt=/std:c++17 --linkopt=/std:c++17
 
 # FreeBSD-specific options
 # Link with libm, which is separated from libc on FreeBSD
