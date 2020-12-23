@@ -141,12 +141,12 @@ std::vector<CK_OBJECT_HANDLE> ObjectStore::Find(
 absl::StatusOr<CK_OBJECT_HANDLE> ObjectStore::FindSingle(
     std::function<bool(const Object&)> predicate) const {
   absl::optional<CK_OBJECT_HANDLE> match;
-  for (const ObjectStoreEntry& entry : entries_) {
-    if (predicate(*entry.second)) {
+  for (const auto& [handle, object] : entries_) {
+    if (predicate(*object)) {
       if (match.has_value()) {
         return absl::FailedPreconditionError("multiple matches found");
       }
-      match = entry.first;
+      match = handle;
     }
   }
   if (!match.has_value()) {

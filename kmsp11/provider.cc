@@ -96,7 +96,7 @@ absl::Status Provider::CloseSession(CK_SESSION_HANDLE session_handle) {
 void Provider::LoopRefresh() {
   while (!shutdown_notification_.WaitForNotificationWithTimeout(
       refresh_interval_)) {
-    for (const auto& token : tokens_) {
+    for (const std::unique_ptr<Token>& token : tokens_) {
       absl::Status refresh_result = token->RefreshState(*kms_client_);
       if (!refresh_result.ok()) {
         LOG(ERROR) << "error refreshing state for key ring "

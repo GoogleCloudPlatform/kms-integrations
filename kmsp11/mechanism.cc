@@ -69,8 +69,8 @@ absl::Span<const CK_MECHANISM_TYPE> Mechanisms() {
   static const std::vector<CK_MECHANISM_TYPE>* const kMechanismTypes = [] {
     auto* types = new std::vector<CK_MECHANISM_TYPE>();
     types->reserve(kMechanisms->size());
-    for (const auto& entry : *kMechanisms) {
-      types->push_back(entry.first);
+    for (const auto& [mechanism_type, mechanism] : *kMechanisms) {
+      types->push_back(mechanism_type);
     }
     std::sort(types->begin(), types->end());
     return types;
