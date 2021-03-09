@@ -33,8 +33,8 @@ build:linux --host_java_toolchain=@bazel_tools//tools/jdk:toolchain_java11
 build:linux --java_toolchain=@bazel_tools//tools/jdk:toolchain_java11
 
 # macOS-specific options
-# Ensure compatibility with all macOS versions that still get security updates.
-build:macos --copt=-mmacosx-version-min=10.13
+# Ensure compatibility with all macOS versions that support C++17.
+build:macos --copt=-mmacosx-version-min=10.15
 # Workaround for build issue: https://github.com/bazelbuild/bazel/issues/4341
 build:macos --copt=-DGRPC_BAZEL_BUILD
 # Java Version

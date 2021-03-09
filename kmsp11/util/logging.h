@@ -7,7 +7,8 @@
 
 namespace kmsp11 {
 
-absl::Status InitializeLogging(absl::string_view output_directory);
+absl::Status InitializeLogging(absl::string_view output_directory,
+                               absl::string_view output_filename_suffix);
 void ShutdownLogging();
 
 CK_RV LogAndResolve(absl::string_view function_name,

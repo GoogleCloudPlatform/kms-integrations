@@ -98,7 +98,8 @@ absl::Status Initialize(CK_VOID_PTR pInitArgs) {
   // Provider::New emits info log messages (for example, noting that a CKV is
   // being skipped due to state DISABLED), so logging should be initialized
   // before Provider::New is invoked.
-  RETURN_IF_ERROR(InitializeLogging(config.log_directory()));
+  RETURN_IF_ERROR(
+      InitializeLogging(config.log_directory(), config.log_filename_suffix()));
 
   absl::StatusOr<std::unique_ptr<Provider>> new_provider =
       Provider::New(config);

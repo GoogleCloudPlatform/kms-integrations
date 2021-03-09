@@ -13,17 +13,36 @@ static bool logging_initialized ABSL_GUARDED_BY(logging_lock);
 
 }  // namespace
 
-absl::Status InitializeLogging(absl::string_view output_directory) {
+absl::Status InitializeLogging(absl::string_view output_directory,
+                               absl::string_view output_filename_suffix) {
   absl::WriterMutexLock lock(&logging_lock);
 
   if (logging_initialized) {
     return NewInternalError("logging is already initialized", SOURCE_LOCATION);
   }
 
-  // Always set both of these properties, in case the library is re-initialized
-  // with new configuration.
-  FLAGS_log_dir = std::string(output_directory);
-  FLAGS_logtostderr = output_directory.empty();
+  if (output_directory.empty()) {
+    google::LogToStderr();
+  } else {
+    // FATAL logs crash the program; emit these to standard error as well.
+    google::SetStderrLogging(google::GLOG_FATAL);
+
+    google::SetLogDestination(
+        google::GLOG_INFO,
+        absl::StrCat(output_directory, "/libkmsp11.log-").c_str());
+
+    for (google::LogSeverity severity :
+         {google::GLOG_WARNING, google::GLOG_ERROR, google::GLOG_FATAL}) {
+      // Disable discrete logs for these levels -- they all still get logged
+      // to the INFO logfile.
+      google::SetLogDestination(severity, "");
+    }
+
+    if (!output_filename_suffix.empty()) {
+      google::SetLogFilenameExtension(
+          absl::StrCat(output_filename_suffix, "-").c_str());
+    }
+  }
 
   google::InitGoogleLogging("libkmsp11");
   logging_initialized = true;

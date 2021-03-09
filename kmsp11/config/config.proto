@@ -29,6 +29,9 @@ message LibraryConfig {
   // value means log to standard error.
   string log_directory = 6;
 
+  // Optional. A suffix that will be appended to generated log filenames.
+  string log_filename_suffix = 8;
+
   // Optional. The interval on which KMS state is refreshed. 0 or unset means
   // the default (300 seconds).
   uint32 refresh_interval_secs = 7;

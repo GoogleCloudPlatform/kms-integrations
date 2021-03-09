@@ -126,6 +126,20 @@ cc_library(
     ],
 )
 
+cc_test(
+    name = "logging_test",
+    srcs = select({
+        "//:macos": [],  #TODO: Build on macOS as well when we move to a 10.15 build server.
+        "//conditions:default": ["logging_test.cc"],
+    }),
+    deps = [
+        ":logging",
+        "//kmsp11/test",
+        "//kmsp11/util:cleanup",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
 cc_library(
     name = "kms_client",
     srcs = ["kms_client.cc"],
