@@ -4,21 +4,21 @@ workspace(name = "com_google_kmstools")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_file")
 
 http_archive(
-    name = "bazel_gazelle",  # v0.22.0 / 2020-10-02
-    sha256 = "d4113967ab451dd4d2d767c3ca5f927fec4b30f3b2c6f8135a2033b9c05a5687",
+    name = "bazel_gazelle",  # v0.23.0 / 2021-03-08
+    sha256 = "62ca106be173579c0a167deb23358fdfe71ffa1e4cfdddf5582af26520f1c66f",
     urls = [
-        "https://storage.googleapis.com/bazel-mirror/github.com/bazelbuild/bazel-gazelle/releases/download/v0.22.0/bazel-gazelle-v0.22.0.tar.gz",
-        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.22.0/bazel-gazelle-v0.22.0.tar.gz",
+        "https://storage.googleapis.com/bazel-mirror/github.com/bazelbuild/bazel-gazelle/releases/download/v0.23.0/bazel-gazelle-v0.23.0.tar.gz",
+        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.23.0/bazel-gazelle-v0.23.0.tar.gz",
     ],
 )
 
 http_archive(
-    name = "boringssl",  # 2020-05-20
+    name = "boringssl",  # 2021-03-04
     # Use github mirror instead of https://boringssl.googlesource.com/boringssl
     # to obtain a boringssl archive with consistent sha256
-    sha256 = "3909329105e28cfeedcd8028865c92f1081ae2524a0ad6c09eba5d91d9ae3869",
-    strip_prefix = "boringssl-3ab047a8e377083a9b38dc908fe1612d5743a021",
-    url = "https://github.com/google/boringssl/archive/3ab047a8e377083a9b38dc908fe1612d5743a021.tar.gz",
+    sha256 = "67e166404c16eb792bd295fbd3f558c6cef166382f0dae0d82f328c67d09608e",
+    strip_prefix = "boringssl-afd67cd00e55e4e22b14f096361c732531a0c539",
+    url = "https://github.com/google/boringssl/archive/afd67cd00e55e4e22b14f096361c732531a0c539.tar.gz",
 )
 
 http_archive(
@@ -36,11 +36,11 @@ http_archive(
 )
 
 http_archive(
-    name = "com_github_grpc_grpc",  # v1.29.1 / 2020-05-20
-    sha256 = "bda7b52bab00592c115d5c2757ca729b665ed39cdf048541bf8aab212464c5a0",
-    strip_prefix = "grpc-7d89dbb311f049b43bda7bbf6f7d7bf1b4c24419",
+    name = "com_github_grpc_grpc",  # v1.36.2 / 2021-03-05
+    sha256 = "6fa969891e03665ccbf36ae2ee8bec49d0c0f52c5e7472ef12578853d5fa7697",
+    strip_prefix = "grpc-c3438a0c5d7bc499eb31fd4853ca72c771f758a5",
     urls = [
-        "https://github.com/grpc/grpc/archive/7d89dbb311f049b43bda7bbf6f7d7bf1b4c24419.tar.gz",
+        "https://github.com/grpc/grpc/archive/c3438a0c5d7bc499eb31fd4853ca72c771f758a5.tar.gz",
     ],
 )
 
@@ -52,10 +52,10 @@ http_archive(
 )
 
 http_archive(
-    name = "com_google_absl",  # 2020-09-08
-    sha256 = "2adc8d02700923164a1128afd36d245ac6fd9fe4a10ee936146b89cd9e4b82a5",
-    strip_prefix = "abseil-cpp-3c8b5d7587dc8ecf730ce9996c89e156e408c3ed",
-    url = "https://github.com/abseil/abseil-cpp/archive/3c8b5d7587dc8ecf730ce9996c89e156e408c3ed.zip",
+    name = "com_google_absl",  # 2021-02-23
+    sha256 = "c1f1c9182a11adecb776a4b9dfa16552bde7f8ffa7f8a3a32d41cc683ae73a84",
+    strip_prefix = "abseil-cpp-998805a4c79d5d7a771f7e5a8ee3cbbbcba04f94",
+    url = "https://github.com/abseil/abseil-cpp/archive/998805a4c79d5d7a771f7e5a8ee3cbbbcba04f94.zip",
 )
 
 http_archive(
@@ -73,32 +73,32 @@ http_archive(
 )
 
 http_archive(
-    name = "com_google_protobuf",  # v3.11.4 / 2020-02-14
-    sha256 = "c5fd8f99f0d30c6f9f050bf008e021ccc70d7645ac1f64679c6038e07583b2f3",
-    strip_prefix = "protobuf-d0bfd5221182da1a7cc280f3337b5e41a89539cf",
-    url = "https://github.com/protocolbuffers/protobuf/archive/d0bfd5221182da1a7cc280f3337b5e41a89539cf.zip",
+    name = "com_google_protobuf",  # 2021-03-02
+    sha256 = "c006a8b936442237f8b4e08e9758c5bf47affb44c4c99130d1c3011b3ac98095",
+    strip_prefix = "protobuf-3172ab8ff97aab005d7734627409faa166174232",
+    url = "https://github.com/protocolbuffers/protobuf/archive/3172ab8ff97aab005d7734627409faa166174232.zip",
 )
 
 http_archive(
-    name = "io_bazel_rules_go",  # v0.24.7 / 2020-11-13
+    name = "io_bazel_rules_go",  # v0.26.0 / 2021-03-08
     # Patch raw PKCS #1 support into rules_go's copy of googleapis.
     patch_args = [
         "-E",
         "-p1",
     ],
     patches = ["//:third_party/rules_go.patch"],
-    sha256 = "207fad3e6689135c5d8713e5a17ba9d1290238f47b9ba545b63d9303406209c6",
+    sha256 = "7c10271940c6bce577d51a075ae77728964db285dac0a46614a7934dc34303e6",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.24.7/rules_go-v0.24.7.tar.gz",
-        "https://github.com/bazelbuild/rules_go/releases/download/v0.24.7/rules_go-v0.24.7.tar.gz",
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.26.0/rules_go-v0.26.0.tar.gz",
+        "https://github.com/bazelbuild/rules_go/releases/download/v0.26.0/rules_go-v0.26.0.tar.gz",
     ],
 )
 
 # Keep this sync'd to the version used in rules_go, above. Otherwise, we're
 # working with two versions of the same repo.
-# https://github.com/bazelbuild/rules_go/blob/v0.24.7/go/private/repositories.bzl#L243
+# https://github.com/bazelbuild/rules_go/blob/v0.26.0/go/private/repositories.bzl#L243
 http_archive(
-    name = "com_google_googleapis",  # 2020-08-24
+    name = "com_google_googleapis",  # 2021-03-05
     # A custom build_file is needed because google_cloud_cpp is using an ugly hack. :-(
     # See https://github.com/googleapis/google-cloud-cpp/blob/v1.20.0/bazel/googleapis.BUILD
     build_file = "@com_github_googleapis_google_cloud_cpp//bazel:googleapis.BUILD",
@@ -108,11 +108,11 @@ http_archive(
         "-p1",
     ],
     patches = ["//:third_party/googleapis.patch"],
-    sha256 = "bba8988a57dc1d259d8e032f3858b52e9708fb863cd378322e703c79582bd064",
-    strip_prefix = "googleapis-079e09a64813291f71759d0e1b5f14b0794dc345",
+    sha256 = "711bc79bd40406dda685a8633f7478979baabaab19eeac664d53f7621866bebc",
+    strip_prefix = "googleapis-d4cd8d96ed6eb5dd7c997aab68a1d6bb0825090c",
     urls = [
-        "https://mirror.bazel.build/github.com/googleapis/googleapis/archive/079e09a64813291f71759d0e1b5f14b0794dc345.zip",
-        "https://github.com/googleapis/googleapis/archive/079e09a64813291f71759d0e1b5f14b0794dc345.zip",
+        "https://mirror.bazel.build/github.com/googleapis/googleapis/archive/d4cd8d96ed6eb5dd7c997aab68a1d6bb0825090c.zip",
+        "https://github.com/googleapis/googleapis/archive/d4cd8d96ed6eb5dd7c997aab68a1d6bb0825090c.zip",
     ],
 )
 
@@ -138,10 +138,10 @@ http_file(
 )
 
 http_archive(
-    name = "rules_jvm_external",  # v3.2 // 2020-02-24
-    sha256 = "19d402ef15f58750352a1a38b694191209ebc7f0252104b81196124fdd43ffa0",
-    strip_prefix = "rules_jvm_external-3.2",
-    url = "https://github.com/bazelbuild/rules_jvm_external/archive/3.2.tar.gz",
+    name = "rules_jvm_external",  # v4.0 // 2021-01-06
+    sha256 = "31d226a6b3f5362b59d261abf9601116094ea4ae2aa9f28789b6c105e4cada68",
+    strip_prefix = "rules_jvm_external-4.0",
+    url = "https://github.com/bazelbuild/rules_jvm_external/archive/4.0.tar.gz",
 )
 
 # Transitive Dependencies
@@ -199,7 +199,7 @@ load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_depe
 
 go_rules_dependencies()
 
-go_register_toolchains()
+go_register_toolchains("1.16.1")
 
 ## Protobuf
 load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")

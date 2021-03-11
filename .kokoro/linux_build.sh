@@ -27,7 +27,7 @@ export LLVM_DIST="clang+llvm-${LLVM_VERSION}-x86_64-linux-gnu-ubuntu-16.04"
 sudo tar xf "${KOKORO_GFILE_DIR}/${LLVM_DIST}.tar.xz" -C /opt
 
 # Add the latest version of Bazel to the PATH
-use_bazel.sh 3.3.0
+use_bazel.sh 3.7.0
 
 # Ensure that build outputs and test logs are uploaded even on failure
 _upload_artifacts() {

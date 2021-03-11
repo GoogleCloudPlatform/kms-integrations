@@ -21,8 +21,7 @@ cd "${PROJECT_ROOT}"
 export RESULTS_DIR="${KOKORO_ARTIFACTS_DIR}/results"
 mkdir "${RESULTS_DIR}"
 
-# Add the latest version of Bazel to the PATH
-use_bazel.sh 3.3.0
+use_bazel.sh 3.7.0
 
 # Ensure that build outputs and test logs are uploaded even on failure
 _upload_artifacts() {

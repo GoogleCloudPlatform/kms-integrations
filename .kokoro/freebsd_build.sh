@@ -21,6 +21,9 @@ cd "${PROJECT_ROOT}"
 export RESULTS_DIR="${KOKORO_ARTIFACTS_DIR}/results"
 mkdir "${RESULTS_DIR}"
 
+sudo pkg update -f
+sudo pkg install -y bazel-3.7.0
+
 # Ensure that build outputs and test logs are uploaded even on failure
 _upload_artifacts() {
   if [ -e "${PROJECT_ROOT}/bazel-bin/kmsp11/main/libkmsp11.so" ]; then
