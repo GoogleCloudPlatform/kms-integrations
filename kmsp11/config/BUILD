@@ -22,8 +22,8 @@ cc_test(
     deps = [
         ":config",
         "//kmsp11/test",
-        "//kmsp11/util:cleanup",
         "//kmsp11/util:platform",
+        "@com_google_absl//absl/cleanup",
         "@com_google_googletest//:gtest_main",
     ],
 )

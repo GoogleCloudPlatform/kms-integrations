@@ -18,11 +18,11 @@ cc_library(
     }),
     deps = [
         "//kmsp11/test",
-        "//kmsp11/util:cleanup",
         "//kmsp11/util:kms_v1",
         "//kmsp11/util:status_macros",
         "@com_github_google_glog//:glog",
         "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/cleanup",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
     ],

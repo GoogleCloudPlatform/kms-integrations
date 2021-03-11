@@ -4,21 +4,6 @@ load("@rules_proto//proto:defs.bzl", "proto_library")
 package(default_visibility = ["//kmsp11:__subpackages__"])
 
 cc_library(
-    name = "cleanup",
-    hdrs = ["cleanup.h"],
-)
-
-cc_test(
-    name = "cleanup_test",
-    size = "small",
-    srcs = ["cleanup_test.cc"],
-    deps = [
-        ":cleanup",
-        "@com_google_googletest//:gtest_main",
-    ],
-)
-
-cc_library(
     name = "crypto_utils",
     srcs = ["crypto_utils.cc"],
     hdrs = ["crypto_utils.h"],
@@ -107,7 +92,7 @@ cc_test(
     deps = [
         ":global_provider",
         "//kmsp11/test",
-        "//kmsp11/util:cleanup",
+        "@com_google_absl//absl/cleanup",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -135,7 +120,7 @@ cc_test(
     deps = [
         ":logging",
         "//kmsp11/test",
-        "//kmsp11/util:cleanup",
+        "@com_google_absl//absl/cleanup",
         "@com_google_googletest//:gtest_main",
     ],
 )

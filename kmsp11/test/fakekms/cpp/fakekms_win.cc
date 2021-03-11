@@ -1,12 +1,12 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
+#include "absl/cleanup/cleanup.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "glog/logging.h"
 #include "kmsp11/test/fakekms/cpp/fakekms.h"
 #include "kmsp11/test/runfiles.h"
-#include "kmsp11/util/cleanup.h"
 #include "kmsp11/util/status_macros.h"
 
 namespace kmsp11 {
@@ -56,10 +56,10 @@ absl::StatusOr<std::unique_ptr<WindowsFakeKms>> WindowsFakeKms::New(
   if (!CreatePipe(&out_read, &out_write, &security_attrs, 0)) {
     return Win32ErrorToStatus("error creating output pipe");
   }
-  Cleanup c([&] {
+  absl::Cleanup c = [&] {
     CHECK(CloseHandle(out_read));
     CHECK(CloseHandle(out_write));
-  });
+  };
 
   STARTUPINFOA startup_info;
   ZeroMemory(&startup_info, sizeof(STARTUPINFOA));

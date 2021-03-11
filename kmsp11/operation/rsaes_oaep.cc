@@ -1,8 +1,8 @@
 #include "kmsp11/operation/rsaes_oaep.h"
 
+#include "absl/cleanup/cleanup.h"
 #include "kmsp11/object.h"
 #include "kmsp11/operation/preconditions.h"
-#include "kmsp11/util/cleanup.h"
 #include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/status_macros.h"
@@ -92,7 +92,7 @@ absl::StatusOr<absl::Span<const uint8_t>> RsaOaepDecrypter::Decrypt(
   kms_v1::AsymmetricDecryptRequest req;
   req.set_name(std::string(key_->kms_key_name()));
   req.set_ciphertext(ciphertext.data(), ciphertext.size());
-  Cleanup c([&req]() -> void { ZeroDelete()(req.release_ciphertext()); });
+  absl::Cleanup c = [&] { ZeroDelete()(req.release_ciphertext()); };
 
   absl::StatusOr<kms_v1::AsymmetricDecryptResponse> resp_or =
       client->AsymmetricDecrypt(req);

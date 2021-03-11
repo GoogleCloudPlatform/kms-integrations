@@ -1,9 +1,9 @@
 #include "kmsp11/util/global_provider.h"
 
+#include "absl/cleanup/cleanup.h"
 #include "gmock/gmock.h"
 #include "kmsp11/test/matchers.h"
 #include "kmsp11/test/test_status_macros.h"
-#include "kmsp11/util/cleanup.h"
 
 namespace kmsp11 {
 namespace {
@@ -22,7 +22,7 @@ TEST(GlobalProviderTest, GetProviderAfterSetReturnsProvider) {
   Provider* captured_provider = provider.get();
 
   ASSERT_OK(SetGlobalProvider(std::move(provider)));
-  Cleanup c([]() { ASSERT_OK(ReleaseGlobalProvider()); });
+  absl::Cleanup c = [] { ASSERT_OK(ReleaseGlobalProvider()); };
 
   EXPECT_EQ(GetGlobalProvider(), captured_provider);
 }
@@ -40,7 +40,7 @@ TEST(GlobalProviderTest, SetProviderWhenAlreadySetReturnsError) {
                        Provider::New(LibraryConfig()));
 
   ASSERT_OK(SetGlobalProvider(std::move(provider1)));
-  Cleanup c([]() { ASSERT_OK(ReleaseGlobalProvider()); });
+  absl::Cleanup c = [] { ASSERT_OK(ReleaseGlobalProvider()); };
 
   EXPECT_THAT(SetGlobalProvider(std::move(provider2)),
               AllOf(StatusIs(absl::StatusCode::kInternal,
@@ -68,7 +68,7 @@ TEST(GlobalProviderTest, SetAndGetProviderAfterReleaseReturnsProvider) {
   ASSERT_OK(SetGlobalProvider(std::move(provider1)));
   ASSERT_OK(ReleaseGlobalProvider());
   ASSERT_OK(SetGlobalProvider(std::move(provider2)))
-  Cleanup c([]() { ASSERT_OK(ReleaseGlobalProvider()); });
+  absl::Cleanup c = [] { ASSERT_OK(ReleaseGlobalProvider()); };
 
   EXPECT_EQ(GetGlobalProvider(), captured_provider2);
 }

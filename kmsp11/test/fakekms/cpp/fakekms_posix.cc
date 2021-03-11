@@ -1,11 +1,11 @@
 #include <csignal>
 
+#include "absl/cleanup/cleanup.h"
 #include "absl/strings/str_format.h"
 #include "glog/logging.h"
 #include "gtest/gtest.h"
 #include "kmsp11/test/fakekms/cpp/fakekms.h"
 #include "kmsp11/test/runfiles.h"
-#include "kmsp11/util/cleanup.h"
 #include "kmsp11/util/status_macros.h"
 
 namespace kmsp11 {
@@ -37,10 +37,10 @@ absl::StatusOr<std::unique_ptr<PosixFakeKms>> PosixFakeKms::New(
   if (pipe(fd) == -1) {
     return PosixErrorToStatus("unable to create output pipe");
   }
-  Cleanup c([&fd]() {
+  absl::Cleanup c = [&] {
     CHECK_EQ(close(fd[0]), 0);
     CHECK_EQ(close(fd[1]), 0);
-  });
+  };
 
   pid_t pid = fork();
   switch (pid) {

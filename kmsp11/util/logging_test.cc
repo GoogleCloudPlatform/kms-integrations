@@ -3,13 +3,13 @@
 #include <filesystem>
 #include <fstream>
 
+#include "absl/cleanup/cleanup.h"
 #include "absl/strings/escaping.h"
 #include "glog/logging.h"
 #include "gmock/gmock.h"
 #include "kmsp11/test/matchers.h"
 #include "kmsp11/test/resource_helpers.h"
 #include "kmsp11/test/test_status_macros.h"
-#include "kmsp11/util/cleanup.h"
 
 namespace kmsp11 {
 namespace {
@@ -24,7 +24,7 @@ using ::testing::internal::GetCapturedStderr;
 TEST(LoggingTest, NoDirectoryLogsInfoToStandardError) {
   CaptureStderr();
   ASSERT_OK(InitializeLogging("", ""));
-  Cleanup c(ShutdownLogging);
+  absl::Cleanup c = ShutdownLogging;
 
   std::string message = "Here is a sample message";
   LOG(INFO) << message;
@@ -35,7 +35,7 @@ TEST(LoggingTest, NoDirectoryLogsInfoToStandardError) {
 TEST(LoggingTest, NoDirectoryLogsWarningToStandardError) {
   CaptureStderr();
   ASSERT_OK(InitializeLogging("", ""));
-  Cleanup c(ShutdownLogging);
+  absl::Cleanup c = ShutdownLogging;
 
   std::string message = "Here is a sample message";
   LOG(WARNING) << message;
@@ -46,7 +46,7 @@ TEST(LoggingTest, NoDirectoryLogsWarningToStandardError) {
 TEST(LoggingTest, NoDirectoryLogsErrorToStandardError) {
   CaptureStderr();
   ASSERT_OK(InitializeLogging("", ""));
-  Cleanup c(ShutdownLogging);
+  absl::Cleanup c = ShutdownLogging;
 
   std::string message = "Here is a sample message";
   LOG(ERROR) << message;
@@ -56,7 +56,7 @@ TEST(LoggingTest, NoDirectoryLogsErrorToStandardError) {
 
 TEST(LoggingTest, NoDirectoryLogsFatalToStandardError) {
   ASSERT_OK(InitializeLogging("", ""));
-  Cleanup c(ShutdownLogging);
+  absl::Cleanup c = ShutdownLogging;
 
   std::string message = "Here is a sample message";
   EXPECT_DEATH({ LOG(FATAL) << message; }, HasSubstr(message));
@@ -65,7 +65,7 @@ TEST(LoggingTest, NoDirectoryLogsFatalToStandardError) {
 TEST(LoggingTest, FilenameSuffixIgnoredWhenNoDirectoryIsSpecified) {
   CaptureStderr();
   ASSERT_OK(InitializeLogging("", "foobar"));
-  Cleanup c(ShutdownLogging);
+  absl::Cleanup c = ShutdownLogging;
 
   std::string message = "Here is a sample message";
   LOG(ERROR) << message;
@@ -98,7 +98,7 @@ class LogDirectoryTest : public testing::Test {
 TEST_F(LogDirectoryTest, DirectorySpecifiedDoesNotLogInfoToStandardError) {
   CaptureStderr();
   ASSERT_OK(InitializeLogging(log_directory_, ""));
-  Cleanup c(ShutdownLogging);
+  absl::Cleanup c = ShutdownLogging;
 
   LOG(INFO) << "Here is a sample message";
 
@@ -108,7 +108,7 @@ TEST_F(LogDirectoryTest, DirectorySpecifiedDoesNotLogInfoToStandardError) {
 TEST_F(LogDirectoryTest, DirectorySpecifiedDoesNotLogWarningToStandardError) {
   CaptureStderr();
   ASSERT_OK(InitializeLogging(log_directory_, ""));
-  Cleanup c(ShutdownLogging);
+  absl::Cleanup c = ShutdownLogging;
 
   LOG(WARNING) << "Here is a sample message";
 
@@ -118,7 +118,7 @@ TEST_F(LogDirectoryTest, DirectorySpecifiedDoesNotLogWarningToStandardError) {
 TEST_F(LogDirectoryTest, DirectorySpecifiedDoesNotLogErrorToStandardError) {
   CaptureStderr();
   ASSERT_OK(InitializeLogging(log_directory_, ""));
-  Cleanup c(ShutdownLogging);
+  absl::Cleanup c = ShutdownLogging;
 
   LOG(ERROR) << "Here is a sample message";
 
@@ -127,7 +127,7 @@ TEST_F(LogDirectoryTest, DirectorySpecifiedDoesNotLogErrorToStandardError) {
 
 TEST_F(LogDirectoryTest, DirectorySpecifiedLogsFatalToStandardError) {
   ASSERT_OK(InitializeLogging(log_directory_, ""));
-  Cleanup c(ShutdownLogging);
+  absl::Cleanup c = ShutdownLogging;
 
   std::string message = "Here is a sample message";
   EXPECT_DEATH({ LOG(FATAL) << message; }, HasSubstr(message));
@@ -135,7 +135,7 @@ TEST_F(LogDirectoryTest, DirectorySpecifiedLogsFatalToStandardError) {
 
 TEST_F(LogDirectoryTest, LogFilenameMatchesExpectedPattern) {
   ASSERT_OK(InitializeLogging(log_directory_, ""));
-  Cleanup c(ShutdownLogging);
+  absl::Cleanup c = ShutdownLogging;
 
   LOG(WARNING) << "Here is a sample message";
 
@@ -147,7 +147,7 @@ TEST_F(LogDirectoryTest, LogFilenameMatchesExpectedPattern) {
 
 TEST_F(LogDirectoryTest, LogFilenameMatchesExpectedPatternWithSuffix) {
   ASSERT_OK(InitializeLogging(log_directory_, "foobar"));
-  Cleanup c(ShutdownLogging);
+  absl::Cleanup c = ShutdownLogging;
 
   LOG(ERROR) << "Here is a sample message";
 
@@ -165,7 +165,7 @@ TEST_F(LogDirectoryTest, SingleFileContainsAllLogLevels) {
   {
     // Using a separate scope to ensure logfiles are flushed.
     ASSERT_OK(InitializeLogging(log_directory_, ""));
-    Cleanup c(ShutdownLogging);
+    absl::Cleanup c = ShutdownLogging;
 
     LOG(INFO) << info_message;
     LOG(WARNING) << warning_message;
