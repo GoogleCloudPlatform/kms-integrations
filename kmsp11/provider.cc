@@ -66,7 +66,7 @@ absl::StatusOr<std::unique_ptr<Provider>> Provider::New(LibraryConfig config) {
 
   // using `new` to invoke a private constructor
   return std::unique_ptr<Provider>(new Provider(
-      info, std::move(tokens), std::move(client), refresh_interval));
+      config, info, std::move(tokens), std::move(client), refresh_interval));
 }
 
 absl::StatusOr<Token*> Provider::TokenAt(CK_SLOT_ID slot_id) {

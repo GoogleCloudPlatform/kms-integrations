@@ -1339,6 +1339,35 @@ TEST_F(BridgeTest, GenerateKeyPairSuccess) {
       kr1_.name() + "/cryptoKeys/" + key_id + "/cryptoKeyVersions/1");
 }
 
+TEST_F(BridgeTest,
+       GenerateTwoKeyPairsSuccessWithExperimentalCreateMultipleVersions) {
+  std::ofstream(config_file_, std::ofstream::out | std::ofstream::app)
+      << "experimental_create_multiple_versions: true" << std::endl;
+
+  EXPECT_OK(Initialize(&init_args_));
+  absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION | CKF_RW_SESSION, nullptr,
+                        nullptr, &session));
+
+  std::string key_id = "my-great-id";
+  CK_ULONG algorithm = KMS_ALGORITHM_EC_SIGN_P256_SHA256;
+
+  CK_MECHANISM gen_mech = {CKM_EC_KEY_PAIR_GEN, nullptr, 0};
+  CK_ATTRIBUTE tmpl[2] = {
+      {CKA_LABEL, key_id.data(), key_id.size()},
+      {CKA_KMS_ALGORITHM, &algorithm, sizeof(algorithm)},
+  };
+
+  CK_OBJECT_HANDLE ckv_handles[2];
+  EXPECT_OK(GenerateKeyPair(session, &gen_mech, nullptr, 0, &tmpl[0], 2,
+                            &ckv_handles[0], &ckv_handles[1]));
+
+  EXPECT_OK(GenerateKeyPair(session, &gen_mech, nullptr, 0, &tmpl[0], 2,
+                            &ckv_handles[0], &ckv_handles[1]));
+}
+
 TEST_F(BridgeTest, DestroyObjectFailsNotInitialized) {
   EXPECT_THAT(DestroyObject(0, 0), StatusRvIs(CKR_CRYPTOKI_NOT_INITIALIZED));
 }

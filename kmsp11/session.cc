@@ -79,6 +79,88 @@ absl::StatusOr<KeyGenerationParams> ExtractKeyGenerationParams(
   return KeyGenerationParams{*label, *algorithm_details};
 }
 
+absl::StatusOr<kms_v1::CryptoKeyVersion> CreateNewVersionOfExistingKey(
+    const KmsClient& client, const kms_v1::CryptoKey& crypto_key,
+    const KeyGenerationParams& prv_gen_params) {
+  if (crypto_key.purpose() != prv_gen_params.algorithm.purpose ||
+      crypto_key.version_template().algorithm() !=
+          prv_gen_params.algorithm.algorithm ||
+      crypto_key.version_template().protection_level() != kms_v1::HSM) {
+    return NewError(
+        absl::StatusCode::kInvalidArgument,
+        absl::StrFormat("key attribute mismatch when attempting to create "
+                        "new version of existing key: "
+                        "current purpose=%d, requested purpose=%d; "
+                        "current algorithm=%d, requested algorithm=%d; "
+                        "current protection_level=%d, "
+                        "requested protection_level=%d",
+                        crypto_key.purpose(), prv_gen_params.algorithm.purpose,
+                        crypto_key.version_template().algorithm(),
+                        prv_gen_params.algorithm.algorithm,
+                        crypto_key.version_template().protection_level(),
+                        kms_v1::HSM),
+        CKR_ARGUMENTS_BAD, SOURCE_LOCATION);
+  }
+  kms_v1::CreateCryptoKeyVersionRequest req;
+  req.set_parent(crypto_key.name());
+  return client.CreateCryptoKeyVersionAndWait(req);
+}
+
+absl::StatusOr<CryptoKeyAndVersion> CreateKeyAndVersion(
+    const KmsClient& client, absl::string_view key_ring_name,
+    const KeyGenerationParams& prv_gen_params,
+    bool experimental_create_multiple_versions) {
+  if (experimental_create_multiple_versions) {
+    kms_v1::GetCryptoKeyRequest req;
+    req.set_name(
+        absl::StrCat(key_ring_name, "/cryptoKeys/", prv_gen_params.label));
+    absl::StatusOr<kms_v1::CryptoKey> ck = client.GetCryptoKey(req);
+    switch (ck.status().code()) {
+      case absl::StatusCode::kOk: {
+        ASSIGN_OR_RETURN(
+            kms_v1::CryptoKeyVersion ckv,
+            CreateNewVersionOfExistingKey(client, *ck, prv_gen_params));
+        return CryptoKeyAndVersion{*ck, ckv};
+      }
+      case absl::StatusCode::kNotFound:
+        // The CryptoKey doesn't exist; continue on to create it.
+        break;
+      default:
+        return ck.status();
+    }
+  }
+
+  kms_v1::CreateCryptoKeyRequest req;
+  req.set_parent(std::string(key_ring_name));
+  req.set_crypto_key_id(prv_gen_params.label);
+  req.mutable_crypto_key()->set_purpose(prv_gen_params.algorithm.purpose);
+  req.mutable_crypto_key()->mutable_version_template()->set_algorithm(
+      prv_gen_params.algorithm.algorithm);
+  req.mutable_crypto_key()->mutable_version_template()->set_protection_level(
+      kms_v1::HSM);
+
+  absl::StatusOr<CryptoKeyAndVersion> key_and_version =
+      client.CreateCryptoKeyAndWaitForFirstVersion(req);
+  if (absl::IsAlreadyExists(key_and_version.status())) {
+    if (experimental_create_multiple_versions) {
+      // TODO(bdhess): If we choose to make this experiment a full-fledged
+      // feature, we should gracefully handle the case where the CryptoKey is
+      // created by another (thread|process|caller) while this request is in
+      // flight.
+      // That recursive logic will be sort of ugly and complicated; just
+      // returning CKR_DEVICE_ERROR/AlreadyExists here seems fine for the
+      // purposes of the experiment.
+      return key_and_version.status();
+    }
+    return NewError(absl::StatusCode::kAlreadyExists,
+                    absl::StrFormat("key with label %s already exists: %s",
+                                    prv_gen_params.label,
+                                    key_and_version.status().message()),
+                    CKR_ARGUMENTS_BAD, SOURCE_LOCATION);
+  }
+  return key_and_version;
+}
+
 }  // namespace
 
 CK_SESSION_INFO Session::info() const {
@@ -260,7 +342,8 @@ absl::Status Session::Verify(absl::Span<const uint8_t> digest,
 absl::StatusOr<AsymmetricHandleSet> Session::GenerateKeyPair(
     const CK_MECHANISM& mechanism,
     absl::Span<const CK_ATTRIBUTE> public_key_attrs,
-    absl::Span<const CK_ATTRIBUTE> private_key_attrs) {
+    absl::Span<const CK_ATTRIBUTE> private_key_attrs,
+    bool experimental_create_multiple_versions) {
   if (session_type_ == SessionType::kReadOnly) {
     return SessionReadOnlyError(SOURCE_LOCATION);
   }
@@ -292,40 +375,25 @@ absl::StatusOr<AsymmetricHandleSet> Session::GenerateKeyPair(
                                    CKR_TEMPLATE_INCONSISTENT, SOURCE_LOCATION);
   }
 
-  kms_v1::CreateCryptoKeyRequest req;
-  req.set_parent(std::string(token_->key_ring_name()));
-  req.set_crypto_key_id(prv_gen_params.label);
-  req.mutable_crypto_key()->set_purpose(prv_gen_params.algorithm.purpose);
-  req.mutable_crypto_key()->mutable_version_template()->set_algorithm(
-      prv_gen_params.algorithm.algorithm);
-  req.mutable_crypto_key()->mutable_version_template()->set_protection_level(
-      kms_v1::HSM);
-
-  absl::StatusOr<CryptoKeyAndVersion> key_and_version =
-      kms_client_->CreateCryptoKeyAndWaitForFirstVersion(req);
-  if (absl::IsAlreadyExists(key_and_version.status())) {
-    return NewError(absl::StatusCode::kAlreadyExists,
-                    absl::StrFormat("key with label %s already exists: %s",
-                                    prv_gen_params.label,
-                                    key_and_version.status().message()),
-                    CKR_ARGUMENTS_BAD, SOURCE_LOCATION);
-  }
-  RETURN_IF_ERROR(key_and_version.status());
+  ASSIGN_OR_RETURN(
+      CryptoKeyAndVersion key_and_version,
+      CreateKeyAndVersion(*kms_client_, token_->key_ring_name(), prv_gen_params,
+                          experimental_create_multiple_versions));
   RETURN_IF_ERROR(token_->RefreshState(*kms_client_));
 
   AsymmetricHandleSet result;
-  ASSIGN_OR_RETURN(
-      result.public_key_handle,
-      token_->FindSingleObject([&key_and_version](const Object& o) -> bool {
-        return o.kms_key_name() == key_and_version->crypto_key_version.name() &&
-               o.object_class() == CKO_PUBLIC_KEY;
-      }));
-  ASSIGN_OR_RETURN(
-      result.private_key_handle,
-      token_->FindSingleObject([&key_and_version](const Object& o) -> bool {
-        return o.kms_key_name() == key_and_version->crypto_key_version.name() &&
-               o.object_class() == CKO_PRIVATE_KEY;
-      }));
+  ASSIGN_OR_RETURN(result.public_key_handle,
+                   token_->FindSingleObject([&](const Object& o) -> bool {
+                     return o.kms_key_name() ==
+                                key_and_version.crypto_key_version.name() &&
+                            o.object_class() == CKO_PUBLIC_KEY;
+                   }));
+  ASSIGN_OR_RETURN(result.private_key_handle,
+                   token_->FindSingleObject([&](const Object& o) -> bool {
+                     return o.kms_key_name() ==
+                                key_and_version.crypto_key_version.name() &&
+                            o.object_class() == CKO_PRIVATE_KEY;
+                   }));
   return result;
 }
 

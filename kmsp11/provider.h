@@ -26,6 +26,7 @@ class Provider {
   // Returns the PID of the process that created this Provider.
   int64_t creation_process_id() { return creation_process_id_; }
 
+  const LibraryConfig& library_config() const { return library_config_; }
   const CK_INFO& info() const { return info_; }
   const unsigned long token_count() const { return tokens_.size(); }
   KmsClient* kms_client() { return kms_client_.get(); }
@@ -44,10 +45,12 @@ class Provider {
   }
 
  private:
-  Provider(CK_INFO info, std::vector<std::unique_ptr<Token>>&& tokens,
+  Provider(LibraryConfig library_config, CK_INFO info,
+           std::vector<std::unique_ptr<Token>>&& tokens,
            std::unique_ptr<KmsClient> kms_client,
            const absl::Duration refresh_interval)
-      : info_(info),
+      : library_config_(library_config),
+        info_(info),
         tokens_(std::move(tokens)),
         sessions_(CKR_SESSION_HANDLE_INVALID),
         kms_client_(std::move(kms_client)),
@@ -57,6 +60,7 @@ class Provider {
 
   void LoopRefresh();
 
+  const LibraryConfig library_config_;
   const CK_INFO info_;
   const std::vector<std::unique_ptr<Token>> tokens_;
   HandleMap<Session> sessions_;

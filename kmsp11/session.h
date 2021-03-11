@@ -53,7 +53,8 @@ class Session {
   absl::StatusOr<AsymmetricHandleSet> GenerateKeyPair(
       const CK_MECHANISM& mechanism,
       absl::Span<const CK_ATTRIBUTE> public_key_attrs,
-      absl::Span<const CK_ATTRIBUTE> private_key_attrs);
+      absl::Span<const CK_ATTRIBUTE> private_key_attrs,
+      bool experimental_create_multiple_versions = false);
 
   absl::Status DestroyObject(std::shared_ptr<Object> object);
 

@@ -863,7 +863,7 @@ TEST_F(GenerateKeyPairTest,
             StatusRvIs(CKR_TEMPLATE_INCONSISTENT)));
 }
 
-TEST_F(GenerateKeyPairTest, DuplicateLabelReturnsAlreadyExists) {
+TEST_F(GenerateKeyPairTest, DuplicateLabelReturnsAlreadyExistsDefaultConfig) {
   std::string label = "my-great-key";
 
   auto kms_client = fake_kms_->NewClient();
@@ -892,6 +892,39 @@ TEST_F(GenerateKeyPairTest, DuplicateLabelReturnsAlreadyExists) {
                     StatusRvIs(CKR_ARGUMENTS_BAD)));
 }
 
+TEST_F(GenerateKeyPairTest,
+       Version2CanBeCreatedWithExperimentalCreateMultipleVersions) {
+  std::string label = "my-great-key";
+
+  auto kms_client = fake_kms_->NewClient();
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM);
+  ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), label, ck,
+                            false);
+
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadWrite, client_.get());
+
+  CK_MECHANISM mech = {CKM_EC_KEY_PAIR_GEN, nullptr, 0};
+  CK_ULONG kms_algorithm = KMS_ALGORITHM_EC_SIGN_P384_SHA384;
+  CK_ATTRIBUTE prv_template[] = {
+      {CKA_KMS_ALGORITHM, &kms_algorithm, sizeof(kms_algorithm)},
+      {CKA_LABEL, label.data(), label.size()},
+  };
+
+  EXPECT_OK(s.GenerateKeyPair(mech, {}, prv_template, true));
+  EXPECT_THAT(token->FindObjects([&](const Object& o) {
+    return absl::StartsWith(o.kms_key_name(), ck.name());
+  }),
+              SizeIs(4)  // Two keypairs, each with public and private.
+  );
+}
+
 TEST_F(GenerateKeyPairTest, GeneratedKeyPairIsImmediatelyAvailable) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
                        Token::New(0, config_, client_.get()));
@@ -906,10 +939,40 @@ TEST_F(GenerateKeyPairTest, GeneratedKeyPairIsImmediatelyAvailable) {
   };
 
   ASSERT_OK_AND_ASSIGN(AsymmetricHandleSet handles,
-                       s.GenerateKeyPair(mech, {}, prv_template));
+                       s.GenerateKeyPair(mech, {}, prv_template, true));
 
   EXPECT_OK(token->GetObject(handles.public_key_handle));
   EXPECT_OK(token->GetObject(handles.private_key_handle));
+}
+
+TEST_F(GenerateKeyPairTest,
+       ExperimentalCreateMultipleVersionsFailsOnAttributeMismatch) {
+  std::string label = "my-great-key";
+
+  auto kms_client = fake_kms_->NewClient();
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM);
+  ck =
+      CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), label, ck, true);
+
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadWrite, client_.get());
+
+  CK_MECHANISM mech = {CKM_RSA_PKCS_KEY_PAIR_GEN, nullptr, 0};
+  CK_ULONG kms_algorithm = KMS_ALGORITHM_RSA_SIGN_PSS_2048_SHA256;
+  CK_ATTRIBUTE prv_template[] = {
+      {CKA_KMS_ALGORITHM, &kms_algorithm, sizeof(kms_algorithm)},
+      {CKA_LABEL, label.data(), label.size()},
+  };
+
+  EXPECT_THAT(s.GenerateKeyPair(mech, {}, prv_template, true),
+              StatusIs(absl::StatusCode::kInvalidArgument,
+                       HasSubstr("key attribute mismatch")));
 }
 
 class DestroyObjectTest : public SessionTest {};

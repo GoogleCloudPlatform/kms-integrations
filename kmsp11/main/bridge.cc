@@ -600,6 +600,7 @@ absl::Status GenerateKeyPair(
     CK_ATTRIBUTE_PTR pPublicKeyTemplate, CK_ULONG ulPublicKeyAttributeCount,
     CK_ATTRIBUTE_PTR pPrivateKeyTemplate, CK_ULONG ulPrivateKeyAttributeCount,
     CK_OBJECT_HANDLE_PTR phPublicKey, CK_OBJECT_HANDLE_PTR phPrivateKey) {
+  ASSIGN_OR_RETURN(Provider * provider, GetProvider());
   ASSIGN_OR_RETURN(std::shared_ptr<Session> session, GetSession(hSession));
 
   if (!pMechanism) {
@@ -632,7 +633,7 @@ absl::Status GenerateKeyPair(
 
   ASSIGN_OR_RETURN(
       AsymmetricHandleSet handles,
-      session->GenerateKeyPair(*pMechanism, pub_attributes, prv_attributes));
+      session->GenerateKeyPair(*pMechanism, pub_attributes, prv_attributes, provider->library_config().experimental_create_multiple_versions()));
 
   *phPublicKey = handles.public_key_handle;
   *phPrivateKey = handles.private_key_handle;
