@@ -422,5 +422,99 @@ TEST(KmsClientTest, DestroyCryptoKeyVersionSuccess) {
   EXPECT_EQ(ckv.state(), kms_v1::CryptoKeyVersion::DESTROY_SCHEDULED);
 }
 
+TEST(KmsClientTest, CreateCryptoKeyVersionAndWaitOutputMatchesStub) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake, FakeKms::New());
+  std::unique_ptr<KmsClient> client =
+      NewClient(fake->listen_addr(), absl::Seconds(2));
+
+  kms_v1::KeyRing kr;
+  kr = CreateKeyRingOrDie(client->kms_stub(), kTestLocation, RandomId(), kr);
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+  ck = CreateCryptoKeyOrDie(client->kms_stub(), kr.name(), RandomId(), ck,
+                            false);
+
+  kms_v1::CreateCryptoKeyVersionRequest req;
+  req.set_parent(ck.name());
+  ASSERT_OK_AND_ASSIGN(kms_v1::CryptoKeyVersion ckv2,
+                       client->CreateCryptoKeyVersionAndWait(req));
+
+  std::string expected_name = absl::StrCat(ck.name(), "/cryptoKeyVersions/2");
+  EXPECT_THAT(GetCryptoKeyVersionOrDie(client->kms_stub(), expected_name),
+              EqualsProto(ckv2));
+}
+
+TEST(KmsClientTest, CreateCryptoKeyVersionAndWaitTimesOutAtDeadline) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake,
+		       FakeKms::New("-delay=100ms"));
+  std::unique_ptr<KmsClient> client =
+      NewClient(fake->listen_addr(), absl::Milliseconds(150));
+
+  kms_v1::KeyRing kr;
+  kr = CreateKeyRingOrDie(client->kms_stub(), kTestLocation, RandomId(), kr);
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+  ck = CreateCryptoKeyOrDie(client->kms_stub(), kr.name(), RandomId(), ck,
+                            false);
+
+  kms_v1::CreateCryptoKeyVersionRequest req;
+  req.set_parent(ck.name());
+
+
+  // CreateCryptoKeyVersionAndWait causes 2+ RPCs for asymmetric keys; if each
+  // RPC has 100ms of delay, then a 150ms deadline will always be exceeded.
+  EXPECT_THAT(client->CreateCryptoKeyVersionAndWait(req),
+              StatusIs(absl::StatusCode::kDeadlineExceeded));
+}
+
+
+TEST(KmsClientTest, CreateCryptoKeyVersionWaitsForEnablement) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake, FakeKms::New());
+  std::unique_ptr<KmsClient> client =
+      NewClient(fake->listen_addr(), absl::Seconds(2));
+
+  kms_v1::KeyRing kr;
+  kr = CreateKeyRingOrDie(client->kms_stub(), kTestLocation, RandomId(), kr);
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+  ck = CreateCryptoKeyOrDie(client->kms_stub(), kr.name(), RandomId(), ck,
+                            false);
+
+  kms_v1::CreateCryptoKeyVersionRequest req;
+  req.set_parent(ck.name());
+  ASSERT_OK_AND_ASSIGN(kms_v1::CryptoKeyVersion ckv2,
+                       client->CreateCryptoKeyVersionAndWait(req));
+
+  EXPECT_EQ(ckv2.state(), kms_v1::CryptoKeyVersion::ENABLED);
+}
+
+TEST(KmsClientTest, GetCryptoKeySuccess) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake, FakeKms::New());
+  std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
+
+  kms_v1::KeyRing kr;
+  kr = CreateKeyRingOrDie(client->kms_stub(), kTestLocation, RandomId(), kr);
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::ENCRYPT_DECRYPT);
+  ck = CreateCryptoKeyOrDie(client->kms_stub(), kr.name(), RandomId(), ck,
+                            false);
+
+  kms_v1::GetCryptoKeyRequest req;
+  req.set_name(ck.name());
+  ASSERT_OK_AND_ASSIGN(kms_v1::CryptoKey got_ck, client->GetCryptoKey(req));
+
+  EXPECT_THAT(got_ck, EqualsProto(ck));
+}
+
 }  // namespace
 }  // namespace kmsp11

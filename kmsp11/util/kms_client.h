@@ -44,8 +44,14 @@ class KmsClient {
   absl::StatusOr<CryptoKeyAndVersion> CreateCryptoKeyAndWaitForFirstVersion(
       const kms_v1::CreateCryptoKeyRequest& request) const;
 
+  absl::StatusOr<kms_v1::CryptoKeyVersion> CreateCryptoKeyVersionAndWait(
+      const kms_v1::CreateCryptoKeyVersionRequest& request) const;
+
   absl::StatusOr<kms_v1::CryptoKeyVersion> DestroyCryptoKeyVersion(
       const kms_v1::DestroyCryptoKeyVersionRequest& request) const;
+
+  absl::StatusOr<kms_v1::CryptoKey> GetCryptoKey(
+      const kms_v1::GetCryptoKeyRequest& request) const;
 
   absl::StatusOr<kms_v1::PublicKey> GetPublicKey(
       const kms_v1::GetPublicKeyRequest& request) const;
@@ -57,6 +63,9 @@ class KmsClient {
       const kms_v1::ListCryptoKeyVersionsRequest& request) const;
 
  private:
+  absl::Status WaitForGeneration(kms_v1::CryptoKeyVersion& ckv,
+                                 absl::Time deadline) const;
+
   std::unique_ptr<kms_v1::KeyManagementService::Stub> kms_stub_;
   absl::Duration rpc_timeout_;
 };

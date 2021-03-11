@@ -89,30 +89,37 @@ KmsClient::CreateCryptoKeyAndWaitForFirstVersion(
 
   ASSIGN_OR_RETURN(kms_v1::CryptoKey ck, CreateCryptoKey(request));
 
-  kms_v1::GetCryptoKeyVersionRequest get_ckv_req;
-  get_ckv_req.set_name(ck.name() + "/cryptoKeyVersions/1");
-
   kms_v1::CryptoKeyVersion ckv;
   if (ck.has_primary()) {
     ckv = ck.primary();
   } else {
+    std::string name = absl::StrCat(ck.name(), "/cryptoKeyVersions/1");
+
     grpc::ClientContext ctx;
-    AddContextSettings(&ctx, "name", get_ckv_req.name(), deadline);
+    AddContextSettings(&ctx, "name", name, deadline);
+
+    kms_v1::GetCryptoKeyVersionRequest get_ckv_req;
+    get_ckv_req.set_name(name);
 
     RETURN_IF_ERROR(kms_stub_->GetCryptoKeyVersion(&ctx, get_ckv_req, &ckv));
   }
 
-  while (ckv.state() == kms_v1::CryptoKeyVersion::PENDING_GENERATION) {
-    // TODO(bdhess): Investigate options for sane backoff outside of google3.
-    absl::SleepFor(absl::Seconds(1));
-
-    grpc::ClientContext ctx;
-    AddContextSettings(&ctx, "name", get_ckv_req.name(), deadline);
-
-    RETURN_IF_ERROR(kms_stub_->GetCryptoKeyVersion(&ctx, get_ckv_req, &ckv));
-  }
-
+  RETURN_IF_ERROR(WaitForGeneration(ckv, deadline));
   return CryptoKeyAndVersion{ck, ckv};
+}
+
+absl::StatusOr<kms_v1::CryptoKeyVersion>
+KmsClient::CreateCryptoKeyVersionAndWait(
+    const kms_v1::CreateCryptoKeyVersionRequest& request) const {
+  absl::Time deadline = absl::Now() + rpc_timeout_;
+
+  grpc::ClientContext ctx;
+  AddContextSettings(&ctx, "parent", request.parent(), deadline);
+
+  kms_v1::CryptoKeyVersion response;
+  RETURN_IF_ERROR(kms_stub_->CreateCryptoKeyVersion(&ctx, request, &response));
+  RETURN_IF_ERROR(WaitForGeneration(response, deadline));
+  return response;
 }
 
 absl::StatusOr<kms_v1::CryptoKeyVersion> KmsClient::DestroyCryptoKeyVersion(
@@ -122,6 +129,16 @@ absl::StatusOr<kms_v1::CryptoKeyVersion> KmsClient::DestroyCryptoKeyVersion(
 
   kms_v1::CryptoKeyVersion response;
   RETURN_IF_ERROR(kms_stub_->DestroyCryptoKeyVersion(&ctx, request, &response));
+  return response;
+}
+
+absl::StatusOr<kms_v1::CryptoKey> KmsClient::GetCryptoKey(
+    const kms_v1::GetCryptoKeyRequest& request) const {
+  grpc::ClientContext ctx;
+  AddContextSettings(&ctx, "name", request.name(), rpc_timeout_);
+
+  kms_v1::CryptoKey response;
+  RETURN_IF_ERROR(kms_stub_->GetCryptoKey(&ctx, request, &response));
   return response;
 }
 
@@ -190,6 +207,22 @@ CryptoKeyVersionsRange KmsClient::ListCryptoKeyVersions(
         std::move(versions.begin(), versions.end(), result.begin());
         return result;
       });
+}
+
+absl::Status KmsClient::WaitForGeneration(kms_v1::CryptoKeyVersion& ckv,
+                                          absl::Time deadline) const {
+  while (ckv.state() == kms_v1::CryptoKeyVersion::PENDING_GENERATION) {
+    // TODO(bdhess): Investigate options for backoff outside of google3.
+    absl::SleepFor(absl::Seconds(1));
+
+    grpc::ClientContext ctx;
+    AddContextSettings(&ctx, "name", ckv.name(), deadline);
+
+    kms_v1::GetCryptoKeyVersionRequest req;
+    req.set_name(ckv.name());
+    RETURN_IF_ERROR(kms_stub_->GetCryptoKeyVersion(&ctx, req, &ckv));
+  }
+  return absl::OkStatus();
 }
 
 }  // namespace kmsp11
