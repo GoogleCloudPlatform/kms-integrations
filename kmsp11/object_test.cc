@@ -185,6 +185,8 @@ TEST(NewKeyPairTest, RsaKeyAttributes) {
 
   ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub, GetTestRsa2048Key());
   const RSA* rsa_key = EVP_PKEY_get0_RSA(pub.get());
+  const BIGNUM *n, *e;
+  RSA_get0_key(rsa_key, &n, &e, /*d=*/nullptr);
 
   ASSERT_OK_AND_ASSIGN(KeyPair key_pair, Object::NewKeyPair(ckv, pub.get()));
   const AttributeMap& pub_attrs = key_pair.public_key.attributes();
@@ -193,16 +195,16 @@ TEST(NewKeyPairTest, RsaKeyAttributes) {
   EXPECT_THAT(pub_attrs.Value(CKA_MODULUS_BITS),
               IsOkAndHolds(MarshalULong(2048)));
   EXPECT_THAT(pub_attrs.Value(CKA_MODULUS),
-              IsOkAndHolds(MarshalBigNum(RSA_get0_n(rsa_key))));
+              IsOkAndHolds(MarshalBigNum(n)));
   EXPECT_THAT(pub_attrs.Value(CKA_PUBLIC_EXPONENT),
-              IsOkAndHolds(MarshalBigNum(RSA_get0_e(rsa_key))));
+              IsOkAndHolds(MarshalBigNum(e)));
   EXPECT_THAT(pub_attrs.Value(CKA_PRIVATE_EXPONENT),
               StatusRvIs(CKR_ATTRIBUTE_TYPE_INVALID));
 
   EXPECT_THAT(prv_attrs.Value(CKA_MODULUS_BITS),
               IsOkAndHolds(MarshalULong(2048)));
   EXPECT_THAT(prv_attrs.Value(CKA_PUBLIC_EXPONENT),
-              IsOkAndHolds(MarshalBigNum(RSA_get0_e(rsa_key))));
+              IsOkAndHolds(MarshalBigNum(e)));
   EXPECT_THAT(prv_attrs.Value(CKA_PRIVATE_EXPONENT),
               StatusRvIs(CKR_ATTRIBUTE_SENSITIVE));
   EXPECT_THAT(prv_attrs.Value(CKA_PRIME_2),

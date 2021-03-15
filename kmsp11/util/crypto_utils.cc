@@ -8,6 +8,7 @@
 #include "kmsp11/util/errors.h"
 #include "openssl/bn.h"
 #include "openssl/bytestring.h"
+#include "openssl/crypto.h"
 #include "openssl/ec_key.h"
 #include "openssl/ecdsa.h"
 #include "openssl/evp.h"
@@ -108,6 +109,19 @@ absl::StatusOr<absl::Time> Asn1TimeToAbsl(const ASN1_TIME* time) {
   return absl::FromCivil(second, absl::UTCTimeZone());
 }
 
+absl::Status CheckFipsSelfTest() {
+  if (FIPS_mode() != 1) {
+    return absl::FailedPreconditionError(
+        absl::StrFormat("FIPS_mode()=%d, want 1", FIPS_mode()));
+  }
+  int self_test_result = BORINGSSL_self_test();
+  if (self_test_result != 1) {
+    return absl::InternalError(
+        absl::StrFormat("BORINGSSL_self_test()=%d, want 1", self_test_result));
+  }
+  return absl::OkStatus();
+}
+
 absl::StatusOr<const EVP_MD*> DigestForMechanism(CK_MECHANISM_TYPE mechanism) {
   switch (mechanism) {
     case CKM_SHA256:
@@ -135,10 +149,12 @@ absl::StatusOr<std::vector<uint8_t>> EcdsaSigAsn1ToP1363(
 
   int sig_len = EcdsaSigLengthP1363(group);
   int n_len = sig_len / 2;
+  const BIGNUM *r, *s;
+  ECDSA_SIG_get0(sig.get(), &r, &s);
 
   std::vector<uint8_t> result(sig_len);
-  if (!BN_bn2bin_padded(&result[0], n_len, ECDSA_SIG_get0_r(sig.get())) ||
-      !BN_bn2bin_padded(&result[n_len], n_len, ECDSA_SIG_get0_s(sig.get()))) {
+  if (!BN_bn2bin_padded(&result[0], n_len, r) ||
+      !BN_bn2bin_padded(&result[n_len], n_len, s)) {
     return NewError(
         absl::StatusCode::kOutOfRange,
         absl::StrCat("error marshaling signature value: ", SslErrorToString()),

@@ -88,7 +88,7 @@ absl::StatusOr<bssl::UniquePtr<X509>> CertAuthority::GenerateCert(
   X509_NAME* issuer = X509_get_issuer_name(cert.get());
   if (X509_NAME_add_entry_by_NID(
           issuer, NID_commonName, MBSTRING_ASC,
-          reinterpret_cast<const uint8_t*>(issuer_cn_.data()),
+          reinterpret_cast<uint8_t*>(const_cast<char*>(issuer_cn_.data())),
           issuer_cn_.size(), kLocationEnd, 0) != 1) {
     return NewInternalError(
         absl::StrCat("error setting issuer: ", SslErrorToString()),
@@ -112,7 +112,7 @@ absl::StatusOr<bssl::UniquePtr<X509>> CertAuthority::GenerateCert(
   X509_NAME* subj = X509_get_subject_name(cert.get());
   if (X509_NAME_add_entry_by_NID(
           subj, NID_commonName, MBSTRING_ASC,
-          reinterpret_cast<const uint8_t*>(subject_cn.data()),
+          reinterpret_cast<uint8_t*>(const_cast<char*>(subject_cn.data())),
           subject_cn.size(), kLocationEnd, 0) != 1) {
     return NewInternalError(
         absl::StrCat("error setting subject: ", SslErrorToString()),

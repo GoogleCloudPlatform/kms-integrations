@@ -124,10 +124,13 @@ absl::Status AddEcPrivateKeyAttributes(AttributeMap* attrs,
 
 absl::Status AddRsaPublicKeyAttributes(AttributeMap* attrs,
                                        const RSA* public_key) {
+  const BIGNUM *n, *e;
+  RSA_get0_key(public_key, &n, &e, /*d=*/nullptr);
+
   // 2.1.2 RSA public key objects
-  attrs->PutBigNum(CKA_MODULUS, RSA_get0_n(public_key));
+  attrs->PutBigNum(CKA_MODULUS, n);
   attrs->PutULong(CKA_MODULUS_BITS, RSA_bits(public_key));
-  attrs->PutBigNum(CKA_PUBLIC_EXPONENT, RSA_get0_e(public_key));
+  attrs->PutBigNum(CKA_PUBLIC_EXPONENT, e);
   return absl::OkStatus();
 }
 

@@ -15,6 +15,11 @@ namespace kmsp11 {
 // Convert an ASN1_TIME structure to an absl::Time.
 absl::StatusOr<absl::Time> Asn1TimeToAbsl(const ASN1_TIME* time);
 
+// Checks that BoringSSL is operating in FIPS mode, and that FIPS self-tests
+// pass. Returns FailedPrecondition if BoringSSL is not in FIPS mode; or
+// Internal if the self-tests fail.
+absl::Status CheckFipsSelfTest();
+
 // Returns an EVP_MD* for the provided digest mechanism, or returns
 // InternalError if the provided mechanism is not a recognized digest.
 absl::StatusOr<const EVP_MD*> DigestForMechanism(CK_MECHANISM_TYPE mechanism);

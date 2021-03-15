@@ -447,9 +447,14 @@ TEST(ParsePrivateKeyTest, RsaKey) {
                        ParsePkcs8PrivateKeyPem(pem));
 
   RSA* rsa = EVP_PKEY_get0_RSA(key.get());
-  EXPECT_TRUE(RSA_get0_e(rsa));
   EXPECT_TRUE(RSA_check_key(rsa));
   EXPECT_TRUE(RSA_check_fips(rsa));
+
+  const BIGNUM *n, *e, *d;
+  RSA_get0_key(rsa, &n, &e, &d);
+  EXPECT_THAT(n, Not(IsNull()));
+  EXPECT_THAT(e, Not(IsNull()));
+  EXPECT_THAT(d, Not(IsNull()));
 }
 
 TEST(ParsePublicKeyTest, EcKey) {
@@ -471,9 +476,14 @@ TEST(ParsePublicKeyTest, RsaKey) {
                        ParseX509PublicKeyDer(der));
 
   RSA* rsa = EVP_PKEY_get0_RSA(key.get());
-  EXPECT_TRUE(RSA_get0_e(rsa));
   EXPECT_TRUE(RSA_check_key(rsa));
   EXPECT_TRUE(RSA_check_fips(rsa));
+
+  const BIGNUM *n, *e, *d;
+  RSA_get0_key(rsa, &n, &e, &d);
+  EXPECT_THAT(n, Not(IsNull()));
+  EXPECT_THAT(e, Not(IsNull()));
+  EXPECT_THAT(d, IsNull());
 }
 
 TEST(ParsePublicKeyTest, MalformedKey) {

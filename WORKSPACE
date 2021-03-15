@@ -13,12 +13,10 @@ http_archive(
 )
 
 http_archive(
-    name = "boringssl",  # 2021-03-04
-    # Use github mirror instead of https://boringssl.googlesource.com/boringssl
-    # to obtain a boringssl archive with consistent sha256
-    sha256 = "67e166404c16eb792bd295fbd3f558c6cef166382f0dae0d82f328c67d09608e",
-    strip_prefix = "boringssl-afd67cd00e55e4e22b14f096361c732531a0c539",
-    url = "https://github.com/google/boringssl/archive/afd67cd00e55e4e22b14f096361c732531a0c539.tar.gz",
+    name = "boringssl",  # 2021-03-18
+    sha256 = "9f263cce1eb9d3429809637c8f62961e9f7b14d814902ca330a1678e9ddf49cd",
+    strip_prefix = "boringssl-dfa7c61bc554788901ee60940b30e5f3fc83f5ac",
+    url = "https://github.com/google/boringssl/archive/dfa7c61bc554788901ee60940b30e5f3fc83f5ac.tar.gz",
 )
 
 http_archive(

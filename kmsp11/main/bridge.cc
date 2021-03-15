@@ -1,5 +1,6 @@
 #include "absl/status/status.h"
 #include "absl/types/optional.h"
+#include "glog/logging.h"
 #include "grpc/fork.h"
 #include "kmsp11/config/config.h"
 #include "kmsp11/cryptoki.h"
@@ -7,6 +8,7 @@
 #include "kmsp11/main/function_list.h"
 #include "kmsp11/mechanism.h"
 #include "kmsp11/provider.h"
+#include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/global_provider.h"
 #include "kmsp11/util/logging.h"
@@ -89,6 +91,11 @@ absl::Status Initialize(CK_VOID_PTR pInitArgs) {
         config, LoadConfigFromFile(static_cast<char*>(init_args->pReserved)));
   } else {
     ASSIGN_OR_RETURN(config, LoadConfigFromEnvironment());
+  }
+
+  if (config.experimental_require_fips_mode()) {
+    absl::Status self_test_result = CheckFipsSelfTest();
+    CHECK(self_test_result.ok()) << "FIPS tests failed: " << self_test_result;
   }
 
   // Initialize gRPC state.
@@ -633,7 +640,9 @@ absl::Status GenerateKeyPair(
 
   ASSIGN_OR_RETURN(
       AsymmetricHandleSet handles,
-      session->GenerateKeyPair(*pMechanism, pub_attributes, prv_attributes, provider->library_config().experimental_create_multiple_versions()));
+      session->GenerateKeyPair(
+          *pMechanism, pub_attributes, prv_attributes,
+          provider->library_config().experimental_create_multiple_versions()));
 
   *phPublicKey = handles.public_key_handle;
   *phPrivateKey = handles.private_key_handle;
