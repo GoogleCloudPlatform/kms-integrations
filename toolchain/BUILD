@@ -24,4 +24,5 @@ cc_toolchain_suite(
     toolchains = {
         "k8": "llvm_toolchain_linux_amd64",
     },
+    tags = ["manual"],
 )

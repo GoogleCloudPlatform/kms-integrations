@@ -35,4 +35,4 @@ _upload_artifacts() {
 }
 trap _upload_artifacts EXIT
 
-bazel test -c opt ${BAZEL_EXTRA_ARGS} //kmsp11/... --keep_going
+bazel test -c opt ${BAZEL_EXTRA_ARGS} ... --keep_going

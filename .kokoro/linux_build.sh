@@ -41,7 +41,7 @@ _upload_artifacts() {
 }
 trap _upload_artifacts EXIT
 
-bazel test -c opt ${BAZEL_EXTRA_ARGS} //kmsp11/... --keep_going \
+bazel test -c opt ${BAZEL_EXTRA_ARGS} ... --keep_going \
   --crosstool_top=//toolchain:llvm_suite \
   --//toolchain:llvm_root=/opt/${LLVM_DIST} \
   --//toolchain:llvm_version=${LLVM_VERSION}

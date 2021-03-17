@@ -23,7 +23,7 @@ set TMP=T:\buildtmp
 :: Ensure Bazel version information is included in the build log
 bazel version
 
-bazel test -c opt %BAZEL_EXTRA_ARGS% //kmsp11/... --keep_going
+bazel test -c opt %BAZEL_EXTRA_ARGS% ... --keep_going
 set RV=%ERRORLEVEL%
 
 if exist "%PROJECT_ROOT%\bazel-bin\kmsp11\main\libkmsp11.so" copy ^
