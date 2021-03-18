@@ -12,8 +12,8 @@ def go_repositories():
     go_repository(
         name = "com_github_bazelbuild_bazel_gazelle",
         importpath = "github.com/bazelbuild/bazel-gazelle",
-        sum = "h1:a2Om7KZ31IuYtoE2SGMMEAfl6Jo+MkLdd3zM+5tkjjI=",
-        version = "v0.22.2",
+        sum = "h1:Ks6YN+WkOv2lYWlvf7ksxUpLvrDbBHPBXXUrBFQ3BZM=",
+        version = "v0.23.0",
     )
     go_repository(
         name = "com_github_bazelbuild_buildtools",
@@ -153,8 +153,8 @@ def go_repositories():
     go_repository(
         name = "com_github_google_go_cmp",
         importpath = "github.com/google/go-cmp",
-        sum = "h1:X2ev0eStA3AbceY54o37/0PQ/UWqKEiiO2dKL5OPaFM=",
-        version = "v0.5.2",
+        sum = "h1:L8R9j+yAqZuZjsqh/z+F1NCffTKKLShY6zXTItVIZ8M=",
+        version = "v0.5.4",
     )
 
     go_repository(
@@ -421,8 +421,8 @@ def go_repositories():
     go_repository(
         name = "org_golang_x_mod",
         importpath = "golang.org/x/mod",
-        sum = "h1:RM4zey1++hCTbCVQfnWeKs9/IEsaBLA8vTkd0WVtmH4=",
-        version = "v0.3.0",
+        sum = "h1:Kvvh58BN8Y9/lBi7hTekvtMpm07eUZ0ck5pRHpsMWrY=",
+        version = "v0.4.1",
     )
     go_repository(
         name = "org_golang_x_net",
@@ -463,8 +463,8 @@ def go_repositories():
     go_repository(
         name = "org_golang_x_tools",
         importpath = "golang.org/x/tools",
-        sum = "h1:7R7+wzd5VuLvCNyHZ/MG511kkoP/DBEzkbh8qUsFbY8=",
-        version = "v0.0.0-20201113202037-1643af1435f3",
+        sum = "h1:kJP9fbfkpUoA4y03Nxor8be+YbShcXP16fc7G4nlgpw=",
+        version = "v0.0.0-20201110124207-079ba7bd75cd",
     )
     go_repository(
         name = "org_golang_x_xerrors",
