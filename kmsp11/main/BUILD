@@ -47,6 +47,23 @@ cc_test(
     ],
 )
 
+cc_test(
+    name = "fork_test",
+    size = "small",
+    srcs = select({
+        "//:windows": [],
+        "//conditions:default": ["fork_test.cc"],
+    }),
+    deps = [
+        ":bridge",
+        "//kmsp11/test",
+        "//kmsp11/test/fakekms/cpp:fakekms",
+        "//kmsp11/util:platform",
+        "@com_google_absl//absl/cleanup",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
 function_def_template(
     name = "bridge_h",
     src = "bridge.h.template",

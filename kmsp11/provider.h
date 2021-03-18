@@ -39,26 +39,31 @@ class Provider {
       CK_SESSION_HANDLE session_handle);
   absl::Status CloseSession(CK_SESSION_HANDLE session_handle);
 
-  virtual ~Provider() {
-    shutdown_notification_.Notify();
-    refresh_thread_.join();
-  }
-
  private:
+  class Refresher {
+   public:
+    Refresher(Provider* provider, absl::Duration interval);
+    virtual ~Refresher();
+
+   private:
+    absl::Notification shutdown_;
+    std::thread thread_;
+  };
+
   Provider(LibraryConfig library_config, CK_INFO info,
            std::vector<std::unique_ptr<Token>>&& tokens,
            std::unique_ptr<KmsClient> kms_client,
-           const absl::Duration refresh_interval)
+           absl::Duration refresh_interval)
       : library_config_(library_config),
         info_(info),
         tokens_(std::move(tokens)),
         sessions_(CKR_SESSION_HANDLE_INVALID),
         kms_client_(std::move(kms_client)),
-        creation_process_id_(GetProcessId()),
-        refresh_interval_(refresh_interval),
-        refresh_thread_(&Provider::LoopRefresh, this) {}
-
-  void LoopRefresh();
+        creation_process_id_(GetProcessId()) {
+    if (refresh_interval > absl::ZeroDuration()) {
+      refresher_.emplace(this, refresh_interval);
+    }
+  }
 
   const LibraryConfig library_config_;
   const CK_INFO info_;
@@ -66,9 +71,7 @@ class Provider {
   HandleMap<Session> sessions_;
   std::unique_ptr<KmsClient> kms_client_;
   int64_t creation_process_id_;
-  const absl::Duration refresh_interval_;
-  absl::Notification shutdown_notification_;
-  std::thread refresh_thread_;
+  absl::optional<Refresher> refresher_;
 };
 
 }  // namespace kmsp11

@@ -60,9 +60,10 @@ absl::StatusOr<std::unique_ptr<Provider>> Provider::New(LibraryConfig config) {
   }
 
   absl::Duration refresh_interval =
-      config.refresh_interval_secs() > 0
-          ? absl::Seconds(config.refresh_interval_secs())
-          : absl::Seconds(300);
+      absl::Seconds(config.refresh_interval_secs());
+  if (!config.has_refresh_interval_secs()) {
+    refresh_interval = absl::Seconds(300);
+  }
 
   // using `new` to invoke a private constructor
   return std::unique_ptr<Provider>(new Provider(
@@ -93,17 +94,27 @@ absl::Status Provider::CloseSession(CK_SESSION_HANDLE session_handle) {
   return sessions_.Remove(session_handle);
 }
 
-void Provider::LoopRefresh() {
-  while (!shutdown_notification_.WaitForNotificationWithTimeout(
-      refresh_interval_)) {
-    for (const std::unique_ptr<Token>& token : tokens_) {
-      absl::Status refresh_result = token->RefreshState(*kms_client_);
-      if (!refresh_result.ok()) {
-        LOG(ERROR) << "error refreshing state for key ring "
-                   << token->key_ring_name() << ": " << refresh_result;
-      }
-    }
-  }
+Provider::Refresher::Refresher(Provider* provider, absl::Duration interval)
+    : thread_(
+          [](Provider* provider, const absl::Duration interval,
+             const absl::Notification* shutdown) {
+            while (!shutdown->WaitForNotificationWithTimeout(interval)) {
+              for (const std::unique_ptr<Token>& token : provider->tokens_) {
+                absl::Status refresh_result =
+                    token->RefreshState(*provider->kms_client_);
+                if (!refresh_result.ok()) {
+                  LOG(ERROR)
+                      << "error refreshing state for key ring "
+                      << token->key_ring_name() << ": " << refresh_result;
+                }
+              }
+            }
+          },
+          provider, interval, &shutdown_) {}
+
+Provider::Refresher::~Refresher() {
+  shutdown_.Notify();
+  thread_.join();
 }
 
 }  // namespace kmsp11
