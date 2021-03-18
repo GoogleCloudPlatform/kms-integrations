@@ -11,27 +11,26 @@ namespace kmsp11 {
 
 // Creates a new error status with the provided parameters.
 // `code` and `ck_rv` must not be OK; these requirements are CHECKed.
-ABSL_MUST_USE_RESULT absl::Status NewError(
-    absl::StatusCode code, absl::string_view msg, CK_RV ck_rv,
-    const SourceLocation& source_location);
+absl::Status NewError(absl::StatusCode code, absl::string_view msg, CK_RV ck_rv,
+                      const SourceLocation& source_location);
 
 // Creates a new FailedPrecondition error with the provided CK_RV.
-ABSL_MUST_USE_RESULT inline absl::Status FailedPreconditionError(
+inline absl::Status FailedPreconditionError(
     absl::string_view msg, CK_RV ck_rv, const SourceLocation& source_location) {
   return NewError(absl::StatusCode::kFailedPrecondition, msg, ck_rv,
                   source_location);
 }
 
 // Creates a new NotFound error for a missing handle with the provided CK_RV.
-ABSL_MUST_USE_RESULT inline absl::Status HandleNotFoundError(
-    CK_ULONG handle, CK_RV rv, const SourceLocation& source_location) {
+inline absl::Status HandleNotFoundError(CK_ULONG handle, CK_RV rv,
+                                        const SourceLocation& source_location) {
   return NewError(absl::StatusCode::kNotFound,
                   absl::StrFormat("handle not found: %#x", handle), rv,
                   SOURCE_LOCATION);
 }
 
 // Creates a new InvalidArgument error with ck_rv = CKR_MECHANISM_INVALID.
-ABSL_MUST_USE_RESULT inline absl::Status InvalidMechanismError(
+inline absl::Status InvalidMechanismError(
     CK_MECHANISM_TYPE mechanism_type, absl::string_view operation,
     const SourceLocation& source_location) {
   return NewError(absl::StatusCode::kInvalidArgument,
@@ -41,7 +40,7 @@ ABSL_MUST_USE_RESULT inline absl::Status InvalidMechanismError(
 }
 
 // Creates a new InvalidArgument error with ck_rv = CKR_MECHANISM_PARAM_INVALID.
-ABSL_MUST_USE_RESULT inline absl::Status InvalidMechanismParamError(
+inline absl::Status InvalidMechanismParamError(
     absl::string_view message, const SourceLocation& source_location) {
   return NewError(absl::StatusCode::kInvalidArgument, message,
                   CKR_MECHANISM_PARAM_INVALID, source_location);
@@ -49,22 +48,22 @@ ABSL_MUST_USE_RESULT inline absl::Status InvalidMechanismParamError(
 
 // Creates a new Internal error with a return value of
 // CKR_GENERAL_ERROR.
-ABSL_MUST_USE_RESULT inline absl::Status NewInternalError(
-    absl::string_view msg, const SourceLocation& source_location) {
+inline absl::Status NewInternalError(absl::string_view msg,
+                                     const SourceLocation& source_location) {
   return NewError(absl::StatusCode::kInternal, msg, CKR_GENERAL_ERROR,
                   source_location);
 }
 
 // Creates a new InvalidArgument error with the provided CK_RV.
-ABSL_MUST_USE_RESULT inline absl::Status NewInvalidArgumentError(
+inline absl::Status NewInvalidArgumentError(
     absl::string_view msg, CK_RV ck_rv, const SourceLocation& source_location) {
   return NewError(absl::StatusCode::kInvalidArgument, msg, ck_rv,
                   source_location);
 }
 
 // Creates a new InvalidArgument error with rv = CKR_ARGUMENTS_BAD.
-ABSL_MUST_USE_RESULT inline absl::Status NullArgumentError(
-    absl::string_view arg_name, const SourceLocation& source_location) {
+inline absl::Status NullArgumentError(absl::string_view arg_name,
+                                      const SourceLocation& source_location) {
   return NewInvalidArgumentError(
       absl::StrFormat("argument %s was unexpectedly null", arg_name),
       CKR_ARGUMENTS_BAD, source_location);
@@ -72,8 +71,7 @@ ABSL_MUST_USE_RESULT inline absl::Status NullArgumentError(
 
 // Creates a new FailedPrecondition error with a return value of
 // CKR_CRYPTOKI_NOT_INITIALIZED.
-ABSL_MUST_USE_RESULT inline absl::Status NotInitializedError(
-    const SourceLocation& source_location) {
+inline absl::Status NotInitializedError(const SourceLocation& source_location) {
   return NewError(absl::StatusCode::kFailedPrecondition,
                   "the library is not initialized",
                   CKR_CRYPTOKI_NOT_INITIALIZED, source_location);
@@ -81,7 +79,7 @@ ABSL_MUST_USE_RESULT inline absl::Status NotInitializedError(
 
 // Creates a new FailedPrecondition error with a return value of
 // CKR_OPERATION_ACTIVE.
-ABSL_MUST_USE_RESULT inline absl::Status OperationActiveError(
+inline absl::Status OperationActiveError(
     const SourceLocation& source_location) {
   return NewError(absl::StatusCode::kFailedPrecondition,
                   "another operation is already active", CKR_OPERATION_ACTIVE,
@@ -90,7 +88,7 @@ ABSL_MUST_USE_RESULT inline absl::Status OperationActiveError(
 
 // Creates a new FailedPrecondition error with a return value of
 // CKR_OPERATION_NOT_INITIALIZED.
-ABSL_MUST_USE_RESULT inline absl::Status OperationNotInitializedError(
+inline absl::Status OperationNotInitializedError(
     absl::string_view operation_name, const SourceLocation& source_location) {
   return NewError(
       absl::StatusCode::kFailedPrecondition,
@@ -100,16 +98,15 @@ ABSL_MUST_USE_RESULT inline absl::Status OperationNotInitializedError(
 
 // Creates a new error with status code OutOfRange and return value of
 // CKR_BUFFER_TOO_SMALL.
-inline ABSL_MUST_USE_RESULT absl::Status OutOfRangeError(
-    absl::string_view msg, const SourceLocation& source_location) {
+inline absl::Status OutOfRangeError(absl::string_view msg,
+                                    const SourceLocation& source_location) {
   return NewError(absl::StatusCode::kOutOfRange, msg, CKR_BUFFER_TOO_SMALL,
                   source_location);
 }
 
 // Creates a new error with status code unimplemented and return value of
 // CKR_FUNCTION_NOT_SUPPORTED.
-inline ABSL_MUST_USE_RESULT absl::Status UnsupportedError(
-    const SourceLocation& source_location) {
+inline absl::Status UnsupportedError(const SourceLocation& source_location) {
   return NewError(absl::StatusCode::kUnimplemented,
                   "the function is not supported", CKR_FUNCTION_NOT_SUPPORTED,
                   source_location);
