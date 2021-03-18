@@ -11,8 +11,7 @@ cc_library(
         ":cryptoki_headers",
         "//kmsp11/util:errors",
         "//kmsp11/util:kms_v1",
-        "@com_google_absl//absl/container:flat_hash_map",
-        "@com_google_absl//absl/container:flat_hash_set",
+        "@com_google_absl//absl/container:btree",
         "@com_google_absl//absl/status:statusor",
     ],
 )
