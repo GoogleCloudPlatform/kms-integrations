@@ -87,7 +87,6 @@ absl::Status AddPrivateKeyAttributes(AttributeMap* attrs,
   attrs->PutBool(CKA_SIGN_RECOVER, false);
   attrs->PutBool(CKA_UNWRAP, false);
   attrs->PutBool(CKA_EXTRACTABLE, false);
-  attrs->PutBool(CKA_UNWRAP, false);
   attrs->PutBool(CKA_ALWAYS_SENSITIVE, ckv.import_job().empty());
   attrs->PutBool(CKA_NEVER_EXTRACTABLE, ckv.import_job().empty());
   attrs->PutBool(CKA_WRAP_WITH_TRUSTED, false);
