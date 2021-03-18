@@ -201,6 +201,10 @@ go_rules_dependencies()
 
 go_register_toolchains("1.16.1")
 
+load("@io_bazel_rules_go//extras:embed_data_deps.bzl", "go_embed_data_dependencies")
+
+go_embed_data_dependencies()
+
 ## Protobuf
 load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
 

@@ -5,7 +5,15 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/x509"
+	"embed"
+	"encoding/pem"
+	"errors"
+	"fmt"
 )
+
+//go:embed testdata/*.pem
+var testdata embed.FS
 
 type keyFactory interface {
 	Generate() interface{}
@@ -28,11 +36,21 @@ func (f *ecKeyFactory) Generate() interface{} {
 type rsaKeyFactory int
 
 func (f rsaKeyFactory) Generate() interface{} {
-	k, err := rsa.GenerateKey(rand.Reader, int(f))
+	key, err := func() (*rsa.PrivateKey, error) {
+		pemKey, err := testdata.ReadFile(fmt.Sprintf("testdata/rsa_%d_private.pem", f))
+		if err != nil {
+			return nil, fmt.Errorf("unsupported RSA key size: %d", f)
+		}
+		block, _ := pem.Decode(pemKey)
+		if block == nil || block.Type != "RSA PRIVATE KEY" {
+			return nil, errors.New("failed to decode PEM block containing RSA private key")
+		}
+		return x509.ParsePKCS1PrivateKey(block.Bytes)
+	}()
 	if err != nil {
-		panic(err) // we ran out of entropy, or bit size is too small
+		panic("error loading pregenerated RSA private key: " + err.Error())
 	}
-	return k
+	return key
 }
 
 type symmetricKeyFactory int

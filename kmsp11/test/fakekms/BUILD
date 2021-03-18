@@ -6,6 +6,7 @@ go_library(
         ["*.go"],
         exclude = ["*_test.go"],
     ),
+    embedsrcs = glob(["testdata/*"]),
     importpath = "oss-tools/kmsp11/test/fakekms",
     visibility = ["//visibility:public"],
     deps = [
