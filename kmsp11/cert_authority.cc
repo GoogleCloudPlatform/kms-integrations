@@ -37,7 +37,7 @@ absl::Status SetRandomSerial(X509* x509) {
 absl::Status AddExtension(X509V3_CTX* ctx, int nid, const char* value) {
   bssl::UniquePtr<X509_EXTENSION> ext(X509V3_EXT_nconf_nid(
       /* conf */ nullptr, ctx, nid, const_cast<char*>(value)));
-  if (!ext || !X509_add_ext(ctx->subject_cert, ext.get(), kLocationEnd)) {
+  if (!ext || X509_add_ext(ctx->subject_cert, ext.get(), kLocationEnd) != 1) {
     return NewInternalError(absl::StrFormat("error adding extension %d: %s",
                                             nid, SslErrorToString()),
                             SOURCE_LOCATION);
@@ -52,10 +52,10 @@ absl::StatusOr<std::unique_ptr<CertAuthority>> CertAuthority::New() {
 
   // Generate a new P-256 key for certificate signing.
   EVP_PKEY* signing_key = nullptr;
-  if (!ctx || !EVP_PKEY_keygen_init(ctx.get()) ||
-      !EVP_PKEY_CTX_set_ec_paramgen_curve_nid(ctx.get(),
-                                              NID_X9_62_prime256v1) ||
-      !EVP_PKEY_keygen(ctx.get(), &signing_key) || !signing_key) {
+  if (!ctx || EVP_PKEY_keygen_init(ctx.get()) != 1 ||
+      EVP_PKEY_CTX_set_ec_paramgen_curve_nid(ctx.get(),
+                                             NID_X9_62_prime256v1) != 1 ||
+      EVP_PKEY_keygen(ctx.get(), &signing_key) != 1 || !signing_key) {
     return NewInternalError(
         absl::StrCat("error generating signing key: ", SslErrorToString()),
         SOURCE_LOCATION);

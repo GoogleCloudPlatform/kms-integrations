@@ -153,8 +153,8 @@ absl::StatusOr<std::vector<uint8_t>> EcdsaSigAsn1ToP1363(
   ECDSA_SIG_get0(sig.get(), &r, &s);
 
   std::vector<uint8_t> result(sig_len);
-  if (!BN_bn2bin_padded(&result[0], n_len, r) ||
-      !BN_bn2bin_padded(&result[n_len], n_len, s)) {
+  if (BN_bn2bin_padded(&result[0], n_len, r) != 1 ||
+      BN_bn2bin_padded(&result[n_len], n_len, s) != 1) {
     return NewError(
         absl::StatusCode::kOutOfRange,
         absl::StrCat("error marshaling signature value: ", SslErrorToString()),
@@ -204,7 +204,8 @@ absl::Status EcdsaVerifyP1363(EC_KEY* public_key, const EVP_MD* hash,
         SOURCE_LOCATION);
   }
 
-  if (!ECDSA_do_verify(digest.data(), digest.size(), sig.get(), public_key)) {
+  if (ECDSA_do_verify(digest.data(), digest.size(), sig.get(), public_key)
+      != 1) {
     return NewInvalidArgumentError(
         absl::StrCat("verification failed: ", SslErrorToString()),
         CKR_SIGNATURE_INVALID, SOURCE_LOCATION);
@@ -252,18 +253,18 @@ absl::Status EncryptRsaOaep(EVP_PKEY* key, const EVP_MD* hash,
 
   bssl::UniquePtr<EVP_PKEY_CTX> ctx(EVP_PKEY_CTX_new(key, nullptr));
 
-  if (!ctx || !EVP_PKEY_encrypt_init(ctx.get()) ||
-      !EVP_PKEY_CTX_set_rsa_padding(ctx.get(), RSA_PKCS1_OAEP_PADDING) ||
-      !EVP_PKEY_CTX_set_rsa_mgf1_md(ctx.get(), hash) ||
-      !EVP_PKEY_CTX_set_rsa_oaep_md(ctx.get(), hash)) {
+  if (!ctx || EVP_PKEY_encrypt_init(ctx.get()) != 1 ||
+      EVP_PKEY_CTX_set_rsa_padding(ctx.get(), RSA_PKCS1_OAEP_PADDING) != 1 ||
+      EVP_PKEY_CTX_set_rsa_mgf1_md(ctx.get(), hash) != 1 ||
+      EVP_PKEY_CTX_set_rsa_oaep_md(ctx.get(), hash) != 1) {
     return NewInternalError(
         absl::StrCat("error building encryption context: ", SslErrorToString()),
         SOURCE_LOCATION);
   }
 
   size_t out_len = ciphertext.size();
-  if (!EVP_PKEY_encrypt(ctx.get(), ciphertext.data(), &out_len,
-                        plaintext.data(), plaintext.size())) {
+  if (EVP_PKEY_encrypt(ctx.get(), ciphertext.data(), &out_len, plaintext.data(),
+                       plaintext.size()) != 1) {
     return NewInternalError(
         absl::StrCat("failed to encrypt: ", SslErrorToString()),
         SOURCE_LOCATION);
@@ -291,9 +292,9 @@ absl::StatusOr<std::string> MarshalEcParametersDer(const EC_KEY* key) {
 
   uint8_t* out_bytes;
   size_t out_len;
-  if (!CBB_init(&cbb, 0) ||
-      !EC_KEY_marshal_curve_name(&cbb, EC_KEY_get0_group(key)) ||
-      !CBB_finish(&cbb, &out_bytes, &out_len)) {
+  if (CBB_init(&cbb, 0) != 1 ||
+      EC_KEY_marshal_curve_name(&cbb, EC_KEY_get0_group(key)) != 1 ||
+      CBB_finish(&cbb, &out_bytes, &out_len) != 1) {
     CBB_cleanup(&cbb);
     return NewInternalError(
         absl::StrCat("failed to marshal ec parameters: ", SslErrorToString()),
@@ -312,11 +313,11 @@ absl::StatusOr<std::string> MarshalEcPointDer(const EC_KEY* key) {
 
   uint8_t* out_bytes;
   size_t out_len;
-  if (!CBB_init(&cbb, 0) ||
-      !EC_POINT_point2cbb(&cbb, EC_KEY_get0_group(key),
-                          EC_KEY_get0_public_key(key),
-                          POINT_CONVERSION_UNCOMPRESSED, bn_ctx.get()) ||
-      !CBB_finish(&cbb, &out_bytes, &out_len)) {
+  if (CBB_init(&cbb, 0) != 1 ||
+      EC_POINT_point2cbb(&cbb, EC_KEY_get0_group(key),
+                         EC_KEY_get0_public_key(key),
+                         POINT_CONVERSION_UNCOMPRESSED, bn_ctx.get()) != 1 ||
+      CBB_finish(&cbb, &out_bytes, &out_len) != 1) {
     CBB_cleanup(&cbb);
     return NewInternalError(
         absl::StrCat("failed to marshal ec point: ", SslErrorToString()),
@@ -342,8 +343,8 @@ absl::StatusOr<std::string> MarshalX509PublicKeyDer(const EVP_PKEY* key) {
 
   uint8_t* out_bytes;
   size_t out_len;
-  if (!CBB_init(&cbb, 0) || !EVP_marshal_public_key(&cbb, key) ||
-      !CBB_finish(&cbb, &out_bytes, &out_len)) {
+  if (CBB_init(&cbb, 0) != 1 || EVP_marshal_public_key(&cbb, key) != 1 ||
+      CBB_finish(&cbb, &out_bytes, &out_len) != 1) {
     CBB_cleanup(&cbb);
     return NewInternalError(
         absl::StrCat("failed to marshal public key: ", SslErrorToString()),
@@ -444,8 +445,8 @@ absl::Status RsaVerifyPkcs1(RSA* public_key, const EVP_MD* hash,
         CKR_SIGNATURE_LEN_RANGE, SOURCE_LOCATION);
   }
 
-  if (!RSA_verify(EVP_MD_type(hash), digest.data(), digest.size(),
-                  signature.data(), signature.size(), public_key)) {
+  if (RSA_verify(EVP_MD_type(hash), digest.data(), digest.size(),
+                 signature.data(), signature.size(), public_key) != 1) {
     return NewInvalidArgumentError(
         absl::StrCat("verification failed: ", SslErrorToString()),
         CKR_SIGNATURE_INVALID, SOURCE_LOCATION);
@@ -472,8 +473,9 @@ absl::Status RsaVerifyPss(RSA* public_key, const EVP_MD* hash,
         CKR_SIGNATURE_LEN_RANGE, SOURCE_LOCATION);
   }
 
-  if (!RSA_verify_pss_mgf1(public_key, digest.data(), digest.size(), hash,
-                           nullptr, -1, signature.data(), signature.size())) {
+  if (RSA_verify_pss_mgf1(public_key, digest.data(), digest.size(), hash,
+                          nullptr, -1, signature.data(),
+                          signature.size()) != 1) {
     return NewInvalidArgumentError(
         absl::StrCat("verification failed: ", SslErrorToString()),
         CKR_SIGNATURE_INVALID, SOURCE_LOCATION);
@@ -513,9 +515,9 @@ absl::Status RsaVerifyRawPkcs1(RSA* public_key, absl::Span<const uint8_t> data,
   size_t out_length;
   // Note that RSA_verify_raw is simply public key decryption. It's up to
   // us to verify that `data` matches the decryption result.
-  if (!RSA_verify_raw(public_key, &out_length, recovered.data(),
-                      recovered.size(), signature.data(), signature.size(),
-                      RSA_PKCS1_PADDING)) {
+  if (RSA_verify_raw(public_key, &out_length, recovered.data(),
+                     recovered.size(), signature.data(), signature.size(),
+                     RSA_PKCS1_PADDING) != 1) {
     return NewInvalidArgumentError(
         absl::StrCat("verification failed: ", SslErrorToString()),
         CKR_SIGNATURE_INVALID, SOURCE_LOCATION);
@@ -544,7 +546,7 @@ std::string SslErrorToString() {
   ERR_print_errors(bio.get());
   const uint8_t* buf;
   size_t buf_len;
-  if (!BIO_mem_contents(bio.get(), &buf, &buf_len) || buf_len == 0) {
+  if (BIO_mem_contents(bio.get(), &buf, &buf_len) != 1 || buf_len == 0) {
     return "(error could not be retrieved from the SSL stack)";
   }
   return std::string(reinterpret_cast<const char*>(buf), buf_len);
