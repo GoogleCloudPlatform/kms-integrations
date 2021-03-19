@@ -66,6 +66,29 @@ build:windows --java_toolchain=@bazel_tools//tools/jdk:toolchain_java11
 # x86 builds on amd64
 build:m32 --copt=-m32 --linkopt=-m32 --test_tag_filters=-no_m32
 
+build:san --build_tests_only
+build:san --test_tag_filters=-no_san
+build:san --strip=never
+build:san --copt=-DGPR_NO_DIRECT_SYSCALLS
+
+build:asan --config=san
+build:asan --copt=-fsanitize=address
+build:asan --copt=-fsanitize=undefined
+build:asan --copt=-O0
+build:asan --copt=-fno-omit-frame-pointer
+build:asan --copt=-DGRPC_ASAN
+build:asan --copt=-DGRPC_UBSAN
+build:asan --copt=-DADDRESS_SANITIZER  # used by absl
+build:asan --linkopt=-fsanitize=address
+build:asan --linkopt=-fsanitize=undefined
+build:asan --action_env=ASAN_OPTIONS=detect_leaks=1:color=always
+
+build:tsan --config=san
+build:tsan --copt=-fsanitize=thread
+build:tsan --copt=-fno-omit-frame-pointer
+build:tsan --copt=-DGRPC_TSAN
+build:tsan --linkopt=-fsanitize=thread
+
 # Import from user.bazelrc if it exists. Keep this at the end of the file so
 # that local options can override options that are declared in this file.
 # https://docs.bazel.build/versions/master/best-practices.html#using-the-bazelrc-file

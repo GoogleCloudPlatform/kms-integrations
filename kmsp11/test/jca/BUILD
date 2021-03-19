@@ -40,7 +40,14 @@ cc_binary(
 java_test(
     name = "SignatureTest",
     srcs = ["SignatureTest.java"],
-    tags = ["no_m32"],
+    tags = [
+        # The workspace rules pull in 64-bit Java on 64-bit hosts, so we can't
+        # test with a 32-bit shared library.
+        "no_m32",
+        # The Java runtime we pull in with the workspace rules doesn't have
+        # sanitizer support.
+        "no_san",
+    ],
     test_class = "kmsp11.test.jca.SignatureTest",
     deps = [
         ":JcaTestFixture",

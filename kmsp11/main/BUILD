@@ -56,6 +56,10 @@ cc_test(
         "//:windows": [],
         "//conditions:default": ["fork_test.cc"],
     }),
+    tags = [
+        # This is experimental behavior; skip sanitizers for now.
+        "no_san",
+    ],
     deps = [
         ":bridge",
         "//kmsp11/test",
