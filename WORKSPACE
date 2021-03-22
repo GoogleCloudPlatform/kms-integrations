@@ -13,11 +13,23 @@ http_archive(
 )
 
 http_archive(
-    name = "boringssl",  # 2021-03-18
-    sha256 = "9f263cce1eb9d3429809637c8f62961e9f7b14d814902ca330a1678e9ddf49cd",
-    strip_prefix = "boringssl-dfa7c61bc554788901ee60940b30e5f3fc83f5ac",
-    url = "https://github.com/google/boringssl/archive/dfa7c61bc554788901ee60940b30e5f3fc83f5ac.tar.gz",
+    name = "io_bazel_rules_go",  # v0.26.0 / 2021-03-08
+    # Patch raw PKCS #1 support into rules_go's copy of googleapis.
+    patch_args = [
+        "-E",
+        "-p1",
+    ],
+    patches = ["//:third_party/rules_go.patch"],
+    sha256 = "7c10271940c6bce577d51a075ae77728964db285dac0a46614a7934dc34303e6",
+    urls = [
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.26.0/rules_go-v0.26.0.tar.gz",
+        "https://github.com/bazelbuild/rules_go/releases/download/v0.26.0/rules_go-v0.26.0.tar.gz",
+    ],
 )
+
+load("boringssl.bzl", "select_boringssl")
+
+select_boringssl()
 
 http_archive(
     name = "com_github_gflags_gflags",  # 2020-03-18
@@ -75,21 +87,6 @@ http_archive(
     url = "https://github.com/protocolbuffers/protobuf/archive/3172ab8ff97aab005d7734627409faa166174232.zip",
 )
 
-http_archive(
-    name = "io_bazel_rules_go",  # v0.26.0 / 2021-03-08
-    # Patch raw PKCS #1 support into rules_go's copy of googleapis.
-    patch_args = [
-        "-E",
-        "-p1",
-    ],
-    patches = ["//:third_party/rules_go.patch"],
-    sha256 = "7c10271940c6bce577d51a075ae77728964db285dac0a46614a7934dc34303e6",
-    urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.26.0/rules_go-v0.26.0.tar.gz",
-        "https://github.com/bazelbuild/rules_go/releases/download/v0.26.0/rules_go-v0.26.0.tar.gz",
-    ],
-)
-
 # Keep this sync'd to the version used in rules_go, above. Otherwise, we're
 # working with two versions of the same repo.
 # https://github.com/bazelbuild/rules_go/blob/v0.26.0/go/private/repositories.bzl#L243
@@ -139,6 +136,22 @@ http_archive(
     strip_prefix = "rules_jvm_external-4.0",
     url = "https://github.com/bazelbuild/rules_jvm_external/archive/4.0.tar.gz",
 )
+
+http_archive(
+    name = "rules_foreign_cc",  # 2021-03-18
+    patch_args = [
+        "-E",
+        "-p1",
+    ],
+    patches = ["//:third_party/rules_foreign_cc.patch"],
+    sha256 = "776d661daddf614b678abfb36f9624335fbad2d618afbf773759d421bcef49c5",
+    strip_prefix = "rules_foreign_cc-d02390f1363cdd2ba5a7f7907a481503d483d569",
+    url = "https://github.com/bazelbuild/rules_foreign_cc/archive/d02390f1363cdd2ba5a7f7907a481503d483d569.tar.gz",
+)
+
+load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_dependencies")
+
+rules_foreign_cc_dependencies(register_built_tools = False)
 
 # Transitive Dependencies
 

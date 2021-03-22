@@ -18,6 +18,11 @@ config_setting(
     constraint_values = ["@platforms//os:windows"],
 )
 
+config_setting(
+    name = "fips",
+    values = {"define": "fips=1"},
+)
+
 # A target to encompass tests that are tagged 'manual'
 # but should be run for release builds.
 test_suite(

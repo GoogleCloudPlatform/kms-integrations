@@ -1,0 +1,86 @@
+From 05cd93068b0a553afc48f69acbceae10c6a17593 Mon Sep 17 00:00:00 2001
+From: Manoj Gupta <manojgupta@google.com>
+Date: Mon, 26 Aug 2019 09:13:58 -0700
+Subject: [PATCH] Add Fallthru support for clang 10.
+
+clang has gained supoprted for __attribute__ ((fallthrough))
+in https://reviews.llvm.org/rL369414.
+Detect the support in clang and enable it as OPENSSL_FALLTHROUGH.
+This is needed to fix ToT clang builds.
+
+Bug: chromium:997709
+Test: CQ
+Change-Id: Iefa17687f6b5e8c95f359f167e9049d9a69c5302
+Reviewed-on: https://boringssl-review.googlesource.com/c/boringssl/+/37244
+Reviewed-by: David Benjamin <davidben@google.com>
+Commit-Queue: David Benjamin <davidben@google.com>
+---
+ crypto/internal.h | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/crypto/internal.h b/crypto/internal.h
+index 76a317aae..3c682e898 100644
+--- a/crypto/internal.h
++++ b/crypto/internal.h
+@@ -187,6 +187,12 @@ typedef __uint128_t uint128_t;
+ #define OPENSSL_FALLTHROUGH [[gnu::fallthrough]]
+ #elif defined(__GNUC__) && __GNUC__ >= 7 // gcc 7
+ #define OPENSSL_FALLTHROUGH __attribute__ ((fallthrough))
++#elif defined(__clang__)
++#if __has_attribute(fallthrough)
++#define OPENSSL_FALLTHROUGH __attribute__ ((fallthrough))
++#else // clang versions that do not support fallthrough.
++#define OPENSSL_FALLTHROUGH
++#endif
+ #else // C++11 on gcc 6, and all other cases
+ #define OPENSSL_FALLTHROUGH
+ #endif
+
+From 1e547722d412a77f2708bf92cfef75c287d2cb9e Mon Sep 17 00:00:00 2001
+From: Manoj Gupta <manojgupta@google.com>
+Date: Mon, 26 Aug 2019 16:30:06 -0700
+Subject: [PATCH] Add OPENSSL_FALLTHROUGH to a few files.
+
+This is a followup of
+https://boringssl-review.googlesource.com/c/boringssl/+/37244
+
+There are a few files that needs the OPENSSL_FALLTHROUGH
+annotation so that they compile with clang.
+
+Bug: chromium:997709
+Test: CQ
+Change-Id: I05f9f85fdb39fbcb8c1193a7b0c335287022719d
+Reviewed-on: https://boringssl-review.googlesource.com/c/boringssl/+/37247
+Commit-Queue: David Benjamin <davidben@google.com>
+Reviewed-by: David Benjamin <davidben@google.com>
+---
+ crypto/asn1/tasn_enc.c            | 2 +-
+ crypto/fipsmodule/cipher/cipher.c | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/crypto/asn1/tasn_enc.c b/crypto/asn1/tasn_enc.c
+index d89ec8a73..3722a5191 100644
+--- a/crypto/asn1/tasn_enc.c
++++ b/crypto/asn1/tasn_enc.c
+@@ -192,7 +192,7 @@ int ASN1_item_ex_i2d(ASN1_VALUE **pval, unsigned char **out,
+         /* Use indefinite length constructed if requested */
+         if (aclass & ASN1_TFLG_NDEF)
+             ndef = 2;
+-        /* fall through */
++        OPENSSL_FALLTHROUGH;
+ 
+     case ASN1_ITYPE_SEQUENCE:
+         i = asn1_enc_restore(&seqcontlen, out, pval, it);
+diff --git a/crypto/fipsmodule/cipher/cipher.c b/crypto/fipsmodule/cipher/cipher.c
+index 7c6fa8e48..c50c6c5cc 100644
+--- a/crypto/fipsmodule/cipher/cipher.c
++++ b/crypto/fipsmodule/cipher/cipher.c
+@@ -192,7 +192,7 @@ int EVP_CipherInit_ex(EVP_CIPHER_CTX *ctx, const EVP_CIPHER *cipher,
+ 
+       case EVP_CIPH_CFB_MODE:
+         ctx->num = 0;
+-        // fall-through
++        OPENSSL_FALLTHROUGH;
+ 
+       case EVP_CIPH_CBC_MODE:
+         assert(EVP_CIPHER_CTX_iv_length(ctx) <= sizeof(ctx->iv));

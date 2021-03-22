@@ -1,0 +1,47 @@
+diff --git a/crypto/fipsmodule/rand/urandom.c b/crypto/fipsmodule/rand/urandom.c
+index 56e4fbd25..18e239ab5 100644
+--- a/crypto/fipsmodule/rand/urandom.c
++++ b/crypto/fipsmodule/rand/urandom.c
+@@ -53,6 +53,10 @@
+ #endif
+ #endif  // OPENSSL_LINUX
+ 
++#if defined(OPENSSL_FREEBSD)
++#define URANDOM_BLOCKS_FOR_ENTROPY
++#endif
++
+ #include <openssl/thread.h>
+ #include <openssl/mem.h>
+ 
+@@ -208,11 +212,11 @@ static void init_once(void) {
+     }
+   }
+ 
+-#if defined(BORINGSSL_FIPS)
+-  // In FIPS mode we ensure that the kernel has sufficient entropy before
+-  // continuing. This is automatically handled by getrandom, which requires
+-  // that the entropy pool has been initialised, but for urandom we have to
+-  // poll.
++#if defined(BORINGSSL_FIPS) && !defined(URANDOM_BLOCKS_FOR_ENTROPY)
++  // In FIPS mode on platforms where urandom doesn't block at startup, we ensure
++  // that the kernel has sufficient entropy before continuing. This is
++  // automatically handled by getrandom, which requires that the entropy pool
++  // has been initialised, but for urandom we have to poll.
+   for (;;) {
+     int entropy_bits;
+     if (ioctl(fd, RNDGETENTCNT, &entropy_bits)) {
+diff --git a/include/openssl/base.h b/include/openssl/base.h
+index 8acb0c368..1616f88ba 100644
+--- a/include/openssl/base.h
++++ b/include/openssl/base.h
+@@ -150,6 +150,10 @@ extern "C" {
+ #define OPENSSL_ANDROID
+ #endif
+ 
++#if defined(__FreeBSD__)
++#define OPENSSL_FREEBSD
++#endif
++
+ // BoringSSL requires platform's locking APIs to make internal global state
+ // thread-safe, including the PRNG. On some single-threaded embedded platforms,
+ // locking APIs may not exist, so this dependency may be disabled with the

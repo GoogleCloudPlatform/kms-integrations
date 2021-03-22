@@ -121,21 +121,6 @@ TEST_F(BridgeTest, InitializeFailsWithArgsNoConfig) {
                        HasSubstr("cannot load configuration")));
 }
 
-TEST(FipsTest,  // Death tests can't use fixtures on Windows.
-     InitializeFailsFipsSelfTest) {
-  std::string config_file = std::tmpnam(nullptr);
-  std::ofstream(config_file, std::ofstream::out | std::ofstream::app)
-      << "experimental_require_fips_mode: true" << std::endl;
-
-  CK_C_INITIALIZE_ARGS init_args = {0};
-  init_args.flags = CKF_OS_LOCKING_OK;
-  init_args.pReserved = const_cast<char*>(config_file.c_str());
-
-  EXPECT_DEATH(
-      Initialize(&init_args).IgnoreError(),
-      AllOf(HasSubstr("FIPS tests failed"), HasSubstr("FIPS_mode()=0")));
-}
-
 TEST_F(BridgeTest, InitializationWarningsAreLogged) {
   // Create a key that will be skipped at init time (purpose==ENCRYPT_DECRYPT)
   auto fake_client = fake_kms_->NewClient();

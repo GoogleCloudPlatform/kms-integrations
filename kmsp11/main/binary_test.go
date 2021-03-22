@@ -2,6 +2,7 @@ package binarytest
 
 import (
 	"debug/elf"
+	"flag"
 	"io/ioutil"
 	"log"
 	"os"
@@ -16,6 +17,13 @@ import (
 	"github.com/google/go-cmp/cmp"
 
 	"kmsp11"
+)
+
+var (
+	minBinarySizeMB = flag.Int64("min_binary_size_mb", 4,
+		"the minimum size of the libkmsp11.so binary, in megabytes")
+	maxBinarySizeMB = flag.Int64("max_binary_size_mb", 12,
+		"the maximum size of the libkmsp11.so binary, in megabytes")
 )
 
 func resolveRunfile(t *testing.T, name string) string {
@@ -48,8 +56,10 @@ func TestBinarySize(t *testing.T) {
 		t.Fatalf("error retrieving file statistics: %v", err)
 	}
 
-	if info.Size() < 4*1024*1024 || info.Size() > 12*1024*1024 {
-		t.Errorf("unexpected file size %d bytes, want >= 4MB and <= 12 MB", info.Size())
+	if info.Size() < *minBinarySizeMB*1024*1024 ||
+		info.Size() > *maxBinarySizeMB*1024*1024 {
+		t.Errorf("unexpected file size %d bytes, want >= %d MB and <= %dMB",
+			info.Size(), *minBinarySizeMB, *maxBinarySizeMB)
 	}
 }
 

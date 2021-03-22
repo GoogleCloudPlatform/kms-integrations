@@ -50,6 +50,22 @@ cc_test(
 )
 
 cc_test(
+    name = "fips_test",
+    size = "small",
+    srcs = select({
+        "//:fips": ["fips_test_fips_mode.cc"],
+        "//conditions:default": ["fips_test_nonfips_mode.cc"],
+    }),
+    deps = [
+        ":bridge",
+        "//kmsp11/test",
+        "//kmsp11/test/fakekms/cpp:fakekms",
+        "@com_google_absl//absl/cleanup",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "fork_test",
     size = "small",
     srcs = select({
@@ -183,6 +199,15 @@ cc_binary(
 go_test(
     name = "binary_test",
     srcs = ["binary_test.go"],
+    args = select({
+        # BoringCrypto in FIPS mode makes much bigger binaries than we get
+        # under non-FIPS conditions.
+        "//:fips": [
+            "-min_binary_size_mb=16",
+            "-max_binary_size_mb=24",
+        ],
+        "//conditions:default": [],
+    }),
     data = [
         ":function_defs.textproto",
         ":libkmsp11.so",

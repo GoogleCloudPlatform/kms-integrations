@@ -27,7 +27,7 @@ sudo mkdir -p /usr/local/etc/pkg/repos
 echo 'FreeBSD: { url: "pkg+http://pkg.FreeBSD.org/${ABI}/latest" }' |\
   sudo tee /usr/local/etc/pkg/repos/FreeBSD.conf
 sudo pkg update -f
-sudo pkg install -y bazel-4.0.0
+sudo pkg install -y bazel-4.0.0 cmake ninja
 
 # Make Bazel use a JDK that isn't a million years old, which fixes weird
 # gRPC connection issues with remote build cache. :-(
