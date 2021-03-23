@@ -21,7 +21,7 @@ cd "${PROJECT_ROOT}"
 export RESULTS_DIR="${KOKORO_ARTIFACTS_DIR}/results"
 mkdir "${RESULTS_DIR}"
 
-use_bazel.sh 3.7.0
+use_bazel.sh 4.0.0
 
 # Ensure that build outputs and test logs are uploaded even on failure
 _upload_artifacts() {
@@ -35,4 +35,4 @@ _upload_artifacts() {
 }
 trap _upload_artifacts EXIT
 
-bazel test -c opt ${BAZEL_EXTRA_ARGS} ... --keep_going
+bazel test -c opt ${BAZEL_EXTRA_ARGS} ... :release_tests --keep_going

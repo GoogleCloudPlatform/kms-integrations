@@ -21,8 +21,13 @@ cd "${PROJECT_ROOT}"
 export RESULTS_DIR="${KOKORO_ARTIFACTS_DIR}/results"
 mkdir "${RESULTS_DIR}"
 
+# Use the 'latest' package repository so that we can get Bazel 4.0.0
+# See https://www.freebsd.org/cgi/man.cgi?query=pkg.conf
+sudo mkdir -p /usr/local/etc/pkg/repos
+echo 'FreeBSD: { url: "pkg+http://pkg.FreeBSD.org/${ABI}/latest" }' |\
+  sudo tee /usr/local/etc/pkg/repos/FreeBSD.conf
 sudo pkg update -f
-sudo pkg install -y bazel-3.7.0
+sudo pkg install -y bazel-4.0.0
 
 # Ensure that build outputs and test logs are uploaded even on failure
 _upload_artifacts() {
@@ -36,4 +41,4 @@ _upload_artifacts() {
 }
 trap _upload_artifacts EXIT
 
-bazel test -c opt ${BAZEL_EXTRA_ARGS} ... --keep_going
+bazel test -c opt ${BAZEL_EXTRA_ARGS} ... :release_tests --keep_going

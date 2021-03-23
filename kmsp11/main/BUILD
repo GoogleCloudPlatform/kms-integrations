@@ -180,6 +180,29 @@ cc_binary(
            }),
 )
 
+go_test(
+    name = "binary_test",
+    srcs = ["binary_test.go"],
+    data = [
+        ":function_defs.textproto",
+        ":libkmsp11.so",
+    ],
+    tags = [
+        # This test is manual because:
+        # - It will fail on devs' workstations if devs have a modern glibc.
+        # - It will fail in asan/tsan builds.
+        # This test should always be run when building releases, and is included
+        # in the `//:release_tests` target.
+        "manual",
+    ],
+    deps = [
+        ":function_def_go_proto",
+        "@com_github_golang_protobuf//proto:go_default_library",
+        "@com_github_google_go_cmp//cmp:go_default_library",
+        "@io_bazel_rules_go//go/tools/bazel:go_default_library",
+    ],
+)
+
 function_def_template(
     name = "linux_exports",
     src = "linux_exports.lds.template",

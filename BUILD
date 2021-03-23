@@ -17,3 +17,11 @@ config_setting(
     name = "windows",
     constraint_values = ["@platforms//os:windows"],
 )
+
+# A target to encompass tests that are tagged 'manual'
+# but should be run for release builds.
+test_suite(
+    name = "release_tests",
+    tags = ["manual"],
+    tests = ["//kmsp11/main:binary_test"],
+)
