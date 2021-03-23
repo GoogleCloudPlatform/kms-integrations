@@ -25,7 +25,7 @@ absl::Status ValidatePssParameters(Object* key, void* parameters,
   RETURN_IF_ERROR(EnsureHashMatches(params->hashAlg, digest));
   RETURN_IF_ERROR(EnsureMgf1HashMatches(params->mgf, digest));
 
-  int expected_salt_length = EVP_MD_size(digest);
+  size_t expected_salt_length = EVP_MD_size(digest);
   if (params->sLen != expected_salt_length) {
     return InvalidMechanismParamError(
         absl::StrFormat("expected salt length for key %s is %d, but %d "

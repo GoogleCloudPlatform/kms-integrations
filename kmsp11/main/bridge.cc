@@ -175,7 +175,7 @@ absl::Status GetSlotList(CK_BBOOL tokenPresent, CK_SLOT_ID_PTR pSlotList,
     return result;
   }
 
-  for (int i = 0; i < provider->token_count(); i++) {
+  for (size_t i = 0; i < provider->token_count(); i++) {
     pSlotList[i] = i;
   }
   *pulCount = provider->token_count();
@@ -299,7 +299,7 @@ absl::Status GetMechanismList(CK_SLOT_ID slotID,
     return result;
   }
 
-  for (int i = 0; i < types.size(); i++) {
+  for (size_t i = 0; i < types.size(); i++) {
     pMechanismList[i] = types[i];
   }
   *pulCount = types.size();

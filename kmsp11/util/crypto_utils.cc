@@ -31,7 +31,7 @@ static const ASN1_TIME kUnixEpoch = [] {
 template <typename T>
 absl::StatusOr<std::string> MarshalDer(T* obj,
                                        int i2d_function(T*, uint8_t**)) {
-  int len = i2d_function(obj, nullptr);
+  size_t len = i2d_function(obj, nullptr);
   if (len <= 0) {
     return NewInternalError(
         absl::StrCat("failed to compute output length during DER marshaling: ",
@@ -186,7 +186,7 @@ absl::Status EcdsaVerifyP1363(EC_KEY* public_key, const EVP_MD* hash,
         CKR_SIGNATURE_LEN_RANGE, SOURCE_LOCATION);
   }
 
-  int max_len = EcdsaSigLengthP1363(EC_KEY_get0_group(public_key));
+  size_t max_len = EcdsaSigLengthP1363(EC_KEY_get0_group(public_key));
   if (signature.length() > max_len) {
     return NewInvalidArgumentError(
         absl::StrFormat(
