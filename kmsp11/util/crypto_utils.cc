@@ -204,8 +204,8 @@ absl::Status EcdsaVerifyP1363(EC_KEY* public_key, const EVP_MD* hash,
         SOURCE_LOCATION);
   }
 
-  if (ECDSA_do_verify(digest.data(), digest.size(), sig.get(), public_key)
-      != 1) {
+  if (ECDSA_do_verify(digest.data(), digest.size(), sig.get(), public_key) !=
+      1) {
     return NewInvalidArgumentError(
         absl::StrCat("verification failed: ", SslErrorToString()),
         CKR_SIGNATURE_INVALID, SOURCE_LOCATION);
@@ -523,10 +523,8 @@ absl::Status RsaVerifyRawPkcs1(RSA* public_key, absl::Span<const uint8_t> data,
         CKR_SIGNATURE_INVALID, SOURCE_LOCATION);
   }
 
-  // TODO(b/160310720): Use a std::equal overload that considers out_length.
-  // (See internal version of raw_pkcs1.cc)
-  if (out_length != data.size() ||
-      !std::equal(data.begin(), data.end(), recovered.begin())) {
+  if (!std::equal(data.begin(), data.end(), recovered.begin(),
+                  recovered.begin() + out_length)) {
     return NewInvalidArgumentError(
         "verification failed: recovered data mismatches expected",
         CKR_SIGNATURE_INVALID, SOURCE_LOCATION);

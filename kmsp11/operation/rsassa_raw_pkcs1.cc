@@ -1,6 +1,7 @@
 #include "kmsp11/operation/rsassa_raw_pkcs1.h"
 
 #include "absl/strings/string_view.h"
+#include "glog/logging.h"
 #include "kmsp11/operation/crypter_interfaces.h"
 #include "kmsp11/operation/preconditions.h"
 #include "kmsp11/util/crypto_utils.h"
@@ -30,11 +31,20 @@ size_t RsaRawPkcs1Signer::signature_length() { return RSA_size(key_.get()); }
 absl::Status RsaRawPkcs1Signer::Sign(KmsClient* client,
                                      absl::Span<const uint8_t> data,
                                      absl::Span<uint8_t> signature) {
+  size_t key_byte_length = RSA_size(key_.get());
   constexpr size_t kRsaPkcs1OverheadBytes = 11;
-  if (data.size() + kRsaPkcs1OverheadBytes > RSA_size(key_.get())) {
-    // TODO(bdhess): better error message
-    return NewInvalidArgumentError("data is too large", CKR_DATA_LEN_RANGE,
-                                   SOURCE_LOCATION);
+  // I don't know how we'd end up with a <11-byte key, but for completeness, and
+  // to avoid unsigned underflow...
+  CHECK_GE(key_byte_length, kRsaPkcs1OverheadBytes);
+  size_t max_data_byte_length = key_byte_length - kRsaPkcs1OverheadBytes;
+
+  if (data.size() > max_data_byte_length) {
+    return NewInvalidArgumentError(
+        absl::StrFormat("data length (%d bytes) exceeds maximum allowed "
+                        "for a %d-bit key (%d bytes)",
+                        data.size(), RSA_bits(key_.get()),
+                        max_data_byte_length),
+        CKR_DATA_LEN_RANGE, SOURCE_LOCATION);
   }
 
   if (signature.size() != signature_length()) {
