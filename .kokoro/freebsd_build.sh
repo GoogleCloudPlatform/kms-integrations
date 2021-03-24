@@ -29,6 +29,14 @@ echo 'FreeBSD: { url: "pkg+http://pkg.FreeBSD.org/${ABI}/latest" }' |\
 sudo pkg update -f
 sudo pkg install -y bazel-4.0.0
 
+# Make Bazel use a JDK that isn't a million years old, which fixes weird
+# gRPC connection issues with remote build cache. :-(
+export JAVA_HOME=/usr/local/openjdk11
+
+# Configure user.bazelrc with remote build caching options
+cp .kokoro/remote_cache.bazelrc user.bazelrc
+echo "build --remote_default_exec_properties=cache-silo-key=freebsd" >> user.bazelrc
+
 # Ensure that build outputs and test logs are uploaded even on failure
 _upload_artifacts() {
   if [ -e "${PROJECT_ROOT}/bazel-bin/kmsp11/main/libkmsp11.so" ]; then

@@ -29,6 +29,10 @@ sudo tar xf "${KOKORO_GFILE_DIR}/${LLVM_DIST}.tar.xz" -C /opt
 
 use_bazel.sh 4.0.0
 
+# Configure user.bazelrc with remote build caching options
+cp .kokoro/remote_cache.bazelrc user.bazelrc
+echo "build --remote_default_exec_properties=cache-silo-key=linux" >> user.bazelrc
+
 # Ensure that build outputs and test logs are uploaded even on failure
 _upload_artifacts() {
   if [ -e "${PROJECT_ROOT}/bazel-bin/kmsp11/main/libkmsp11.so" ]; then

@@ -11,6 +11,10 @@ mkdir "%RESULTS_DIR%"
 
 choco install -y bazel --version 4.0.0
 
+:: Configure user.bazelrc with remote build caching options
+copy .kokoro\remote_cache.bazelrc user.bazelrc
+echo build --remote_default_exec_properties=cache-silo-key=windows >> user.bazelrc
+
 :: https://docs.bazel.build/versions/master/windows.html#build-c-with-msvc
 set BAZEL_VC=C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\
 
