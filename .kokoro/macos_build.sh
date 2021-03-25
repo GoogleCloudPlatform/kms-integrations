@@ -21,7 +21,18 @@ cd "${PROJECT_ROOT}"
 export RESULTS_DIR="${KOKORO_ARTIFACTS_DIR}/results"
 mkdir "${RESULTS_DIR}"
 
+# Unwrap our wrapped service account key
+export GOOGLE_APPLICATION_CREDENTIALS=${PROJECT_ROOT}/oss-tools-ci-key.json
+go run ./.kokoro/unwrap_key.go \
+  -wrapping_key_file=${KOKORO_KEYSTORE_DIR}/75220_token-wrapping-key \
+  -wrapped_key_file=${KOKORO_GFILE_DIR}/oss-tools-ci-key.json.enc \
+  > ${GOOGLE_APPLICATION_CREDENTIALS}
+
 use_bazel.sh 4.0.0
+
+# Configure user.bazelrc with remote build caching options
+cp .kokoro/remote_cache.bazelrc user.bazelrc
+echo "build --remote_default_exec_properties=cache-silo-key=macos" >> user.bazelrc
 
 # Ensure that build outputs and test logs are uploaded even on failure
 _upload_artifacts() {
