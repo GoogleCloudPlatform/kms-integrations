@@ -65,8 +65,9 @@ func TestGetPublicKeyEC(t *testing.T) {
 	}
 
 	want := &kmspb.PublicKey{
-		Name:      ckv.Name,
-		Algorithm: kmspb.CryptoKeyVersion_EC_SIGN_P256_SHA256,
+		Name:            ckv.Name,
+		Algorithm:       kmspb.CryptoKeyVersion_EC_SIGN_P256_SHA256,
+		ProtectionLevel: kmspb.ProtectionLevel_SOFTWARE,
 	}
 
 	opts := append(testutil.ProtoDiffOpts(), ignorePEMAndPEMCRC)
@@ -90,7 +91,8 @@ func TestGetPublicKeyRSA(t *testing.T) {
 		CryptoKey: &kmspb.CryptoKey{
 			Purpose: kmspb.CryptoKey_ASYMMETRIC_DECRYPT,
 			VersionTemplate: &kmspb.CryptoKeyVersionTemplate{
-				Algorithm: kmspb.CryptoKeyVersion_RSA_DECRYPT_OAEP_2048_SHA256,
+				Algorithm:       kmspb.CryptoKeyVersion_RSA_DECRYPT_OAEP_2048_SHA256,
+				ProtectionLevel: kmspb.ProtectionLevel_HSM,
 			},
 		},
 		SkipInitialVersionCreation: true,
@@ -107,8 +109,9 @@ func TestGetPublicKeyRSA(t *testing.T) {
 	}
 
 	want := &kmspb.PublicKey{
-		Name:      ckv.Name,
-		Algorithm: kmspb.CryptoKeyVersion_RSA_DECRYPT_OAEP_2048_SHA256,
+		Name:            ckv.Name,
+		Algorithm:       kmspb.CryptoKeyVersion_RSA_DECRYPT_OAEP_2048_SHA256,
+		ProtectionLevel: kmspb.ProtectionLevel_HSM,
 	}
 
 	opts := append(testutil.ProtoDiffOpts(), ignorePEMAndPEMCRC)

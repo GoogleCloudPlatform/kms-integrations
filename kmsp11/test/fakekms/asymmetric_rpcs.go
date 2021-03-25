@@ -55,10 +55,11 @@ func (f *fakeKMS) GetPublicKey(ctx context.Context, req *kmspb.GetPublicKeyReque
 	})
 
 	return &kmspb.PublicKey{
-		Name:      req.Name,
-		Algorithm: ckv.pb.Algorithm,
-		Pem:       string(pemPub),
-		PemCrc32C: crc32c(pemPub),
+		Name:            req.Name,
+		Algorithm:       ckv.pb.Algorithm,
+		Pem:             string(pemPub),
+		PemCrc32C:       crc32c(pemPub),
+		ProtectionLevel: ckv.pb.ProtectionLevel,
 	}, nil
 }
 
@@ -96,6 +97,7 @@ func (f *fakeKMS) AsymmetricDecrypt(ctx context.Context, req *kmspb.AsymmetricDe
 	return &kmspb.AsymmetricDecryptResponse{
 		Plaintext:       pt,
 		PlaintextCrc32C: crc32c(pt),
+		ProtectionLevel: ckv.pb.ProtectionLevel,
 	}, nil
 }
 
@@ -153,9 +155,9 @@ func (f *fakeKMS) AsymmetricSign(ctx context.Context, req *kmspb.AsymmetricSignR
 	}
 
 	return &kmspb.AsymmetricSignResponse{
-		// Not yet emitted (cl/342265843)
-		// Name:            req.Name,
+		Name:            req.Name,
 		Signature:       sig,
 		SignatureCrc32C: crc32c(sig),
+		ProtectionLevel: ckv.pb.ProtectionLevel,
 	}, nil
 }

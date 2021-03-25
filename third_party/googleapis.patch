@@ -1,10 +1,27 @@
 diff --git a/google/cloud/kms/v1/resources.proto b/google/cloud/kms/v1/resources.proto
 old mode 100644
 new mode 100755
-index 88e31bd95..4790142ae
+index 88e31bd95..a84ec8894
 --- a/google/cloud/kms/v1/resources.proto
 +++ b/google/cloud/kms/v1/resources.proto
-@@ -268,6 +268,15 @@ message CryptoKeyVersion {
+@@ -141,6 +141,16 @@ message CryptoKey {
+   // Labels with user-defined metadata. For more information, see
+   // [Labeling Keys](https://cloud.google.com/kms/docs/labeling-keys).
+   map<string, string> labels = 10;
++
++  // Whether this key may contain imported versions only.
++  bool import_only = 13 [(google.api.field_behavior) = IMMUTABLE];
++
++  // The period of time that versions of this key spend in the
++  // [DESTROY_SCHEDULED][CryptoKeyVersion.CryptoKeyVersionState.DESTROY_SCHEDULED]
++  // state before transitioning to
++  // [DESTROYED][CryptoKeyVersion.CryptoKeyVersionState.DESTROYED]. If not
++  // specified at creation time, the default duration is 24 hours.
++  google.protobuf.Duration destroy_scheduled_duration = 14 [(google.api.field_behavior) = IMMUTABLE];
+ }
+ 
+ // A [CryptoKeyVersionTemplate][google.cloud.kms.v1.CryptoKeyVersionTemplate] specifies the properties to use when creating
+@@ -268,6 +278,15 @@ message CryptoKeyVersion {
      // RSASSA-PKCS1-v1_5 with a 4096 bit key and a SHA512 digest.
      RSA_SIGN_PKCS1_4096_SHA512 = 16;
  
@@ -20,10 +37,20 @@ index 88e31bd95..4790142ae
      // RSAES-OAEP 2048 bit key with a SHA256 digest.
      RSA_DECRYPT_OAEP_2048_SHA256 = 8;
  
+@@ -440,6 +459,9 @@ message PublicKey {
+   //
+   // NOTE: This field is in Beta.
+   string name = 4;
++
++  // The [ProtectionLevel][] of the [CryptoKeyVersion][] public key.
++  ProtectionLevel protection_level = 5;
+ }
+ 
+ // An [ImportJob][google.cloud.kms.v1.ImportJob] can be used to create [CryptoKeys][google.cloud.kms.v1.CryptoKey] and
 diff --git a/google/cloud/kms/v1/service.proto b/google/cloud/kms/v1/service.proto
 old mode 100644
 new mode 100755
-index 65d20771f..923802743
+index 65d20771f..b0b8200c1
 --- a/google/cloud/kms/v1/service.proto
 +++ b/google/cloud/kms/v1/service.proto
 @@ -837,7 +837,7 @@ message AsymmetricSignRequest {
@@ -64,7 +91,7 @@ index 65d20771f..923802743
  }
  
  // Request message for [KeyManagementService.AsymmetricDecrypt][google.cloud.kms.v1.KeyManagementService.AsymmetricDecrypt].
-@@ -1000,6 +1022,18 @@ message AsymmetricSignResponse {
+@@ -1000,6 +1022,21 @@ message AsymmetricSignResponse {
    //
    // NOTE: This field is in Beta.
    string name = 4;
@@ -80,6 +107,19 @@ index 65d20771f..923802743
 +  //
 +  // NOTE: This field is in Beta.
 +  bool verified_data_crc32c = 5;
++
++  // The [ProtectionLevel][] of the [CryptoKeyVersion][] used for signing.
++  ProtectionLevel protection_level = 6;
  }
  
  // Response message for [KeyManagementService.AsymmetricDecrypt][google.cloud.kms.v1.KeyManagementService.AsymmetricDecrypt].
+@@ -1033,6 +1070,9 @@ message AsymmetricDecryptResponse {
+   //
+   // NOTE: This field is in Beta.
+   bool verified_ciphertext_crc32c = 3;
++
++  // The [ProtectionLevel][] of the [CryptoKeyVersion][] used for signing.
++  ProtectionLevel protection_level = 4;
+ }
+ 
+ // Request message for [KeyManagementService.UpdateCryptoKeyPrimaryVersion][google.cloud.kms.v1.KeyManagementService.UpdateCryptoKeyPrimaryVersion].

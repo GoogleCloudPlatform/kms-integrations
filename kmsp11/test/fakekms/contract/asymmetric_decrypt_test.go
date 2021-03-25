@@ -62,6 +62,7 @@ func TestAsymmetricDecrypt(t *testing.T) {
 	want := &kmspb.AsymmetricDecryptResponse{
 		Plaintext:       pt,
 		PlaintextCrc32C: wrapperspb.Int64(int64(crc32.Checksum(pt, crc32CTable))),
+		ProtectionLevel: kmspb.ProtectionLevel_SOFTWARE,
 	}
 
 	if diff := cmp.Diff(want, got, testutil.ProtoDiffOpts()...); diff != "" {

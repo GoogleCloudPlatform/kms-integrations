@@ -20,6 +20,7 @@ go_test(
         "@org_golang_google_protobuf//proto:go_default_library",
         "@org_golang_google_protobuf//reflect/protoreflect:go_default_library",
         "@org_golang_google_protobuf//testing/protocmp:go_default_library",
+        "@org_golang_google_protobuf//types/known/durationpb:go_default_library",
         "@org_golang_google_protobuf//types/known/wrapperspb:go_default_library",
     ],
 )

@@ -4,6 +4,7 @@ import (
 	"context"
 	"oss-tools/kmsp11/test/fakekms/testutil"
 	"testing"
+	"time"
 
 	"github.com/golang/protobuf/ptypes"
 	"github.com/google/go-cmp/cmp"
@@ -32,8 +33,13 @@ func TestDestroyEnabledCryptoKeyVersion(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	expectedDestroyTime := time.Now().Add(24 * time.Hour).Truncate(time.Microsecond)
+
 	ckv.State = kmspb.CryptoKeyVersion_DESTROY_SCHEDULED
-	ckv.DestroyTime = ptypes.TimestampNow()
+	ckv.DestroyTime, err = ptypes.TimestampProto(expectedDestroyTime)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if diff := cmp.Diff(ckv, got, testutil.ProtoDiffOpts()...); diff != "" {
 		t.Errorf("ckv proto mismatch on destroy RPC (-want +got): %s", diff)
@@ -69,8 +75,13 @@ func TestDestroyDisabledCryptoKeyVersion(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	expectedDestroyTime := time.Now().Add(24 * time.Hour).Truncate(time.Microsecond)
+
 	ckv.State = kmspb.CryptoKeyVersion_DESTROY_SCHEDULED
-	ckv.DestroyTime = ptypes.TimestampNow()
+	ckv.DestroyTime, err = ptypes.TimestampProto(expectedDestroyTime)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if diff := cmp.Diff(ckv, got, testutil.ProtoDiffOpts()...); diff != "" {
 		t.Errorf("ckv proto mismatch on destroy RPC (-want +got): %s", diff)

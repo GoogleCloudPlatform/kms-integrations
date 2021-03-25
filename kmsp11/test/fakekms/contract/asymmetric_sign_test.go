@@ -34,7 +34,8 @@ func TestECSign(t *testing.T) {
 		CryptoKey: &kmspb.CryptoKey{
 			Purpose: kmspb.CryptoKey_ASYMMETRIC_SIGN,
 			VersionTemplate: &kmspb.CryptoKeyVersionTemplate{
-				Algorithm: kmspb.CryptoKeyVersion_EC_SIGN_P384_SHA384,
+				ProtectionLevel: kmspb.ProtectionLevel_HSM,
+				Algorithm:       kmspb.CryptoKeyVersion_EC_SIGN_P384_SHA384,
 			},
 		},
 		SkipInitialVersionCreation: true,
@@ -68,8 +69,8 @@ func TestECSign(t *testing.T) {
 	}
 
 	want := &kmspb.AsymmetricSignResponse{
-		// Not yet emitted (cl/342265843)
-		// Name: ckv.Name,
+		Name:            ckv.Name,
+		ProtectionLevel: kmspb.ProtectionLevel_HSM,
 	}
 
 	opts := append(testutil.ProtoDiffOpts(), ignoreSignatureAndSignatureCRC)
@@ -131,8 +132,8 @@ func TestRSASignPKCS1(t *testing.T) {
 	}
 
 	want := &kmspb.AsymmetricSignResponse{
-		// Not yet emitted (cl/342265843)
-		// Name: ckv.Name,
+		Name:            ckv.Name,
+		ProtectionLevel: kmspb.ProtectionLevel_SOFTWARE,
 	}
 
 	opts := append(testutil.ProtoDiffOpts(), ignoreSignatureAndSignatureCRC)
@@ -155,7 +156,8 @@ func TestRSASignRawPKCS1(t *testing.T) {
 		CryptoKey: &kmspb.CryptoKey{
 			Purpose: kmspb.CryptoKey_ASYMMETRIC_SIGN,
 			VersionTemplate: &kmspb.CryptoKeyVersionTemplate{
-				Algorithm: kmspb.CryptoKeyVersion_RSA_SIGN_RAW_PKCS1_2048,
+				ProtectionLevel: kmspb.ProtectionLevel_HSM,
+				Algorithm:       kmspb.CryptoKeyVersion_RSA_SIGN_RAW_PKCS1_2048,
 			},
 		},
 		SkipInitialVersionCreation: true,
@@ -184,8 +186,8 @@ func TestRSASignRawPKCS1(t *testing.T) {
 	}
 
 	want := &kmspb.AsymmetricSignResponse{
-		// Not yet emitted (cl/342265843)
-		// Name: ckv.Name,
+		Name:            ckv.Name,
+		ProtectionLevel: kmspb.ProtectionLevel_HSM,
 	}
 
 	opts := append(testutil.ProtoDiffOpts(), ignoreSignatureAndSignatureCRC)
@@ -246,8 +248,8 @@ func TestRSASignPSS(t *testing.T) {
 	}
 
 	want := &kmspb.AsymmetricSignResponse{
-		// Not yet emitted (cl/342265843)
-		// Name: ckv.Name,
+		Name:            ckv.Name,
+		ProtectionLevel: kmspb.ProtectionLevel_SOFTWARE,
 	}
 
 	opts := append(testutil.ProtoDiffOpts(), ignoreSignatureAndSignatureCRC)

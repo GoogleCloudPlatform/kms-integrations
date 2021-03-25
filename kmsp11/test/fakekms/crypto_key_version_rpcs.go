@@ -4,6 +4,7 @@ import (
 	"context"
 	"sort"
 	"strconv"
+	"time"
 
 	"github.com/golang/protobuf/ptypes"
 
@@ -187,10 +188,18 @@ func (f *fakeKMS) DestroyCryptoKeyVersion(ctx context.Context, req *kmspb.Destro
 
 	switch ckv.pb.State {
 	case kmspb.CryptoKeyVersion_ENABLED, kmspb.CryptoKeyVersion_DISABLED:
-		ckv.pb.State = kmspb.CryptoKeyVersion_DESTROY_SCHEDULED
-		ckv.pb.DestroyTime = ptypes.TimestampNow()
-		return ckv.pb, nil
+		break
 	default:
 		return nil, errFailedPrecondition("state must be one of ENABLED or DISABLED in order to destroy")
 	}
+
+	// destroy_time is represented internally in KMS as int64 micros
+	dt, err := ptypes.TimestampProto(time.Now().Add(24 * time.Hour).Truncate(time.Microsecond))
+	if err != nil {
+		return nil, err
+	}
+
+	ckv.pb.DestroyTime = dt
+	ckv.pb.State = kmspb.CryptoKeyVersion_DESTROY_SCHEDULED
+	return ckv.pb, nil
 }

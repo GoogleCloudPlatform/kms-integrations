@@ -28,28 +28,28 @@ var (
 )
 
 func TestMain(m *testing.M) {
-	flag.StringVar(&location, "location", "projects/fakekms-testing/locations/us-east1",
+	flag.StringVar(&location, "location", "projects/oss-tools-test/locations/us-central1",
 		"the project and location to use for testing")
 	flag.DurationVar(&asyncPollInterval, "async_poll_interval", time.Millisecond,
 		"the duration to sleep between Get requests when waiting on asynchronous events")
-	realKMS := flag.Bool("realkms", false,
-		"true if tests should be run against real KMS instead of fakekms")
+	kmsEndpoint := flag.String("kms_endpoint", "",
+		"the KMS endpoint to use for requests; if unspecified, fakekms will be used")
 	credsFilePath := flag.String("credentials_file", "",
 		"the google application credentials file to use for authentication; ignored for fake runs")
 	flag.Parse()
 
-	if *realKMS {
-		testRealKMS(m, *credsFilePath)
-	} else {
+	if *kmsEndpoint == "" {
 		testFakeKMS(m)
+	} else {
+		testRealKMS(m, *kmsEndpoint, *credsFilePath)
 	}
 }
 
-func testRealKMS(m *testing.M, credsFilePath string) {
+func testRealKMS(m *testing.M, kmsEndpoint, credsFilePath string) {
 	initCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	var opts []option.ClientOption
+	opts := []option.ClientOption {option.WithEndpoint(kmsEndpoint)}
 	if credsFilePath != "" {
 		opts = append(opts, option.WithCredentialsFile(credsFilePath))
 	}

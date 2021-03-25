@@ -12,6 +12,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"google.golang.org/protobuf/types/known/durationpb"
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 )
 
@@ -46,6 +47,7 @@ func TestCreateCryptoKeyDefaults(t *testing.T) {
 			ProtectionLevel: kmspb.ProtectionLevel_SOFTWARE,
 			State:           kmspb.CryptoKeyVersion_ENABLED,
 		},
+		DestroyScheduledDuration: &durationpb.Duration{Seconds: 86400},
 	}
 
 	if diff := cmp.Diff(want, got, testutil.ProtoDiffOpts()...); diff != "" {
@@ -134,6 +136,7 @@ func TestCreateCryptoKeyAlgorithms(t *testing.T) {
 					ProtectionLevel: c.ProtectionLevel,
 					Algorithm:       c.Algorithm,
 				},
+				DestroyScheduledDuration: &durationpb.Duration{Seconds: 86400},
 			}
 
 			if diff := cmp.Diff(want, got, testutil.ProtoDiffOpts()...); diff != "" {
