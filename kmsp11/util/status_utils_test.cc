@@ -1,10 +1,13 @@
 #include "kmsp11/util/status_utils.h"
 
 #include "absl/status/status.h"
-#include "gtest/gtest.h"
+#include "gmock/gmock.h"
 
 namespace kmsp11 {
 namespace {
+
+using ::testing::AllOf;
+using ::testing::HasSubstr;
 
 TEST(SetErrorRvTest, SetErrorRvOnErrorStatus) {
   absl::Status s = absl::ResourceExhaustedError("foo");
@@ -49,6 +52,16 @@ TEST(GetCkRvTest, RetrieveVendorDefinedSetValue) {
   absl::Status s = absl::UnknownError("foo");
   SetErrorRv(s, custom_value);
   EXPECT_EQ(GetCkRv(s), custom_value);
+}
+
+TEST(StatusPayloadTest, StatusToStringIsReadable) {
+  ASSERT_EQ(CKR_SESSION_CLOSED, 0xb0);
+
+  absl::Status s = absl::FailedPreconditionError("session is closed");
+  SetErrorRv(s, CKR_SESSION_CLOSED);
+
+  EXPECT_THAT(s.ToString(),
+              AllOf(HasSubstr("session is closed"), HasSubstr("CK_RV=0xb0")));
 }
 
 }  // namespace

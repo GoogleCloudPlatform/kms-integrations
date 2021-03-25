@@ -3,20 +3,52 @@
 #include <cstring>
 #include <string>
 
+#include "absl/status/status_payload_printer.h"
 #include "absl/strings/cord.h"
 #include "absl/strings/escaping.h"
+#include "absl/strings/str_format.h"
 #include "absl/types/optional.h"
 #include "glog/logging.h"
 #include "kmsp11/util/status_details.pb.h"
 
 namespace kmsp11 {
+namespace {
 
 // The URL we'll use for storing a custom payload in the status.
 // Notes on the naming convention are at
 // https://github.com/abseil/abseil-cpp/blob/bf6166a635ab57fe0559b00dcd3ff09a8c42de2e/absl/status/status.h#L149
-static const char* kTypeUrl = "type.googleapis.com/kmsp11.StatusDetails";
+constexpr absl::string_view kTypeUrl =
+    "type.googleapis.com/kmsp11.StatusDetails";
+
+CK_RV ExtractRvFromCord(const absl::Cord& cord) {
+  std::string payload(cord);
+  StatusDetails details;
+  if (!details.ParseFromString(payload)) {
+    // It doesn't really make sense to return an error status from a function
+    // that is itself processing an error status. Log a warning instead.
+    LOG(WARNING) << "status payload of type " << kTypeUrl << " with payload '"
+                 << absl::BytesToHexString(payload)
+                 << "' could not be parsed as a StatusDetails";
+  }
+  return details.ck_rv();
+}
+
+absl::optional<std::string> PrintPayload(absl::string_view type_url,
+                                         const absl::Cord& content) {
+  if (type_url != kTypeUrl) {
+    return absl::nullopt;
+  }
+  return absl::StrFormat("CK_RV=%#x", ExtractRvFromCord(content));
+}
+
+}  // namespace
 
 void SetErrorRv(absl::Status& status, CK_RV rv) {
+  static const bool kPayloadPrinterRegistered = [] {
+    absl::status_internal::SetStatusPayloadPrinter(&PrintPayload);
+    return true;
+  }();
+  CHECK(kPayloadPrinterRegistered);
   CHECK(!status.ok()) << "attempting to set rv=" << rv << " for status OK";
   CHECK(rv != CKR_OK) << "attempting to set rv=0 for status " << status;
   StatusDetails details;
@@ -29,28 +61,18 @@ CK_RV GetCkRv(const absl::Status& status) {
     return CKR_OK;
   }
 
-  absl::optional<absl::Cord> maybe_payload = status.GetPayload(kTypeUrl);
-  if (!maybe_payload.has_value()) {
+  absl::optional<absl::Cord> payload = status.GetPayload(kTypeUrl);
+  if (!payload.has_value()) {
     return kDefaultErrorCkRv;
   }
 
-  std::string payload(maybe_payload.value());
-  StatusDetails details;
-  if (!details.ParseFromString(payload)) {
-    // It doesn't really make sense to return an error status from a function
-    // that is itself processing an error status. Log a warning instead.
-    LOG(WARNING) << "status payload of type " << kTypeUrl << " with payload '"
-                 << absl::BytesToHexString(payload)
-                 << "' could not be parsed as a StatusDetails";
-  }
-
-  if (details.ck_rv() == CKR_OK) {
+  CK_RV rv = ExtractRvFromCord(*payload);
+  if (rv == CKR_OK) {
     LOG(WARNING) << "recovered status details has rv=CKR_OK; falling back to "
                     "default error code";
     return kDefaultErrorCkRv;
   }
-
-  return details.ck_rv();
+  return rv;
 }
 
 }  // namespace kmsp11
