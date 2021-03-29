@@ -14,6 +14,10 @@ namespace kmsp11 {
 // Convert an ASN1_TIME structure to an absl::Time.
 absl::StatusOr<absl::Time> Asn1TimeToAbsl(const ASN1_TIME* time);
 
+// Convert the provided BIGNUM to big-endian binary, padding with leading zeroes
+// to fill dest.
+absl::Status BignumToBinary(const BIGNUM* src, absl::Span<uint8_t> dest);
+
 // Checks that BoringSSL is operating in FIPS mode, and that FIPS self-tests
 // pass. Returns FailedPrecondition if BoringSSL is not in FIPS mode; or
 // Internal if the self-tests fail.
@@ -112,7 +116,7 @@ absl::Status RsaVerifyPkcs1(RSA* public_key, const EVP_MD* hash,
 // Verifies that the provided RSA PSS signature is valid over digest.
 // PSS options are not configurable: MGF1 hash is always the same as the data
 // hash, and salt length always equals hash length.
-absl::Status RsaVerifyPss(RSA* public_key, const EVP_MD* hash,
+absl::Status RsaVerifyPss(EVP_PKEY* public_key, const EVP_MD* hash,
                           absl::Span<const uint8_t> digest,
                           absl::Span<const uint8_t> signature);
 

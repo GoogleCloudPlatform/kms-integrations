@@ -217,8 +217,7 @@ TEST_F(RsaPssTest, SignSuccess) {
   std::vector<uint8_t> sig(signer->signature_length());
   EXPECT_OK(signer->Sign(client_.get(), digest, absl::MakeSpan(sig)));
 
-  EXPECT_OK(RsaVerifyPss(EVP_PKEY_get0_RSA(public_key_.get()), EVP_sha256(),
-                         digest, sig));
+  EXPECT_OK(RsaVerifyPss(public_key_.get(), EVP_sha256(), digest, sig));
 }
 
 TEST_F(RsaPssTest, SignDigestLengthInvalid) {

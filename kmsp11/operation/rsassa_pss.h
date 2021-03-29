@@ -21,10 +21,10 @@ class RsaPssSigner : public KmsDigestSigner {
   virtual ~RsaPssSigner() {}
 
  private:
-  RsaPssSigner(std::shared_ptr<Object> object, bssl::UniquePtr<RSA> key)
+  RsaPssSigner(std::shared_ptr<Object> object, bssl::UniquePtr<EVP_PKEY> key)
       : KmsDigestSigner(object), key_(std::move(key)) {}
 
-  bssl::UniquePtr<RSA> key_;
+  bssl::UniquePtr<EVP_PKEY> key_;
 };
 
 class RsaPssVerifier : public VerifierInterface {
@@ -38,11 +38,11 @@ class RsaPssVerifier : public VerifierInterface {
   virtual ~RsaPssVerifier() {}
 
  private:
-  RsaPssVerifier(std::shared_ptr<Object> object, bssl::UniquePtr<RSA> key)
+  RsaPssVerifier(std::shared_ptr<Object> object, bssl::UniquePtr<EVP_PKEY> key)
       : object_(object), key_(std::move(key)) {}
 
   std::shared_ptr<Object> object_;
-  bssl::UniquePtr<RSA> key_;
+  bssl::UniquePtr<EVP_PKEY> key_;
 };
 
 }  // namespace kmsp11

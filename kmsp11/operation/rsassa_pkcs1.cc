@@ -23,7 +23,11 @@ absl::StatusOr<std::vector<uint8_t>> ExtractDigest(
         CKR_DATA_INVALID, SOURCE_LOCATION);
   }
 
-  int got_nid = OBJ_obj2nid(digest_info->algor->algorithm);
+  const X509_ALGOR* algorithm;
+  const ASN1_OCTET_STRING* digest;
+  X509_SIG_get0(digest_info.get(), &algorithm, &digest);
+
+  int got_nid = OBJ_obj2nid(algorithm->algorithm);
   if (got_nid != expected_digest_nid) {
     return NewInvalidArgumentError(
         absl::StrFormat("digest algorithm NID mismatch (got %d, want %d)",
@@ -31,9 +35,7 @@ absl::StatusOr<std::vector<uint8_t>> ExtractDigest(
         CKR_DATA_INVALID, SOURCE_LOCATION);
   }
 
-  return std::vector<uint8_t>(
-      digest_info->digest->data,
-      digest_info->digest->data + digest_info->digest->length);
+  return std::vector<uint8_t>(digest->data, digest->data + digest->length);
 }
 
 }  // namespace

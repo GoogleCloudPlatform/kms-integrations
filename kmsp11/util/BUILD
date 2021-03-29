@@ -9,6 +9,7 @@ cc_library(
     hdrs = ["crypto_utils.h"],
     deps = [
         ":errors",
+        ":status_macros",
         "//kmsp11:cryptoki_headers",
         "//kmsp11:openssl",
         "@com_google_absl//absl/random",

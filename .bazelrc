@@ -91,6 +91,7 @@ build:tsan --copt=-fno-omit-frame-pointer
 build:tsan --copt=-DGRPC_TSAN
 build:tsan --linkopt=-fsanitize=thread
 
+build:fips --copt=-DBORINGSSL_FIPS
 build:fips --define=fips=1
 build:fips --repo_env=KMSP11_FIPS=1
 

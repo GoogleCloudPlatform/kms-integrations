@@ -17,14 +17,17 @@ using ::testing::HasSubstr;
 // http://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/errata01/os/pkcs11-curr-v2.40-errata01-os-complete.html#_Toc441850410
 absl::StatusOr<std::vector<uint8_t>> BuildRsaDigestInfo(
     int digest_nid, absl::Span<const uint8_t> digest) {
+  X509_ALGOR* algorithm;
+  ASN1_OCTET_STRING* dig;
   bssl::UniquePtr<X509_SIG> digest_info(X509_SIG_new());
-  if (X509_ALGOR_set0(digest_info->algor, OBJ_nid2obj(digest_nid), V_ASN1_NULL,
+  X509_SIG_getm(digest_info.get(), &algorithm, &dig);
+
+  if (X509_ALGOR_set0(algorithm, OBJ_nid2obj(digest_nid), V_ASN1_NULL,
                       nullptr) != 1) {
     return absl::InternalError(absl::StrCat(
         "failure setting algorithm parameters: ", SslErrorToString()));
   }
-  if (ASN1_OCTET_STRING_set(digest_info->digest, digest.data(),
-                            digest.size()) != 1) {
+  if (ASN1_OCTET_STRING_set(dig, digest.data(), digest.size()) != 1) {
     return absl::InternalError(
         absl::StrCat("failure setting digest value: ", SslErrorToString()));
   }

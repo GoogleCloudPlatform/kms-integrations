@@ -51,11 +51,13 @@ absl::StatusOr<std::unique_ptr<SignerInterface>> RsaPssSigner::New(
   ASSIGN_OR_RETURN(bssl::UniquePtr<EVP_PKEY> parsed_key,
                    ParseX509PublicKeyDer(key_der));
 
-  return std::unique_ptr<SignerInterface>(new RsaPssSigner(
-      key, bssl::UniquePtr<RSA>(EVP_PKEY_get1_RSA(parsed_key.get()))));
+  return std::unique_ptr<SignerInterface>(
+      new RsaPssSigner(key, std::move(parsed_key)));
 }
 
-size_t RsaPssSigner::signature_length() { return RSA_size(key_.get()); }
+size_t RsaPssSigner::signature_length() {
+  return RSA_size(EVP_PKEY_get0_RSA(key_.get()));
+}
 
 absl::StatusOr<std::unique_ptr<VerifierInterface>> RsaPssVerifier::New(
     std::shared_ptr<Object> key, const CK_MECHANISM* mechanism) {
@@ -69,8 +71,8 @@ absl::StatusOr<std::unique_ptr<VerifierInterface>> RsaPssVerifier::New(
   ASSIGN_OR_RETURN(bssl::UniquePtr<EVP_PKEY> parsed_key,
                    ParseX509PublicKeyDer(key_der));
 
-  return std::unique_ptr<VerifierInterface>(new RsaPssVerifier(
-      key, bssl::UniquePtr<RSA>(EVP_PKEY_get1_RSA(parsed_key.get()))));
+  return std::unique_ptr<VerifierInterface>(
+      new RsaPssVerifier(key, std::move(parsed_key)));
 }
 
 absl::Status RsaPssVerifier::Verify(KmsClient* client,

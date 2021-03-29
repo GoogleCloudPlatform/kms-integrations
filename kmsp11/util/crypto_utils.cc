@@ -6,6 +6,7 @@
 #include "absl/synchronization/mutex.h"
 #include "absl/time/time.h"
 #include "kmsp11/util/errors.h"
+#include "kmsp11/util/status_macros.h"
 
 namespace kmsp11 {
 namespace {
@@ -21,6 +22,34 @@ static const ASN1_TIME kUnixEpoch = [] {
 template <typename T>
 absl::StatusOr<std::string> MarshalDer(T* obj,
                                        int i2d_function(T*, uint8_t**)) {
+  size_t len = i2d_function(obj, nullptr);
+  if (len <= 0) {
+    return NewInternalError(
+        absl::StrCat("failed to compute output length during DER marshaling: ",
+                     SslErrorToString()),
+        SOURCE_LOCATION);
+  }
+
+  std::string result(len, ' ');
+  uint8_t* result_data = reinterpret_cast<uint8_t*>(result.data());
+
+  len = i2d_function(obj, &result_data);
+  if (len != result.size()) {
+    return NewInternalError(
+        absl::StrFormat(
+            "length mismatch during DER marshaling (got %d, want %d)", len,
+            result.size()),
+        SOURCE_LOCATION);
+  }
+
+  return result;
+}
+
+// A helper for invoking an OpenSSL function of the form i2d_FOO, and returning
+// the DER output as a string.
+template <typename T>
+absl::StatusOr<std::string> MarshalDer(const T* obj,
+                                       int i2d_function(const T*, uint8_t**)) {
   size_t len = i2d_function(obj, nullptr);
   if (len <= 0) {
     return NewInternalError(
@@ -99,6 +128,29 @@ absl::StatusOr<absl::Time> Asn1TimeToAbsl(const ASN1_TIME* time) {
   return absl::FromCivil(second, absl::UTCTimeZone());
 }
 
+absl::Status BignumToBinary(const BIGNUM* src, absl::Span<uint8_t> dest) {
+  size_t unpadded_length(BN_num_bytes(src));
+  if (dest.size() < unpadded_length) {
+    return NewError(
+        absl::StatusCode::kOutOfRange,
+        absl::StrFormat(
+            "output data length is %d bytes; buffer length is %d bytes",
+            unpadded_length, dest.size()),
+        CKR_FUNCTION_FAILED, SOURCE_LOCATION);
+  }
+  size_t pad_size = dest.size() - unpadded_length;
+
+  int bytes_written = BN_bn2bin(src, &dest[pad_size]);
+  if (bytes_written != int(unpadded_length)) {
+    return NewInternalError(
+        absl::StrFormat("expected to write %d bytes but wrote %d",
+                        bytes_written, unpadded_length),
+        SOURCE_LOCATION);
+  }
+  std::memset(dest.data(), 0, pad_size);
+  return absl::OkStatus();
+}
+
 absl::Status CheckFipsSelfTest() {
   if (FIPS_mode() != 1) {
     return absl::FailedPreconditionError(
@@ -129,8 +181,9 @@ absl::StatusOr<const EVP_MD*> DigestForMechanism(CK_MECHANISM_TYPE mechanism) {
 
 absl::StatusOr<std::vector<uint8_t>> EcdsaSigAsn1ToP1363(
     absl::string_view asn1_sig, const EC_GROUP* group) {
-  bssl::UniquePtr<ECDSA_SIG> sig(ECDSA_SIG_from_bytes(
-      reinterpret_cast<const uint8_t*>(asn1_sig.data()), asn1_sig.size()));
+  const uint8_t* sig_data = reinterpret_cast<const uint8_t*>(asn1_sig.data());
+  bssl::UniquePtr<ECDSA_SIG> sig(
+      d2i_ECDSA_SIG(nullptr, &sig_data, asn1_sig.size()));
   if (!sig) {
     return NewInvalidArgumentError(
         absl::StrCat("error parsing asn.1 signature: ", SslErrorToString()),
@@ -143,13 +196,9 @@ absl::StatusOr<std::vector<uint8_t>> EcdsaSigAsn1ToP1363(
   ECDSA_SIG_get0(sig.get(), &r, &s);
 
   std::vector<uint8_t> result(sig_len);
-  if (BN_bn2bin_padded(&result[0], n_len, r) != 1 ||
-      BN_bn2bin_padded(&result[n_len], n_len, s) != 1) {
-    return NewError(
-        absl::StatusCode::kOutOfRange,
-        absl::StrCat("error marshaling signature value: ", SslErrorToString()),
-        CKR_FUNCTION_FAILED, SOURCE_LOCATION);
-  }
+  RETURN_IF_ERROR(BignumToBinary(r, absl::Span<uint8_t>(&result[0], n_len)));
+  RETURN_IF_ERROR(
+      BignumToBinary(s, absl::Span<uint8_t>(&result[n_len], n_len)));
 
   return result;
 }
@@ -187,8 +236,12 @@ absl::Status EcdsaVerifyP1363(EC_KEY* public_key, const EVP_MD* hash,
 
   bssl::UniquePtr<ECDSA_SIG> sig(ECDSA_SIG_new());
   int n_len = signature.length() / 2;
-  if (!BN_bin2bn(&signature[0], n_len, sig->r) ||
-      !BN_bin2bn(&signature[n_len], n_len, sig->s)) {
+
+  bssl::UniquePtr<BIGNUM> r(BN_new());
+  bssl::UniquePtr<BIGNUM> s(BN_new());
+  if (!BN_bin2bn(&signature[0], n_len, r.get()) ||
+      !BN_bin2bn(&signature[n_len], n_len, s.get()) ||
+      !ECDSA_SIG_set0(sig.get(), r.release(), s.release())) {
     return NewInternalError(
         absl::StrCat("error parsing signature component: ", SslErrorToString()),
         SOURCE_LOCATION);
@@ -277,46 +330,11 @@ absl::StatusOr<std::string> MarshalAsn1Integer(ASN1_INTEGER* value) {
 }
 
 absl::StatusOr<std::string> MarshalEcParametersDer(const EC_KEY* key) {
-  CBB cbb;
-  CBB_zero(&cbb);
-
-  uint8_t* out_bytes;
-  size_t out_len;
-  if (CBB_init(&cbb, 0) != 1 ||
-      EC_KEY_marshal_curve_name(&cbb, EC_KEY_get0_group(key)) != 1 ||
-      CBB_finish(&cbb, &out_bytes, &out_len) != 1) {
-    CBB_cleanup(&cbb);
-    return NewInternalError(
-        absl::StrCat("failed to marshal ec parameters: ", SslErrorToString()),
-        SOURCE_LOCATION);
-  }
-
-  std::string result(reinterpret_cast<char*>(out_bytes), out_len);
-  OPENSSL_free(out_bytes);
-  return result;
+  return MarshalDer(key, &i2d_ECParameters);
 }
 
 absl::StatusOr<std::string> MarshalEcPointDer(const EC_KEY* key) {
-  bssl::UniquePtr<BN_CTX> bn_ctx(BN_CTX_new());
-  CBB cbb;
-  CBB_zero(&cbb);
-
-  uint8_t* out_bytes;
-  size_t out_len;
-  if (CBB_init(&cbb, 0) != 1 ||
-      EC_POINT_point2cbb(&cbb, EC_KEY_get0_group(key),
-                         EC_KEY_get0_public_key(key),
-                         POINT_CONVERSION_UNCOMPRESSED, bn_ctx.get()) != 1 ||
-      CBB_finish(&cbb, &out_bytes, &out_len) != 1) {
-    CBB_cleanup(&cbb);
-    return NewInternalError(
-        absl::StrCat("failed to marshal ec point: ", SslErrorToString()),
-        SOURCE_LOCATION);
-  }
-
-  std::string result(reinterpret_cast<char*>(out_bytes), out_len);
-  OPENSSL_free(out_bytes);
-  return result;
+  return MarshalDer(key, &i2o_ECPublicKey);
 }
 
 absl::StatusOr<std::string> MarshalX509CertificateDer(X509* cert) {
@@ -328,22 +346,7 @@ absl::StatusOr<std::string> MarshalX509Name(X509_NAME* value) {
 }
 
 absl::StatusOr<std::string> MarshalX509PublicKeyDer(const EVP_PKEY* key) {
-  CBB cbb;
-  CBB_zero(&cbb);
-
-  uint8_t* out_bytes;
-  size_t out_len;
-  if (CBB_init(&cbb, 0) != 1 || EVP_marshal_public_key(&cbb, key) != 1 ||
-      CBB_finish(&cbb, &out_bytes, &out_len) != 1) {
-    CBB_cleanup(&cbb);
-    return NewInternalError(
-        absl::StrCat("failed to marshal public key: ", SslErrorToString()),
-        SOURCE_LOCATION);
-  }
-
-  std::string result(reinterpret_cast<char*>(out_bytes), out_len);
-  OPENSSL_free(out_bytes);
-  return result;
+  return MarshalDer(key, &i2d_PUBKEY);
 }
 
 absl::StatusOr<std::string> MarshalX509Sig(X509_SIG* value) {
@@ -445,7 +448,7 @@ absl::Status RsaVerifyPkcs1(RSA* public_key, const EVP_MD* hash,
   return absl::OkStatus();
 }
 
-absl::Status RsaVerifyPss(RSA* public_key, const EVP_MD* hash,
+absl::Status RsaVerifyPss(EVP_PKEY* public_key, const EVP_MD* hash,
                           absl::Span<const uint8_t> digest,
                           absl::Span<const uint8_t> signature) {
   if (digest.length() != EVP_MD_size(hash)) {
@@ -455,17 +458,29 @@ absl::Status RsaVerifyPss(RSA* public_key, const EVP_MD* hash,
         CKR_DATA_LEN_RANGE, SOURCE_LOCATION);
   }
 
-  if (signature.length() != RSA_size(public_key)) {
+  int rsa_size = RSA_size(EVP_PKEY_get0_RSA(public_key));
+  if (int(signature.length()) != rsa_size) {
     return NewInvalidArgumentError(
         absl::StrFormat(
             "signature length mismatches expected (got %d, want %d)",
-            signature.length(), RSA_size(public_key)),
+            signature.length(), rsa_size),
         CKR_SIGNATURE_LEN_RANGE, SOURCE_LOCATION);
   }
 
-  if (RSA_verify_pss_mgf1(public_key, digest.data(), digest.size(), hash,
-                          nullptr, -1, signature.data(),
-                          signature.size()) != 1) {
+  bssl::UniquePtr<EVP_PKEY_CTX> ctx(EVP_PKEY_CTX_new(public_key, nullptr));
+  if (!ctx || EVP_PKEY_verify_init(ctx.get()) != 1 ||
+      EVP_PKEY_CTX_set_signature_md(ctx.get(), hash) != 1 ||
+      EVP_PKEY_CTX_set_rsa_padding(ctx.get(), RSA_PKCS1_PSS_PADDING) != 1 ||
+      EVP_PKEY_CTX_set_rsa_mgf1_md(ctx.get(), hash) != 1 ||
+      EVP_PKEY_CTX_set_rsa_pss_saltlen(ctx.get(), -1) != 1) {
+    return NewInternalError(
+        absl::StrCat("error building verification context: ",
+                     SslErrorToString()),
+        SOURCE_LOCATION);
+  }
+
+  if (EVP_PKEY_verify(ctx.get(), signature.data(), signature.size(),
+                      digest.data(), digest.size()) != 1) {
     return NewInvalidArgumentError(
         absl::StrCat("verification failed: ", SslErrorToString()),
         CKR_SIGNATURE_INVALID, SOURCE_LOCATION);
@@ -502,17 +517,16 @@ absl::Status RsaVerifyRawPkcs1(RSA* public_key, absl::Span<const uint8_t> data,
   }
 
   std::vector<uint8_t> recovered(RSA_size(public_key));
-  size_t out_length;
-  // Note that RSA_verify_raw is simply public key decryption. It's up to
-  // us to verify that `data` matches the decryption result.
-  if (RSA_verify_raw(public_key, &out_length, recovered.data(),
-                     recovered.size(), signature.data(), signature.size(),
-                     RSA_PKCS1_PADDING) != 1) {
+  int decrypt_result =
+      RSA_public_decrypt(signature.size(), signature.data(), recovered.data(),
+                         public_key, RSA_PKCS1_PADDING);
+  if (decrypt_result == -1) {
     return NewInvalidArgumentError(
         absl::StrCat("verification failed: ", SslErrorToString()),
         CKR_SIGNATURE_INVALID, SOURCE_LOCATION);
   }
 
+  size_t out_length = decrypt_result;
   if (!std::equal(data.begin(), data.end(), recovered.begin(),
                   recovered.begin() + out_length)) {
     return NewInvalidArgumentError(
@@ -532,12 +546,12 @@ void SafeZeroMemory(volatile char* ptr, size_t size) {
 std::string SslErrorToString() {
   bssl::UniquePtr<BIO> bio(BIO_new(BIO_s_mem()));
   ERR_print_errors(bio.get());
-  const uint8_t* buf;
-  size_t buf_len;
-  if (BIO_mem_contents(bio.get(), &buf, &buf_len) != 1 || buf_len == 0) {
+  char* contents;
+  int len = BIO_get_mem_data(bio.get(), &contents);
+  if (len <= 0) {
     return "(error could not be retrieved from the SSL stack)";
   }
-  return std::string(reinterpret_cast<const char*>(buf), buf_len);
+  return std::string(contents, size_t(len));
 }
 
 }  // namespace kmsp11

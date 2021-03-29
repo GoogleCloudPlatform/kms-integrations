@@ -11,6 +11,7 @@
 namespace kmsp11 {
 namespace {
 
+using ::testing::ElementsAre;
 using ::testing::HasSubstr;
 using ::testing::IsEmpty;
 using ::testing::IsNull;
@@ -31,6 +32,39 @@ TEST(Asn1TimeToAbslTest, Now) {
 
   absl::Time now_seconds = absl::FromUnixSeconds(absl::ToUnixSeconds(now));
   EXPECT_THAT(Asn1TimeToAbsl(asn1_time.get()), IsOkAndHolds(now_seconds));
+}
+
+TEST(BignumToBinaryTest, MarshalsWithoutPadding) {
+  bssl::UniquePtr<BIGNUM> bn(BN_new());
+  EXPECT_TRUE(BN_set_word(bn.get(), 0x010001));
+
+  uint8_t result[3];
+  std::memset(result, 0xFF, 3);
+
+  EXPECT_OK(BignumToBinary(bn.get(), absl::MakeSpan(result)));
+  EXPECT_THAT(result, ElementsAre(0x01, 0x00, 0x01));
+}
+
+TEST(BignumToBinaryTest, MarshalsWithPadding) {
+  bssl::UniquePtr<BIGNUM> bn(BN_new());
+  EXPECT_TRUE(BN_set_word(bn.get(), 0xFE010001));
+
+  uint8_t result[5];
+  std::memset(result, 0xFF, 5);
+
+  EXPECT_OK(BignumToBinary(bn.get(), absl::MakeSpan(result)));
+  EXPECT_THAT(result, ElementsAre(0x00, 0xFE, 0x01, 0x00, 0x01));
+}
+
+TEST(BignumToBinaryTest, BufferTooShortReturnsError) {
+  bssl::UniquePtr<BIGNUM> bn(BN_new());
+  EXPECT_TRUE(BN_set_word(bn.get(), 0x010001));
+
+  uint8_t result[2];
+
+  EXPECT_THAT(
+      BignumToBinary(bn.get(), absl::MakeSpan(result)),
+      StatusIs(absl::StatusCode::kOutOfRange, HasSubstr("output data length")));
 }
 
 TEST(DigestForMechanismTest, Sha256) {
@@ -310,22 +344,15 @@ TEST(EncryptRsaOaepTest, InvalidArgumentErrorCiphertextTooLong) {
 }
 
 TEST(MarshalEcParametersTest, CurveOidMarshaled) {
+  // The ASN.1 encoding of the OID 1.3.132.0.34
+  constexpr absl::string_view kP384Oid("\x06\x05\x2b\x81\x04\x00\x22", 7);
+
   // Generate a new P-384 key
   bssl::UniquePtr<EC_KEY> key(EC_KEY_new_by_curve_name(NID_secp384r1));
   EXPECT_TRUE(EC_KEY_generate_key(key.get()));
 
   // Serialize the EC parameters (group)
-  ASSERT_OK_AND_ASSIGN(std::string oid_der, MarshalEcParametersDer(key.get()));
-
-  // Deserialize the EC parameters and read the curve's OID
-  CBS cbs;
-  CBS_init(&cbs, reinterpret_cast<const uint8_t*>(oid_der.data()),
-           oid_der.size());
-  CBS oid;
-  EXPECT_TRUE(CBS_get_asn1(&cbs, &oid, CBS_ASN1_OBJECT));
-
-  // Ensure the retrieved OID matches the expected
-  EXPECT_EQ(OBJ_cbs2nid(&oid), OBJ_txt2nid("1.3.132.0.34"));
+  EXPECT_THAT(MarshalEcParametersDer(key.get()), IsOkAndHolds(kP384Oid));
 }
 
 TEST(MarshalEcPointTest, PointMarshaled) {
@@ -582,8 +609,6 @@ TEST(RsaVerifyPssTest, ValidSignature) {
                        LoadTestRunfile("rsa_2048_public.pem"));
   ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub_key,
                        ParseX509PublicKeyPem(pub_pem));
-  RSA* rsa_pub = EVP_PKEY_get0_RSA(pub_key.get());
-  EXPECT_TRUE(rsa_pub);
 
   std::string data = "This is a message to authenticate\n";
   uint8_t data_hash[32];
@@ -600,7 +625,8 @@ TEST(RsaVerifyPssTest, ValidSignature) {
   absl::Span<const uint8_t> valid_sig_bytes = absl::MakeConstSpan(
       reinterpret_cast<const uint8_t*>(valid_sig.data()), valid_sig.size());
 
-  EXPECT_OK(RsaVerifyPss(rsa_pub, EVP_sha256(), data_hash, valid_sig_bytes));
+  EXPECT_OK(
+      RsaVerifyPss(pub_key.get(), EVP_sha256(), data_hash, valid_sig_bytes));
 }
 
 TEST(RsaVerifyPssTest, InvalidSignatureDigestLength) {
@@ -608,11 +634,9 @@ TEST(RsaVerifyPssTest, InvalidSignatureDigestLength) {
                        LoadTestRunfile("rsa_2048_public.pem"));
   ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub_key,
                        ParseX509PublicKeyPem(pub_pem));
-  RSA* rsa_pub = EVP_PKEY_get0_RSA(pub_key.get());
-  EXPECT_TRUE(rsa_pub);
 
   uint8_t data_hash[31], sig_bytes[256];
-  EXPECT_THAT(RsaVerifyPss(rsa_pub, EVP_sha256(), data_hash, sig_bytes),
+  EXPECT_THAT(RsaVerifyPss(pub_key.get(), EVP_sha256(), data_hash, sig_bytes),
               StatusRvIs(CKR_DATA_LEN_RANGE));
 }
 
@@ -621,8 +645,6 @@ TEST(RsaVerifyPssTest, InvalidSignatureBitFlip) {
                        LoadTestRunfile("rsa_2048_public.pem"));
   ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub_key,
                        ParseX509PublicKeyPem(pub_pem));
-  RSA* rsa_pub = EVP_PKEY_get0_RSA(pub_key.get());
-  EXPECT_TRUE(rsa_pub);
 
   std::string data = "This is a message to authenticate\n";
   uint8_t data_hash[32];
@@ -640,7 +662,7 @@ TEST(RsaVerifyPssTest, InvalidSignatureBitFlip) {
   absl::Span<const uint8_t> sig_bytes = absl::MakeConstSpan(
       reinterpret_cast<const uint8_t*>(sig.data()), sig.size());
 
-  EXPECT_THAT(RsaVerifyPss(rsa_pub, EVP_sha256(), data_hash, sig_bytes),
+  EXPECT_THAT(RsaVerifyPss(pub_key.get(), EVP_sha256(), data_hash, sig_bytes),
               StatusRvIs(CKR_SIGNATURE_INVALID));
 }
 
@@ -649,11 +671,9 @@ TEST(RsaVerifyPssTest, InvalidSignatureSigLength) {
                        LoadTestRunfile("rsa_2048_public.pem"));
   ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub_key,
                        ParseX509PublicKeyPem(pub_pem));
-  RSA* rsa_pub = EVP_PKEY_get0_RSA(pub_key.get());
-  EXPECT_TRUE(rsa_pub);
 
   uint8_t data_hash[32], sig_bytes[255];
-  EXPECT_THAT(RsaVerifyPss(rsa_pub, EVP_sha256(), data_hash, sig_bytes),
+  EXPECT_THAT(RsaVerifyPss(pub_key.get(), EVP_sha256(), data_hash, sig_bytes),
               StatusRvIs(CKR_SIGNATURE_LEN_RANGE));
 }
 
@@ -768,6 +788,7 @@ TEST(RsaVerifyRawPkcs1Test, InvalidSignatureSigLength) {
 TEST(SslErrorToStringTest, ErrorEmitted) {
   bssl::UniquePtr<EC_KEY> ec_key(EC_KEY_new_by_curve_name(0));
   EXPECT_THAT(ec_key, IsNull());
+  EXPECT_NE(ERR_peek_error(), 0);
   EXPECT_THAT(SslErrorToString(), HasSubstr("UNKNOWN_GROUP"));
 }
 
@@ -775,6 +796,7 @@ TEST(SslErrorToStringTest, MessageEmittedOnNoError) {
   bssl::UniquePtr<EC_KEY> ec_key(
       EC_KEY_new_by_curve_name(NID_X9_62_prime256v1));
   EXPECT_THAT(ec_key, Not(IsNull()));
+  EXPECT_EQ(ERR_peek_error(), 0);
   EXPECT_THAT(SslErrorToString(), HasSubstr("error could not be retrieved"));
 }
 
