@@ -95,7 +95,7 @@ absl::Status AddPrivateKeyAttributes(AttributeMap* attrs,
 }
 
 absl::Status AddEcPublicKeyAttributes(AttributeMap* attrs,
-                                      const EC_KEY* public_key) {
+                                      BSSL_CONST EC_KEY* public_key) {
   ASSIGN_OR_RETURN(std::string params, MarshalEcParametersDer(public_key));
   ASSIGN_OR_RETURN(std::string ec_point, MarshalEcPointDer(public_key));
 
@@ -107,7 +107,7 @@ absl::Status AddEcPublicKeyAttributes(AttributeMap* attrs,
 }
 
 absl::Status AddEcPrivateKeyAttributes(AttributeMap* attrs,
-                                       const EC_KEY* public_key) {
+                                       BSSL_CONST EC_KEY* public_key) {
   ASSIGN_OR_RETURN(std::string params, MarshalEcParametersDer(public_key));
 
   // Some implementations seem to expect that EC private keys contain the EC
@@ -121,7 +121,7 @@ absl::Status AddEcPrivateKeyAttributes(AttributeMap* attrs,
 }
 
 absl::Status AddRsaPublicKeyAttributes(AttributeMap* attrs,
-                                       const RSA* public_key) {
+                                       BSSL_CONST RSA* public_key) {
   const BIGNUM *n, *e;
   RSA_get0_key(public_key, &n, &e, /*d=*/nullptr);
 
@@ -133,7 +133,7 @@ absl::Status AddRsaPublicKeyAttributes(AttributeMap* attrs,
 }
 
 absl::Status AddRsaPrivateKeyAttributes(AttributeMap* attrs,
-                                        const RSA* public_key) {
+                                        BSSL_CONST RSA* public_key) {
   // Some implementations seem to expect that RSA private keys contain the RSA
   // public key attributes as well.
   RETURN_IF_ERROR(AddRsaPublicKeyAttributes(attrs, public_key));
@@ -201,7 +201,7 @@ absl::Status AddX509CertificateAttributes(AttributeMap* attrs,
 }  // namespace
 
 absl::StatusOr<KeyPair> Object::NewKeyPair(const kms_v1::CryptoKeyVersion& ckv,
-                                           const EVP_PKEY* public_key) {
+                                           BSSL_CONST EVP_PKEY* public_key) {
   ASSIGN_OR_RETURN(std::string pub_der, MarshalX509PublicKeyDer(public_key));
 
   AttributeMap pub_attrs;
@@ -219,13 +219,13 @@ absl::StatusOr<KeyPair> Object::NewKeyPair(const kms_v1::CryptoKeyVersion& ckv,
   int pkey_id = EVP_PKEY_id(public_key);
   switch (pkey_id) {
     case EVP_PKEY_EC: {
-      const EC_KEY* ec_public_key = EVP_PKEY_get0_EC_KEY(public_key);
+      BSSL_CONST EC_KEY* ec_public_key = EVP_PKEY_get0_EC_KEY(public_key);
       RETURN_IF_ERROR(AddEcPublicKeyAttributes(&pub_attrs, ec_public_key));
       RETURN_IF_ERROR(AddEcPrivateKeyAttributes(&prv_attrs, ec_public_key));
       break;
     }
     case EVP_PKEY_RSA: {
-      const RSA* rsa_public_key = EVP_PKEY_get0_RSA(public_key);
+      BSSL_CONST RSA* rsa_public_key = EVP_PKEY_get0_RSA(public_key);
       RETURN_IF_ERROR(AddRsaPublicKeyAttributes(&pub_attrs, rsa_public_key));
       RETURN_IF_ERROR(AddRsaPrivateKeyAttributes(&prv_attrs, rsa_public_key));
       break;

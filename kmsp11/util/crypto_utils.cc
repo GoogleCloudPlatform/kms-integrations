@@ -156,11 +156,14 @@ absl::Status CheckFipsSelfTest() {
     return absl::FailedPreconditionError(
         absl::StrFormat("FIPS_mode()=%d, want 1", FIPS_mode()));
   }
+
+#ifdef OPENSSL_IS_BORINGSSL  // BORINGSSL_self_test is of course BoringSSL-only.
   int self_test_result = BORINGSSL_self_test();
   if (self_test_result != 1) {
     return absl::InternalError(
         absl::StrFormat("BORINGSSL_self_test()=%d, want 1", self_test_result));
   }
+#endif
   return absl::OkStatus();
 }
 
@@ -329,11 +332,11 @@ absl::StatusOr<std::string> MarshalAsn1Integer(ASN1_INTEGER* value) {
   return MarshalDer(value, &i2d_ASN1_INTEGER);
 }
 
-absl::StatusOr<std::string> MarshalEcParametersDer(const EC_KEY* key) {
+absl::StatusOr<std::string> MarshalEcParametersDer(BSSL_CONST EC_KEY* key) {
   return MarshalDer(key, &i2d_ECParameters);
 }
 
-absl::StatusOr<std::string> MarshalEcPointDer(const EC_KEY* key) {
+absl::StatusOr<std::string> MarshalEcPointDer(BSSL_CONST EC_KEY* key) {
   return MarshalDer(key, &i2o_ECPublicKey);
 }
 
@@ -345,7 +348,7 @@ absl::StatusOr<std::string> MarshalX509Name(X509_NAME* value) {
   return MarshalDer(value, &i2d_X509_NAME);
 }
 
-absl::StatusOr<std::string> MarshalX509PublicKeyDer(const EVP_PKEY* key) {
+absl::StatusOr<std::string> MarshalX509PublicKeyDer(BSSL_CONST EVP_PKEY* key) {
   return MarshalDer(key, &i2d_PUBKEY);
 }
 

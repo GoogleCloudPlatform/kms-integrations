@@ -455,7 +455,10 @@ TEST(ParsePrivateKeyTest, EcKey) {
   const EC_KEY* ec_key = EVP_PKEY_get0_EC_KEY(key.get());
   EXPECT_TRUE(EC_KEY_get0_private_key(ec_key));
   EXPECT_TRUE(EC_KEY_check_key(ec_key));
+
+#ifdef OPENSSL_IS_BORINGSSL  // EC_KEY_check_fips is BoringSSL-only
   EXPECT_TRUE(EC_KEY_check_fips(ec_key));
+#endif
 }
 
 TEST(ParsePrivateKeyTest, RsaKey) {
@@ -467,7 +470,10 @@ TEST(ParsePrivateKeyTest, RsaKey) {
 
   RSA* rsa = EVP_PKEY_get0_RSA(key.get());
   EXPECT_TRUE(RSA_check_key(rsa));
+
+#ifdef OPENSSL_IS_BORINGSSL  // RSA_check_fips is BoringSSL-only
   EXPECT_TRUE(RSA_check_fips(rsa));
+#endif
 
   const BIGNUM *n, *e, *d;
   RSA_get0_key(rsa, &n, &e, &d);
@@ -485,7 +491,10 @@ TEST(ParsePublicKeyTest, EcKey) {
   const EC_KEY* ec_key = EVP_PKEY_get0_EC_KEY(key.get());
   EXPECT_TRUE(EC_KEY_get0_public_key(ec_key));
   EXPECT_TRUE(EC_KEY_check_key(ec_key));
+
+#ifdef OPENSSL_IS_BORINGSSL  // EC_KEY_check_fips is BoringSSL-only
   EXPECT_TRUE(EC_KEY_check_fips(ec_key));
+#endif
 }
 
 TEST(ParsePublicKeyTest, RsaKey) {
@@ -495,8 +504,14 @@ TEST(ParsePublicKeyTest, RsaKey) {
                        ParseX509PublicKeyDer(der));
 
   RSA* rsa = EVP_PKEY_get0_RSA(key.get());
+
+#ifdef OPENSSL_IS_BORINGSSL
+  // RSA_check_key is for private keys only in OpenSSL.
+  // https://www.openssl.org/docs/man1.0.2/man3/RSA_check_key.html
   EXPECT_TRUE(RSA_check_key(rsa));
+  // RSA_check_fips is BoringSSL-only.
   EXPECT_TRUE(RSA_check_fips(rsa));
+#endif
 
   const BIGNUM *n, *e, *d;
   RSA_get0_key(rsa, &n, &e, &d);

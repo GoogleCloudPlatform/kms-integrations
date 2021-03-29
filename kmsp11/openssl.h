@@ -16,6 +16,8 @@
 #include "openssl/x509_vfy.h"  // IWYU pragma: export
 #include "openssl/x509v3.h"    // IWYU pragma: export
 
+#ifdef OPENSSL_IS_BORINGSSL
+#define BSSL_CONST const
 #ifdef BORINGSSL_FIPS
 
 // X509_SIG_get0 and X509_SIG_getm were added to BoringSSL after the most
@@ -43,5 +45,10 @@ inline void X509_SIG_getm(X509_SIG* sig, X509_ALGOR** out_alg,
 }
 
 #endif  // BORINGSSL_FIPS
+#else   // OPENSSL_IS_BORINGSSL
+
+#define BSSL_CONST
+
+#endif  // OPENSSL_IS_BORINGSSL
 
 #endif  // KMSP11_OPENSSL_H_

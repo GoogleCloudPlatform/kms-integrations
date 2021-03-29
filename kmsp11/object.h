@@ -20,7 +20,7 @@ struct KeyPair;
 class Object {
  public:
   static absl::StatusOr<KeyPair> NewKeyPair(const kms_v1::CryptoKeyVersion& ckv,
-                                            const EVP_PKEY* public_key);
+                                            BSSL_CONST EVP_PKEY* public_key);
 
   static absl::StatusOr<Object> NewCertificate(
       const kms_v1::CryptoKeyVersion& ckv, X509* certificate);

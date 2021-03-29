@@ -159,7 +159,7 @@ TEST(NewKeyPairTest, PrivateKeyAttributes) {
 TEST(NewKeyPairTest, EcKeyAttributes) {
   kms_v1::CryptoKeyVersion ckv = NewTestCkv();
   ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub, GetTestP256Key());
-  const EC_KEY* ec_key = EVP_PKEY_get0_EC_KEY(pub.get());
+  BSSL_CONST EC_KEY* ec_key = EVP_PKEY_get0_EC_KEY(pub.get());
 
   ASSERT_OK_AND_ASSIGN(std::string params, MarshalEcParametersDer(ec_key));
   ASSERT_OK_AND_ASSIGN(std::string point, MarshalEcPointDer(ec_key));
