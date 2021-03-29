@@ -5,9 +5,6 @@
 #include "kmsp11/test/resource_helpers.h"
 #include "kmsp11/test/test_status_macros.h"
 #include "kmsp11/util/crypto_utils.h"
-#include "openssl/rand.h"
-#include "openssl/sha.h"
-#include "openssl/x509.h"
 
 namespace kmsp11 {
 namespace {

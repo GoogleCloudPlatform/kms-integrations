@@ -8,7 +8,7 @@
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
 #include "absl/types/span.h"
-#include "openssl/bn.h"
+#include "kmsp11/openssl.h"
 
 namespace kmsp11 {
 

@@ -8,7 +8,6 @@
 #include "kmsp11/test/test_status_macros.h"
 #include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/status_macros.h"
-#include "openssl/rsa.h"
 
 namespace kmsp11 {
 namespace {
@@ -194,8 +193,7 @@ TEST(NewKeyPairTest, RsaKeyAttributes) {
 
   EXPECT_THAT(pub_attrs.Value(CKA_MODULUS_BITS),
               IsOkAndHolds(MarshalULong(2048)));
-  EXPECT_THAT(pub_attrs.Value(CKA_MODULUS),
-              IsOkAndHolds(MarshalBigNum(n)));
+  EXPECT_THAT(pub_attrs.Value(CKA_MODULUS), IsOkAndHolds(MarshalBigNum(n)));
   EXPECT_THAT(pub_attrs.Value(CKA_PUBLIC_EXPONENT),
               IsOkAndHolds(MarshalBigNum(e)));
   EXPECT_THAT(pub_attrs.Value(CKA_PRIVATE_EXPONENT),

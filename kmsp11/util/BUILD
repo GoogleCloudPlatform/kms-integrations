@@ -10,7 +10,7 @@ cc_library(
     deps = [
         ":errors",
         "//kmsp11:cryptoki_headers",
-        "@boringssl//:crypto",
+        "//kmsp11:openssl",
         "@com_google_absl//absl/random",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/synchronization",
@@ -256,7 +256,7 @@ cc_library(
     hdrs = ["string_utils.h"],
     deps = [
         ":errors",
-        "@boringssl//:crypto",
+        "//kmsp11:openssl",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",

@@ -7,7 +7,6 @@
 #include "google/cloud/kms/v1/service.pb.h"
 #include "kmsp11/cryptoki.h"
 #include "kmsp11/util/kms_v1.h"
-#include "openssl/evp.h"
 
 namespace kmsp11 {
 

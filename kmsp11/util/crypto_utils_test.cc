@@ -7,14 +7,6 @@
 #include "gmock/gmock.h"
 #include "kmsp11/test/runfiles.h"
 #include "kmsp11/test/test_status_macros.h"
-#include "openssl/asn1.h"
-#include "openssl/bn.h"
-#include "openssl/bytestring.h"
-#include "openssl/ec_key.h"
-#include "openssl/obj.h"
-#include "openssl/pem.h"
-#include "openssl/rsa.h"
-#include "openssl/sha.h"
 
 namespace kmsp11 {
 namespace {

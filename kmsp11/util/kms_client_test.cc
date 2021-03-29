@@ -2,13 +2,12 @@
 
 #include "absl/time/time.h"
 #include "gmock/gmock.h"
+#include "kmsp11/openssl.h"
 #include "kmsp11/test/fakekms/cpp/fakekms.h"
 #include "kmsp11/test/matchers.h"
 #include "kmsp11/test/resource_helpers.h"
 #include "kmsp11/test/test_status_macros.h"
 #include "kmsp11/util/crypto_utils.h"
-#include "openssl/ec_key.h"
-#include "openssl/sha.h"
 
 namespace kmsp11 {
 namespace {
@@ -449,7 +448,7 @@ TEST(KmsClientTest, CreateCryptoKeyVersionAndWaitOutputMatchesStub) {
 
 TEST(KmsClientTest, CreateCryptoKeyVersionAndWaitTimesOutAtDeadline) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake,
-		       FakeKms::New("-delay=100ms"));
+                       FakeKms::New("-delay=100ms"));
   std::unique_ptr<KmsClient> client =
       NewClient(fake->listen_addr(), absl::Milliseconds(150));
 
@@ -466,13 +465,11 @@ TEST(KmsClientTest, CreateCryptoKeyVersionAndWaitTimesOutAtDeadline) {
   kms_v1::CreateCryptoKeyVersionRequest req;
   req.set_parent(ck.name());
 
-
   // CreateCryptoKeyVersionAndWait causes 2+ RPCs for asymmetric keys; if each
   // RPC has 100ms of delay, then a 150ms deadline will always be exceeded.
   EXPECT_THAT(client->CreateCryptoKeyVersionAndWait(req),
               StatusIs(absl::StatusCode::kDeadlineExceeded));
 }
-
 
 TEST(KmsClientTest, CreateCryptoKeyVersionWaitsForEnablement) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake, FakeKms::New());

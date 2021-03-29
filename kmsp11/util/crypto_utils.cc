@@ -6,16 +6,6 @@
 #include "absl/synchronization/mutex.h"
 #include "absl/time/time.h"
 #include "kmsp11/util/errors.h"
-#include "openssl/bn.h"
-#include "openssl/bytestring.h"
-#include "openssl/crypto.h"
-#include "openssl/ec_key.h"
-#include "openssl/ecdsa.h"
-#include "openssl/evp.h"
-#include "openssl/mem.h"
-#include "openssl/pem.h"
-#include "openssl/rand.h"
-#include "openssl/x509.h"
 
 namespace kmsp11 {
 namespace {

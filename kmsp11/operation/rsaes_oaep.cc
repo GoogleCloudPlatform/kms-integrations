@@ -7,7 +7,6 @@
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/status_macros.h"
 #include "kmsp11/util/string_utils.h"
-#include "openssl/sha.h"
 
 namespace kmsp11 {
 

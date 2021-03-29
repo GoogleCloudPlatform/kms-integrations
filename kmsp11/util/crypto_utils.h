@@ -7,8 +7,7 @@
 #include "absl/status/statusor.h"
 #include "absl/time/time.h"
 #include "kmsp11/cryptoki.h"
-#include "openssl/evp.h"
-#include "openssl/x509.h"
+#include "kmsp11/openssl.h"
 
 namespace kmsp11 {
 

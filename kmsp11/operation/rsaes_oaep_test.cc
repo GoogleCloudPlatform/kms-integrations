@@ -9,7 +9,6 @@
 #include "kmsp11/test/test_status_macros.h"
 #include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/kms_client.h"
-#include "openssl/rand.h"
 
 namespace kmsp11 {
 namespace {

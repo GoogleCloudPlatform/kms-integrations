@@ -33,9 +33,9 @@ cc_library(
     hdrs = ["attribute_map.h"],
     deps = [
         ":cryptoki_headers",
+        ":openssl",
         "//kmsp11/util:errors",
         "//kmsp11/util:string_utils",
-        "@boringssl//:crypto",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/types:variant",
@@ -59,11 +59,11 @@ cc_library(
     hdrs = ["cert_authority.h"],
     deps = [
         ":algorithm_details",
+        ":openssl",
         "//kmsp11/util:crypto_utils",
         "//kmsp11/util:errors",
         "//kmsp11/util:kms_client",
         "//kmsp11/util:string_utils",
-        "@boringssl//:crypto",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
     ],
@@ -222,6 +222,12 @@ proto_library(
 cc_proto_library(
     name = "object_store_state_cc_proto",
     deps = [":object_store_state_proto"],
+)
+
+cc_library(
+    name = "openssl",
+    hdrs = ["openssl.h"],
+    deps = ["@boringssl//:crypto"],
 )
 
 cc_library(

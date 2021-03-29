@@ -5,8 +5,8 @@
 #include "absl/status/statusor.h"
 #include "absl/types/variant.h"
 #include "kmsp11/cryptoki.h"
+#include "kmsp11/openssl.h"
 #include "kmsp11/util/string_utils.h"
-#include "openssl/bn.h"
 
 namespace kmsp11 {
 

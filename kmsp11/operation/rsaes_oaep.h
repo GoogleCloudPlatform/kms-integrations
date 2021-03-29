@@ -2,9 +2,10 @@
 #define KMSP11_OPERATION_RSAES_OAEP_H_
 
 #include "absl/strings/string_view.h"
+#include "kmsp11/openssl.h"
 #include "kmsp11/operation/crypter_interfaces.h"
+#include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/string_utils.h"
-#include "openssl/sha.h"
 
 namespace kmsp11 {
 

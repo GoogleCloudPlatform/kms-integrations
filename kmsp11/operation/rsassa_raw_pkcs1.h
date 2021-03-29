@@ -2,10 +2,11 @@
 #define KMSP11_OPERATION_RSASSA_RAW_PKCS1_H_
 
 #include "absl/strings/string_view.h"
+#include "kmsp11/openssl.h"
 #include "kmsp11/operation/crypter_interfaces.h"
+#include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/kms_client.h"
 #include "kmsp11/util/string_utils.h"
-#include "openssl/rsa.h"
 
 namespace kmsp11 {
 
