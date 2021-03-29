@@ -6,6 +6,8 @@
 #include "grpcpp/client_context.h"
 #include "grpcpp/create_channel.h"
 #include "grpcpp/security/credentials.h"
+#include "kmsp11/util/backoff.h"
+#include "kmsp11/util/kms_client_service_config.h"
 #include "kmsp11/util/status_macros.h"
 #include "kmsp11/version.h"
 
@@ -44,6 +46,7 @@ KmsClient::KmsClient(absl::string_view endpoint_address,
   // //google3/cloud/analysis/concord/configs/api/attribution-prod/tools.yaml
   args.SetUserAgentPrefix(absl::StrFormat(
       "cloud-kms-pkcs11/%d.%d", kLibraryVersion.major, kLibraryVersion.minor));
+  args.SetServiceConfigJSON(std::string(kDefaultKmsServiceConfig));
 
   std::shared_ptr<grpc::Channel> channel =
       grpc::CreateCustomChannel(std::string(endpoint_address), creds, args);
@@ -211,9 +214,14 @@ CryptoKeyVersionsRange KmsClient::ListCryptoKeyVersions(
 
 absl::Status KmsClient::WaitForGeneration(kms_v1::CryptoKeyVersion& ckv,
                                           absl::Time deadline) const {
+  // The time for newly generated HSM keys to flip to enabled in (real) KMS
+  // varies from 10-40ish milliseconds depending on key type.
+  constexpr absl::Duration kMinDelay = absl::Milliseconds(20);
+  constexpr absl::Duration kMaxDelay = absl::Seconds(1);
+
+  int tries = 0;
   while (ckv.state() == kms_v1::CryptoKeyVersion::PENDING_GENERATION) {
-    // TODO(bdhess): Investigate options for backoff outside of google3.
-    absl::SleepFor(absl::Seconds(1));
+    absl::SleepFor(ComputeBackoff(kMinDelay, kMaxDelay, tries++));
 
     grpc::ClientContext ctx;
     AddContextSettings(&ctx, "name", ckv.name(), deadline);

@@ -4,6 +4,27 @@ load("@rules_proto//proto:defs.bzl", "proto_library")
 package(default_visibility = ["//kmsp11:__subpackages__"])
 
 cc_library(
+    name = "backoff",
+    srcs = ["backoff.cc"],
+    hdrs = ["backoff.h"],
+    deps = [
+        "@com_github_google_glog//:glog",
+        "@com_google_absl//absl/time",
+    ],
+)
+
+cc_test(
+    name = "backoff_test",
+    size = "small",
+    srcs = ["backoff_test.cc"],
+    deps = [
+        ":backoff",
+        "//kmsp11/test",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
     name = "crypto_utils",
     srcs = ["crypto_utils.cc"],
     hdrs = ["crypto_utils.h"],
@@ -128,9 +149,13 @@ cc_test(
 
 cc_library(
     name = "kms_client",
-    srcs = ["kms_client.cc"],
+    srcs = [
+        "kms_client.cc",
+        "kms_client_service_config.h",
+    ],
     hdrs = ["kms_client.h"],
     deps = [
+        ":backoff",
         ":kms_v1",
         ":status_macros",
         ":status_utils",
