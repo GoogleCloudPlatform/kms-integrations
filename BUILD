@@ -1,3 +1,5 @@
+load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+
 config_setting(
     name = "freebsd",
     constraint_values = ["@platforms//os:freebsd"],
@@ -21,6 +23,11 @@ config_setting(
 config_setting(
     name = "fips",
     values = {"define": "fips=1"},
+)
+
+config_setting(
+    name = "openssl",
+    values = {"define": "openssl=1"},
 )
 
 # A target to encompass tests that are tagged 'manual'

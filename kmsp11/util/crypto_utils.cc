@@ -5,6 +5,7 @@
 #include "absl/random/random.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/time/time.h"
+#include "glog/logging.h"
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/status_macros.h"
 
@@ -207,7 +208,11 @@ absl::StatusOr<std::vector<uint8_t>> EcdsaSigAsn1ToP1363(
 }
 
 int EcdsaSigLengthP1363(const EC_GROUP* group) {
-  return 2 * BN_num_bytes(EC_GROUP_get0_order(group));
+  // We can move to EC_GROUP_get0_order if/when we no longer need to
+  // support OpenSSL 1.0.2.
+  bssl::UniquePtr<BIGNUM> bn(BN_new());
+  CHECK_EQ(EC_GROUP_get_order(group, bn.get(), nullptr), 1);
+  return 2 * BN_num_bytes(bn.get());
 }
 
 absl::Status EcdsaVerifyP1363(EC_KEY* public_key, const EVP_MD* hash,
@@ -333,7 +338,15 @@ absl::StatusOr<std::string> MarshalAsn1Integer(ASN1_INTEGER* value) {
 }
 
 absl::StatusOr<std::string> MarshalEcParametersDer(BSSL_CONST EC_KEY* key) {
-  return MarshalDer(key, &i2d_ECParameters);
+  int curve_nid = EC_GROUP_get_curve_name(EC_KEY_get0_group(key));
+  if (curve_nid == 0) {
+    return NewInternalError("could not determine curve NID", SOURCE_LOCATION);
+  }
+  // const_cast is needed for the older FIPS-mode BoringSSL.
+  // See discussion on this requirement being relaxed in
+  // https://boringssl-review.googlesource.com/c/boringssl/+/46164
+  return MarshalDer(const_cast<ASN1_OBJECT*>(OBJ_nid2obj(curve_nid)),
+                    &i2d_ASN1_OBJECT);
 }
 
 absl::StatusOr<std::string> MarshalEcPointDer(BSSL_CONST EC_KEY* key) {
@@ -547,6 +560,7 @@ void SafeZeroMemory(volatile char* ptr, size_t size) {
 }
 
 std::string SslErrorToString() {
+  CHECK(kCryptoLibraryInitialized);
   bssl::UniquePtr<BIO> bio(BIO_new(BIO_s_mem()));
   ERR_print_errors(bio.get());
   char* contents;

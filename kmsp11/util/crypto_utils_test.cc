@@ -801,10 +801,12 @@ TEST(RsaVerifyRawPkcs1Test, InvalidSignatureSigLength) {
 }
 
 TEST(SslErrorToStringTest, ErrorEmitted) {
-  bssl::UniquePtr<EC_KEY> ec_key(EC_KEY_new_by_curve_name(0));
+  bssl::UniquePtr<EC_KEY> ec_key(EC_KEY_new_by_curve_name(1));
   EXPECT_THAT(ec_key, IsNull());
   EXPECT_NE(ERR_peek_error(), 0);
-  EXPECT_THAT(SslErrorToString(), HasSubstr("UNKNOWN_GROUP"));
+  EXPECT_THAT(SslErrorToString(),
+              AnyOf(HasSubstr("UNKNOWN_GROUP"),    // BoringSSL message
+                    HasSubstr("unknown group")));  // OpenSSL message
 }
 
 TEST(SslErrorToStringTest, MessageEmittedOnNoError) {

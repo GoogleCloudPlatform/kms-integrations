@@ -24,6 +24,8 @@ var (
 		"the minimum size of the libkmsp11.so binary, in megabytes")
 	maxBinarySizeMB = flag.Int64("max_binary_size_mb", 12,
 		"the maximum size of the libkmsp11.so binary, in megabytes")
+	expectOpenSSL = flag.Bool("expect_openssl", false,
+		"whether or not OpenSSL is an expected dependency")
 )
 
 func resolveRunfile(t *testing.T, name string) string {
@@ -147,11 +149,17 @@ func TestImportedSymbolsLinux(t *testing.T) {
 	}
 
 	// These should be the only libraries from which we import symbols.
-	allowedDeps := map[string]struct{}{
-		"ld-linux-x86-64.so.2": {},
-		"libc.so.6":            {},
-		"libm.so.6":            {},
-		"libpthread.so.0":      {},
+	// True for deps that are part of glibc.
+	allowedDeps := map[string]bool{
+		"ld-linux-x86-64.so.2": false,
+		"libc.so.6":            true,
+		"libm.so.6":            true,
+		"libpthread.so.0":      true,
+	}
+
+	if *expectOpenSSL {
+		allowedDeps["libcrypto.so.1.0.0"] = false
+		allowedDeps["libssl.so.1.0.0"] = false
 	}
 
 	// We target GLIBC >= 2.17, so all symbols we import must be <= 2.17.
@@ -166,8 +174,10 @@ func TestImportedSymbolsLinux(t *testing.T) {
 	}
 
 	for _, sym := range symbols {
-		if _, ok := allowedDeps[sym.Library]; !ok {
+		if glibc, ok := allowedDeps[sym.Library]; !ok {
 			t.Errorf("unexpected library dependency for imported symbol: %v", sym)
+			continue
+		} else if !glibc {
 			continue
 		}
 
@@ -193,7 +203,13 @@ func TestImportedLibrariesFreeBSD(t *testing.T) {
 		t.Skip("this test only runs on freebsd")
 	}
 
-	want := []string{"libc++.so.1", "libc.so.7", "libcxxrt.so.1", "libgcc_s.so.1", "libm.so.5", "libthr.so.3"}
+	want := []string{
+		"libc++.so.1", "libc.so.7", "libcxxrt.so.1",
+		"libgcc_s.so.1", "libm.so.5", "libthr.so.3"}
+	if *expectOpenSSL {
+		want = append(want, "libcrypto.so.8", "libssl.so.8")
+	}
+	sort.Strings(want)
 
 	got, err := loadELFBinary(t).ImportedLibraries()
 	if err != nil {

@@ -93,6 +93,7 @@ absl::Status Initialize(CK_VOID_PTR pInitArgs) {
     ASSIGN_OR_RETURN(config, LoadConfigFromEnvironment());
   }
 
+  CHECK(kCryptoLibraryInitialized);
   if (config.experimental_require_fips_mode()) {
     absl::Status self_test_result = CheckFipsSelfTest();
     CHECK(self_test_result.ok()) << "FIPS tests failed: " << self_test_result;

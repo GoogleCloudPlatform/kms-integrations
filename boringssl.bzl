@@ -79,6 +79,34 @@ cc_library(
 )
 """
 
+_OPENSSL_BUILD_FILE_CONTENT = """
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+cc_library(
+    name = "crypto",
+    hdrs = glob(["openssl/*.h"]),
+    linkopts = ["-lcrypto"],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "ssl",
+    hdrs = glob(["openssl/*.h"]),
+    deps = [":crypto"],
+    linkopts = ["-lssl"],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "openssl_compat",
+    hdrs = ["compat/openssl/libcrypto-compat.h"],
+    srcs = ["compat/openssl/libcrypto-compat.c"],
+    strip_include_prefix = "compat",
+    deps = [":crypto"],
+    visibility = ["//visibility:public"],
+)
+"""
+
 def _must_succeed(operation, result):
     if (result.return_code != 0):
         error_msg = (
@@ -92,13 +120,38 @@ def _must_succeed(operation, result):
         )
         fail(error_msg)
 
-def _boringssl_impl(repo_ctx):
-    if "KMSP11_FIPS" not in repo_ctx.os.environ:
+def _crypto_library_impl(repo_ctx):
+    library = repo_ctx.os.environ.get("KMSP11_CRYPTO_LIBRARY", default = "boringssl")
+    if library not in ["boringssl", "boringssl_fips", "openssl"]:
+        fail("KMSP11_CRYPTO_LIBRARY='%s' is not supported" % (library))
+
+    if library == "boringssl":
         repo_ctx.download_and_extract(
             # 2021-03-18
             url = "https://github.com/google/boringssl/archive/dfa7c61bc554788901ee60940b30e5f3fc83f5ac.tar.gz",
             sha256 = "9f263cce1eb9d3429809637c8f62961e9f7b14d814902ca330a1678e9ddf49cd",
             stripPrefix = "boringssl-dfa7c61bc554788901ee60940b30e5f3fc83f5ac",
+        )
+        return
+
+    if library == "openssl":
+        include_dir = repo_ctx.os.environ.get(
+            "OPENSSL_INCLUDE_DIR",
+            default = "/usr/include/openssl",
+        )
+        repo_ctx.symlink(include_dir, "openssl")
+
+        # See https://wiki.openssl.org/index.php/OpenSSL_1.1.0_Changes#Backward_compatibility
+        repo_ctx.download_and_extract(
+            url = "https://wiki.openssl.org/images/e/ed/Openssl-compat.tar.gz",
+            sha256 = "2d75ffb10b2e3138a9c4e3c130fede955c5b8e326e6a860b718a99e41df58abb",
+            output = "compat/openssl",
+        )
+        repo_ctx.patch(Label("//:third_party/openssl_compat.patch"))
+
+        repo_ctx.file(
+            "BUILD",
+            content = _OPENSSL_BUILD_FILE_CONTENT,
         )
         return
 
@@ -161,17 +214,24 @@ def _boringssl_impl(repo_ctx):
         executable = False,
     )
 
-boringssl = repository_rule(
-    implementation = _boringssl_impl,
+crypto_library = repository_rule(
+    implementation = _crypto_library_impl,
     attrs = {
         "_go_cache": attr.label(
             default = Label("@bazel_gazelle_go_repository_cache//:go.env"),
             allow_single_file = True,
         ),
     },
+    environ = [
+        "KMSP11_CRYPTO_LIBRARY",
+        "OPENSSL_INCLUDE_DIR",
+    ],
 )
 
-def select_boringssl():
+def select_crypto_library():
     if native.existing_rule("boringssl"):
         return
-    boringssl(name = "boringssl")
+
+    # Our crypto repository will always be named 'boringssl' so that our
+    # gRPC stack uses it as well.
+    crypto_library(name = "boringssl")

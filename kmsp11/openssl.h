@@ -24,31 +24,90 @@
 // recent FIPS validation.
 // https://boringssl-review.googlesource.com/c/boringssl/+/42344
 
-inline void X509_SIG_get0(const X509_SIG* sig, const X509_ALGOR** out_alg,
-                          const ASN1_OCTET_STRING** out_digest) {
-  if (out_alg != nullptr) {
-    *out_alg = sig->algor;
-  }
-  if (out_digest != nullptr) {
-    *out_digest = sig->digest;
-  }
-}
-
-inline void X509_SIG_getm(X509_SIG* sig, X509_ALGOR** out_alg,
-                          ASN1_OCTET_STRING** out_digest) {
-  if (out_alg != nullptr) {
-    *out_alg = sig->algor;
-  }
-  if (out_digest != nullptr) {
-    *out_digest = sig->digest;
-  }
-}
+void X509_SIG_get0(const X509_SIG* sig, const X509_ALGOR** out_alg,
+                   const ASN1_OCTET_STRING** out_digest);
+void X509_SIG_getm(X509_SIG* sig, X509_ALGOR** out_alg,
+                   ASN1_OCTET_STRING** out_digest);
 
 #endif  // BORINGSSL_FIPS
 #else   // OPENSSL_IS_BORINGSSL
 
 #define BSSL_CONST
 
+#include <memory>
+
+extern "C" {
+#include "openssl/libcrypto-compat.h"
+}
+
+// bssl::UniquePtr implementation cribbed from
+// https://github.com/google/boringssl/blob/49f0329110a1d93a5febc2bceceedc655d995420/include/openssl/base.h#L510
+
+#define MAKE_DELETER(type, deleter)              \
+  template <>                                    \
+  struct Deleter<type> {                         \
+    void operator()(type* ptr) { deleter(ptr); } \
+  };
+
+namespace bssl {
+
+template <typename T, typename Enable = void>
+struct Deleter {};
+
+template <typename T>
+using UniquePtr = std::unique_ptr<T, Deleter<T> >;
+
+MAKE_DELETER(ASN1_OBJECT, ASN1_OBJECT_free);
+MAKE_DELETER(ASN1_TIME, ASN1_TIME_free);
+MAKE_DELETER(BIGNUM, BN_free);
+MAKE_DELETER(BIO, BIO_free);
+MAKE_DELETER(BN_CTX, BN_CTX_free);
+MAKE_DELETER(CONF, NCONF_free);
+MAKE_DELETER(EC_GROUP, EC_GROUP_free);
+MAKE_DELETER(EC_KEY, EC_KEY_free);
+MAKE_DELETER(EC_POINT, EC_POINT_free);
+MAKE_DELETER(ECDSA_SIG, ECDSA_SIG_free);
+MAKE_DELETER(EVP_PKEY, EVP_PKEY_free);
+MAKE_DELETER(EVP_PKEY_CTX, EVP_PKEY_CTX_free);
+MAKE_DELETER(RSA, RSA_free);
+MAKE_DELETER(X509, X509_free);
+MAKE_DELETER(X509_EXTENSION, X509_EXTENSION_free);
+MAKE_DELETER(X509_SIG, X509_SIG_free);
+MAKE_DELETER(X509_STORE, X509_STORE_free);
+MAKE_DELETER(X509_STORE_CTX, X509_STORE_CTX_free);
+
+}  // namespace bssl
+
+// A hook for version-specific initialization required for OpenSSL.
+// BoringSSL contains a function called CRYPTO_library_init() that
+// does nothing.
+void CRYPTO_library_init();
+
+// A handful of functions that we use are unavailable in older OpenSSL
+// versions; add our own implementations.
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+
+EC_KEY* EVP_PKEY_get0_EC_KEY(EVP_PKEY* pkey);
+
+const ASN1_TIME* X509_get0_notAfter(const X509* x);
+const ASN1_TIME* X509_get0_notBefore(const X509* x);
+
+void X509_SIG_get0(const X509_SIG* sig, const X509_ALGOR** out_alg,
+                   const ASN1_OCTET_STRING** out_digest);
+
+void X509_SIG_getm(X509_SIG* sig, X509_ALGOR** out_alg,
+                   ASN1_OCTET_STRING** out_digest);
+
+#endif  // OPENSSL_VERSION_NUMBER
 #endif  // OPENSSL_IS_BORINGSSL
+
+namespace kmsp11 {
+
+static const bool kCryptoLibraryInitialized = [] {
+  CRYPTO_library_init();
+  return true;
+}();
+
+}  // namespace kmsp11
 
 #endif  // KMSP11_OPENSSL_H_

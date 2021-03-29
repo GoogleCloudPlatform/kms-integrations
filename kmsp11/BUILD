@@ -226,8 +226,12 @@ cc_proto_library(
 
 cc_library(
     name = "openssl",
+    srcs = ["openssl.cc"],
     hdrs = ["openssl.h"],
-    deps = ["@boringssl//:crypto"],
+    deps = ["@boringssl//:crypto"] + select({
+        "//:openssl": ["@boringssl//:openssl_compat"],
+        "//conditions:default": [],
+    }),
 )
 
 cc_library(

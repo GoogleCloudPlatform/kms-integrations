@@ -93,7 +93,10 @@ build:tsan --linkopt=-fsanitize=thread
 
 build:fips --copt=-DBORINGSSL_FIPS
 build:fips --define=fips=1
-build:fips --repo_env=KMSP11_FIPS=1
+build:fips --repo_env=KMSP11_CRYPTO_LIBRARY=boringssl_fips
+
+build:openssl --define=openssl=1
+build:openssl --repo_env=KMSP11_CRYPTO_LIBRARY=openssl
 
 # Import from user.bazelrc if it exists. Keep this at the end of the file so
 # that local options can override options that are declared in this file.

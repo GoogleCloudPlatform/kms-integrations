@@ -206,6 +206,7 @@ go_test(
             "-min_binary_size_mb=16",
             "-max_binary_size_mb=24",
         ],
+        "//:openssl": ["-expect_openssl"],
         "//conditions:default": [],
     }),
     data = [

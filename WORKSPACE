@@ -27,9 +27,9 @@ http_archive(
     ],
 )
 
-load("boringssl.bzl", "select_boringssl")
+load("boringssl.bzl", "select_crypto_library")
 
-select_boringssl()
+select_crypto_library()
 
 http_archive(
     name = "com_github_gflags_gflags",  # 2020-03-18
