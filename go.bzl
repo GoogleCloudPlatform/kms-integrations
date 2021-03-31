@@ -237,6 +237,12 @@ def go_repositories():
         version = "v0.1.0",
     )
     go_repository(
+        name = "com_github_miekg_pkcs11",
+        importpath = "github.com/miekg/pkcs11",
+        sum = "h1:iMwmD7I5225wv84WxIG/bmxz9AXjWvTWIbM/TYHvWtw=",
+        version = "v1.0.3",
+    )
+    go_repository(
         name = "com_github_pelletier_go_toml",
         importpath = "github.com/pelletier/go-toml",
         sum = "h1:T5zMGML61Wp+FlcbWjRDT7yAxhJNAiPPLOFECq181zc=",
