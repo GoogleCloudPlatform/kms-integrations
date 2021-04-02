@@ -4,13 +4,9 @@
 #include "absl/cleanup/cleanup.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
-#include "glog/logging.h"
 #include "kmsp11/test/fakekms/cpp/fakekms.h"
-#include "kmsp11/test/runfiles.h"
-#include "kmsp11/util/status_macros.h"
 
 namespace kmsp11 {
-
 namespace {
 
 class WindowsFakeKms : public FakeKms {
@@ -43,8 +39,9 @@ absl::Status Win32ErrorToStatus(absl::string_view message) {
       absl::StrFormat("%s: code %d: %s", message, error_code, error_text));
 }
 
-absl::StatusOr<std::unique_ptr<WindowsFakeKms>> WindowsFakeKms::New(
-    absl::string_view flags) {
+}  // namespace
+
+absl::StatusOr<std::unique_ptr<FakeKms>> FakeKms::New(absl::string_view flags) {
   // https://docs.microsoft.com/en-us/windows/win32/procthread/creating-a-child-process-with-redirected-input-and-output
   SECURITY_ATTRIBUTES security_attrs{
       sizeof(SECURITY_ATTRIBUTES),  // nLength
@@ -69,10 +66,8 @@ absl::StatusOr<std::unique_ptr<WindowsFakeKms>> WindowsFakeKms::New(
 
   PROCESS_INFORMATION process_info;
 
-  std::string bin_path = RunfileLocation(
-      "com_google_kmstools/kmsp11/test/fakekms/main/fakekms_/fakekms.exe");
+  std::string bin_path = BinaryLocation(".exe");
   std::string command_line = absl::StrCat(bin_path, " ", flags);
-
   if (!CreateProcessA(bin_path.c_str(), const_cast<char*>(command_line.c_str()),
                       nullptr, nullptr, true, CREATE_NO_WINDOW, nullptr,
                       nullptr, &startup_info, &process_info)) {
@@ -89,14 +84,6 @@ absl::StatusOr<std::unique_ptr<WindowsFakeKms>> WindowsFakeKms::New(
 
   std::string address(buf, len);
   return absl::make_unique<WindowsFakeKms>(address, process_info.hProcess);
-}
-
-}  // namespace
-
-absl::StatusOr<std::unique_ptr<FakeKms>> FakeKms::New(absl::string_view flags) {
-  ASSIGN_OR_RETURN(std::unique_ptr<WindowsFakeKms> fake,
-                   WindowsFakeKms::New(flags));
-  return std::unique_ptr<FakeKms>(std::move(fake));
 }
 
 }  // namespace kmsp11

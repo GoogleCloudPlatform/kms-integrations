@@ -1,23 +1,27 @@
 #include "kmsp11/test/fakekms/cpp/fakekms.h"
 
+#include "absl/strings/str_format.h"
 #include "absl/time/clock.h"
 #include "gmock/gmock.h"
 #include "grpcpp/create_channel.h"
 #include "grpcpp/security/credentials.h"
-#include "kmsp11/test/test_status_macros.h"
 
 namespace kmsp11 {
 namespace {
 
-TEST(CppFakeKmsTest, SmokeTest) {
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake, FakeKms::New());
+namespace kms_v1 = ::google::cloud::kms::v1;
 
-  grpc::ChannelArguments args;
-  std::shared_ptr<grpc::Channel> channel = grpc::CreateCustomChannel(
-      fake->listen_addr(), grpc::InsecureChannelCredentials(), args);
+// Declare an IsOk matcher locally so that we don't have to depend on kmsp11.
+MATCHER(IsOk, absl::StrFormat("status is %sOK", negation ? "not " : "")) {
+  return arg.ok();
+}
+
+TEST(ServerTest, SmokeTest) {
+  absl::StatusOr<std::unique_ptr<FakeKms>> fake = FakeKms::New();
+  ASSERT_THAT(fake.status(), IsOk());
 
   std::unique_ptr<kms_v1::KeyManagementService::Stub> stub =
-      kms_v1::KeyManagementService::NewStub(channel);
+      (*fake)->NewClient();
 
   grpc::ClientContext ctx;
 
@@ -27,21 +31,17 @@ TEST(CppFakeKmsTest, SmokeTest) {
 
   kms_v1::KeyRing kr;
 
-  EXPECT_OK(stub->CreateKeyRing(&ctx, req, &kr));
+  EXPECT_THAT(stub->CreateKeyRing(&ctx, req, &kr), IsOk());
   EXPECT_EQ(kr.name(),
             "projects/my-project/locations/us-central1/keyRings/kr1");
 }
 
-TEST(CppFakeKmsTest, EnsureFlagsArePassed) {
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake,
-                       FakeKms::New("-delay=3s"));
-
-  grpc::ChannelArguments args;
-  std::shared_ptr<grpc::Channel> channel = grpc::CreateCustomChannel(
-      fake->listen_addr(), grpc::InsecureChannelCredentials(), args);
+TEST(ServerTest, EnsureFlagsArePassed) {
+  absl::StatusOr<std::unique_ptr<FakeKms>> fake = FakeKms::New("-delay=300ms");
+  ASSERT_THAT(fake.status(), IsOk());
 
   std::unique_ptr<kms_v1::KeyManagementService::Stub> stub =
-      kms_v1::KeyManagementService::NewStub(channel);
+      (*fake)->NewClient();
 
   grpc::ClientContext ctx;
 
@@ -52,8 +52,8 @@ TEST(CppFakeKmsTest, EnsureFlagsArePassed) {
   kms_v1::KeyRing kr;
 
   absl::Time begin = absl::Now();
-  EXPECT_OK(stub->CreateKeyRing(&ctx, req, &kr));
-  EXPECT_GE(absl::Now() - begin, absl::Seconds(3));
+  EXPECT_THAT(stub->CreateKeyRing(&ctx, req, &kr), IsOk());
+  EXPECT_GE(absl::Now() - begin, absl::Milliseconds(300));
 }
 
 }  // namespace

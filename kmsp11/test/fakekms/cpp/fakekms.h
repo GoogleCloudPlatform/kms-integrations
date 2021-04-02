@@ -4,9 +4,11 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/str_split.h"
 #include "absl/strings/strip.h"
+#include "glog/logging.h"
+#include "google/cloud/kms/v1/service.grpc.pb.h"
 #include "grpcpp/create_channel.h"
 #include "grpcpp/security/credentials.h"
-#include "kmsp11/util/kms_v1.h"
+#include "tools/cpp/runfiles/runfiles.h"
 
 namespace kmsp11 {
 
@@ -31,8 +33,9 @@ class FakeKms {
 
   const std::string& listen_addr() const { return listen_addr_; }
 
-  inline std::unique_ptr<kms_v1::KeyManagementService::Stub> NewClient() {
-    return kms_v1::KeyManagementService::NewStub(
+  inline std::unique_ptr<google::cloud::kms::v1::KeyManagementService::Stub>
+  NewClient() {
+    return google::cloud::kms::v1::KeyManagementService::NewStub(
         grpc::CreateChannel(listen_addr_, grpc::InsecureChannelCredentials()));
   }
 
@@ -40,6 +43,18 @@ class FakeKms {
   FakeKms(std::string listen_addr) {
     std::vector<std::string> split = absl::StrSplit(listen_addr, '\n');
     listen_addr_ = std::string(absl::StripAsciiWhitespace(split[0]));
+  }
+
+  inline static std::string BinaryLocation(
+      absl::string_view binary_suffix = "") {
+    using ::bazel::tools::cpp::runfiles::Runfiles;
+    std::string error;
+    std::unique_ptr<Runfiles> runfiles =
+        absl::WrapUnique(Runfiles::CreateForTest(&error));
+    CHECK(runfiles) << "error creating runfiles: " << error;
+    return runfiles->Rlocation(absl::StrCat(
+        "com_google_kmstools/kmsp11/test/fakekms/main/fakekms_/fakekms",
+        binary_suffix));
   }
 
  private:
