@@ -8,8 +8,6 @@ import (
 	"hash/crc32"
 	"testing"
 
-	"oss-tools/kmsp11/test/fakekms/testutil"
-
 	"github.com/google/go-cmp/cmp"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -65,7 +63,7 @@ func TestAsymmetricDecrypt(t *testing.T) {
 		ProtectionLevel: kmspb.ProtectionLevel_SOFTWARE,
 	}
 
-	if diff := cmp.Diff(want, got, testutil.ProtoDiffOpts()...); diff != "" {
+	if diff := cmp.Diff(want, got, ProtoDiffOpts()...); diff != "" {
 		t.Errorf("proto mismatch (-want +got): %s", diff)
 	}
 }

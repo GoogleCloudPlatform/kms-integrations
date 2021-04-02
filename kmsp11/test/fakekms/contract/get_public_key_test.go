@@ -10,8 +10,6 @@ import (
 	"encoding/pem"
 	"testing"
 
-	"oss-tools/kmsp11/test/fakekms/testutil"
-
 	"github.com/google/go-cmp/cmp"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -70,7 +68,7 @@ func TestGetPublicKeyEC(t *testing.T) {
 		ProtectionLevel: kmspb.ProtectionLevel_SOFTWARE,
 	}
 
-	opts := append(testutil.ProtoDiffOpts(), ignorePEMAndPEMCRC)
+	opts := append(ProtoDiffOpts(), ignorePEMAndPEMCRC)
 	if diff := cmp.Diff(want, got, opts...); diff != "" {
 		t.Errorf("proto mismatch (-want +got): %s", diff)
 	}
@@ -114,7 +112,7 @@ func TestGetPublicKeyRSA(t *testing.T) {
 		ProtectionLevel: kmspb.ProtectionLevel_HSM,
 	}
 
-	opts := append(testutil.ProtoDiffOpts(), ignorePEMAndPEMCRC)
+	opts := append(ProtoDiffOpts(), ignorePEMAndPEMCRC)
 	if diff := cmp.Diff(want, got, opts...); diff != "" {
 		t.Errorf("proto mismatch (-want +got): %s", diff)
 	}

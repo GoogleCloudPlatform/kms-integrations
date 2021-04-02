@@ -11,8 +11,6 @@ import (
 	"math/big"
 	"testing"
 
-	"oss-tools/kmsp11/test/fakekms/testutil"
-
 	"github.com/google/go-cmp/cmp"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -73,7 +71,7 @@ func TestECSign(t *testing.T) {
 		ProtectionLevel: kmspb.ProtectionLevel_HSM,
 	}
 
-	opts := append(testutil.ProtoDiffOpts(), ignoreSignatureAndSignatureCRC)
+	opts := append(ProtoDiffOpts(), ignoreSignatureAndSignatureCRC)
 	if diff := cmp.Diff(want, got, opts...); diff != "" {
 		t.Errorf("proto mismatch (-want +got): %s", diff)
 	}
@@ -136,7 +134,7 @@ func TestRSASignPKCS1(t *testing.T) {
 		ProtectionLevel: kmspb.ProtectionLevel_SOFTWARE,
 	}
 
-	opts := append(testutil.ProtoDiffOpts(), ignoreSignatureAndSignatureCRC)
+	opts := append(ProtoDiffOpts(), ignoreSignatureAndSignatureCRC)
 	if diff := cmp.Diff(want, got, opts...); diff != "" {
 		t.Errorf("proto mismatch (-want +got): %s", diff)
 	}
@@ -190,7 +188,7 @@ func TestRSASignRawPKCS1(t *testing.T) {
 		ProtectionLevel: kmspb.ProtectionLevel_HSM,
 	}
 
-	opts := append(testutil.ProtoDiffOpts(), ignoreSignatureAndSignatureCRC)
+	opts := append(ProtoDiffOpts(), ignoreSignatureAndSignatureCRC)
 	if diff := cmp.Diff(want, got, opts...); diff != "" {
 		t.Errorf("proto mismatch (-want +got): %s", diff)
 	}
@@ -252,7 +250,7 @@ func TestRSASignPSS(t *testing.T) {
 		ProtectionLevel: kmspb.ProtectionLevel_SOFTWARE,
 	}
 
-	opts := append(testutil.ProtoDiffOpts(), ignoreSignatureAndSignatureCRC)
+	opts := append(ProtoDiffOpts(), ignoreSignatureAndSignatureCRC)
 	if diff := cmp.Diff(want, got, opts...); diff != "" {
 		t.Errorf("proto mismatch (-want +got): %s", diff)
 	}

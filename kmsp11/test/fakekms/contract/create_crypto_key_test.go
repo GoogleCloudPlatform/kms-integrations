@@ -5,15 +5,13 @@ import (
 	"fmt"
 	"testing"
 
-	"oss-tools/kmsp11/test/fakekms/testutil"
-
 	"github.com/golang/protobuf/ptypes"
 	"github.com/google/go-cmp/cmp"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"google.golang.org/protobuf/types/known/durationpb"
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
+	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 func TestCreateCryptoKeyDefaults(t *testing.T) {
@@ -50,7 +48,7 @@ func TestCreateCryptoKeyDefaults(t *testing.T) {
 		DestroyScheduledDuration: &durationpb.Duration{Seconds: 86400},
 	}
 
-	if diff := cmp.Diff(want, got, testutil.ProtoDiffOpts()...); diff != "" {
+	if diff := cmp.Diff(want, got, ProtoDiffOpts()...); diff != "" {
 		t.Errorf("unexpected diff (-want, +got): %s", diff)
 	}
 }
@@ -111,7 +109,7 @@ func TestCreateCryptoKeyAlgorithms(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			keyID := testutil.RandomID(t)
+			keyID := RandomID(t)
 			got, err := client.CreateCryptoKey(ctx, &kmspb.CreateCryptoKeyRequest{
 				Parent:      kr.Name,
 				CryptoKeyId: keyID,
@@ -139,7 +137,7 @@ func TestCreateCryptoKeyAlgorithms(t *testing.T) {
 				DestroyScheduledDuration: &durationpb.Duration{Seconds: 86400},
 			}
 
-			if diff := cmp.Diff(want, got, testutil.ProtoDiffOpts()...); diff != "" {
+			if diff := cmp.Diff(want, got, ProtoDiffOpts()...); diff != "" {
 				t.Errorf("unexpected diff (-want +got): %s", diff)
 			}
 		})
@@ -213,7 +211,7 @@ func TestCreateCryptoKeyMissingAlgorithm(t *testing.T) {
 	for _, p := range purposes {
 		_, err := client.CreateCryptoKey(ctx, &kmspb.CreateCryptoKeyRequest{
 			Parent:      kr.Name,
-			CryptoKeyId: testutil.RandomID(t),
+			CryptoKeyId: RandomID(t),
 			CryptoKey: &kmspb.CryptoKey{
 				Purpose: p,
 			},

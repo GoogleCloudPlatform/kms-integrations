@@ -5,8 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"oss-tools/kmsp11/test/fakekms/testutil"
-
 	kms "cloud.google.com/go/kms/apiv1"
 	"google.golang.org/protobuf/proto"
 
@@ -23,7 +21,7 @@ func (c *ContractTestClient) CreateTestKR(ctx context.Context, t *testing.T, req
 	t.Helper()
 
 	r := &kmspb.CreateKeyRingRequest{
-		KeyRingId: testutil.RandomID(t),
+		KeyRingId: RandomID(t),
 	}
 	proto.Merge(r, req)
 
@@ -40,7 +38,7 @@ func (c *ContractTestClient) CreateTestCK(ctx context.Context, t *testing.T, req
 	t.Helper()
 
 	r := &kmspb.CreateCryptoKeyRequest{
-		CryptoKeyId: testutil.RandomID(t),
+		CryptoKeyId: RandomID(t),
 	}
 	proto.Merge(r, req)
 

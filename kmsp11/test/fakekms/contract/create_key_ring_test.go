@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"testing"
 
-	"oss-tools/kmsp11/test/fakekms/testutil"
-
 	"github.com/golang/protobuf/ptypes"
 	"github.com/google/go-cmp/cmp"
 	"google.golang.org/grpc/codes"
@@ -17,7 +15,7 @@ import (
 
 func TestCreateKeyRing(t *testing.T) {
 	ctx := context.Background()
-	keyRingID := testutil.RandomID(t)
+	keyRingID := RandomID(t)
 
 	got, err := client.CreateKeyRing(ctx, &kmspb.CreateKeyRingRequest{
 		Parent:    location,
@@ -32,7 +30,7 @@ func TestCreateKeyRing(t *testing.T) {
 		CreateTime: ptypes.TimestampNow(),
 	}
 
-	if diff := cmp.Diff(want, got, testutil.ProtoDiffOpts()...); diff != "" {
+	if diff := cmp.Diff(want, got, ProtoDiffOpts()...); diff != "" {
 		t.Errorf("unexpected diff (-want +got): %s", diff)
 	}
 }
@@ -66,7 +64,7 @@ func TestCreateKeyRingDuplicateName(t *testing.T) {
 
 	req := &kmspb.CreateKeyRingRequest{
 		Parent:    location,
-		KeyRingId: testutil.RandomID(t),
+		KeyRingId: RandomID(t),
 	}
 
 	if _, err := client.CreateKeyRing(ctx, req); err != nil {

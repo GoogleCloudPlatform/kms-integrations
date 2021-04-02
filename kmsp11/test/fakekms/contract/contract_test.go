@@ -49,7 +49,7 @@ func testRealKMS(m *testing.M, kmsEndpoint, credsFilePath string) {
 	initCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	opts := []option.ClientOption {option.WithEndpoint(kmsEndpoint)}
+	opts := []option.ClientOption{option.WithEndpoint(kmsEndpoint)}
 	if credsFilePath != "" {
 		opts = append(opts, option.WithCredentialsFile(credsFilePath))
 	}

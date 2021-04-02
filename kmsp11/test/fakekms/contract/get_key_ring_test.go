@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"testing"
 
-	"oss-tools/kmsp11/test/fakekms/testutil"
-
 	"github.com/google/go-cmp/cmp"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -25,7 +23,7 @@ func TestGetKeyRingEqualsCreated(t *testing.T) {
 		t.Error(err)
 	}
 
-	if diff := cmp.Diff(want, got, testutil.ProtoDiffOpts()...); diff != "" {
+	if diff := cmp.Diff(want, got, ProtoDiffOpts()...); diff != "" {
 		t.Errorf("proto mismatch (-want +got): %s", diff)
 	}
 }
@@ -45,7 +43,7 @@ func TestGetKeyRingNotFound(t *testing.T) {
 	ctx := context.Background()
 
 	_, err := client.GetKeyRing(ctx, &kmspb.GetKeyRingRequest{
-		Name: fmt.Sprintf("%s/keyRings/%s", location, testutil.RandomID(t)),
+		Name: fmt.Sprintf("%s/keyRings/%s", location, RandomID(t)),
 	})
 	if status.Code(err) != codes.NotFound {
 		t.Errorf("err=%v, want code=%s", err, codes.NotFound)

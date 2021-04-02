@@ -2,7 +2,7 @@ package contract
 
 import (
 	"context"
-	"oss-tools/kmsp11/test/fakekms/testutil"
+
 	"testing"
 	"time"
 
@@ -41,7 +41,7 @@ func TestDestroyEnabledCryptoKeyVersion(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if diff := cmp.Diff(ckv, got, testutil.ProtoDiffOpts()...); diff != "" {
+	if diff := cmp.Diff(ckv, got, ProtoDiffOpts()...); diff != "" {
 		t.Errorf("ckv proto mismatch on destroy RPC (-want +got): %s", diff)
 	}
 }
@@ -83,7 +83,7 @@ func TestDestroyDisabledCryptoKeyVersion(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if diff := cmp.Diff(ckv, got, testutil.ProtoDiffOpts()...); diff != "" {
+	if diff := cmp.Diff(ckv, got, ProtoDiffOpts()...); diff != "" {
 		t.Errorf("ckv proto mismatch on destroy RPC (-want +got): %s", diff)
 	}
 }

@@ -4,8 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"oss-tools/kmsp11/test/fakekms/testutil"
-
 	"github.com/google/go-cmp/cmp"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -35,7 +33,7 @@ func TestGetCryptoKeyVersionEqualsCreated(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if diff := cmp.Diff(want, got, testutil.ProtoDiffOpts()...); diff != "" {
+	if diff := cmp.Diff(want, got, ProtoDiffOpts()...); diff != "" {
 		t.Errorf("proto mismatch (-want +got): %s", diff)
 	}
 }

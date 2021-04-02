@@ -4,8 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"oss-tools/kmsp11/test/fakekms/testutil"
-
 	"github.com/google/go-cmp/cmp"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -35,7 +33,7 @@ func TestUpdateCryptoKeyVersionDisableEnable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if diff := cmp.Diff(ck.Primary, gotVersion, testutil.ProtoDiffOpts()...); diff != "" {
+	if diff := cmp.Diff(ck.Primary, gotVersion, ProtoDiffOpts()...); diff != "" {
 		t.Errorf("ckv proto mismatch on disable RPC (-want +got): %s", diff)
 	}
 
@@ -44,7 +42,7 @@ func TestUpdateCryptoKeyVersionDisableEnable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if diff := cmp.Diff(ck, gotKey, testutil.ProtoDiffOpts()...); diff != "" {
+	if diff := cmp.Diff(ck, gotKey, ProtoDiffOpts()...); diff != "" {
 		t.Errorf("ck proto mismatch after disable RPC (-want +got): %s", diff)
 	}
 
@@ -59,7 +57,7 @@ func TestUpdateCryptoKeyVersionDisableEnable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if diff := cmp.Diff(ck.Primary, gotVersion, testutil.ProtoDiffOpts()...); diff != "" {
+	if diff := cmp.Diff(ck.Primary, gotVersion, ProtoDiffOpts()...); diff != "" {
 		t.Errorf("ckv proto mismatch on enable RPC (-want +got): %s", diff)
 	}
 }

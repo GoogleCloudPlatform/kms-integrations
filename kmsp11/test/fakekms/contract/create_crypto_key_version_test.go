@@ -6,8 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"oss-tools/kmsp11/test/fakekms/testutil"
-
 	"github.com/golang/protobuf/ptypes"
 	"github.com/google/go-cmp/cmp"
 	"google.golang.org/grpc/codes"
@@ -46,7 +44,7 @@ func TestCreateCryptoKeyVersionSequential(t *testing.T) {
 		State:           kmspb.CryptoKeyVersion_ENABLED,
 	}
 
-	if diff := cmp.Diff(want, got, testutil.ProtoDiffOpts()...); diff != "" {
+	if diff := cmp.Diff(want, got, ProtoDiffOpts()...); diff != "" {
 		t.Errorf("unexpected version 1 diff (-want, +got): %s", diff)
 	}
 
@@ -58,7 +56,7 @@ func TestCreateCryptoKeyVersionSequential(t *testing.T) {
 	want.Name = ck.Name + "/cryptoKeyVersions/2"
 	want.CreateTime = ptypes.TimestampNow()
 
-	if diff := cmp.Diff(want, got, testutil.ProtoDiffOpts()...); diff != "" {
+	if diff := cmp.Diff(want, got, ProtoDiffOpts()...); diff != "" {
 		t.Errorf("unexpected version 2 diff (-want, +got): %s", diff)
 	}
 }
@@ -137,7 +135,7 @@ func TestCreateCryptoKeyVersionAsync(t *testing.T) {
 				State:           kmspb.CryptoKeyVersion_PENDING_GENERATION,
 			}
 
-			if diff := cmp.Diff(want, got, testutil.ProtoDiffOpts()...); diff != "" {
+			if diff := cmp.Diff(want, got, ProtoDiffOpts()...); diff != "" {
 				t.Errorf("unexpected pregeneration diff (-want +got): %s", diff)
 			}
 
@@ -157,7 +155,7 @@ func TestCreateCryptoKeyVersionAsync(t *testing.T) {
 
 			// Real KMS returns an attestation for HSM keys. Ignore it, because we
 			// don't support attestations in the fake.
-			opts := append(testutil.ProtoDiffOpts(), protocmp.IgnoreFields(
+			opts := append(ProtoDiffOpts(), protocmp.IgnoreFields(
 				new(kmspb.CryptoKeyVersion), protoreflect.Name("attestation")))
 
 			if diff := cmp.Diff(want, got, opts...); diff != "" {
