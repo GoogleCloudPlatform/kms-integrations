@@ -268,6 +268,13 @@ def go_repositories():
         version = "v1.3.0",
     )
     go_repository(
+        name = "com_github_sethvargo_go_gcpkms",
+        importpath = "github.com/sethvargo/go-gcpkms",
+        sum = "h1:pyjDLqLwpk9pMjDSTilPpaUjgP1AfSjX9WGzitZwGUY=",
+        version = "v0.1.0",
+    )
+
+    go_repository(
         name = "com_github_stretchr_objx",
         importpath = "github.com/stretchr/objx",
         sum = "h1:4G4v2dO3VZwixGIRoQ5Lfboy6nUhCyYzaqnIAPPhYs4=",

@@ -46,4 +46,11 @@ _upload_artifacts() {
 }
 trap _upload_artifacts EXIT
 
-bazel test -c opt ${BAZEL_EXTRA_ARGS} ... :release_tests --keep_going
+export BAZEL_ARGS="-c opt --keep_going ${BAZEL_EXTRA_ARGS}"
+
+bazel test ${BAZEL_ARGS} ... :release_tests
+
+bazel run ${BAZEL_ARGS} //kmsp11/tools/buildsigner -- \
+  -signing_key=projects/oss-tools-build/locations/us/keyRings/oss-tools-release-signing-dev/cryptoKeys/dev-signing-key-20210401/cryptoKeyVersions/1 \
+  < bazel-bin/kmsp11/main/libkmsp11.so \
+  > ${RESULTS_DIR}/libkmsp11.dylib.sig
