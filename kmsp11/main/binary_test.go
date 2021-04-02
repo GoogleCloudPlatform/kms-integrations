@@ -80,7 +80,7 @@ func loadELFBinary(t *testing.T) *elf.File {
 func loadP11FunctionNames(t *testing.T) []string {
 	t.Helper()
 
-	f, err := ioutil.ReadFile(resolveRunfile(t, "kmsp11/main/function_defs.textproto"))
+	f, err := ioutil.ReadFile(resolveRunfile(t, "kmsp11/tools/p11fn/function_defs.textproto"))
 	if err != nil {
 		t.Fatalf("error reading function list textproto: %v", err)
 	}
