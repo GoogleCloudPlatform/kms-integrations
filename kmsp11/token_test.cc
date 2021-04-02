@@ -22,19 +22,19 @@ using ::testing::Property;
 class TokenTest : public testing::Test {
  protected:
   inline void SetUp() override {
-    ASSERT_OK_AND_ASSIGN(fake_kms_, FakeKms::New());
+    ASSERT_OK_AND_ASSIGN(fake_server_, fakekms::Server::New());
 
-    auto fake_client = fake_kms_->NewClient();
+    auto fake_client = fake_server_->NewClient();
     key_ring_ = CreateKeyRingOrDie(fake_client.get(), kTestLocation, RandomId(),
                                    key_ring_);
 
     config_.set_key_ring(key_ring_.name());
-    client_ = absl::make_unique<KmsClient>(fake_kms_->listen_addr(),
+    client_ = absl::make_unique<KmsClient>(fake_server_->listen_addr(),
                                            grpc::InsecureChannelCredentials(),
                                            absl::Seconds(1));
   }
 
-  std::unique_ptr<FakeKms> fake_kms_;
+  std::unique_ptr<fakekms::Server> fake_server_;
   kms_v1::KeyRing key_ring_;
   TokenConfig config_;
   std::unique_ptr<KmsClient> client_;
@@ -249,7 +249,7 @@ TEST_F(TokenTest, LogoutWithoutLoginFails) {
 }
 
 TEST_F(TokenTest, FindObjectsPublicBeforePrivate) {
-  auto kms_client = fake_kms_->NewClient();
+  auto kms_client = fake_server_->NewClient();
 
   kms_v1::CryptoKey ck;
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
@@ -283,7 +283,7 @@ TEST_F(TokenTest, FindObjectsPublicBeforePrivate) {
 }
 
 TEST_F(TokenTest, FindObjectsKeyNamesSorted) {
-  auto kms_client = fake_kms_->NewClient();
+  auto kms_client = fake_server_->NewClient();
 
   kms_v1::CryptoKey ck;
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
@@ -338,7 +338,7 @@ TEST_F(TokenTest, ObjectsUnknownHandle) {
 }
 
 TEST_F(TokenTest, EncryptDecryptKeyUnavailable) {
-  auto kms_client = fake_kms_->NewClient();
+  auto kms_client = fake_server_->NewClient();
 
   kms_v1::CryptoKey ck;
   ck.set_purpose(kms_v1::CryptoKey::ENCRYPT_DECRYPT);
@@ -352,7 +352,7 @@ TEST_F(TokenTest, EncryptDecryptKeyUnavailable) {
 }
 
 TEST_F(TokenTest, SoftwareKeyUnavailable) {
-  auto kms_client = fake_kms_->NewClient();
+  auto kms_client = fake_server_->NewClient();
 
   kms_v1::CryptoKey ck;
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
@@ -370,7 +370,7 @@ TEST_F(TokenTest, SoftwareKeyUnavailable) {
 }
 
 TEST_F(TokenTest, DisabledKeyUnavailable) {
-  auto kms_client = fake_kms_->NewClient();
+  auto kms_client = fake_server_->NewClient();
 
   kms_v1::CryptoKey ck;
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
@@ -414,7 +414,7 @@ TEST_F(TokenTest, DisabledKeyUnavailable) {
 }
 
 TEST_F(TokenTest, DisabledKeyUnavailableAfterRefresh) {
-  auto kms_client = fake_kms_->NewClient();
+  auto kms_client = fake_server_->NewClient();
 
   kms_v1::CryptoKey ck;
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
@@ -451,7 +451,7 @@ TEST_F(TokenTest, DisabledKeyUnavailableAfterRefresh) {
 }
 
 TEST_F(TokenTest, CertGeneratedWhenConfigIsSet) {
-  auto kms_client = fake_kms_->NewClient();
+  auto kms_client = fake_server_->NewClient();
 
   kms_v1::CryptoKey ck;
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
@@ -482,7 +482,7 @@ TEST_F(TokenTest, CertGeneratedWhenConfigIsSet) {
 }
 
 TEST_F(TokenTest, CertNotGeneratedWhenConfigIsUnset) {
-  auto kms_client = fake_kms_->NewClient();
+  auto kms_client = fake_server_->NewClient();
 
   kms_v1::CryptoKey ck;
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);

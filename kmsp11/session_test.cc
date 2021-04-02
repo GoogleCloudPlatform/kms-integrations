@@ -20,19 +20,19 @@ using ::testing::SizeIs;
 class SessionTest : public testing::Test {
  protected:
   void SetUp() override {
-    ASSERT_OK_AND_ASSIGN(fake_kms_, FakeKms::New());
+    ASSERT_OK_AND_ASSIGN(fake_server_, fakekms::Server::New());
 
-    auto fake_client = fake_kms_->NewClient();
+    auto fake_client = fake_server_->NewClient();
     key_ring_ = CreateKeyRingOrDie(fake_client.get(), kTestLocation, RandomId(),
                                    key_ring_);
 
     config_.set_key_ring(key_ring_.name());
-    client_ = absl::make_unique<KmsClient>(fake_kms_->listen_addr(),
+    client_ = absl::make_unique<KmsClient>(fake_server_->listen_addr(),
                                            grpc::InsecureChannelCredentials(),
                                            absl::Seconds(5));
   }
 
-  std::unique_ptr<FakeKms> fake_kms_;
+  std::unique_ptr<fakekms::Server> fake_server_;
   kms_v1::KeyRing key_ring_;
   TokenConfig config_;
   std::unique_ptr<KmsClient> client_;
@@ -134,7 +134,7 @@ TEST_F(SessionTest, FindEmptyTokenSuccess) {
 }
 
 TEST_F(SessionTest, FindAllSinglePage) {
-  auto kms_client = fake_kms_->NewClient();
+  auto kms_client = fake_server_->NewClient();
 
   kms_v1::CryptoKey ck;
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
@@ -173,7 +173,7 @@ TEST_F(SessionTest, FindAllSinglePage) {
 }
 
 TEST_F(SessionTest, FindIgnoreResults) {
-  auto kms_client = fake_kms_->NewClient();
+  auto kms_client = fake_server_->NewClient();
 
   kms_v1::CryptoKey ck;
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
@@ -196,7 +196,7 @@ TEST_F(SessionTest, FindIgnoreResults) {
 }
 
 TEST_F(SessionTest, FindPublicKeysMultiPage) {
-  auto kms_client = fake_kms_->NewClient();
+  auto kms_client = fake_server_->NewClient();
 
   kms_v1::CryptoKey ck;
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
@@ -276,7 +276,7 @@ TEST_F(SessionTest, FindFinalNotInitialized) {
 }
 
 TEST_F(SessionTest, Decrypt) {
-  auto kms_client = fake_kms_->NewClient();
+  auto kms_client = fake_server_->NewClient();
 
   kms_v1::CryptoKey ck;
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_DECRYPT);
@@ -321,7 +321,7 @@ TEST_F(SessionTest, Decrypt) {
 }
 
 TEST_F(SessionTest, DecryptInitAlreadyActive) {
-  auto kms_client = fake_kms_->NewClient();
+  auto kms_client = fake_server_->NewClient();
 
   kms_v1::CryptoKey ck;
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_DECRYPT);
@@ -366,7 +366,7 @@ TEST_F(SessionTest, DecryptNotInitialized) {
 }
 
 TEST_F(SessionTest, Encrypt) {
-  auto kms_client = fake_kms_->NewClient();
+  auto kms_client = fake_server_->NewClient();
 
   kms_v1::CryptoKey ck;
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_DECRYPT);
@@ -404,7 +404,7 @@ TEST_F(SessionTest, Encrypt) {
 }
 
 TEST_F(SessionTest, EncryptInitAlreadyActive) {
-  auto kms_client = fake_kms_->NewClient();
+  auto kms_client = fake_server_->NewClient();
 
   kms_v1::CryptoKey ck;
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_DECRYPT);
@@ -449,7 +449,7 @@ TEST_F(SessionTest, EncryptNotInitialized) {
 }
 
 TEST_F(SessionTest, Sign) {
-  auto kms_client = fake_kms_->NewClient();
+  auto kms_client = fake_server_->NewClient();
 
   kms_v1::CryptoKey ck;
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
@@ -491,7 +491,7 @@ TEST_F(SessionTest, Sign) {
 }
 
 TEST_F(SessionTest, SignInitAlreadyActive) {
-  auto kms_client = fake_kms_->NewClient();
+  auto kms_client = fake_server_->NewClient();
 
   kms_v1::CryptoKey ck;
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
@@ -525,7 +525,7 @@ TEST_F(SessionTest, SignInitAlreadyActive) {
 }
 
 TEST_F(SessionTest, SignatureLength) {
-  auto kms_client = fake_kms_->NewClient();
+  auto kms_client = fake_server_->NewClient();
 
   kms_v1::CryptoKey ck;
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
@@ -577,7 +577,7 @@ TEST_F(SessionTest, SignNotInitialized) {
 }
 
 TEST_F(SessionTest, SignVerify) {
-  auto kms_client = fake_kms_->NewClient();
+  auto kms_client = fake_server_->NewClient();
 
   kms_v1::CryptoKey ck;
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
@@ -623,7 +623,7 @@ TEST_F(SessionTest, SignVerify) {
 }
 
 TEST_F(SessionTest, VerifyInitAlreadyActive) {
-  auto kms_client = fake_kms_->NewClient();
+  auto kms_client = fake_server_->NewClient();
 
   kms_v1::CryptoKey ck;
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
@@ -866,7 +866,7 @@ TEST_F(GenerateKeyPairTest,
 TEST_F(GenerateKeyPairTest, DuplicateLabelReturnsAlreadyExistsDefaultConfig) {
   std::string label = "my-great-key";
 
-  auto kms_client = fake_kms_->NewClient();
+  auto kms_client = fake_server_->NewClient();
   kms_v1::CryptoKey ck;
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
   ck.mutable_version_template()->set_algorithm(
@@ -896,7 +896,7 @@ TEST_F(GenerateKeyPairTest,
        Version2CanBeCreatedWithExperimentalCreateMultipleVersions) {
   std::string label = "my-great-key";
 
-  auto kms_client = fake_kms_->NewClient();
+  auto kms_client = fake_server_->NewClient();
   kms_v1::CryptoKey ck;
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
   ck.mutable_version_template()->set_algorithm(
@@ -949,7 +949,7 @@ TEST_F(GenerateKeyPairTest,
        ExperimentalCreateMultipleVersionsFailsOnAttributeMismatch) {
   std::string label = "my-great-key";
 
-  auto kms_client = fake_kms_->NewClient();
+  auto kms_client = fake_server_->NewClient();
   kms_v1::CryptoKey ck;
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
   ck.mutable_version_template()->set_algorithm(
@@ -988,7 +988,7 @@ TEST_F(DestroyObjectTest, ReadOnlySessionReturnsFailedPrecondition) {
 }
 
 TEST_F(DestroyObjectTest, DestroyPublicKeyReturnsActionProhibited) {
-  auto kms_client = fake_kms_->NewClient();
+  auto kms_client = fake_server_->NewClient();
 
   kms_v1::CryptoKey ck;
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
@@ -1020,7 +1020,7 @@ TEST_F(DestroyObjectTest, DestroyPublicKeyReturnsActionProhibited) {
 }
 
 TEST_F(DestroyObjectTest, DestroyedKeyPairIsImmediatelyAbsent) {
-  auto kms_client = fake_kms_->NewClient();
+  auto kms_client = fake_server_->NewClient();
 
   kms_v1::CryptoKey ck;
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);

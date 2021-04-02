@@ -302,12 +302,12 @@ TEST(NewOaepEncrypterTest, FailureLabelSpecified) {
 class OaepCryptTest : public testing::Test {
  protected:
   void SetUp() override {
-    ASSERT_OK_AND_ASSIGN(fake_kms_, FakeKms::New());
-    client_ = absl::make_unique<KmsClient>(fake_kms_->listen_addr(),
+    ASSERT_OK_AND_ASSIGN(fake_server_, fakekms::Server::New());
+    client_ = absl::make_unique<KmsClient>(fake_server_->listen_addr(),
                                            grpc::InsecureChannelCredentials(),
                                            absl::Seconds(1));
 
-    auto fake_client = fake_kms_->NewClient();
+    auto fake_client = fake_server_->NewClient();
 
     kms_v1::KeyRing kr;
     kr = CreateKeyRingOrDie(fake_client.get(), kTestLocation, RandomId(), kr);
@@ -339,7 +339,7 @@ class OaepCryptTest : public testing::Test {
     ASSERT_OK_AND_ASSIGN(decrypter_, RsaOaepDecrypter::New(prv, &mechanism));
   }
 
-  std::unique_ptr<FakeKms> fake_kms_;
+  std::unique_ptr<fakekms::Server> fake_server_;
   std::unique_ptr<KmsClient> client_;
   std::string kms_key_name_;
   bssl::UniquePtr<EVP_PKEY> public_key_;
@@ -385,7 +385,8 @@ TEST_F(OaepCryptTest, DecryptFailureKeyDisabled) {
   google::protobuf::FieldMask update_mask;
   update_mask.add_paths("state");
 
-  UpdateCryptoKeyVersionOrDie(fake_kms_->NewClient().get(), ckv, update_mask);
+  UpdateCryptoKeyVersionOrDie(fake_server_->NewClient().get(), ckv,
+                              update_mask);
 
   uint8_t ciphertext[256];
   EXPECT_THAT(decrypter_->Decrypt(client_.get(), ciphertext),
@@ -409,7 +410,8 @@ TEST_F(OaepCryptTest, DecryptUsesCache) {
   google::protobuf::FieldMask update_mask;
   update_mask.add_paths("state");
 
-  UpdateCryptoKeyVersionOrDie(fake_kms_->NewClient().get(), ckv, update_mask);
+  UpdateCryptoKeyVersionOrDie(fake_server_->NewClient().get(), ckv,
+                              update_mask);
 
   ASSERT_OK_AND_ASSIGN(absl::Span<const uint8_t> recovered_plaintext,
                        decrypter_->Decrypt(client_.get(), ciphertext));

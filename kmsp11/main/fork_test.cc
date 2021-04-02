@@ -18,7 +18,8 @@ namespace {
 // we should try to get them to support it for us if feasible. Until then, this
 // test ensures we don't introduce a regression that breaks forking.
 TEST(ForkTest, ProviderToleratesForkAfterInitWithEnvVariableSet) {
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake_kms, FakeKms::New());
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_kms,
+                       fakekms::Server::New());
   auto client = fake_kms->NewClient();
 
   kms_v1::KeyRing kr;

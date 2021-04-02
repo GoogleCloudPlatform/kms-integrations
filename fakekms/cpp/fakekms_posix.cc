@@ -4,18 +4,18 @@
 #include "absl/strings/str_format.h"
 #include "fakekms/cpp/fakekms.h"
 
-namespace kmsp11 {
+namespace fakekms {
 namespace {
 
-class PosixFakeKms : public FakeKms {
+class PosixServer : public Server {
  public:
-  static absl::StatusOr<std::unique_ptr<PosixFakeKms>> New(
+  static absl::StatusOr<std::unique_ptr<PosixServer>> New(
       absl::string_view flags);
 
-  PosixFakeKms(std::string listen_addr, pid_t pid)
-      : FakeKms(listen_addr), pid_(pid) {}
+  PosixServer(std::string listen_addr, pid_t pid)
+      : Server(listen_addr), pid_(pid) {}
 
-  ~PosixFakeKms() { CHECK_EQ(kill(pid_, SIGINT), 0); }
+  ~PosixServer() { CHECK_EQ(kill(pid_, SIGINT), 0); }
 
  private:
   pid_t pid_;
@@ -28,7 +28,7 @@ absl::Status PosixErrorToStatus(absl::string_view prefix) {
 
 }  // namespace
 
-absl::StatusOr<std::unique_ptr<FakeKms>> FakeKms::New(absl::string_view flags) {
+absl::StatusOr<std::unique_ptr<Server>> Server::New(absl::string_view flags) {
   int fd[2];
   if (pipe(fd) == -1) {
     return PosixErrorToStatus("unable to create output pipe");
@@ -79,9 +79,9 @@ absl::StatusOr<std::unique_ptr<FakeKms>> FakeKms::New(absl::string_view flags) {
 
       std::string address(line, len);
       free(line);
-      return absl::make_unique<PosixFakeKms>(address, pid);
+      return absl::make_unique<PosixServer>(address, pid);
     }
   }
 }
 
-}  // namespace kmsp11
+}  // namespace fakekms

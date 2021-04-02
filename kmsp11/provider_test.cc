@@ -19,9 +19,9 @@ using ::testing::Le;
 class ProviderTest : public testing::Test {
  protected:
   void SetUp() override {
-    ASSERT_OK_AND_ASSIGN(fake_kms_, FakeKms::New());
+    ASSERT_OK_AND_ASSIGN(fake_server_, fakekms::Server::New());
 
-    auto client = fake_kms_->NewClient();
+    auto client = fake_server_->NewClient();
     kms_v1::KeyRing kr1;
     kr1 = CreateKeyRingOrDie(client.get(), kTestLocation, RandomId(), kr1);
     kms_v1::KeyRing kr2;
@@ -40,13 +40,13 @@ class ProviderTest : public testing::Test {
       kms_endpoint: "%s",
       use_insecure_grpc_channel_credentials: true,
     )",
-                        kr1.name(), kr2.name(), fake_kms_->listen_addr()));
+                        kr1.name(), kr2.name(), fake_server_->listen_addr()));
 
     ASSERT_OK_AND_ASSIGN(provider_, Provider::New(config));
     info_ = provider_->info();
   }
 
-  std::unique_ptr<FakeKms> fake_kms_;
+  std::unique_ptr<fakekms::Server> fake_server_;
   std::unique_ptr<Provider> provider_;
   CK_INFO info_;
 };

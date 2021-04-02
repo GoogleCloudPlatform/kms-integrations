@@ -1,5 +1,5 @@
-#ifndef FAKEKMS_CPP_FAKEKMS_H_
-#define FAKEKMS_CPP_FAKEKMS_H_
+#ifndef FAKEKMS_CPP_SERVER_H_
+#define FAKEKMS_CPP_SERVER_H_
 
 #include "absl/status/statusor.h"
 #include "absl/strings/str_split.h"
@@ -10,9 +10,9 @@
 #include "grpcpp/security/credentials.h"
 #include "tools/cpp/runfiles/runfiles.h"
 
-namespace kmsp11 {
+namespace fakekms {
 
-// Class FakeKms provides a C++ language binding for launching a Fake KMS
+// Class Server provides a C++ language binding for launching a Fake KMS
 // server.
 //
 // The binding is implemented by launching the fake server in a child process.
@@ -24,12 +24,12 @@ namespace kmsp11 {
 // the FakeKms object lifetime, the server at listen_addr() is available for
 // use. The FakeKms destructor shuts down the child process and releases all
 // resources associated with the fake.
-class FakeKms {
+class Server {
  public:
-  static absl::StatusOr<std::unique_ptr<FakeKms>> New(
+  static absl::StatusOr<std::unique_ptr<Server>> New(
       absl::string_view flags = "");
 
-  virtual ~FakeKms() {}
+  virtual ~Server() {}
 
   const std::string& listen_addr() const { return listen_addr_; }
 
@@ -40,7 +40,7 @@ class FakeKms {
   }
 
  protected:
-  FakeKms(std::string listen_addr) {
+  Server(std::string listen_addr) {
     std::vector<std::string> split = absl::StrSplit(listen_addr, '\n');
     listen_addr_ = std::string(absl::StripAsciiWhitespace(split[0]));
   }
@@ -60,6 +60,6 @@ class FakeKms {
   std::string listen_addr_;
 };
 
-}  // namespace kmsp11
+}  // namespace fakekms
 
-#endif  // FAKEKMS_CPP_FAKEKMS_H_
+#endif  // FAKEKMS_CPP_SERVER_H_

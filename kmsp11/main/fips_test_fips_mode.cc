@@ -11,7 +11,8 @@ namespace kmsp11 {
 namespace {
 
 TEST(FipsTest, InitializePassesFipsSelfTestFipsModeRequired) {
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake_kms, FakeKms::New());
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_kms,
+                       fakekms::Server::New());
 
   std::string config_file = std::tmpnam(nullptr);
   std::ofstream(config_file, std::ofstream::out | std::ofstream::app)

@@ -6,18 +6,18 @@
 #include "absl/strings/str_format.h"
 #include "fakekms/cpp/fakekms.h"
 
-namespace kmsp11 {
+namespace fakekms {
 namespace {
 
-class WindowsFakeKms : public FakeKms {
+class WindowsServer : public Server {
  public:
-  static absl::StatusOr<std::unique_ptr<WindowsFakeKms>> New(
+  static absl::StatusOr<std::unique_ptr<WindowsServer>> New(
       absl::string_view flags);
 
-  WindowsFakeKms(std::string listen_addr, HANDLE process_handle)
-      : FakeKms(listen_addr), process_handle_(process_handle) {}
+  WindowsServer(std::string listen_addr, HANDLE process_handle)
+      : Server(listen_addr), process_handle_(process_handle) {}
 
-  ~WindowsFakeKms() {
+  ~WindowsServer() {
     CHECK(TerminateProcess(process_handle_, 0));
     CHECK(CloseHandle(process_handle_));
   }
@@ -41,7 +41,7 @@ absl::Status Win32ErrorToStatus(absl::string_view message) {
 
 }  // namespace
 
-absl::StatusOr<std::unique_ptr<FakeKms>> FakeKms::New(absl::string_view flags) {
+absl::StatusOr<std::unique_ptr<Server>> Server::New(absl::string_view flags) {
   // https://docs.microsoft.com/en-us/windows/win32/procthread/creating-a-child-process-with-redirected-input-and-output
   SECURITY_ATTRIBUTES security_attrs{
       sizeof(SECURITY_ATTRIBUTES),  // nLength
@@ -83,7 +83,7 @@ absl::StatusOr<std::unique_ptr<FakeKms>> FakeKms::New(absl::string_view flags) {
   }
 
   std::string address(buf, len);
-  return absl::make_unique<WindowsFakeKms>(address, process_info.hProcess);
+  return absl::make_unique<WindowsServer>(address, process_info.hProcess);
 }
 
-}  // namespace kmsp11
+}  // namespace fakekms

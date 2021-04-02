@@ -6,7 +6,7 @@
 #include "grpcpp/create_channel.h"
 #include "grpcpp/security/credentials.h"
 
-namespace kmsp11 {
+namespace fakekms {
 namespace {
 
 namespace kms_v1 = ::google::cloud::kms::v1;
@@ -17,11 +17,11 @@ MATCHER(IsOk, absl::StrFormat("status is %sOK", negation ? "not " : "")) {
 }
 
 TEST(ServerTest, SmokeTest) {
-  absl::StatusOr<std::unique_ptr<FakeKms>> fake = FakeKms::New();
-  ASSERT_THAT(fake.status(), IsOk());
+  absl::StatusOr<std::unique_ptr<Server>> server = Server::New();
+  ASSERT_THAT(server.status(), IsOk());
 
   std::unique_ptr<kms_v1::KeyManagementService::Stub> stub =
-      (*fake)->NewClient();
+      (*server)->NewClient();
 
   grpc::ClientContext ctx;
 
@@ -37,11 +37,11 @@ TEST(ServerTest, SmokeTest) {
 }
 
 TEST(ServerTest, EnsureFlagsArePassed) {
-  absl::StatusOr<std::unique_ptr<FakeKms>> fake = FakeKms::New("-delay=300ms");
-  ASSERT_THAT(fake.status(), IsOk());
+  absl::StatusOr<std::unique_ptr<Server>> server = Server::New("-delay=300ms");
+  ASSERT_THAT(server.status(), IsOk());
 
   std::unique_ptr<kms_v1::KeyManagementService::Stub> stub =
-      (*fake)->NewClient();
+      (*server)->NewClient();
 
   grpc::ClientContext ctx;
 
@@ -57,4 +57,4 @@ TEST(ServerTest, EnsureFlagsArePassed) {
 }
 
 }  // namespace
-}  // namespace kmsp11
+}  // namespace fakekms

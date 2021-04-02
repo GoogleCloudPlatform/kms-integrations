@@ -20,7 +20,8 @@ std::unique_ptr<KmsClient> NewClient(
 }
 
 TEST(KmsClientTest, ListCryptoKeysSuccess) {
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake, FakeKms::New());
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake,
+                       fakekms::Server::New());
   std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
 
   kms_v1::KeyRing kr;
@@ -53,7 +54,8 @@ TEST(KmsClientTest, ListCryptoKeysSuccess) {
 }
 
 TEST(KmsClientTest, ListCryptoKeysFailureInvalidName) {
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake, FakeKms::New());
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake,
+                       fakekms::Server::New());
   std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
 
   kms_v1::ListCryptoKeysRequest list_req;
@@ -65,7 +67,8 @@ TEST(KmsClientTest, ListCryptoKeysFailureInvalidName) {
 }
 
 TEST(KmsClientTest, ListCryptoKeyVersionsSuccess) {
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake, FakeKms::New());
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake,
+                       fakekms::Server::New());
   std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
 
   kms_v1::KeyRing kr;
@@ -102,7 +105,8 @@ TEST(KmsClientTest, ListCryptoKeyVersionsSuccess) {
 }
 
 TEST(KmsClientTest, ListCryptoKeyVersionsFailureInvalidName) {
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake, FakeKms::New());
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake,
+                       fakekms::Server::New());
   std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
 
   kms_v1::ListCryptoKeyVersionsRequest list_req;
@@ -114,7 +118,8 @@ TEST(KmsClientTest, ListCryptoKeyVersionsFailureInvalidName) {
 }
 
 TEST(KmsClientTest, GetPublicKeySuccess) {
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake, FakeKms::New());
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake,
+                       fakekms::Server::New());
   std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
 
   kms_v1::KeyRing kr;
@@ -140,7 +145,8 @@ TEST(KmsClientTest, GetPublicKeySuccess) {
 }
 
 TEST(KmsClientTest, GetPublicKeyFailureInvalidName) {
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake, FakeKms::New());
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake,
+                       fakekms::Server::New());
   std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
 
   kms_v1::GetPublicKeyRequest pub_req;
@@ -150,7 +156,8 @@ TEST(KmsClientTest, GetPublicKeyFailureInvalidName) {
 }
 
 TEST(KmsClientTest, AsymmetricDecryptSuccess) {
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake, FakeKms::New());
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake,
+                       fakekms::Server::New());
   std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
 
   kms_v1::KeyRing kr;
@@ -193,7 +200,8 @@ TEST(KmsClientTest, AsymmetricDecryptSuccess) {
 }
 
 TEST(KmsClientTest, AsymmetricDecryptFailureInvalidName) {
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake, FakeKms::New());
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake,
+                       fakekms::Server::New());
   std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
 
   kms_v1::AsymmetricDecryptRequest req;
@@ -203,7 +211,8 @@ TEST(KmsClientTest, AsymmetricDecryptFailureInvalidName) {
 }
 
 TEST(KmsClientTest, AsymmetricSignSuccess) {
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake, FakeKms::New());
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake,
+                       fakekms::Server::New());
   std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
 
   kms_v1::KeyRing kr;
@@ -246,7 +255,8 @@ TEST(KmsClientTest, AsymmetricSignSuccess) {
 }
 
 TEST(KmsClientTest, AsymmetricSignFailureInvalidName) {
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake, FakeKms::New());
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake,
+                       fakekms::Server::New());
   std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
 
   kms_v1::AsymmetricSignRequest req;
@@ -256,7 +266,8 @@ TEST(KmsClientTest, AsymmetricSignFailureInvalidName) {
 }
 
 TEST(KmsClientTest, CreateCryptoKeyCreatesCryptoKey) {
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake, FakeKms::New());
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake,
+                       fakekms::Server::New());
   std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
 
   kms_v1::KeyRing kr;
@@ -275,7 +286,8 @@ TEST(KmsClientTest, CreateCryptoKeyCreatesCryptoKey) {
 }
 
 TEST(KmsClientTest, CreateCryptoKeyFailsOnExistingName) {
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake, FakeKms::New());
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake,
+                       fakekms::Server::New());
   std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
 
   kms_v1::KeyRing kr;
@@ -297,7 +309,8 @@ TEST(KmsClientTest, CreateCryptoKeyFailsOnExistingName) {
 }
 
 TEST(KmsClientTest, CreateCryptoKeyInvalidArgumentOnInvalidName) {
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake, FakeKms::New());
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake,
+                       fakekms::Server::New());
   std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
 
   kms_v1::KeyRing kr;
@@ -314,7 +327,8 @@ TEST(KmsClientTest, CreateCryptoKeyInvalidArgumentOnInvalidName) {
 
 TEST(KmsClientTest,
      CreateCryptoKeyAndFirstVersionCreatesCryptoKeyAndFirstVersion) {
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake, FakeKms::New());
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake,
+                       fakekms::Server::New());
   std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
 
   kms_v1::KeyRing kr;
@@ -338,7 +352,8 @@ TEST(KmsClientTest,
 }
 
 TEST(KmsClientTest, CreateCryptoKeyAndFirstVersionFailsOnExistingName) {
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake, FakeKms::New());
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake,
+                       fakekms::Server::New());
   std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
 
   kms_v1::KeyRing kr;
@@ -361,7 +376,8 @@ TEST(KmsClientTest, CreateCryptoKeyAndFirstVersionFailsOnExistingName) {
 
 TEST(KmsClientTest,
      CreateCryptoKeyAndFirstVersionInvalidArgumentOnInvalidName) {
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake, FakeKms::New());
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake,
+                       fakekms::Server::New());
   std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
 
   kms_v1::KeyRing kr;
@@ -377,8 +393,8 @@ TEST(KmsClientTest,
 }
 
 TEST(KmsClientTest, CreateCryptoKeyAndFirstVersionTimesOutAtDeadline) {
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake,
-                       FakeKms::New("-delay=100ms"));
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake,
+                       fakekms::Server::New("-delay=100ms"));
   std::unique_ptr<KmsClient> client =
       NewClient(fake->listen_addr(), absl::Milliseconds(150));
 
@@ -400,7 +416,8 @@ TEST(KmsClientTest, CreateCryptoKeyAndFirstVersionTimesOutAtDeadline) {
 }
 
 TEST(KmsClientTest, DestroyCryptoKeyVersionSuccess) {
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake, FakeKms::New());
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake,
+                       fakekms::Server::New());
   std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
 
   kms_v1::KeyRing kr;
@@ -422,7 +439,8 @@ TEST(KmsClientTest, DestroyCryptoKeyVersionSuccess) {
 }
 
 TEST(KmsClientTest, CreateCryptoKeyVersionAndWaitOutputMatchesStub) {
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake, FakeKms::New());
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake,
+                       fakekms::Server::New());
   std::unique_ptr<KmsClient> client =
       NewClient(fake->listen_addr(), absl::Seconds(2));
 
@@ -447,8 +465,8 @@ TEST(KmsClientTest, CreateCryptoKeyVersionAndWaitOutputMatchesStub) {
 }
 
 TEST(KmsClientTest, CreateCryptoKeyVersionAndWaitTimesOutAtDeadline) {
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake,
-                       FakeKms::New("-delay=100ms"));
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake,
+                       fakekms::Server::New("-delay=100ms"));
   std::unique_ptr<KmsClient> client =
       NewClient(fake->listen_addr(), absl::Milliseconds(150));
 
@@ -472,7 +490,8 @@ TEST(KmsClientTest, CreateCryptoKeyVersionAndWaitTimesOutAtDeadline) {
 }
 
 TEST(KmsClientTest, CreateCryptoKeyVersionWaitsForEnablement) {
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake, FakeKms::New());
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake,
+                       fakekms::Server::New());
   std::unique_ptr<KmsClient> client =
       NewClient(fake->listen_addr(), absl::Seconds(2));
 
@@ -495,7 +514,8 @@ TEST(KmsClientTest, CreateCryptoKeyVersionWaitsForEnablement) {
 }
 
 TEST(KmsClientTest, GetCryptoKeySuccess) {
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<FakeKms> fake, FakeKms::New());
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake,
+                       fakekms::Server::New());
   std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
 
   kms_v1::KeyRing kr;

@@ -16,13 +16,13 @@ using ::testing::Property;
 class BuildStateTest : public testing::Test {
  protected:
   void SetUp() override {
-    ASSERT_OK_AND_ASSIGN(fake_kms_, FakeKms::New());
+    ASSERT_OK_AND_ASSIGN(fake_server_, fakekms::Server::New());
 
-    kms_stub_ = fake_kms_->NewClient();
+    kms_stub_ = fake_server_->NewClient();
     key_ring_ = CreateKeyRingOrDie(kms_stub_.get(), kTestLocation, RandomId(),
                                    key_ring_);
 
-    client_ = absl::make_unique<KmsClient>(fake_kms_->listen_addr(),
+    client_ = absl::make_unique<KmsClient>(fake_server_->listen_addr(),
                                            grpc::InsecureChannelCredentials(),
                                            absl::Seconds(1));
   }
@@ -43,7 +43,7 @@ class BuildStateTest : public testing::Test {
     return WaitForEnablement(kms_stub_.get(), ckv);
   }
 
-  std::unique_ptr<FakeKms> fake_kms_;
+  std::unique_ptr<fakekms::Server> fake_server_;
   std::unique_ptr<kms_v1::KeyManagementService::Stub> kms_stub_;
   kms_v1::KeyRing key_ring_;
   std::unique_ptr<KmsClient> client_;

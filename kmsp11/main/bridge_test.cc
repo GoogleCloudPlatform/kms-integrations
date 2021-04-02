@@ -27,15 +27,14 @@ using ::testing::IsSupersetOf;
 class BridgeTest : public testing::Test {
  protected:
   void SetUp() override {
-    ASSERT_OK_AND_ASSIGN(fake_kms_, FakeKms::New());
+    ASSERT_OK_AND_ASSIGN(fake_server_, fakekms::Server::New());
 
-    auto client = fake_kms_->NewClient();
+    auto client = fake_server_->NewClient();
     kr1_ = CreateKeyRingOrDie(client.get(), kTestLocation, RandomId(), kr1_);
     kr2_ = CreateKeyRingOrDie(client.get(), kTestLocation, RandomId(), kr2_);
 
     config_file_ = std::tmpnam(nullptr);
-    std::ofstream(config_file_)
-        << absl::StrFormat(R"(
+    std::ofstream(config_file_) << absl::StrFormat(R"(
 tokens:
   - key_ring: "%s"
     label: "foo"
@@ -44,7 +43,8 @@ tokens:
 kms_endpoint: "%s"
 use_insecure_grpc_channel_credentials: true
 )",
-                           kr1_.name(), kr2_.name(), fake_kms_->listen_addr());
+                                                   kr1_.name(), kr2_.name(),
+                                                   fake_server_->listen_addr());
 
     init_args_ = {0};
     init_args_.flags = CKF_OS_LOCKING_OK;
@@ -53,7 +53,7 @@ use_insecure_grpc_channel_credentials: true
 
   void TearDown() override { std::remove(config_file_.c_str()); }
 
-  std::unique_ptr<FakeKms> fake_kms_;
+  std::unique_ptr<fakekms::Server> fake_server_;
   kms_v1::KeyRing kr1_;
   kms_v1::KeyRing kr2_;
   std::string config_file_;
@@ -122,7 +122,7 @@ TEST_F(BridgeTest, InitializeFailsWithArgsNoConfig) {
 
 TEST_F(BridgeTest, InitializationWarningsAreLogged) {
   // Create a key that will be skipped at init time (purpose==ENCRYPT_DECRYPT)
-  auto fake_client = fake_kms_->NewClient();
+  auto fake_client = fake_server_->NewClient();
   kms_v1::CryptoKey ck;
   ck.set_purpose(kms_v1::CryptoKey::ENCRYPT_DECRYPT);
   ck.mutable_version_template()->set_protection_level(kms_v1::HSM);
@@ -140,7 +140,7 @@ TEST_F(BridgeTest, InitializationWarningsAreLogged) {
 
 TEST_F(BridgeTest, LoggingIsInitializedBeforeKmsCallsAreMade) {
   // Create a key that will be skipped at init time (purpose==ENCRYPT_DECRYPT)
-  auto fake_client = fake_kms_->NewClient();
+  auto fake_client = fake_server_->NewClient();
   kms_v1::CryptoKey ck;
   ck.set_purpose(kms_v1::CryptoKey::ENCRYPT_DECRYPT);
   ck.mutable_version_template()->set_protection_level(kms_v1::HSM);
@@ -589,7 +589,7 @@ TEST_F(BridgeTest, GetMechanismInfoFailsInvalidSlotId) {
 }
 
 TEST_F(BridgeTest, GetAttributeValueSuccess) {
-  auto fake_client = fake_kms_->NewClient();
+  auto fake_client = fake_server_->NewClient();
 
   kms_v1::CryptoKey ck;
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
@@ -625,7 +625,7 @@ TEST_F(BridgeTest, GetAttributeValueSuccess) {
 }
 
 TEST_F(BridgeTest, GetAttributeValueFailsSensitiveAttribute) {
-  auto fake_client = fake_kms_->NewClient();
+  auto fake_client = fake_server_->NewClient();
 
   kms_v1::CryptoKey ck;
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
@@ -662,7 +662,7 @@ TEST_F(BridgeTest, GetAttributeValueFailsSensitiveAttribute) {
 }
 
 TEST_F(BridgeTest, GetAttributeValueFailsNonExistentAttribute) {
-  auto fake_client = fake_kms_->NewClient();
+  auto fake_client = fake_server_->NewClient();
 
   kms_v1::CryptoKey ck;
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
@@ -699,7 +699,7 @@ TEST_F(BridgeTest, GetAttributeValueFailsNonExistentAttribute) {
 }
 
 TEST_F(BridgeTest, GetAttributeValueSuccessNoBuffer) {
-  auto fake_client = fake_kms_->NewClient();
+  auto fake_client = fake_server_->NewClient();
 
   kms_v1::CryptoKey ck;
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
@@ -733,7 +733,7 @@ TEST_F(BridgeTest, GetAttributeValueSuccessNoBuffer) {
 }
 
 TEST_F(BridgeTest, GetAttributeValueFailureBufferTooShort) {
-  auto fake_client = fake_kms_->NewClient();
+  auto fake_client = fake_server_->NewClient();
 
   kms_v1::CryptoKey ck;
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
@@ -770,7 +770,7 @@ TEST_F(BridgeTest, GetAttributeValueFailureBufferTooShort) {
 }
 
 TEST_F(BridgeTest, GetAttributeValueFailureAllAttributesProcessed) {
-  auto fake_client = fake_kms_->NewClient();
+  auto fake_client = fake_server_->NewClient();
 
   kms_v1::CryptoKey ck;
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
@@ -852,7 +852,7 @@ TEST_F(BridgeTest, GetAttributeValueFailureInvalidObjectHandle) {
 }
 
 TEST_F(BridgeTest, GetAttributeValueFailureNullTemplate) {
-  auto fake_client = fake_kms_->NewClient();
+  auto fake_client = fake_server_->NewClient();
 
   kms_v1::CryptoKey ck;
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
@@ -886,7 +886,7 @@ TEST_F(BridgeTest, GetAttributeValueFailureNullTemplate) {
 }
 
 TEST_F(BridgeTest, FindEcPrivateKey) {
-  auto fake_client = fake_kms_->NewClient();
+  auto fake_client = fake_server_->NewClient();
 
   kms_v1::CryptoKey ck;
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
@@ -933,7 +933,7 @@ TEST_F(BridgeTest, FindEcPrivateKey) {
 }
 
 TEST_F(BridgeTest, FindCertificate) {
-  auto fake_client = fake_kms_->NewClient();
+  auto fake_client = fake_server_->NewClient();
 
   kms_v1::CryptoKey ck;
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
@@ -967,7 +967,7 @@ TEST_F(BridgeTest, FindCertificate) {
 }
 
 TEST_F(BridgeTest, NoCertificatesWhenConfigNotSet) {
-  auto fake_client = fake_kms_->NewClient();
+  auto fake_client = fake_server_->NewClient();
 
   kms_v1::CryptoKey ck;
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
@@ -1162,7 +1162,7 @@ TEST_F(BridgeTest, FindObjectsContainsNewResultsAfterRefresh) {
   EXPECT_EQ(found_count, 0);
   EXPECT_OK(FindObjectsFinal(session));
 
-  auto fake_client = fake_kms_->NewClient();
+  auto fake_client = fake_server_->NewClient();
 
   kms_v1::CryptoKey ck;
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
@@ -1333,7 +1333,7 @@ TEST_F(BridgeTest, GenerateKeyPairSuccess) {
   EXPECT_THAT(found_handles, testing::UnorderedElementsAreArray(handles));
 
   // Ensure that the CKV can be located with direct KMS API calls.
-  auto fake_client = fake_kms_->NewClient();
+  auto fake_client = fake_server_->NewClient();
   GetCryptoKeyVersionOrDie(
       fake_client.get(),
       kr1_.name() + "/cryptoKeys/" + key_id + "/cryptoKeyVersions/1");
@@ -1391,7 +1391,7 @@ TEST_F(BridgeTest, DestroyObjectFailsInvalidObjectHandle) {
 }
 
 TEST_F(BridgeTest, DestroyObjectSuccessPrivateKey) {
-  auto fake_client = fake_kms_->NewClient();
+  auto fake_client = fake_server_->NewClient();
 
   kms_v1::CryptoKey ck;
   ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
@@ -1429,7 +1429,7 @@ class AsymmetricCryptTest : public BridgeTest {
  protected:
   void SetUp() override {
     BridgeTest::SetUp();
-    auto kms_client = fake_kms_->NewClient();
+    auto kms_client = fake_server_->NewClient();
 
     kms_v1::CryptoKey ck;
     ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_DECRYPT);
@@ -1778,7 +1778,7 @@ class AsymmetricSignTest : public BridgeTest {
  protected:
   void SetUp() override {
     BridgeTest::SetUp();
-    auto kms_client = fake_kms_->NewClient();
+    auto kms_client = fake_server_->NewClient();
 
     kms_v1::CryptoKey ck;
     ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
