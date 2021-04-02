@@ -13,7 +13,7 @@ import (
 	timestamppb "github.com/golang/protobuf/ptypes/timestamp"
 )
 
-// ProtoDiffOpts() returns cmp.Options suitable for diffing KMS proto messages.
+// ProtoDiffOpts returns cmp.Options suitable for diffing KMS proto messages.
 func ProtoDiffOpts() []cmp.Option {
 	return []cmp.Option{protocmp.Transform(), EquateApproxTimestamp(time.Minute)}
 }

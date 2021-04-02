@@ -2,7 +2,6 @@ package contract
 
 import (
 	"context"
-
 	"testing"
 	"time"
 

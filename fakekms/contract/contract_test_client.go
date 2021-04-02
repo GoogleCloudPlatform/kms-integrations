@@ -11,13 +11,13 @@ import (
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 )
 
-// ContractTestClient is a key management client with additional helpers.
-type ContractTestClient struct {
+// testClient is a key management client with additional helpers.
+type testClient struct {
 	*kms.KeyManagementClient
 }
 
 // CreateTestKR creates a KeyRing using the provided request.
-func (c *ContractTestClient) CreateTestKR(ctx context.Context, t *testing.T, req *kmspb.CreateKeyRingRequest) *kmspb.KeyRing {
+func (c *testClient) CreateTestKR(ctx context.Context, t *testing.T, req *kmspb.CreateKeyRingRequest) *kmspb.KeyRing {
 	t.Helper()
 
 	r := &kmspb.CreateKeyRingRequest{
@@ -34,7 +34,7 @@ func (c *ContractTestClient) CreateTestKR(ctx context.Context, t *testing.T, req
 }
 
 // CreateTestCK creates a CryptoKey using the provided request.
-func (c *ContractTestClient) CreateTestCK(ctx context.Context, t *testing.T, req *kmspb.CreateCryptoKeyRequest) *kmspb.CryptoKey {
+func (c *testClient) CreateTestCK(ctx context.Context, t *testing.T, req *kmspb.CreateCryptoKeyRequest) *kmspb.CryptoKey {
 	t.Helper()
 
 	r := &kmspb.CreateCryptoKeyRequest{
@@ -52,7 +52,7 @@ func (c *ContractTestClient) CreateTestCK(ctx context.Context, t *testing.T, req
 
 // CreateTestCKVAndWait creates a CryptoKeyVersion with the provided request
 // and waits for its state to be enabled before returning.
-func (c *ContractTestClient) CreateTestCKVAndWait(ctx context.Context, t *testing.T, req *kmspb.CreateCryptoKeyVersionRequest) *kmspb.CryptoKeyVersion {
+func (c *testClient) CreateTestCKVAndWait(ctx context.Context, t *testing.T, req *kmspb.CreateCryptoKeyVersionRequest) *kmspb.CryptoKeyVersion {
 	t.Helper()
 
 	ckv, err := c.CreateCryptoKeyVersion(ctx, req)

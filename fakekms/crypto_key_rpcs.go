@@ -6,8 +6,8 @@ import (
 
 	"github.com/golang/protobuf/ptypes"
 
-	"google.golang.org/protobuf/types/known/durationpb"
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
+	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 // CreateCryptoKey fakes a Cloud KMS API function.

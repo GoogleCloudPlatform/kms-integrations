@@ -21,7 +21,7 @@ import (
 
 // variables used by test cases
 var (
-	client            *ContractTestClient
+	client            *testClient
 	location          string
 	asyncPollInterval time.Duration
 )
@@ -59,7 +59,7 @@ func testRealKMS(m *testing.M, kmsEndpoint, credsFilePath string) {
 	}
 	defer c.Close()
 
-	client = &ContractTestClient{c}
+	client = &testClient{c}
 	os.Exit(m.Run())
 }
 
@@ -84,7 +84,7 @@ func testFakeKMS(m *testing.M) {
 	}
 	defer c.Close()
 
-	client = &ContractTestClient{c}
+	client = &testClient{c}
 	os.Exit(m.Run())
 }
 
