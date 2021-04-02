@@ -3,11 +3,11 @@
 #include <fstream>
 
 #include "absl/cleanup/cleanup.h"
+#include "fakekms/cpp/fakekms.h"
 #include "gmock/gmock.h"
 #include "kmsp11/config/config.h"
 #include "kmsp11/kmsp11.h"
 #include "kmsp11/openssl.h"
-#include "kmsp11/test/fakekms/cpp/fakekms.h"
 #include "kmsp11/test/matchers.h"
 #include "kmsp11/test/resource_helpers.h"
 #include "kmsp11/test/test_status_macros.h"

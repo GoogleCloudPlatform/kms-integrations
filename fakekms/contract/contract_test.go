@@ -14,9 +14,8 @@ import (
 	"google.golang.org/api/option"
 	"google.golang.org/grpc"
 
-	"oss-tools/kmsp11/test/fakekms"
-
 	kms "cloud.google.com/go/kms/apiv1"
+	"cloud.google.com/kms/oss/fakekms"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 

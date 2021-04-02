@@ -1,8 +1,8 @@
 #include "kmsp11/operation/rsaes_oaep.h"
 
+#include "fakekms/cpp/fakekms.h"
 #include "gmock/gmock.h"
 #include "kmsp11/object.h"
-#include "kmsp11/test/fakekms/cpp/fakekms.h"
 #include "kmsp11/test/matchers.h"
 #include "kmsp11/test/resource_helpers.h"
 #include "kmsp11/test/runfiles.h"

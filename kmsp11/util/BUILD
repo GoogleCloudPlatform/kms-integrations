@@ -172,8 +172,8 @@ cc_test(
     srcs = ["kms_client_test.cc"],
     deps = [
         ":kms_client",
+        "//fakekms/cpp:fakekms",
         "//kmsp11/test",
-        "//kmsp11/test/fakekms/cpp:fakekms",
         "@com_google_googletest//:gtest_main",
     ],
 )

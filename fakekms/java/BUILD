@@ -5,7 +5,7 @@ package(default_visibility = ["//kmsp11:__subpackages__"])
 java_library(
     name = "FakeKms",
     srcs = ["FakeKms.java"],
-    data = ["//kmsp11/test/fakekms/main:fakekms"],
+    data = ["//fakekms/main:fakekms"],
     deps = [
         "@bazel_tools//tools/java/runfiles",
         "@maven//:com_google_api_gax",

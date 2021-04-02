@@ -62,8 +62,8 @@ cc_test(
     srcs = ["ecdsa_test.cc"],
     deps = [
         ":ecdsa",
+        "//fakekms/cpp:fakekms",
         "//kmsp11/test",
-        "//kmsp11/test/fakekms/cpp:fakekms",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -146,8 +146,8 @@ cc_test(
     srcs = ["rsaes_oaep_test.cc"],
     deps = [
         ":rsaes_oaep",
+        "//fakekms/cpp:fakekms",
         "//kmsp11/test",
-        "//kmsp11/test/fakekms/cpp:fakekms",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -175,8 +175,8 @@ cc_test(
     srcs = ["rsassa_pkcs1_test.cc"],
     deps = [
         ":rsassa_pkcs1",
+        "//fakekms/cpp:fakekms",
         "//kmsp11/test",
-        "//kmsp11/test/fakekms/cpp:fakekms",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -204,8 +204,8 @@ cc_test(
     srcs = ["rsassa_pss_test.cc"],
     deps = [
         ":rsassa_pss",
+        "//fakekms/cpp:fakekms",
         "//kmsp11/test",
-        "//kmsp11/test/fakekms/cpp:fakekms",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -232,8 +232,8 @@ cc_test(
     srcs = ["rsassa_raw_pkcs1_test.cc"],
     deps = [
         ":rsassa_raw_pkcs1",
+        "//fakekms/cpp:fakekms",
         "//kmsp11/test",
-        "//kmsp11/test/fakekms/cpp:fakekms",
         "@com_google_googletest//:gtest_main",
     ],
 )

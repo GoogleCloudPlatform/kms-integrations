@@ -31,7 +31,7 @@ go_test(
     ),
     embed = [":contract_test_util"],
     deps = [
-        "//kmsp11/test/fakekms",
+        "//fakekms",
         "@com_github_golang_protobuf//ptypes:go_default_library_gen",
         "@com_github_google_go_cmp//cmp:go_default_library",
         "@com_github_google_uuid//:go_default_library",

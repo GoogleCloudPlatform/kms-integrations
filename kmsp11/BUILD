@@ -182,8 +182,8 @@ cc_test(
     srcs = ["object_loader_test.cc"],
     deps = [
         ":object_loader",
+        "//fakekms/cpp:fakekms",
         "//kmsp11/test",
-        "//kmsp11/test/fakekms/cpp:fakekms",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -259,8 +259,8 @@ cc_test(
     srcs = ["provider_test.cc"],
     deps = [
         ":provider",
+        "//fakekms/cpp:fakekms",
         "//kmsp11/test",
-        "//kmsp11/test/fakekms/cpp:fakekms",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -281,8 +281,8 @@ cc_test(
     srcs = ["session_test.cc"],
     deps = [
         ":session",
+        "//fakekms/cpp:fakekms",
         "//kmsp11/test",
-        "//kmsp11/test/fakekms/cpp:fakekms",
         "//kmsp11/util:crypto_utils",
         "@com_google_googletest//:gtest_main",
     ],
@@ -313,8 +313,8 @@ cc_test(
     srcs = ["token_test.cc"],
     deps = [
         ":token",
+        "//fakekms/cpp:fakekms",
         "//kmsp11/test",
-        "//kmsp11/test/fakekms/cpp:fakekms",
         "@com_google_googletest//:gtest_main",
     ],
 )

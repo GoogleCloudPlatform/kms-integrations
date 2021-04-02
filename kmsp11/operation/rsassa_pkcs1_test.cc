@@ -1,7 +1,7 @@
 #include "kmsp11/operation/rsassa_pkcs1.h"
 
+#include "fakekms/cpp/fakekms.h"
 #include "kmsp11/object.h"
-#include "kmsp11/test/fakekms/cpp/fakekms.h"
 #include "kmsp11/test/resource_helpers.h"
 #include "kmsp11/test/test_status_macros.h"
 #include "kmsp11/util/crypto_utils.h"

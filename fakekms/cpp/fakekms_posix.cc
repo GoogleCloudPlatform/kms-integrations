@@ -2,7 +2,7 @@
 
 #include "absl/cleanup/cleanup.h"
 #include "absl/strings/str_format.h"
-#include "kmsp11/test/fakekms/cpp/fakekms.h"
+#include "fakekms/cpp/fakekms.h"
 
 namespace kmsp11 {
 namespace {

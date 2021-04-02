@@ -1,4 +1,4 @@
-#include "kmsp11/test/fakekms/cpp/fakekms.h"
+#include "fakekms/cpp/fakekms.h"
 
 #include "absl/strings/str_format.h"
 #include "absl/time/clock.h"

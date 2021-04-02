@@ -7,7 +7,7 @@ go_library(
         exclude = ["*_test.go"],
     ),
     embedsrcs = glob(["testdata/*"]),
-    importpath = "oss-tools/kmsp11/test/fakekms",
+    importpath = "cloud.google.com/kms/oss/fakekms",
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_golang_protobuf//proto:go_default_library",

@@ -38,8 +38,8 @@ cc_test(
     srcs = ["bridge_test.cc"],
     deps = [
         ":bridge",
+        "//fakekms/cpp:fakekms",
         "//kmsp11/test",
-        "//kmsp11/test/fakekms/cpp:fakekms",
         "//kmsp11/util:crypto_utils",
         "//kmsp11/util:platform",
         "@com_google_absl//absl/cleanup",
@@ -56,8 +56,8 @@ cc_test(
     }),
     deps = [
         ":bridge",
+        "//fakekms/cpp:fakekms",
         "//kmsp11/test",
-        "//kmsp11/test/fakekms/cpp:fakekms",
         "@com_google_absl//absl/cleanup",
         "@com_google_googletest//:gtest_main",
     ],
@@ -76,8 +76,8 @@ cc_test(
     ],
     deps = [
         ":bridge",
+        "//fakekms/cpp:fakekms",
         "//kmsp11/test",
-        "//kmsp11/test/fakekms/cpp:fakekms",
         "//kmsp11/util:platform",
         "@com_google_absl//absl/cleanup",
         "@com_google_googletest//:gtest_main",

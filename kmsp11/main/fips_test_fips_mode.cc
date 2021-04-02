@@ -1,10 +1,10 @@
 #include <fstream>
 
 #include "absl/cleanup/cleanup.h"
+#include "fakekms/cpp/fakekms.h"
 #include "gmock/gmock.h"
 #include "kmsp11/kmsp11.h"
 #include "kmsp11/main/bridge.h"
-#include "kmsp11/test/fakekms/cpp/fakekms.h"
 #include "kmsp11/test/test_status_macros.h"
 
 namespace kmsp11 {

@@ -10,7 +10,7 @@ cc_library(
         "//conditions:default": ["fakekms_posix.cc"],
     }),
     hdrs = ["fakekms.h"],
-    data = ["//kmsp11/test/fakekms/main:fakekms"],
+    data = ["//fakekms/main:fakekms"],
     defines = select({
         # https://www.freebsd.org/cgi/man.cgi?query=getline&manpath=FreeBSD+11.4-RELEASE
         "//:freebsd": ["_WITH_GETLINE"],

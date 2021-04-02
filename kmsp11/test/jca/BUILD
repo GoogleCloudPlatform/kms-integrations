@@ -20,7 +20,7 @@ java_library(
     ],
     deps = [
         ":Environment",
-        "//kmsp11/test/fakekms/java:FakeKms",
+        "//fakekms/java:FakeKms",
         "@bazel_tools//tools/java/runfiles",
         "@maven//:com_google_api_grpc_proto_google_cloud_kms_v1",
         "@maven//:com_google_cloud_google_cloud_kms",

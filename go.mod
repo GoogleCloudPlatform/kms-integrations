@@ -1,4 +1,4 @@
-module oss-tools
+module cloud.google.com/kms/oss
 
 go 1.16
 

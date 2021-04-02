@@ -18,8 +18,8 @@ import java.util.ArrayList;
 public class FakeKms implements AutoCloseable {
 
   private static final String FAKEKMS_PATH =
-      "com_google_kmstools/kmsp11/test/fakekms/main/fakekms_/"
-          + (System.getProperty("os.name").startsWith("Windows") ? "fakekms.exe" : "fakekms");
+      "com_google_kmstools/fakekms/main/fakekms_/fakekms"
+          + (System.getProperty("os.name").startsWith("Windows") ? ".exe" : "");
 
   private final Process process;
   private final String serverAddress;

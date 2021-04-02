@@ -12,7 +12,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"oss-tools/kmsp11/test/fakekms"
+	"cloud.google.com/kms/oss/fakekms"
 )
 
 var delay = flag.Duration("delay", 0,

@@ -1,5 +1,5 @@
-#ifndef KMSP11_TEST_FAKEKMS_CPP_FAKEKMS_H_
-#define KMSP11_TEST_FAKEKMS_CPP_FAKEKMS_H_
+#ifndef FAKEKMS_CPP_FAKEKMS_H_
+#define FAKEKMS_CPP_FAKEKMS_H_
 
 #include "absl/status/statusor.h"
 #include "absl/strings/str_split.h"
@@ -53,8 +53,7 @@ class FakeKms {
         absl::WrapUnique(Runfiles::CreateForTest(&error));
     CHECK(runfiles) << "error creating runfiles: " << error;
     return runfiles->Rlocation(absl::StrCat(
-        "com_google_kmstools/kmsp11/test/fakekms/main/fakekms_/fakekms",
-        binary_suffix));
+        "com_google_kmstools/fakekms/main/fakekms_/fakekms", binary_suffix));
   }
 
  private:
@@ -63,4 +62,4 @@ class FakeKms {
 
 }  // namespace kmsp11
 
-#endif  // KMSP11_TEST_FAKEKMS_CPP_FAKEKMS_H_
+#endif  // FAKEKMS_CPP_FAKEKMS_H_
