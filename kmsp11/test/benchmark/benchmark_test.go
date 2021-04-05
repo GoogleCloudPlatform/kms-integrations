@@ -8,6 +8,8 @@ import (
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"fmt"
+	"os"
+	"path"
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
@@ -32,16 +34,89 @@ func init() {
 	p = pkcs11.New(lib)
 }
 
-func initLibrary(b *testing.B) func() {
-	if err := p.Initialize(); err != nil {
-		b.Fatalf("Initialize: %v", err)
-	}
+const configVar = "KMS_PKCS11_CONFIG"
 
-	return func() {
+type testEnv struct {
+	tb                     testing.TB
+	testDir, logDir        string
+	envVarSet, initialized bool
+}
+
+func (env *testEnv) Close() {
+	if env.initialized {
 		if err := p.Finalize(); err != nil {
-			b.Fatal(err)
+			env.tb.Errorf("error calling C_Finalize: %v", err)
 		}
 	}
+	if env.envVarSet {
+		if err := os.Unsetenv(configVar); err != nil {
+			env.tb.Errorf("error unsetting %q: %v", configVar, err)
+		}
+	}
+
+	if env.tb.Failed() {
+		env.tb.Log("attempting to extract library logs to supplmement test failure information")
+		entries, err := os.ReadDir(env.logDir)
+		if err != nil {
+			env.tb.Logf("failed to read from log directory: %v", err)
+		}
+
+		for _, entry := range entries {
+			fullPath := path.Join(env.logDir, entry.Name())
+			fileBytes, err := os.ReadFile(fullPath)
+			if err != nil {
+				env.tb.Logf("error reading file %q: %v", fullPath, err)
+			}
+			env.tb.Logf("contents of %q: %s", fullPath, string(fileBytes))
+		}
+	}
+
+	os.RemoveAll(env.testDir)
+}
+
+const configTemplate = `---
+kms_endpoint: staging-cloudkms.sandbox.googleapis.com
+user_project_override: oss-tools-test
+tokens:
+  - key_ring: projects/oss-tools-test/locations/us-central1/keyRings/load-test
+log_directory: %q
+`
+
+func initLibrary(b *testing.B) func() {
+	b.Helper()
+	env := &testEnv{tb: b}
+
+	var err error
+	if env.testDir, err = os.MkdirTemp("", "pkcs11-benchmark"); err != nil {
+		b.Fatalf("error creating test directory: %v", err)
+	}
+
+	env.logDir = path.Join(env.testDir, "log")
+	if err = os.Mkdir(env.logDir, 0755); err != nil {
+		env.Close()
+		b.Fatalf("error creating log directory: %v", err)
+	}
+
+	config := fmt.Sprintf(configTemplate, env.logDir)
+	configFile := path.Join(env.testDir, "config.yaml")
+	if err = os.WriteFile(configFile, []byte(config), 0644); err != nil {
+		env.Close()
+		b.Fatalf("error writing config file: %v", err)
+	}
+
+	if err = os.Setenv(configVar, configFile); err != nil {
+		env.Close()
+		b.Fatalf("error setting %q: %v", configVar, err)
+	}
+	env.envVarSet = true
+
+	if err := p.Initialize(); err != nil {
+		env.Close()
+		b.Fatalf("error initializing: %v", err)
+	}
+	env.initialized = true
+
+	return env.Close
 }
 
 func newSessionHandle(b *testing.B) (pkcs11.SessionHandle, func()) {

@@ -41,7 +41,8 @@ std::unique_ptr<KmsClient> NewKmsClient(const LibraryConfig& config) {
                                    ? kDefaultRpcTimeout
                                    : absl::Seconds(config.rpc_timeout_secs());
 
-  return absl::make_unique<KmsClient>(endpoint_address, creds, rpc_timeout);
+  return absl::make_unique<KmsClient>(endpoint_address, creds, rpc_timeout,
+                                      config.user_project_override());
 }
 
 }  // namespace

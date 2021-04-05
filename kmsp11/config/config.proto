@@ -13,6 +13,10 @@ message LibraryConfig {
   // Optional. The address to invoke. Defaults to `cloudkms.googleapis.com:443`.
   string kms_endpoint = 3;
 
+  // Optional. The user project to use for per-request billing and global
+  // quotas.
+  string user_project_override = 11;
+
   // Optional. True means that Google default authentication should be skipped,
   // and insecure gRPC credentials (read: no credentials) should be used
   // instead. Intended for use in test environments only, as this will result in

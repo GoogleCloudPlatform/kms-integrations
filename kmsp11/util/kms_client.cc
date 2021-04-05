@@ -2,7 +2,6 @@
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
-#include "absl/time/clock.h"
 #include "grpcpp/client_context.h"
 #include "grpcpp/create_channel.h"
 #include "grpcpp/security/credentials.h"
@@ -12,35 +11,29 @@
 #include "kmsp11/version.h"
 
 namespace kmsp11 {
-namespace {
 
-void AddContextSettings(grpc::ClientContext* ctx,
-                        absl::string_view relative_resource,
-                        absl::string_view resource_name,
-                        absl::Time rpc_deadline) {
+void KmsClient::AddContextSettings(grpc::ClientContext* ctx,
+                                   absl::string_view relative_resource,
+                                   absl::string_view resource_name,
+                                   absl::Time rpc_deadline) const {
   // See https://cloud.google.com/kms/docs/grpc
   ctx->AddMetadata("x-goog-request-params",
                    absl::StrCat(relative_resource, "=", resource_name));
   ctx->set_deadline(absl::ToChronoTime(rpc_deadline));
 
+  if (!user_project_override_.empty()) {
+    ctx->AddMetadata("x-goog-user-project", user_project_override_);
+  }
+
   // note this should be unset for CreateCKV and ImportCKV
   ctx->set_idempotent(true);
 }
 
-void AddContextSettings(grpc::ClientContext* ctx,
-                        absl::string_view relative_resource,
-                        absl::string_view resource_name,
-                        absl::Duration rpc_timeout) {
-  AddContextSettings(ctx, relative_resource, resource_name,
-                     absl::Now() + rpc_timeout);
-}
-
-}  // namespace
-
 KmsClient::KmsClient(absl::string_view endpoint_address,
                      const std::shared_ptr<grpc::ChannelCredentials>& creds,
-                     absl::Duration rpc_timeout)
-    : rpc_timeout_(rpc_timeout) {
+                     absl::Duration rpc_timeout,
+                     absl::string_view user_project_override)
+    : rpc_timeout_(rpc_timeout), user_project_override_(user_project_override) {
   grpc::ChannelArguments args;
   // Registered in Concord
   // //google3/cloud/analysis/concord/configs/api/attribution-prod/tools.yaml
@@ -57,7 +50,7 @@ KmsClient::KmsClient(absl::string_view endpoint_address,
 absl::StatusOr<kms_v1::AsymmetricDecryptResponse> KmsClient::AsymmetricDecrypt(
     const kms_v1::AsymmetricDecryptRequest& request) const {
   grpc::ClientContext ctx;
-  AddContextSettings(&ctx, "name", request.name(), rpc_timeout_);
+  AddContextSettings(&ctx, "name", request.name());
 
   kms_v1::AsymmetricDecryptResponse response;
   RETURN_IF_ERROR(kms_stub_->AsymmetricDecrypt(&ctx, request, &response));
@@ -67,7 +60,7 @@ absl::StatusOr<kms_v1::AsymmetricDecryptResponse> KmsClient::AsymmetricDecrypt(
 absl::StatusOr<kms_v1::AsymmetricSignResponse> KmsClient::AsymmetricSign(
     const kms_v1::AsymmetricSignRequest& request) const {
   grpc::ClientContext ctx;
-  AddContextSettings(&ctx, "name", request.name(), rpc_timeout_);
+  AddContextSettings(&ctx, "name", request.name());
 
   kms_v1::AsymmetricSignResponse response;
   RETURN_IF_ERROR(kms_stub_->AsymmetricSign(&ctx, request, &response));
@@ -77,7 +70,7 @@ absl::StatusOr<kms_v1::AsymmetricSignResponse> KmsClient::AsymmetricSign(
 absl::StatusOr<kms_v1::CryptoKey> KmsClient::CreateCryptoKey(
     const kms_v1::CreateCryptoKeyRequest& request) const {
   grpc::ClientContext ctx;
-  AddContextSettings(&ctx, "parent", request.parent(), rpc_timeout_);
+  AddContextSettings(&ctx, "parent", request.parent());
   ctx.set_idempotent(false);
 
   kms_v1::CryptoKey response;
@@ -128,7 +121,7 @@ KmsClient::CreateCryptoKeyVersionAndWait(
 absl::StatusOr<kms_v1::CryptoKeyVersion> KmsClient::DestroyCryptoKeyVersion(
     const kms_v1::DestroyCryptoKeyVersionRequest& request) const {
   grpc::ClientContext ctx;
-  AddContextSettings(&ctx, "name", request.name(), rpc_timeout_);
+  AddContextSettings(&ctx, "name", request.name());
 
   kms_v1::CryptoKeyVersion response;
   RETURN_IF_ERROR(kms_stub_->DestroyCryptoKeyVersion(&ctx, request, &response));
@@ -138,7 +131,7 @@ absl::StatusOr<kms_v1::CryptoKeyVersion> KmsClient::DestroyCryptoKeyVersion(
 absl::StatusOr<kms_v1::CryptoKey> KmsClient::GetCryptoKey(
     const kms_v1::GetCryptoKeyRequest& request) const {
   grpc::ClientContext ctx;
-  AddContextSettings(&ctx, "name", request.name(), rpc_timeout_);
+  AddContextSettings(&ctx, "name", request.name());
 
   kms_v1::CryptoKey response;
   RETURN_IF_ERROR(kms_stub_->GetCryptoKey(&ctx, request, &response));
@@ -148,7 +141,7 @@ absl::StatusOr<kms_v1::CryptoKey> KmsClient::GetCryptoKey(
 absl::StatusOr<kms_v1::PublicKey> KmsClient::GetPublicKey(
     const kms_v1::GetPublicKeyRequest& request) const {
   grpc::ClientContext ctx;
-  AddContextSettings(&ctx, "name", request.name(), rpc_timeout_);
+  AddContextSettings(&ctx, "name", request.name());
 
   kms_v1::PublicKey response;
   RETURN_IF_ERROR(kms_stub_->GetPublicKey(&ctx, request, &response));
@@ -162,7 +155,7 @@ CryptoKeysRange KmsClient::ListCryptoKeys(
       [this](const kms_v1::ListCryptoKeysRequest& request)
           -> google::cloud::StatusOr<kms_v1::ListCryptoKeysResponse> {
         grpc::ClientContext ctx;
-        AddContextSettings(&ctx, "parent", request.parent(), rpc_timeout_);
+        AddContextSettings(&ctx, "parent", request.parent());
 
         kms_v1::ListCryptoKeysResponse response;
         grpc::Status result =
@@ -190,7 +183,7 @@ CryptoKeyVersionsRange KmsClient::ListCryptoKeyVersions(
       [this](const kms_v1::ListCryptoKeyVersionsRequest& request)
           -> ::google::cloud::StatusOr<kms_v1::ListCryptoKeyVersionsResponse> {
         grpc::ClientContext ctx;
-        AddContextSettings(&ctx, "parent", request.parent(), rpc_timeout_);
+        AddContextSettings(&ctx, "parent", request.parent());
 
         kms_v1::ListCryptoKeyVersionsResponse response;
         grpc::Status result =

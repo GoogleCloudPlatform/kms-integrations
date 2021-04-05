@@ -1,10 +1,11 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
+load("@io_bazel_rules_go//go:def.bzl", "go_test")
 
 package(default_visibility = ["//kmsp11:__subpackages__"])
 
 go_test(
     name = "benchmark_test",
     srcs = ["benchmark_test.go"],
+    args = ["-test.bench=."],
     data = ["//kmsp11/main:libkmsp11.so"],
     tags = [
         # This test is manual because of the expected KMS traffic spike and its
