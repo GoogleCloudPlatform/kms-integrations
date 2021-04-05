@@ -98,6 +98,10 @@ build:fips --repo_env=KMSP11_CRYPTO_LIBRARY=boringssl_fips
 build:openssl --define=openssl=1
 build:openssl --repo_env=KMSP11_CRYPTO_LIBRARY=openssl
 
+# Allow credentials in the home directory well-known location to be used
+# when running tests.
+test --test_env=HOME
+
 # Import from user.bazelrc if it exists. Keep this at the end of the file so
 # that local options can override options that are declared in this file.
 # https://docs.bazel.build/versions/master/best-practices.html#using-the-bazelrc-file
