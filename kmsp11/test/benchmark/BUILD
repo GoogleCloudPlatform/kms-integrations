@@ -14,6 +14,7 @@ go_test(
     ],
     deps = [
         "@com_github_miekg_pkcs11//:go_default_library",
+        "@go_googleapis//google/cloud/kms/v1:kms_go_proto",
         "@io_bazel_rules_go//go/tools/bazel:go_default_library",
     ],
 )

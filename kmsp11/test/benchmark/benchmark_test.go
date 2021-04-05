@@ -14,6 +14,12 @@ import (
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/miekg/pkcs11"
+	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
+)
+
+const (
+	GoogleDefined = (0x80000000 | 0x1E100)
+	KMSAlgorithm = (GoogleDefined | 0x01)
 )
 
 var (
@@ -208,7 +214,7 @@ func BenchmarkECDSA(b *testing.B) {
 	finalize := initLibrary(b)
 	defer finalize()
 	template := []*pkcs11.Attribute{pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PRIVATE_KEY),
-		pkcs11.NewAttribute(pkcs11.CKA_LABEL, "load-test-ec")}
+		pkcs11.NewAttribute(KMSAlgorithm, uint(kmspb.CryptoKeyVersion_EC_SIGN_P256_SHA256))}
 	key := getKey(b, template)
 	b.RunParallel(func(pb *testing.PB) {
 		session, closeSession := newSessionHandle(b)
@@ -228,7 +234,7 @@ func BenchmarkRSAPKCS1Sign(b *testing.B) {
 	finalize := initLibrary(b)
 	defer finalize()
 	template := []*pkcs11.Attribute{pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PRIVATE_KEY),
-		pkcs11.NewAttribute(pkcs11.CKA_LABEL, "load-test-rsa-pkcs")}
+		pkcs11.NewAttribute(KMSAlgorithm, uint(kmspb.CryptoKeyVersion_RSA_SIGN_PKCS1_2048_SHA256))}
 	key := getKey(b, template)
 	b.RunParallel(func(pb *testing.PB) {
 		session, closeSession := newSessionHandle(b)
@@ -249,7 +255,7 @@ func BenchmarkRSAPSSSign(b *testing.B) {
 	defer finalize()
 	params := pkcs11.NewPSSParams(pkcs11.CKM_SHA256, pkcs11.CKG_MGF1_SHA256, 32)
 	template := []*pkcs11.Attribute{pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PRIVATE_KEY),
-		pkcs11.NewAttribute(pkcs11.CKA_LABEL, "load-test-rsa-pss")}
+		pkcs11.NewAttribute(KMSAlgorithm, uint(kmspb.CryptoKeyVersion_RSA_SIGN_PSS_2048_SHA256))}
 	key := getKey(b, template)
 	b.RunParallel(func(pb *testing.PB) {
 		session, closeSession := newSessionHandle(b)
@@ -270,7 +276,7 @@ func BenchmarkRSAOAEPEncrypt(b *testing.B) {
 	defer finalize()
 	params := pkcs11.NewOAEPParams(pkcs11.CKM_SHA256, pkcs11.CKG_MGF1_SHA256, pkcs11.CKZ_DATA_SPECIFIED, nil)
 	template := []*pkcs11.Attribute{pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PUBLIC_KEY),
-		pkcs11.NewAttribute(pkcs11.CKA_LABEL, "load-test-rsa-oaep")}
+		pkcs11.NewAttribute(KMSAlgorithm, uint(kmspb.CryptoKeyVersion_RSA_DECRYPT_OAEP_2048_SHA256))}
 	key := getKey(b, template)
 	b.RunParallel(func(pb *testing.PB) {
 		session, closeSession := newSessionHandle(b)
@@ -292,7 +298,7 @@ func BenchmarkRSAOAEPDecrypt(b *testing.B) {
 
 	params := pkcs11.NewOAEPParams(pkcs11.CKM_SHA256, pkcs11.CKG_MGF1_SHA256, pkcs11.CKZ_DATA_SPECIFIED, nil)
 	template := []*pkcs11.Attribute{pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PUBLIC_KEY),
-		pkcs11.NewAttribute(pkcs11.CKA_LABEL, "load-test-rsa-oaep")}
+		pkcs11.NewAttribute(KMSAlgorithm, uint(kmspb.CryptoKeyVersion_RSA_DECRYPT_OAEP_2048_SHA256))}
 	setupSession, closeSession := newSessionHandle(b)
 	key := findKey(b, setupSession, template)
 	attr, err := p.GetAttributeValue(setupSession, key, []*pkcs11.Attribute{pkcs11.NewAttribute(pkcs11.CKA_PUBLIC_KEY_INFO, nil)})
@@ -317,7 +323,7 @@ func BenchmarkRSAOAEPDecrypt(b *testing.B) {
 	}
 
 	template = []*pkcs11.Attribute{pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PRIVATE_KEY),
-		pkcs11.NewAttribute(pkcs11.CKA_LABEL, "load-test-rsa-oaep")}
+		pkcs11.NewAttribute(KMSAlgorithm, uint(kmspb.CryptoKeyVersion_RSA_DECRYPT_OAEP_2048_SHA256))}
 	key = getKey(b, template)
 	b.RunParallel(func(pb *testing.PB) {
 		session, closeSession := newSessionHandle(b)
