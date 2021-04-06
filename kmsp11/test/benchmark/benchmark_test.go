@@ -19,7 +19,7 @@ import (
 
 const (
 	GoogleDefined = (0x80000000 | 0x1E100)
-	KMSAlgorithm = (GoogleDefined | 0x01)
+	KMSAlgorithm  = (GoogleDefined | 0x01)
 )
 
 var (
@@ -129,8 +129,9 @@ func newSessionHandle(b *testing.B) (pkcs11.SessionHandle, func()) {
 	b.Helper()
 
 	// Slots are always assigned 0-index according to how they exist in YAML config,
-	// hardcoding 0 here.
-	session, err := p.OpenSession(0, pkcs11.CKF_SERIAL_SESSION)
+	// hardcoding 0 here. Making the session read-write in case test resources need
+	// to be generated.
+	session, err := p.OpenSession(0, pkcs11.CKF_SERIAL_SESSION|pkcs11.CKF_RW_SESSION)
 	if err != nil {
 		b.Fatalf("OpenSession: %v", err)
 	}
@@ -142,12 +143,38 @@ func newSessionHandle(b *testing.B) (pkcs11.SessionHandle, func()) {
 	}
 }
 
-func findKey(b *testing.B, session pkcs11.SessionHandle, template []*pkcs11.Attribute) pkcs11.ObjectHandle {
+func createKey(b *testing.B, session pkcs11.SessionHandle, alg kmspb.CryptoKeyVersion_CryptoKeyVersionAlgorithm) (pub, prv pkcs11.ObjectHandle) {
+	privateKeyTemplate := []*pkcs11.Attribute{
+		pkcs11.NewAttribute(pkcs11.CKA_LABEL, kmspb.CryptoKeyVersion_CryptoKeyVersionAlgorithm_name[int32(alg)]),
+		pkcs11.NewAttribute(KMSAlgorithm, uint(alg)),
+	}
+	var pbk, pvk pkcs11.ObjectHandle
+	var err error
+	switch alg {
+	case kmspb.CryptoKeyVersion_EC_SIGN_P256_SHA256, kmspb.CryptoKeyVersion_EC_SIGN_P384_SHA384:
+		pbk, pvk, err = p.GenerateKeyPair(session,
+			[]*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_EC_KEY_PAIR_GEN, nil)},
+			nil, privateKeyTemplate)
+	default:
+		pbk, pvk, err = p.GenerateKeyPair(session,
+			[]*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_RSA_PKCS_KEY_PAIR_GEN, nil)},
+			nil, privateKeyTemplate)
+	}
+	if err != nil {
+		b.Fatalf("failed to generate keypair: %v", err)
+	}
+
+	return pbk, pvk
+}
+
+func findOrCreateKey(b *testing.B, session pkcs11.SessionHandle, alg kmspb.CryptoKeyVersion_CryptoKeyVersionAlgorithm, keyType uint) pkcs11.ObjectHandle {
 	b.Helper()
+	template := []*pkcs11.Attribute{pkcs11.NewAttribute(pkcs11.CKA_CLASS, keyType),
+		pkcs11.NewAttribute(KMSAlgorithm, uint(alg))}
 	if err := p.FindObjectsInit(session, template); err != nil {
 		b.Fatalf("FindObjectsInit: %v", err)
 	}
-	// Find a maximum of 2 objects, to catch multiple matches and produce a warning.
+	// Find a maximum of 2 objects, to catch multiple key matches and throw an error.
 	obj, _, err := p.FindObjects(session, 2)
 	if err != nil {
 		b.Fatalf("FindObjects: %v", err)
@@ -157,9 +184,14 @@ func findKey(b *testing.B, session pkcs11.SessionHandle, template []*pkcs11.Attr
 	}
 	switch len(obj) {
 	case 0:
-		b.Fatal("findKey: could not find a valid key")
+		b.Log("findKey: could not find a valid match, attempting to create key")
+		pbk, pvk := createKey(b, session, alg)
+		if keyType == pkcs11.CKO_PRIVATE_KEY {
+			return pvk
+		}
+		return pbk
 	case 2:
-		b.Error("findKey: found multiple matches, returning first match")
+		b.Log("findKey: found multiple matches, returning first match")
 	default:
 		break
 	}
@@ -167,10 +199,10 @@ func findKey(b *testing.B, session pkcs11.SessionHandle, template []*pkcs11.Attr
 	return obj[0]
 }
 
-func getKey(b *testing.B, template []*pkcs11.Attribute) pkcs11.ObjectHandle {
+func getKey(b *testing.B, alg kmspb.CryptoKeyVersion_CryptoKeyVersionAlgorithm, keyType uint) pkcs11.ObjectHandle {
 	session, closeSession := newSessionHandle(b)
 	defer closeSession()
-	key := findKey(b, session, template)
+	key := findOrCreateKey(b, session, alg, keyType)
 
 	return key
 }
@@ -213,16 +245,16 @@ func generateDigestInfo(b *testing.B, algorithm crypto.Hash) []byte {
 func BenchmarkECDSA(b *testing.B) {
 	finalize := initLibrary(b)
 	defer finalize()
-	template := []*pkcs11.Attribute{pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PRIVATE_KEY),
-		pkcs11.NewAttribute(KMSAlgorithm, uint(kmspb.CryptoKeyVersion_EC_SIGN_P256_SHA256))}
-	key := getKey(b, template)
+	key := getKey(b, kmspb.CryptoKeyVersion_EC_SIGN_P256_SHA256, pkcs11.CKO_PRIVATE_KEY)
 	b.RunParallel(func(pb *testing.PB) {
 		session, closeSession := newSessionHandle(b)
 		defer closeSession()
 
 		for pb.Next() {
 			digest := generateInput(b, 32)
-			p.SignInit(session, []*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_ECDSA, nil)}, key)
+			if err := p.SignInit(session, []*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_ECDSA, nil)}, key); err != nil {
+				b.Fatalf("SignInit: %v", err)
+			}
 			if _, err := p.Sign(session, digest); err != nil {
 				b.Fatalf("failed to sign: %v", err)
 			}
@@ -233,16 +265,16 @@ func BenchmarkECDSA(b *testing.B) {
 func BenchmarkRSAPKCS1Sign(b *testing.B) {
 	finalize := initLibrary(b)
 	defer finalize()
-	template := []*pkcs11.Attribute{pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PRIVATE_KEY),
-		pkcs11.NewAttribute(KMSAlgorithm, uint(kmspb.CryptoKeyVersion_RSA_SIGN_PKCS1_2048_SHA256))}
-	key := getKey(b, template)
+	key := getKey(b, kmspb.CryptoKeyVersion_RSA_SIGN_PKCS1_2048_SHA256, pkcs11.CKO_PRIVATE_KEY)
 	b.RunParallel(func(pb *testing.PB) {
 		session, closeSession := newSessionHandle(b)
 		defer closeSession()
 
 		for pb.Next() {
 			digest := generateDigestInfo(b, crypto.SHA256)
-			p.SignInit(session, []*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_RSA_PKCS, nil)}, key)
+			if err := p.SignInit(session, []*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_RSA_PKCS, nil)}, key); err != nil {
+				b.Fatalf("SignInit: %v", err)
+			}
 			if _, err := p.Sign(session, digest); err != nil {
 				b.Fatalf("failed to sign: %v", err)
 			}
@@ -254,16 +286,16 @@ func BenchmarkRSAPSSSign(b *testing.B) {
 	finalize := initLibrary(b)
 	defer finalize()
 	params := pkcs11.NewPSSParams(pkcs11.CKM_SHA256, pkcs11.CKG_MGF1_SHA256, 32)
-	template := []*pkcs11.Attribute{pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PRIVATE_KEY),
-		pkcs11.NewAttribute(KMSAlgorithm, uint(kmspb.CryptoKeyVersion_RSA_SIGN_PSS_2048_SHA256))}
-	key := getKey(b, template)
+	key := getKey(b, kmspb.CryptoKeyVersion_RSA_SIGN_PSS_2048_SHA256, pkcs11.CKO_PRIVATE_KEY)
 	b.RunParallel(func(pb *testing.PB) {
 		session, closeSession := newSessionHandle(b)
 		defer closeSession()
 
 		for pb.Next() {
 			digest := generateInput(b, 32)
-			p.SignInit(session, []*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_RSA_PKCS_PSS, params)}, key)
+			if err := p.SignInit(session, []*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_RSA_PKCS_PSS, params)}, key); err != nil {
+				b.Fatalf("SignInit: %v", err)
+			}
 			if _, err := p.Sign(session, digest); err != nil {
 				b.Fatalf("failed to sign: %v", err)
 			}
@@ -275,16 +307,16 @@ func BenchmarkRSAOAEPEncrypt(b *testing.B) {
 	finalize := initLibrary(b)
 	defer finalize()
 	params := pkcs11.NewOAEPParams(pkcs11.CKM_SHA256, pkcs11.CKG_MGF1_SHA256, pkcs11.CKZ_DATA_SPECIFIED, nil)
-	template := []*pkcs11.Attribute{pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PUBLIC_KEY),
-		pkcs11.NewAttribute(KMSAlgorithm, uint(kmspb.CryptoKeyVersion_RSA_DECRYPT_OAEP_2048_SHA256))}
-	key := getKey(b, template)
+	key := getKey(b, kmspb.CryptoKeyVersion_RSA_DECRYPT_OAEP_2048_SHA256, pkcs11.CKO_PUBLIC_KEY)
 	b.RunParallel(func(pb *testing.PB) {
 		session, closeSession := newSessionHandle(b)
 		defer closeSession()
 
 		for pb.Next() {
 			message := generateInput(b, 190)
-			p.EncryptInit(session, []*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_RSA_PKCS_OAEP, params)}, key)
+			if err := p.EncryptInit(session, []*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_RSA_PKCS_OAEP, params)}, key); err != nil {
+				b.Fatalf("EncryptInit: %v", err)
+			}
 			if _, err := p.Encrypt(session, message); err != nil {
 				b.Fatalf("failed to encrypt: %v", err)
 			}
@@ -297,10 +329,8 @@ func BenchmarkRSAOAEPDecrypt(b *testing.B) {
 	defer finalize()
 
 	params := pkcs11.NewOAEPParams(pkcs11.CKM_SHA256, pkcs11.CKG_MGF1_SHA256, pkcs11.CKZ_DATA_SPECIFIED, nil)
-	template := []*pkcs11.Attribute{pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PUBLIC_KEY),
-		pkcs11.NewAttribute(KMSAlgorithm, uint(kmspb.CryptoKeyVersion_RSA_DECRYPT_OAEP_2048_SHA256))}
 	setupSession, closeSession := newSessionHandle(b)
-	key := findKey(b, setupSession, template)
+	key := findOrCreateKey(b, setupSession, kmspb.CryptoKeyVersion_RSA_DECRYPT_OAEP_2048_SHA256, pkcs11.CKO_PUBLIC_KEY)
 	attr, err := p.GetAttributeValue(setupSession, key, []*pkcs11.Attribute{pkcs11.NewAttribute(pkcs11.CKA_PUBLIC_KEY_INFO, nil)})
 	if err != nil {
 		b.Fatalf("err %s\n", err)
@@ -322,15 +352,15 @@ func BenchmarkRSAOAEPDecrypt(b *testing.B) {
 		b.Fatalf("failed to encrypt: %v", err)
 	}
 
-	template = []*pkcs11.Attribute{pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PRIVATE_KEY),
-		pkcs11.NewAttribute(KMSAlgorithm, uint(kmspb.CryptoKeyVersion_RSA_DECRYPT_OAEP_2048_SHA256))}
-	key = getKey(b, template)
+	key = getKey(b, kmspb.CryptoKeyVersion_RSA_DECRYPT_OAEP_2048_SHA256, pkcs11.CKO_PRIVATE_KEY)
 	b.RunParallel(func(pb *testing.PB) {
 		session, closeSession := newSessionHandle(b)
 		defer closeSession()
 
 		for pb.Next() {
-			p.DecryptInit(session, []*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_RSA_PKCS_OAEP, params)}, key)
+			if err := p.DecryptInit(session, []*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_RSA_PKCS_OAEP, params)}, key); err != nil {
+				b.Fatalf("DecryptInit: %v", err)
+			}
 			if _, err := p.Decrypt(session, ciphertext); err != nil {
 				b.Fatalf("failed to decrypt: %v", err)
 			}
