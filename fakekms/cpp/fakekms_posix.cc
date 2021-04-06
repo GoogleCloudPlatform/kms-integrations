@@ -28,7 +28,7 @@ absl::Status PosixErrorToStatus(absl::string_view prefix) {
 
 }  // namespace
 
-absl::StatusOr<std::unique_ptr<Server>> Server::New(absl::string_view flags) {
+absl::StatusOr<std::unique_ptr<Server>> Server::New() {
   int fd[2];
   if (pipe(fd) == -1) {
     return PosixErrorToStatus("unable to create output pipe");
@@ -55,8 +55,7 @@ absl::StatusOr<std::unique_ptr<Server>> Server::New(absl::string_view flags) {
       c.~Cleanup();
 
       std::string bin_path = BinaryLocation();
-      std::string bin_flags(flags);
-      execl(bin_path.c_str(), bin_path.c_str(), bin_flags.c_str(), (char*)0);
+      execl(bin_path.c_str(), bin_path.c_str(), (char*)0);
 
       // the previous line replaces the executable, so this
       // line shouldn't be reached

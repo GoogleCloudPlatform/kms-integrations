@@ -173,6 +173,7 @@ cc_test(
     deps = [
         ":kms_client",
         "//fakekms/cpp:fakekms",
+        "//fakekms/cpp:fault_helpers",
         "//kmsp11/test",
         "@com_google_googletest//:gtest_main",
     ],

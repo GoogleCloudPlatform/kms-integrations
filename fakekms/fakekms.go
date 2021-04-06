@@ -7,8 +7,10 @@ import (
 	"sync"
 	"time"
 
+	"cloud.google.com/kms/oss/fakekms/fault"
 	"google.golang.org/grpc"
 
+	"cloud.google.com/kms/oss/fakekms/fault/faultpb"
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 )
 
@@ -91,21 +93,17 @@ type ServerOptions struct {
 
 // NewServer starts a new local Fake KMS server that is listening for gRPC requests.
 func NewServer() (*Server, error) {
-	return NewServerWithOptions(&ServerOptions{})
-}
-
-// NewServerWithOptions uses the provided options to start a new local Fake KMS server that is
-// listening for gRPC requests.
-func NewServerWithOptions(opts *ServerOptions) (*Server, error) {
 	lis, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
 		return nil, err
 	}
 
-	f := &fakeKMS{keyRings: make(map[keyRingName]*keyRing)}
+	fakeKMS := &fakeKMS{keyRings: make(map[keyRingName]*keyRing)}
+	faultServer := &fault.Server{}
 	s := grpc.NewServer(grpc.ChainUnaryInterceptor(
-		newDelayInterceptor(opts.Delay), newLockInterceptor(&f.mux)))
-	kmspb.RegisterKeyManagementServiceServer(s, f)
+		faultServer.NewInterceptor(), newLockInterceptor(&fakeKMS.mux)))
+	kmspb.RegisterKeyManagementServiceServer(s, fakeKMS)
+	faultpb.RegisterFaultServiceServer(s, faultServer)
 
 	go s.Serve(lis)
 	return &Server{Addr: lis.Addr(), grpcServer: s}, nil

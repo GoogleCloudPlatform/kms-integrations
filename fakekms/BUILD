@@ -10,6 +10,8 @@ go_library(
     importpath = "cloud.google.com/kms/oss/fakekms",
     visibility = ["//visibility:public"],
     deps = [
+        "//fakekms/fault",
+        "//fakekms/fault:fault_go_proto",
         "@com_github_golang_protobuf//proto:go_default_library",
         "@com_github_golang_protobuf//ptypes:go_default_library_gen",
         "@go_googleapis//google/cloud/kms/v1:kms_go_proto",

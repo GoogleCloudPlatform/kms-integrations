@@ -41,7 +41,7 @@ absl::Status Win32ErrorToStatus(absl::string_view message) {
 
 }  // namespace
 
-absl::StatusOr<std::unique_ptr<Server>> Server::New(absl::string_view flags) {
+absl::StatusOr<std::unique_ptr<Server>> Server::New() {
   // https://docs.microsoft.com/en-us/windows/win32/procthread/creating-a-child-process-with-redirected-input-and-output
   SECURITY_ATTRIBUTES security_attrs{
       sizeof(SECURITY_ATTRIBUTES),  // nLength
@@ -67,8 +67,7 @@ absl::StatusOr<std::unique_ptr<Server>> Server::New(absl::string_view flags) {
   PROCESS_INFORMATION process_info;
 
   std::string bin_path = BinaryLocation(".exe");
-  std::string command_line = absl::StrCat(bin_path, " ", flags);
-  if (!CreateProcessA(bin_path.c_str(), const_cast<char*>(command_line.c_str()),
+  if (!CreateProcessA(bin_path.c_str(), const_cast<char*>(bin_path.c_str()),
                       nullptr, nullptr, true, CREATE_NO_WINDOW, nullptr,
                       nullptr, &startup_info, &process_info)) {
     return Win32ErrorToStatus("error creating fakekms process");

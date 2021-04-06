@@ -2,6 +2,7 @@
 
 #include "absl/time/time.h"
 #include "fakekms/cpp/fakekms.h"
+#include "fakekms/cpp/fault_helpers.h"
 #include "gmock/gmock.h"
 #include "kmsp11/openssl.h"
 #include "kmsp11/test/matchers.h"
@@ -394,7 +395,7 @@ TEST(KmsClientTest,
 
 TEST(KmsClientTest, CreateCryptoKeyAndFirstVersionTimesOutAtDeadline) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake,
-                       fakekms::Server::New("-delay=100ms"));
+                       fakekms::Server::New());
   std::unique_ptr<KmsClient> client =
       NewClient(fake->listen_addr(), absl::Milliseconds(150));
 
@@ -408,9 +409,11 @@ TEST(KmsClientTest, CreateCryptoKeyAndFirstVersionTimesOutAtDeadline) {
   req.mutable_crypto_key()->mutable_version_template()->set_algorithm(
       kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
 
-  // CreateCryptoKeyAndWaitForFirstVersion causes 2+ RPCs for asymmetric keys;
-  // if each RPC has 100ms of delay, then a 150ms deadline will always be
-  // exceeded.
+  AddDelayOrDie(*fake, absl::Milliseconds(200), "GetCryptoKeyVersion");
+
+  // CreateCryptoKeyAndWaitForFirstVersion causes a CreateCryptoKey followed by
+  // one or more GetCryptoKeyVersions. If GetCKV has a 200ms delay, and we have
+  // set a 150ms deadline, then the deadline will always be exceeded.
   EXPECT_THAT(client->CreateCryptoKeyAndWaitForFirstVersion(req),
               StatusIs(absl::StatusCode::kDeadlineExceeded));
 }
@@ -466,7 +469,7 @@ TEST(KmsClientTest, CreateCryptoKeyVersionAndWaitOutputMatchesStub) {
 
 TEST(KmsClientTest, CreateCryptoKeyVersionAndWaitTimesOutAtDeadline) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake,
-                       fakekms::Server::New("-delay=100ms"));
+                       fakekms::Server::New());
   std::unique_ptr<KmsClient> client =
       NewClient(fake->listen_addr(), absl::Milliseconds(150));
 
@@ -483,8 +486,11 @@ TEST(KmsClientTest, CreateCryptoKeyVersionAndWaitTimesOutAtDeadline) {
   kms_v1::CreateCryptoKeyVersionRequest req;
   req.set_parent(ck.name());
 
-  // CreateCryptoKeyVersionAndWait causes 2+ RPCs for asymmetric keys; if each
-  // RPC has 100ms of delay, then a 150ms deadline will always be exceeded.
+  AddDelayOrDie(*fake, absl::Milliseconds(200), "GetCryptoKeyVersion");
+
+  // CreateCryptoKeyVersionAndWait causes a CreateCryptoKey followed by one or
+  // more GetCryptoKeyVersions. If GetCKV has a 200ms delay, and we have set a
+  // 150ms deadline, then the deadline will always be exceeded.
   EXPECT_THAT(client->CreateCryptoKeyVersionAndWait(req),
               StatusIs(absl::StatusCode::kDeadlineExceeded));
 }
@@ -530,6 +536,53 @@ TEST(KmsClientTest, GetCryptoKeySuccess) {
   req.set_name(ck.name());
   ASSERT_OK_AND_ASSIGN(kms_v1::CryptoKey got_ck, client->GetCryptoKey(req));
 
+  EXPECT_THAT(got_ck, EqualsProto(ck));
+}
+
+TEST(KmsClientTest, ClientRetriesTransparentlyOnUnavailable) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake,
+                       fakekms::Server::New());
+  std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
+
+  kms_v1::KeyRing kr;
+  kr = CreateKeyRingOrDie(client->kms_stub(), kTestLocation, RandomId(), kr);
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::ENCRYPT_DECRYPT);
+  ck = CreateCryptoKeyOrDie(client->kms_stub(), kr.name(), RandomId(), ck,
+                            false);
+
+  AddErrorOrDie(*fake, absl::UnavailableError("not available"));
+
+  kms_v1::GetCryptoKeyRequest req;
+  req.set_name(ck.name());
+  ASSERT_OK_AND_ASSIGN(kms_v1::CryptoKey got_ck, client->GetCryptoKey(req));
+
+  // Expecting OK status because our retry policy should retry on UNAVAILABLE.
+  EXPECT_THAT(got_ck, EqualsProto(ck));
+}
+
+TEST(KmsClientTest, ClientRetriesTransparentlyOnServerDeadlineExceeded) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake,
+                       fakekms::Server::New());
+  std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
+
+  kms_v1::KeyRing kr;
+  kr = CreateKeyRingOrDie(client->kms_stub(), kTestLocation, RandomId(), kr);
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::ENCRYPT_DECRYPT);
+  ck = CreateCryptoKeyOrDie(client->kms_stub(), kr.name(), RandomId(), ck,
+                            false);
+
+  AddErrorOrDie(*fake, absl::DeadlineExceededError("deadline exceeded"));
+
+  kms_v1::GetCryptoKeyRequest req;
+  req.set_name(ck.name());
+  ASSERT_OK_AND_ASSIGN(kms_v1::CryptoKey got_ck, client->GetCryptoKey(req));
+
+  // Expecting OK status because our retry policy should retry on
+  // DEADLINE_EXCEEDED.
   EXPECT_THAT(got_ck, EqualsProto(ck));
 }
 

@@ -49,6 +49,18 @@ proto_library(
     ],
 )
 
+cc_proto_library(
+    name = "fault_cc_proto",
+    deps = [":fault_proto"],
+)
+
+cc_grpc_library(
+    name = "fault_cc_grpc",
+    srcs = [":fault_proto"],
+    grpc_only = True,
+    deps = [":fault_cc_proto"],
+)
+
 proto_library(
     name = "math_proto",
     testonly = True,

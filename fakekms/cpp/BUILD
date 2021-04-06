@@ -17,6 +17,7 @@ cc_library(
         "//conditions:default": [],
     }),
     deps = [
+        "//fakekms/fault:fault_cc_grpc",
         "@bazel_tools//tools/cpp/runfiles",
         "@com_github_google_glog//:glog",
         "@com_github_grpc_grpc//:grpc++",
@@ -35,5 +36,21 @@ cc_test(
         ":fakekms",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "fault_helpers",
+    testonly = True,
+    srcs = ["fault_helpers.cc"],
+    hdrs = ["fault_helpers.h"],
+    deps = [
+        ":fakekms",
+        "//fakekms/fault:fault_cc_grpc",
+        "@com_github_google_glog//:glog",
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/time",
     ],
 )

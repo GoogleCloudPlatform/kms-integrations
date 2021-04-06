@@ -36,25 +36,5 @@ TEST(ServerTest, SmokeTest) {
             "projects/my-project/locations/us-central1/keyRings/kr1");
 }
 
-TEST(ServerTest, EnsureFlagsArePassed) {
-  absl::StatusOr<std::unique_ptr<Server>> server = Server::New("-delay=300ms");
-  ASSERT_THAT(server.status(), IsOk());
-
-  std::unique_ptr<kms_v1::KeyManagementService::Stub> stub =
-      (*server)->NewClient();
-
-  grpc::ClientContext ctx;
-
-  kms_v1::CreateKeyRingRequest req;
-  req.set_parent("projects/my-project/locations/us-central1");
-  req.set_key_ring_id("kr1");
-
-  kms_v1::KeyRing kr;
-
-  absl::Time begin = absl::Now();
-  EXPECT_THAT(stub->CreateKeyRing(&ctx, req, &kr), IsOk());
-  EXPECT_GE(absl::Now() - begin, absl::Milliseconds(300));
-}
-
 }  // namespace
 }  // namespace fakekms

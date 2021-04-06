@@ -1,9 +1,10 @@
-#ifndef FAKEKMS_CPP_SERVER_H_
-#define FAKEKMS_CPP_SERVER_H_
+#ifndef FAKEKMS_CPP_FAKEKMS_H_
+#define FAKEKMS_CPP_FAKEKMS_H_
 
 #include "absl/status/statusor.h"
 #include "absl/strings/str_split.h"
 #include "absl/strings/strip.h"
+#include "fakekms/fault/fault.grpc.pb.h"
 #include "glog/logging.h"
 #include "google/cloud/kms/v1/service.grpc.pb.h"
 #include "grpcpp/create_channel.h"
@@ -26,23 +27,28 @@ namespace fakekms {
 // resources associated with the fake.
 class Server {
  public:
-  static absl::StatusOr<std::unique_ptr<Server>> New(
-      absl::string_view flags = "");
+  static absl::StatusOr<std::unique_ptr<Server>> New();
 
   virtual ~Server() {}
 
   const std::string& listen_addr() const { return listen_addr_; }
 
   inline std::unique_ptr<google::cloud::kms::v1::KeyManagementService::Stub>
-  NewClient() {
+  NewClient() const {
     return google::cloud::kms::v1::KeyManagementService::NewStub(
-        grpc::CreateChannel(listen_addr_, grpc::InsecureChannelCredentials()));
+        client_channel_);
+  }
+
+  inline std::unique_ptr<FaultService::Stub> NewFaultClient() const {
+    return FaultService::NewStub(client_channel_);
   }
 
  protected:
   Server(std::string listen_addr) {
     std::vector<std::string> split = absl::StrSplit(listen_addr, '\n');
     listen_addr_ = std::string(absl::StripAsciiWhitespace(split[0]));
+    client_channel_ =
+        grpc::CreateChannel(listen_addr_, grpc::InsecureChannelCredentials());
   }
 
   inline static std::string BinaryLocation(
@@ -58,8 +64,9 @@ class Server {
 
  private:
   std::string listen_addr_;
+  std::shared_ptr<grpc::Channel> client_channel_;
 };
 
 }  // namespace fakekms
 
-#endif  // FAKEKMS_CPP_SERVER_H_
+#endif  // FAKEKMS_CPP_FAKEKMS_H_

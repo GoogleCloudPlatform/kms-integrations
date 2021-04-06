@@ -4,25 +4,22 @@ import (
 	"context"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/golang/protobuf/proto"
 	"google.golang.org/grpc"
 )
-
-func newDelayInterceptor(duration time.Duration) grpc.UnaryServerInterceptor {
-	return func(ctx context.Context, req interface{}, _ *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-		time.Sleep(duration)
-		return handler(ctx, req)
-	}
-}
 
 func newLockInterceptor(mux *sync.RWMutex) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 		methodParts := strings.Split(info.FullMethod, "/")
 		svc, method := methodParts[1], methodParts[2]
 
-		if svc != "google.cloud.kms.v1.KeyManagementService" {
+		switch svc {
+		case "google.cloud.kms.v1.KeyManagementService":
+			break
+		case "fakekms.FaultService":
+			return handler(ctx, req)
+		default:
 			return nil, errUnimplemented("unsupported service: %s", svc)
 		}
 
