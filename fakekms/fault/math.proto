@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package math;
+
+option go_package = "cloud.google.com/kms/oss/fakekms/mathpb";
+
+message AddRequest {
+  int64 x = 1;
+  int64 y = 2;
+}
+
+message AddResponse {
+  int64 sum = 1;
+}
+
+message MultiplyRequest {
+  int64 x = 1;
+  int64 y = 2;
+}
+
+message MultiplyResponse {
+  int64 product = 1;
+}
+
+service MathService {
+  rpc Add(AddRequest) returns (AddResponse);
+  rpc Multiply(MultiplyRequest) returns (MultiplyResponse);
+}
