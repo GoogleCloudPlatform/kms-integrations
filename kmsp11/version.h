@@ -5,7 +5,7 @@
 
 namespace kmsp11 {
 
-constexpr CK_VERSION kLibraryVersion = {0, 10};
+constexpr CK_VERSION kLibraryVersion = {0, 20};
 
 }
 

@@ -1,5 +1,7 @@
 # PKCS #11 Library for Cloud KMS User Guide
 
+Version 0.20
+
 🧪 Preview. Google Confidential.
 
 This library is covered by the [Pre-GA Offerings Terms][gcp-service-terms] of
