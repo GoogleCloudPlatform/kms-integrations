@@ -1,6 +1,6 @@
 # PKCS #11 Library for Cloud KMS User Guide
 
-Version 0.20
+Version 0.21
 
 🧪 Preview. Google Confidential.
 
