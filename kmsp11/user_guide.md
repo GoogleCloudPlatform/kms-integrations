@@ -39,13 +39,33 @@ architectures. The object file `libkmsp11.so` depends only on core system
 libraries that are available on any FreeBSD 11 system. You do not need to
 compile the library yourself, and it does not require an installation routine.
 
-### Downloading the library
+### Downloading and verifying the library
 
-You can download the library from the [drop location](http://b/184264411). After
-being extracted, you may verify the signature by running the following command:
+Your account manager can help you enroll for access in the private preview, and
+can provide you with download links. If you're not sure who your account manager
+is, you can email
+[cloudkms-feedback@google.com](mailto:cloudkms-feedback@google.com) for help.
+
+After you've downloaded the library, you can check the downloaded library for
+integrity by verifying the build signature against the preview release public
+signing key.
+
+Save this key on your filesystem, for example, in a file named
+`pkcs11-preview-signing-key.pem`:
+
+```
+-----BEGIN PUBLIC KEY-----
+MHYwEAYHKoZIzj0CAQYFK4EEACIDYgAE2TkOo/xW4xUQ3L+F54s0wvL+3++rIHSl
+EKbRKIeNmNMCuZyW6DsVle/xfoWXe86QqAU2K6yKmwntSTaofy4Jw5CLZBRuxIJ8
+YRWxVfaoh8LPwon2v5raynbZnq2hgGUH
+-----END PUBLIC KEY-----
+```
+
+You can then verify the library signature using OpenSSL:
 
 ```sh
-# TODO(b/184264411): Devise instructions.
+openssl dgst -sha384 -verify pkcs11-preview-signing-key.pem \
+  -signature libkmsp11.so.sig libkmsp11.so
 ```
 
 ## Authentication and Authorization
