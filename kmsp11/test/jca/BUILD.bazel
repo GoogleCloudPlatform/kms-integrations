@@ -39,6 +39,7 @@ cc_binary(
 
 java_test(
     name = "SignatureTest",
+    size = "small",
     srcs = ["SignatureTest.java"],
     tags = [
         # The workspace rules pull in 64-bit Java on 64-bit hosts, so we can't

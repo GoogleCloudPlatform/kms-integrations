@@ -21,6 +21,7 @@ go_library(
 
 go_test(
     name = "fault_test",
+    size = "small",
     srcs = ["fault_test.go"],
     embed = [":fault"],
     deps = [

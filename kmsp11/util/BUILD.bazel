@@ -110,6 +110,7 @@ cc_library(
 
 cc_test(
     name = "global_provider_test",
+    size = "small",
     srcs = ["global_provider_test.cc"],
     deps = [
         ":global_provider",
@@ -135,6 +136,7 @@ cc_library(
 
 cc_test(
     name = "logging_test",
+    size = "small",
     srcs = select({
         "//:macos": [],  #TODO: Build on macOS as well when we move to a 10.15 build server.
         "//conditions:default": ["logging_test.cc"],
