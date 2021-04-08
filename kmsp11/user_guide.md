@@ -131,7 +131,7 @@ tokens                | list   | Yes      | None    | A list of [token configura
 refresh_interval_secs | int    | No       | 300     | The interval (in seconds) between attempts to update the key change in this library with the latest state from Cloud KMS. A value of 0 means never refresh.
 rpc_timeout_secs      | int    | No       | 30      | The timeout (in seconds) for RPCs made to Cloud KMS.
 log_directory         | string | No       | None    | A directory where application logs should be written. If unspecified, application logs will be written to standard error rather than to the filesystem.
-generate_certs        | bool   | No       | false   | Whether to generate certificates at runtime for asymmetric KMS keys. The certificates are regenerated each time the library is intiailized, and they do not chain to a public root of trust. They are intended to provide compatibility with the [Sun PKCS #11 JCA Provider][java-p11-guide] which requires that all private keys have an associated certificate. Other use is discouraged.
+log_filename_suffix   | string | No       | None    | A suffix that will be appended to application log file names.
 
 #### Experimental global configuration options
 
@@ -139,6 +139,7 @@ Item Name                             | Type | Required | Default | Description
 ------------------------------------- | ---- | -------- | ------- | -----------
 experimental_create_multiple_versions | bool | No       | false   | Enables an experiment that allows multiple versions of a CryptoKey to be created.
 experimental_require_fips_mode        | bool | No       | false   | Enables an experiment that requires that BoringSSL or OpenSSL have been built in FIPS mode, and that FIPS self checks pass.
+experimental_generate_certs           | bool | No       | false   | Whether to generate certificates at runtime for asymmetric KMS keys. The certificates are regenerated each time the library is intiailized, and they do not chain to a public root of trust. They are intended to provide compatibility with the [Sun PKCS #11 JCA Provider][java-p11-guide] which requires that all private keys have an associated certificate. Other use is discouraged.
 
 ### Per token configuration
 
