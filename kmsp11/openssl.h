@@ -87,6 +87,9 @@ void CRYPTO_library_init();
 // versions; add our own implementations.
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 
+#define OpenSSL_version SSLeay_version
+#define OPENSSL_VERSION SSLEAY_VERSION
+
 EC_KEY* EVP_PKEY_get0_EC_KEY(EVP_PKEY* pkey);
 
 const ASN1_TIME* X509_get0_notAfter(const X509* x);

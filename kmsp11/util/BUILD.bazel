@@ -157,8 +157,10 @@ cc_library(
     deps = [
         ":backoff",
         ":kms_v1",
+        ":platform",
         ":status_macros",
         ":status_utils",
+        "//kmsp11:openssl",
         "//kmsp11:version",
         "@com_github_googleapis_google_cloud_cpp//google/cloud:google_cloud_cpp_grpc_utils",
         "@com_github_grpc_grpc//:grpc++",
@@ -197,7 +199,21 @@ cc_library(
     hdrs = ["platform.h"],
     deps = [
         ":errors",
+        ":status_macros",
+        "@com_google_absl//absl/cleanup",
         "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+    ],
+)
+
+cc_test(
+    name = "platform_test",
+    size = "small",
+    srcs = ["platform_test.cc"],
+    deps = [
+        ":platform",
+        "@com_google_absl//absl/strings",
+        "@com_google_googletest//:gtest_main",
     ],
 )
 

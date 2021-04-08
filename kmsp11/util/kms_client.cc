@@ -5,12 +5,30 @@
 #include "grpcpp/client_context.h"
 #include "grpcpp/create_channel.h"
 #include "grpcpp/security/credentials.h"
+#include "kmsp11/openssl.h"
 #include "kmsp11/util/backoff.h"
 #include "kmsp11/util/kms_client_service_config.h"
+#include "kmsp11/util/platform.h"
 #include "kmsp11/util/status_macros.h"
 #include "kmsp11/version.h"
 
 namespace kmsp11 {
+namespace {
+
+// clang-format off
+// Sample value:
+// `cloud-kms-pkcs11/0.21 (amd64; BoringSSL; Linux/4.15.0-1096-gcp-x86_64; glibc/2.23)`
+// clang-format on
+std::string ComputeUserAgentPrefix() {
+  // Registered in Concord (cl/315314203)
+  return absl::StrFormat("cloud-kms-pkcs11/%d.%d (%s; %s%s; %s)",
+                         kLibraryVersion.major, kLibraryVersion.minor,
+                         GetTargetPlatform(), OpenSSL_version(OPENSSL_VERSION),
+                         FIPS_mode() == 1 ? " FIPS" : "",
+                         GetHostPlatformInfo());
+}
+
+}  // namespace
 
 void KmsClient::AddContextSettings(grpc::ClientContext* ctx,
                                    absl::string_view relative_resource,
@@ -35,10 +53,7 @@ KmsClient::KmsClient(absl::string_view endpoint_address,
                      absl::string_view user_project_override)
     : rpc_timeout_(rpc_timeout), user_project_override_(user_project_override) {
   grpc::ChannelArguments args;
-  // Registered in Concord
-  // //google3/cloud/analysis/concord/configs/api/attribution-prod/tools.yaml
-  args.SetUserAgentPrefix(absl::StrFormat(
-      "cloud-kms-pkcs11/%d.%d", kLibraryVersion.major, kLibraryVersion.minor));
+  args.SetUserAgentPrefix(ComputeUserAgentPrefix());
   args.SetServiceConfigJSON(std::string(kDefaultKmsServiceConfig));
 
   std::shared_ptr<grpc::Channel> channel =

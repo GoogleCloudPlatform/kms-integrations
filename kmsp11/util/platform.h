@@ -39,6 +39,20 @@ absl::Status SetMode(const char* filename, int mode);
 // if a process has been forked.
 int64_t GetProcessId();
 
+// Returns "x86" or "amd64" indicating the target platform for this binary.
+absl::string_view GetTargetPlatform();
+
+// Return a string that provides host platform information suitable for
+// inclusion an a user-agent header. Note that the host platform may vary from
+// the target platform (e.g. running an x86 binary on amd64).
+//
+// Examples:
+// "Linux/4.15.0-1096-gcp-amd64-x86_64; glibc/2.23"
+// "FreeBSD/11.4-RELEASE-p2-amd64"
+// "Darwin/19.6.0-x86_64"
+// "Windows Server Datacenter/10.0.2004.19041-amd64"
+std::string GetHostPlatformInfo();
+
 }  // namespace kmsp11
 
 #endif  // KMSP11_UTIL_PLATFORM_H_

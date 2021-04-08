@@ -1,8 +1,14 @@
 #include <errno.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/utsname.h>
 #include <unistd.h>
 
+#ifdef __linux__
+#include <gnu/libc-version.h>
+#endif
+
+#include "glog/logging.h"
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/platform.h"
 
@@ -48,6 +54,31 @@ absl::Status SetMode(const char* filename, int mode) {
 int64_t GetProcessId() {
   static_assert(sizeof(pid_t) <= sizeof(int64_t), "pid must fit in an int64");
   return getpid();
+}
+
+absl::string_view GetTargetPlatform() {
+#if defined(__amd64__)
+  return "amd64";
+#elif defined(__i386__)
+  return "x86";
+#else
+  static_assert(false, "unhandled processor type");
+#endif
+}
+
+std::string GetHostPlatformInfo() {
+  std::string info = "posix/unknown";
+  utsname n;
+  if (uname(&n) == 0) {
+    info = absl::StrFormat("%s/%s-%s", n.sysname, n.release, n.machine);
+  }
+
+#ifdef __linux__
+  // For Linux we target a specific minimum glibc version, so grab that
+  // information as well.
+  info = absl::StrCat(info, "; glibc/", gnu_get_libc_version());
+#endif
+  return info;
 }
 
 }  // namespace kmsp11
