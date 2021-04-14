@@ -41,6 +41,21 @@ architectures. The object file `libkmsp11.so` depends only on core system
 libraries that are available on any FreeBSD 11 system. You do not need to
 compile the library yourself, and it does not require an installation routine.
 
+### Windows system requirements
+
+The library is built and tested on Windows Server (semi-annual channel), on the
+amd64 architecture. The library is designed to be compatible with Windows Server
+2012 R2, Windows 8.1 (x64), and all subsequent server and x64 desktop releases.
+The library requires the preinstallation of the Visual C++ 2019 x64
+Redistributable package, which can be downloaded [here][msvc-redistributable].
+
+### macOS system requirements
+
+The library is built and tested on macOS 10.14 (Mojave) on the amd64
+architecture. The library is designed to be compatible with subsequent macOS
+releases, including 10.15 (Catalina) and 11.0 (Big Sur). You do not need to
+compile the library yourself, and it does not require an installation routine.
+
 ### Downloading and verifying the library
 
 Your account manager can help you enroll for access in the private preview, and
@@ -346,6 +361,7 @@ This means that:
 [kms-ec-algorithms]: https://cloud.google.com/kms/docs/algorithms#elliptic_curve_signing_algorithms
 [kms-permissions-and-roles]: https://cloud.google.com/kms/docs/reference/permissions-and-roles
 [kms-rsa-sign-algorithms]: https://cloud.google.com/kms/docs/algorithms#rsa_signing_algorithms
+[msvc-redistributable]: https://aka.ms/vs/16/release/vc_redist.x64.exe
 [p11-extended-provider-profile]: http://docs.oasis-open.org/pkcs11/pkcs11-profiles/v2.40/os/pkcs11-profiles-v2.40-os.html#_Toc416960554
 [C_Initialize]: http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/errata01/os/pkcs11-base-v2.40-errata01-os-complete.html#_Toc323024102
 [C_Finalize]: http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/errata01/os/pkcs11-base-v2.40-errata01-os-complete.html#_Toc383864872
