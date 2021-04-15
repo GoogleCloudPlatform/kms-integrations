@@ -68,26 +68,35 @@ build:windows --java_toolchain=@bazel_tools//tools/jdk:toolchain_java11
 # x86 builds on amd64
 build:m32 --copt=-m32 --linkopt=-m32 --test_tag_filters=-no_m32
 
+# Sanitizer configurations (asan, tsan, ubsan)
+# Options mostly cribbed from Abseil and gRPC
+# https://github.com/grpc/grpc/blob/2210819f85c97aa3b61b1dbeb1ce190714c81326/tools/bazel.rc#L17
+# https://github.com/abseil/abseil-cpp/blob/46dfbfe31ca1dd414e4c33cbcbcd7199bb4efde3/ci/linux_clang-latest_libcxx_asan_bazel.sh#L71
+# https://github.com/abseil/abseil-cpp/blob/46dfbfe31ca1dd414e4c33cbcbcd7199bb4efde3/ci/linux_clang-latest_libcxx_tsan_bazel.sh#L71
+
 build:san --build_tests_only
 build:san --test_tag_filters=-no_san
 build:san --strip=never
+build:san --copt=-fno-omit-frame-pointer
 build:san --copt=-DGPR_NO_DIRECT_SYSCALLS
+build:san --linkopt=-fsanitize-link-c++-runtime
 
 build:asan --config=san
 build:asan --copt=-fsanitize=address
 build:asan --copt=-fsanitize=undefined
+build:asan --copt=-fsanitize=float-divide-by-zero
+build:asan --copt=-fsanitize=nullability
 build:asan --copt=-O0
-build:asan --copt=-fno-omit-frame-pointer
 build:asan --copt=-DGRPC_ASAN
 build:asan --copt=-DGRPC_UBSAN
 build:asan --copt=-DADDRESS_SANITIZER  # used by absl
 build:asan --linkopt=-fsanitize=address
 build:asan --linkopt=-fsanitize=undefined
-build:asan --action_env=ASAN_OPTIONS=detect_leaks=1:color=always
+build:asan --test_env=ASAN_OPTIONS=detect_leaks=1:color=always
+build:asan --test_env=UBSAN_OPTIONS=print_stacktrace=1
 
 build:tsan --config=san
 build:tsan --copt=-fsanitize=thread
-build:tsan --copt=-fno-omit-frame-pointer
 build:tsan --copt=-DGRPC_TSAN
 build:tsan --linkopt=-fsanitize=thread
 
