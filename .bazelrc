@@ -98,7 +98,11 @@ build:asan --test_env=UBSAN_OPTIONS=print_stacktrace=1
 build:tsan --config=san
 build:tsan --copt=-fsanitize=thread
 build:tsan --copt=-DGRPC_TSAN
+build:tsan --copt=-DTHREAD_SANITIZER # used by absl
+build:tsan --copt=-DDYNAMIC_ANNOTATIONS_ENABLED=1 # used by absl
 build:tsan --linkopt=-fsanitize=thread
+# Required by Abseil -- see https://github.com/abseil/abseil-cpp/issues/299#issuecomment-489433591
+build:tsan --test_env=TSAN_OPTIONS=report_atomic_races=0
 
 build:fips --copt=-DBORINGSSL_FIPS
 build:fips --define=fips=1
