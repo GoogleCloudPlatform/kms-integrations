@@ -68,7 +68,12 @@ absl::StatusOr<kms_v1::AsymmetricDecryptResponse> KmsClient::AsymmetricDecrypt(
   AddContextSettings(&ctx, "name", request.name());
 
   kms_v1::AsymmetricDecryptResponse response;
-  RETURN_IF_ERROR(kms_stub_->AsymmetricDecrypt(&ctx, request, &response));
+  absl::Status rpc_result =
+      ToStatus(kms_stub_->AsymmetricDecrypt(&ctx, request, &response));
+  if (!rpc_result.ok()) {
+    SetErrorRv(rpc_result, CKR_DEVICE_ERROR);
+    return rpc_result;
+  }
   return response;
 }
 
@@ -78,7 +83,12 @@ absl::StatusOr<kms_v1::AsymmetricSignResponse> KmsClient::AsymmetricSign(
   AddContextSettings(&ctx, "name", request.name());
 
   kms_v1::AsymmetricSignResponse response;
-  RETURN_IF_ERROR(kms_stub_->AsymmetricSign(&ctx, request, &response));
+  absl::Status rpc_result =
+      ToStatus(kms_stub_->AsymmetricSign(&ctx, request, &response));
+  if (!rpc_result.ok()) {
+    SetErrorRv(rpc_result, CKR_DEVICE_ERROR);
+    return rpc_result;
+  }
   return response;
 }
 
@@ -89,7 +99,12 @@ absl::StatusOr<kms_v1::CryptoKey> KmsClient::CreateCryptoKey(
   ctx.set_idempotent(false);
 
   kms_v1::CryptoKey response;
-  RETURN_IF_ERROR(kms_stub_->CreateCryptoKey(&ctx, request, &response));
+  absl::Status rpc_result =
+      ToStatus(kms_stub_->CreateCryptoKey(&ctx, request, &response));
+  if (!rpc_result.ok()) {
+    SetErrorRv(rpc_result, CKR_DEVICE_ERROR);
+    return rpc_result;
+  }
   return response;
 }
 
@@ -112,7 +127,12 @@ KmsClient::CreateCryptoKeyAndWaitForFirstVersion(
     kms_v1::GetCryptoKeyVersionRequest get_ckv_req;
     get_ckv_req.set_name(name);
 
-    RETURN_IF_ERROR(kms_stub_->GetCryptoKeyVersion(&ctx, get_ckv_req, &ckv));
+    absl::Status rpc_result =
+        ToStatus(kms_stub_->GetCryptoKeyVersion(&ctx, get_ckv_req, &ckv));
+    if (!rpc_result.ok()) {
+      SetErrorRv(rpc_result, CKR_DEVICE_ERROR);
+      return rpc_result;
+    }
   }
 
   RETURN_IF_ERROR(WaitForGeneration(ckv, deadline));
@@ -128,7 +148,12 @@ KmsClient::CreateCryptoKeyVersionAndWait(
   AddContextSettings(&ctx, "parent", request.parent(), deadline);
 
   kms_v1::CryptoKeyVersion response;
-  RETURN_IF_ERROR(kms_stub_->CreateCryptoKeyVersion(&ctx, request, &response));
+  absl::Status rpc_result =
+      ToStatus(kms_stub_->CreateCryptoKeyVersion(&ctx, request, &response));
+  if (!rpc_result.ok()) {
+    SetErrorRv(rpc_result, CKR_DEVICE_ERROR);
+    return rpc_result;
+  }
   RETURN_IF_ERROR(WaitForGeneration(response, deadline));
   return response;
 }
@@ -139,7 +164,12 @@ absl::StatusOr<kms_v1::CryptoKeyVersion> KmsClient::DestroyCryptoKeyVersion(
   AddContextSettings(&ctx, "name", request.name());
 
   kms_v1::CryptoKeyVersion response;
-  RETURN_IF_ERROR(kms_stub_->DestroyCryptoKeyVersion(&ctx, request, &response));
+  absl::Status rpc_result =
+      ToStatus(kms_stub_->DestroyCryptoKeyVersion(&ctx, request, &response));
+  if (!rpc_result.ok()) {
+    SetErrorRv(rpc_result, CKR_DEVICE_ERROR);
+    return rpc_result;
+  }
   return response;
 }
 
@@ -149,7 +179,12 @@ absl::StatusOr<kms_v1::CryptoKey> KmsClient::GetCryptoKey(
   AddContextSettings(&ctx, "name", request.name());
 
   kms_v1::CryptoKey response;
-  RETURN_IF_ERROR(kms_stub_->GetCryptoKey(&ctx, request, &response));
+  absl::Status rpc_result =
+      ToStatus(kms_stub_->GetCryptoKey(&ctx, request, &response));
+  if (!rpc_result.ok()) {
+    SetErrorRv(rpc_result, CKR_DEVICE_ERROR);
+    return rpc_result;
+  }
   return response;
 }
 
@@ -159,7 +194,12 @@ absl::StatusOr<kms_v1::PublicKey> KmsClient::GetPublicKey(
   AddContextSettings(&ctx, "name", request.name());
 
   kms_v1::PublicKey response;
-  RETURN_IF_ERROR(kms_stub_->GetPublicKey(&ctx, request, &response));
+  absl::Status rpc_result =
+      ToStatus(kms_stub_->GetPublicKey(&ctx, request, &response));
+  if (!rpc_result.ok()) {
+    SetErrorRv(rpc_result, CKR_DEVICE_ERROR);
+    return rpc_result;
+  }
   return response;
 }
 
@@ -176,6 +216,8 @@ CryptoKeysRange KmsClient::ListCryptoKeys(
         grpc::Status result =
             kms_stub_->ListCryptoKeys(&ctx, request, &response);
         if (!result.ok()) {
+          // TODO(b/160313948): pull a copy of the google-cloud-cpp logic,
+          // convert to absl::Status, and drop the dependency.
           return google::cloud::Status(
               google::cloud::StatusCode(result.error_code()),
               result.error_message());
@@ -204,6 +246,8 @@ CryptoKeyVersionsRange KmsClient::ListCryptoKeyVersions(
         grpc::Status result =
             kms_stub_->ListCryptoKeyVersions(&ctx, request, &response);
         if (!result.ok()) {
+          // TODO(b/160313948): pull a copy of the google-cloud-cpp logic,
+          // convert to absl::Status, and drop the dependency.
           return google::cloud::Status(
               google::cloud::StatusCode(result.error_code()),
               result.error_message());
@@ -236,7 +280,12 @@ absl::Status KmsClient::WaitForGeneration(kms_v1::CryptoKeyVersion& ckv,
 
     kms_v1::GetCryptoKeyVersionRequest req;
     req.set_name(ckv.name());
-    RETURN_IF_ERROR(kms_stub_->GetCryptoKeyVersion(&ctx, req, &ckv));
+    absl::Status rpc_result =
+        ToStatus(kms_stub_->GetCryptoKeyVersion(&ctx, req, &ckv));
+    if (!rpc_result.ok()) {
+      SetErrorRv(rpc_result, CKR_DEVICE_ERROR);
+      return rpc_result;
+    }
   }
   return absl::OkStatus();
 }

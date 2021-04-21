@@ -333,28 +333,26 @@ absl::Status GetAttributeValue(CK_SESSION_HANDLE hSession,
 
   absl::Status result = absl::OkStatus();
   for (CK_ATTRIBUTE& attr : absl::MakeSpan(pTemplate, ulCount)) {
-    absl::StatusOr<absl::string_view> value_or =
+    absl::StatusOr<absl::string_view> value =
         object->attributes().Value(attr.type);
 
     // C_GetAttributeValue cases 1 and 2
-    if (!value_or.ok()) {
-      result = value_or.status();
+    if (!value.ok()) {
+      result = value.status();
       attr.ulValueLen = CK_UNAVAILABLE_INFORMATION;
       continue;
     }
 
-    absl::string_view value = value_or.value();
-
     // C_GetAttributeValue case 3
     if (!attr.pValue) {
-      attr.ulValueLen = value.size();
+      attr.ulValueLen = value->size();
       continue;
     }
 
     // C_GetAttributeValue case 4
-    if (attr.ulValueLen >= value.size()) {
-      std::copy(value.begin(), value.end(), static_cast<char*>(attr.pValue));
-      attr.ulValueLen = value.size();
+    if (attr.ulValueLen >= value->size()) {
+      std::copy(value->begin(), value->end(), static_cast<char*>(attr.pValue));
+      attr.ulValueLen = value->size();
       continue;
     }
 
@@ -363,7 +361,7 @@ absl::Status GetAttributeValue(CK_SESSION_HANDLE hSession,
     result = OutOfRangeError(
         absl::StrFormat(
             "attribute %#X is of length %d, received buffer of length %d",
-            attr.type, value.size(), attr.ulValueLen),
+            attr.type, value->size(), attr.ulValueLen),
         SOURCE_LOCATION);
   }
 
