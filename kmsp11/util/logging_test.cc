@@ -10,6 +10,7 @@
 #include "kmsp11/test/matchers.h"
 #include "kmsp11/test/resource_helpers.h"
 #include "kmsp11/test/test_status_macros.h"
+#include "kmsp11/util/errors.h"
 
 namespace kmsp11 {
 namespace {
@@ -20,6 +21,15 @@ using ::testing::Not;
 using ::testing::SizeIs;
 using ::testing::internal::CaptureStderr;
 using ::testing::internal::GetCapturedStderr;
+
+TEST(LoggingTest, StandardErrorIsEmptyWhenNoLogMessageAreEmitted) {
+  CaptureStderr();
+
+  ASSERT_OK(InitializeLogging("", ""));
+  ShutdownLogging();
+
+  EXPECT_THAT(GetCapturedStderr(), IsEmpty());
+}
 
 TEST(LoggingTest, NoDirectoryLogsInfoToStandardError) {
   CaptureStderr();
@@ -180,6 +190,32 @@ TEST_F(LogDirectoryTest, SingleFileContainsAllLogLevels) {
   EXPECT_THAT(log_content,
               AllOf(HasSubstr(info_message), HasSubstr(warning_message),
                     HasSubstr(error_message)));
+}
+
+TEST_F(LogDirectoryTest, GrpcErrorsAreLoggedToGlogDestination) {
+  gpr_set_log_verbosity(GPR_LOG_SEVERITY_DEBUG);
+  std::string error_message = "Error message";
+  std::string info_message = "Info message";
+  std::string debug_message = "Debug message";
+
+  {
+    // Using a separate scope to ensure logfiles are flushed.
+    ASSERT_OK(InitializeLogging(log_directory_, ""));
+    absl::Cleanup c = ShutdownLogging;
+
+    gpr_log(GPR_ERROR, error_message.c_str());
+    gpr_log(GPR_INFO, info_message.c_str());
+    gpr_log(GPR_DEBUG, debug_message.c_str());
+  }
+
+  std::vector<std::filesystem::directory_entry> files = LogDirectoryEntries();
+  ASSERT_THAT(files, SizeIs(1));
+  std::ifstream in(files[0].path().string());
+  std::string log_content((std::istreambuf_iterator<char>(in)),
+                          (std::istreambuf_iterator<char>()));
+  EXPECT_THAT(log_content,
+              AllOf(HasSubstr(error_message), HasSubstr(info_message),
+                    HasSubstr(debug_message)));
 }
 
 }  // namespace
