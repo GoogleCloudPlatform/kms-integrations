@@ -99,15 +99,16 @@ absl::Status Initialize(CK_VOID_PTR pInitArgs) {
     CHECK(self_test_result.ok()) << "FIPS tests failed: " << self_test_result;
   }
 
+  // grpc_init() emits log messages when GRPC_VERBOSITY is debug, and
+  // Provider::New emits info log messages (for example, noting that a CKV is
+  // being skipped due to state DISABLED), so logging should be initialized
+  // before either of these is invoked.
+  RETURN_IF_ERROR(
+      InitializeLogging(config.log_directory(), config.log_filename_suffix()));
+
   // Initialize gRPC state.
   grpc_init();
   grpc_fork_handlers_auto_register();
-
-  // Provider::New emits info log messages (for example, noting that a CKV is
-  // being skipped due to state DISABLED), so logging should be initialized
-  // before Provider::New is invoked.
-  RETURN_IF_ERROR(
-      InitializeLogging(config.log_directory(), config.log_filename_suffix()));
 
   absl::StatusOr<std::unique_ptr<Provider>> new_provider =
       Provider::New(config);

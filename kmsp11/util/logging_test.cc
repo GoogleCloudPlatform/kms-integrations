@@ -7,10 +7,12 @@
 #include "absl/strings/escaping.h"
 #include "glog/logging.h"
 #include "gmock/gmock.h"
+#include "grpc/grpc.h"
 #include "kmsp11/test/matchers.h"
 #include "kmsp11/test/resource_helpers.h"
 #include "kmsp11/test/test_status_macros.h"
 #include "kmsp11/util/errors.h"
+#include "kmsp11/util/platform.h"
 
 namespace kmsp11 {
 namespace {
@@ -193,16 +195,20 @@ TEST_F(LogDirectoryTest, SingleFileContainsAllLogLevels) {
 }
 
 TEST_F(LogDirectoryTest, GrpcErrorsAreLoggedToGlogDestination) {
-  gpr_set_log_verbosity(GPR_LOG_SEVERITY_DEBUG);
   std::string error_message = "Error message";
   std::string info_message = "Info message";
   std::string debug_message = "Debug message";
+  CaptureStderr();
+
+  SetEnvVariable("GRPC_VERBOSITY", "debug");
+  absl::Cleanup c = [] { ClearEnvVariable("GRPC_VERBOSITY"); };
 
   {
     // Using a separate scope to ensure logfiles are flushed.
     ASSERT_OK(InitializeLogging(log_directory_, ""));
     absl::Cleanup c = ShutdownLogging;
 
+    grpc_init();
     gpr_log(GPR_ERROR, error_message.c_str());
     gpr_log(GPR_INFO, info_message.c_str());
     gpr_log(GPR_DEBUG, debug_message.c_str());
@@ -216,6 +222,7 @@ TEST_F(LogDirectoryTest, GrpcErrorsAreLoggedToGlogDestination) {
   EXPECT_THAT(log_content,
               AllOf(HasSubstr(error_message), HasSubstr(info_message),
                     HasSubstr(debug_message)));
+  EXPECT_THAT(GetCapturedStderr(), IsEmpty());
 }
 
 }  // namespace
