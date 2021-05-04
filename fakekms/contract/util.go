@@ -4,13 +4,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/protobuf/ptypes"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/testing/protocmp"
 
-	timestamppb "github.com/golang/protobuf/ptypes/timestamp"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // ProtoDiffOpts returns cmp.Options suitable for diffing KMS proto messages.
@@ -51,8 +50,10 @@ func EquateApproxTimestamp(margin time.Duration) cmp.Option {
 func comparableTime(msg proto.Message) (time.Time, bool) {
 	ts := new(timestamppb.Timestamp)
 	proto.Merge(ts, msg)
-	t, err := ptypes.Timestamp(ts)
-	return t, err == nil
+	if err := ts.CheckValid(); err != nil {
+		return time.Time{}, false
+	}
+	return ts.AsTime(), true
 }
 
 // Returns the difference in times between the two timestamp messages as

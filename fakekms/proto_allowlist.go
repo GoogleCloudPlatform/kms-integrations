@@ -1,7 +1,7 @@
 package fakekms
 
 import (
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -15,8 +15,8 @@ func allowlist(paths ...string) protoAllowlister {
 	return p
 }
 
-func (a protoAllowlister) check(msg proto.GeneratedMessage) error {
-	return a.checkInternal("", proto.MessageV2(msg).ProtoReflect())
+func (a protoAllowlister) check(msg proto.Message) error {
+	return a.checkInternal("", msg.ProtoReflect())
 }
 
 func (a protoAllowlister) checkInternal(prefix string, msg protoreflect.Message) (err error) {

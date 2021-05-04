@@ -5,13 +5,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/protobuf/ptypes"
 	"github.com/google/go-cmp/cmp"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 	fmpb "google.golang.org/genproto/protobuf/field_mask"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func TestDestroyEnabledCryptoKeyVersion(t *testing.T) {
@@ -35,10 +35,7 @@ func TestDestroyEnabledCryptoKeyVersion(t *testing.T) {
 	expectedDestroyTime := time.Now().Add(24 * time.Hour).Truncate(time.Microsecond)
 
 	ckv.State = kmspb.CryptoKeyVersion_DESTROY_SCHEDULED
-	ckv.DestroyTime, err = ptypes.TimestampProto(expectedDestroyTime)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ckv.DestroyTime = timestamppb.New(expectedDestroyTime)
 
 	if diff := cmp.Diff(ckv, got, ProtoDiffOpts()...); diff != "" {
 		t.Errorf("ckv proto mismatch on destroy RPC (-want +got): %s", diff)
@@ -77,10 +74,7 @@ func TestDestroyDisabledCryptoKeyVersion(t *testing.T) {
 	expectedDestroyTime := time.Now().Add(24 * time.Hour).Truncate(time.Microsecond)
 
 	ckv.State = kmspb.CryptoKeyVersion_DESTROY_SCHEDULED
-	ckv.DestroyTime, err = ptypes.TimestampProto(expectedDestroyTime)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ckv.DestroyTime = timestamppb.New(expectedDestroyTime)
 
 	if diff := cmp.Diff(ckv, got, ProtoDiffOpts()...); diff != "" {
 		t.Errorf("ckv proto mismatch on destroy RPC (-want +got): %s", diff)

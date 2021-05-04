@@ -9,7 +9,7 @@ import (
 	"hash/crc32"
 
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
-	wrapperspb "google.golang.org/protobuf/types/known/wrapperspb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 var crc32cTable = crc32.MakeTable(crc32.Castagnoli)

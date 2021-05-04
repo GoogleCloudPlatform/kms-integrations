@@ -6,9 +6,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/golang/protobuf/ptypes"
-
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // CreateCryptoKeyVersionVersion fakes a Cloud KMS API function.
@@ -41,7 +40,7 @@ func (f *fakeKMS) createVersion(ck *cryptoKey) *kmspb.CryptoKeyVersion {
 
 	pb := &kmspb.CryptoKeyVersion{
 		Name:            name.String(),
-		CreateTime:      ptypes.TimestampNow(),
+		CreateTime:      timestamppb.Now(),
 		Algorithm:       ck.pb.VersionTemplate.Algorithm,
 		ProtectionLevel: ck.pb.VersionTemplate.ProtectionLevel,
 	}
@@ -65,7 +64,7 @@ func (f *fakeKMS) createVersion(ck *cryptoKey) *kmspb.CryptoKeyVersion {
 
 			ckv.keyMaterial = k
 			pb.State = kmspb.CryptoKeyVersion_ENABLED
-			pb.GenerateTime = ptypes.TimestampNow()
+			pb.GenerateTime = timestamppb.Now()
 		}()
 	} else {
 		// sync generation
@@ -194,12 +193,9 @@ func (f *fakeKMS) DestroyCryptoKeyVersion(ctx context.Context, req *kmspb.Destro
 	}
 
 	// destroy_time is represented internally in KMS as int64 micros
-	dt, err := ptypes.TimestampProto(time.Now().Add(24 * time.Hour).Truncate(time.Microsecond))
-	if err != nil {
-		return nil, err
-	}
+	destroyTime := time.Now().Add(24 * time.Hour).Truncate(time.Microsecond)
 
-	ckv.pb.DestroyTime = dt
+	ckv.pb.DestroyTime = timestamppb.New(destroyTime)
 	ckv.pb.State = kmspb.CryptoKeyVersion_DESTROY_SCHEDULED
 	return ckv.pb, nil
 }

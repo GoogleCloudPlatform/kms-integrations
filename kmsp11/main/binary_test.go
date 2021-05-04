@@ -13,8 +13,8 @@ import (
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
-	"github.com/golang/protobuf/proto"
 	"github.com/google/go-cmp/cmp"
+	"google.golang.org/protobuf/encoding/prototext"
 
 	"kmsp11"
 )
@@ -86,7 +86,7 @@ func loadP11FunctionNames(t *testing.T) []string {
 	}
 
 	list := new(kmsp11.CkFuncList)
-	if err := proto.UnmarshalText(string(f), list); err != nil {
+	if err := prototext.Unmarshal(f, list); err != nil {
 		log.Fatalf("error parsing function list textproto: %+v", err)
 	}
 

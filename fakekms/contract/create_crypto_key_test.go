@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/golang/protobuf/ptypes"
 	"github.com/google/go-cmp/cmp"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func TestCreateCryptoKeyDefaults(t *testing.T) {
@@ -31,7 +31,7 @@ func TestCreateCryptoKeyDefaults(t *testing.T) {
 
 	want := kmspb.CryptoKey{
 		Name:       kr.Name + "/cryptoKeys/encrypt",
-		CreateTime: ptypes.TimestampNow(),
+		CreateTime: timestamppb.Now(),
 		Purpose:    kmspb.CryptoKey_ENCRYPT_DECRYPT,
 		VersionTemplate: &kmspb.CryptoKeyVersionTemplate{
 			ProtectionLevel: kmspb.ProtectionLevel_SOFTWARE,
@@ -39,8 +39,8 @@ func TestCreateCryptoKeyDefaults(t *testing.T) {
 		},
 		Primary: &kmspb.CryptoKeyVersion{
 			Name:            kr.Name + "/cryptoKeys/encrypt/cryptoKeyVersions/1",
-			CreateTime:      ptypes.TimestampNow(),
-			GenerateTime:    ptypes.TimestampNow(),
+			CreateTime:      timestamppb.Now(),
+			GenerateTime:    timestamppb.Now(),
 			Algorithm:       kmspb.CryptoKeyVersion_GOOGLE_SYMMETRIC_ENCRYPTION,
 			ProtectionLevel: kmspb.ProtectionLevel_SOFTWARE,
 			State:           kmspb.CryptoKeyVersion_ENABLED,
@@ -128,7 +128,7 @@ func TestCreateCryptoKeyAlgorithms(t *testing.T) {
 
 			want := &kmspb.CryptoKey{
 				Name:       fmt.Sprintf("%s/cryptoKeys/%s", kr.Name, keyID),
-				CreateTime: ptypes.TimestampNow(),
+				CreateTime: timestamppb.Now(),
 				Purpose:    c.Purpose,
 				VersionTemplate: &kmspb.CryptoKeyVersionTemplate{
 					ProtectionLevel: c.ProtectionLevel,

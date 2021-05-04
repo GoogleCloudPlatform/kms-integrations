@@ -4,9 +4,8 @@ import (
 	"context"
 	"sort"
 
-	"github.com/golang/protobuf/ptypes"
-
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // CreateKeyRing fakes a Cloud KMS API function.
@@ -31,7 +30,7 @@ func (f *fakeKMS) CreateKeyRing(ctx context.Context, req *kmspb.CreateKeyRingReq
 
 	pb := &kmspb.KeyRing{
 		Name:       name.String(),
-		CreateTime: ptypes.TimestampNow(),
+		CreateTime: timestamppb.Now(),
 	}
 	f.keyRings[name] = &keyRing{
 		pb:   pb,
