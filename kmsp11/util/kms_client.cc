@@ -208,19 +208,16 @@ CryptoKeysRange KmsClient::ListCryptoKeys(
   return CryptoKeysRange(
       request,
       [this](const kms_v1::ListCryptoKeysRequest& request)
-          -> google::cloud::StatusOr<kms_v1::ListCryptoKeysResponse> {
+          -> absl::StatusOr<kms_v1::ListCryptoKeysResponse> {
         grpc::ClientContext ctx;
         AddContextSettings(&ctx, "parent", request.parent());
 
         kms_v1::ListCryptoKeysResponse response;
-        grpc::Status result =
-            kms_stub_->ListCryptoKeys(&ctx, request, &response);
-        if (!result.ok()) {
-          // TODO(b/160313948): pull a copy of the google-cloud-cpp logic,
-          // convert to absl::Status, and drop the dependency.
-          return google::cloud::Status(
-              google::cloud::StatusCode(result.error_code()),
-              result.error_message());
+        absl::Status rpc_result =
+            ToStatus(kms_stub_->ListCryptoKeys(&ctx, request, &response));
+        if (!rpc_result.ok()) {
+          SetErrorRv(rpc_result, CKR_DEVICE_ERROR);
+          return rpc_result;
         }
         return response;
       },
@@ -238,19 +235,16 @@ CryptoKeyVersionsRange KmsClient::ListCryptoKeyVersions(
   return CryptoKeyVersionsRange(
       request,
       [this](const kms_v1::ListCryptoKeyVersionsRequest& request)
-          -> ::google::cloud::StatusOr<kms_v1::ListCryptoKeyVersionsResponse> {
+          -> absl::StatusOr<kms_v1::ListCryptoKeyVersionsResponse> {
         grpc::ClientContext ctx;
         AddContextSettings(&ctx, "parent", request.parent());
 
         kms_v1::ListCryptoKeyVersionsResponse response;
-        grpc::Status result =
-            kms_stub_->ListCryptoKeyVersions(&ctx, request, &response);
-        if (!result.ok()) {
-          // TODO(b/160313948): pull a copy of the google-cloud-cpp logic,
-          // convert to absl::Status, and drop the dependency.
-          return google::cloud::Status(
-              google::cloud::StatusCode(result.error_code()),
-              result.error_message());
+        absl::Status rpc_result = ToStatus(
+            kms_stub_->ListCryptoKeyVersions(&ctx, request, &response));
+        if (!rpc_result.ok()) {
+          SetErrorRv(rpc_result, CKR_DEVICE_ERROR);
+          return rpc_result;
         }
         return response;
       },

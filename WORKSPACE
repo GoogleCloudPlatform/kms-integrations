@@ -67,13 +67,6 @@ http_archive(
 )
 
 http_archive(
-    name = "com_github_googleapis_google_cloud_cpp",  # v1.20.0 // 2020-11-03
-    sha256 = "128dc8aee54921cb6869c46d837c3f1810d18d669b82062fdc56e60b84a1bda2",
-    strip_prefix = "google-cloud-cpp-88d7735677a7a79757c8c69455cab2acd84eddb0",
-    url = "https://github.com/googleapis/google-cloud-cpp/archive/88d7735677a7a79757c8c69455cab2acd84eddb0.tar.gz",
-)
-
-http_archive(
     name = "com_google_googletest",  # 2020-04-03
     sha256 = "363089f62b375e6a73b7149015e7fe92e50d124ab4e95ba062774c496d96f2fc",
     strip_prefix = "googletest-e3f0319d89f4cbf32993de595d984183b1a9fc57",
@@ -92,9 +85,6 @@ http_archive(
 # https://github.com/bazelbuild/rules_go/blob/v0.26.0/go/private/repositories.bzl#L243
 http_archive(
     name = "com_google_googleapis",  # 2021-03-05
-    # A custom build_file is needed because google_cloud_cpp is using an ugly hack. :-(
-    # See https://github.com/googleapis/google-cloud-cpp/blob/v1.20.0/bazel/googleapis.BUILD
-    build_file = "@com_github_googleapis_google_cloud_cpp//bazel:googleapis.BUILD",
     # Patch raw PKCS #1 support into googleapis.
     patch_args = [
         "-E",
@@ -154,11 +144,6 @@ load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_depende
 rules_foreign_cc_dependencies(register_built_tools = False)
 
 # Transitive Dependencies
-
-## Google Cloud CPP
-load("@com_github_googleapis_google_cloud_cpp//bazel:google_cloud_cpp_deps.bzl", "google_cloud_cpp_deps")
-
-google_cloud_cpp_deps()
 
 load("@com_google_googleapis//:repository_rules.bzl", "switched_rules_by_language")
 

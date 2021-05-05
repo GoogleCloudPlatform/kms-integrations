@@ -1,23 +1,9 @@
-// Copyright 2020 Google LLC
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// This file was ported from the Google Cloud Platform C++ Client Libraries,
+// the original source can be found here:
+// https://github.com/googleapis/google-cloud-cpp/blob/9d9591913f342bafcd83a34df8e96d4dd5d87534/google/cloud/internal/pagination_range.h
+#ifndef KMSP11_UTIL_PAGINATION_RANGE_H_
+#define KMSP11_UTIL_PAGINATION_RANGE_H_
 
-#ifndef GOOGLE_CLOUD_CPP_GOOGLE_CLOUD_INTERNAL_PAGINATION_RANGE_H
-#define GOOGLE_CLOUD_CPP_GOOGLE_CLOUD_INTERNAL_PAGINATION_RANGE_H
-
-#include "google/cloud/status_or.h"
-#include "google/cloud/version.h"
-#include <google/protobuf/util/message_differencer.h>
 #include <functional>
 #include <iterator>
 #include <string>
@@ -25,20 +11,20 @@
 #include <utility>
 #include <vector>
 
-namespace google {
-namespace cloud {
-inline namespace GOOGLE_CLOUD_CPP_NS {
-namespace internal {
+#include "absl/status/statusor.h"
+#include "google/protobuf/util/message_differencer.h"
 
-inline bool ComparePaginationValues(google::protobuf::Message const& lhs,
-                                    google::protobuf::Message const& rhs) {
+namespace kmsp11 {
+
+inline bool ComparePaginationValues(const google::protobuf::Message& lhs,
+                                    const google::protobuf::Message& rhs) {
   return google::protobuf::util::MessageDifferencer::Equals(lhs, rhs);
 }
 
 template <typename T, typename std::enable_if<
                           !std::is_base_of<google::protobuf::Message, T>::value,
                           int>::type = 0>
-bool ComparePaginationValues(T const& lhs, T const& rhs) {
+bool ComparePaginationValues(const T& lhs, const T& rhs) {
   return lhs == rhs;
 }
 
@@ -51,7 +37,7 @@ class PaginationIterator {
   //@{
   /// @name Iterator traits
   using iterator_category = std::input_iterator_tag;
-  using value_type = StatusOr<T>;
+  using value_type = absl::StatusOr<T>;
   using difference_type = std::ptrdiff_t;
   using pointer = value_type*;
   using reference = value_type&;
@@ -70,19 +56,19 @@ class PaginationIterator {
     return tmp;
   }
 
-  value_type const* operator->() const { return &value_; }
+  const value_type* operator->() const { return &value_; }
   value_type* operator->() { return &value_; }
 
-  value_type const& operator*() const& { return value_; }
+  const value_type& operator*() const& { return value_; }
   value_type& operator*() & { return value_; }
-  value_type const&& operator*() const&& { return std::move(value_); }
+  const value_type&& operator*() const&& { return std::move(value_); }
   value_type&& operator*() && { return std::move(value_); }
 
  private:
   friend Range;
 
-  friend bool operator==(PaginationIterator const& lhs,
-                         PaginationIterator const& rhs) {
+  friend bool operator==(const PaginationIterator& lhs,
+                         const PaginationIterator& rhs) {
     // Iterators on different streams are always different.
     if (lhs.owner_ != rhs.owner_) {
       return false;
@@ -102,8 +88,8 @@ class PaginationIterator {
     return lhs.value_.ok() == rhs.value_.ok();
   }
 
-  friend bool operator!=(PaginationIterator const& lhs,
-                         PaginationIterator const& rhs) {
+  friend bool operator!=(const PaginationIterator& lhs,
+                         const PaginationIterator& rhs) {
     return !(lhs == rhs);
   }
 
@@ -139,9 +125,10 @@ class PaginationRange {
    * @param get_items extracts the items from the response using native C++
    *     types (as opposed to the proto types used in `Response`).
    */
-  PaginationRange(Request request,
-                  std::function<StatusOr<Response>(Request const& r)> loader,
-                  std::function<std::vector<T>(Response r)> get_items)
+  PaginationRange(
+      Request request,
+      std::function<absl::StatusOr<Response>(const Request& r)> loader,
+      std::function<std::vector<T>(Response r)> get_items)
       : request_(std::move(request)),
         next_page_loader_(std::move(loader)),
         get_items_(std::move(get_items)),
@@ -177,9 +164,9 @@ class PaginationRange {
    *   status. If the stream is exhausted, it returns the `.end()` iterator.
    */
   iterator GetNext() {
-    static Status const kPastTheEndError(
-        StatusCode::kFailedPrecondition,
-        "Cannot iterating past the end of ListObjectReader");
+    static absl::Status const kPastTheEndError(
+        absl::FailedPreconditionError(
+        "Cannot iterating past the end of ListObjectReader"));
     if (current_page_.end() == current_) {
       if (on_last_page_) {
         return iterator(nullptr, kPastTheEndError);
@@ -208,7 +195,7 @@ class PaginationRange {
 
  private:
   Request request_;
-  std::function<StatusOr<Response>(Request const& r)> next_page_loader_;
+  std::function<absl::StatusOr<Response>(const Request& r)> next_page_loader_;
   std::function<std::vector<T>(Response r)> get_items_;
   std::vector<T> current_page_;
   typename std::vector<T>::iterator current_;
@@ -224,17 +211,14 @@ struct UnimplementedPaginationRange<PaginationRange<T, Request, Response>> {
   static PaginationRange<T, Request, Response> Create() {
     return PaginationRange<T, Request, Response>(
         Request{},
-        [](Request const&) {
-          return StatusOr<Response>(
-              Status{StatusCode::kUnimplemented, "needs-override"});
+        [](const Request&) {
+          return absl::StatusOr<Response>(
+              absl::UnimplementedError("needs-override"));
         },
         [](Response) { return std::vector<T>{}; });
   }
 };
 
-}  // namespace internal
-}  // namespace GOOGLE_CLOUD_CPP_NS
-}  // namespace cloud
-}  // namespace google
+}  // namespace kmsp11
 
-#endif  // GOOGLE_CLOUD_CPP_GOOGLE_CLOUD_INTERNAL_PAGINATION_RANGE_H
+#endif  // KMSP11_UTIL_PAGINATION_RANGE_H_

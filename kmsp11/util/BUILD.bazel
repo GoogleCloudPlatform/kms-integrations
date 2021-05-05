@@ -161,12 +161,12 @@ cc_library(
     deps = [
         ":backoff",
         ":kms_v1",
+        ":pagination_range",
         ":platform",
         ":status_macros",
         ":status_utils",
         "//kmsp11:openssl",
         "//kmsp11:version",
-        "@com_github_googleapis_google_cloud_cpp//google/cloud:google_cloud_cpp_grpc_utils",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/status:statusor",
     ],
@@ -191,6 +191,26 @@ cc_library(
     deps = [
         "@com_google_googleapis//google/cloud/kms/v1:kms_cc_grpc",
         "@com_google_googleapis//google/cloud/kms/v1:kms_cc_proto",
+    ],
+)
+
+cc_library(
+    name = "pagination_range",
+    hdrs = ["pagination_range.h"],
+    deps = [
+        "@com_google_absl//absl/status",
+    ],
+)
+
+cc_test(
+    name = "pagination_range_test",
+    size = "small",
+    srcs = ["pagination_range_test.cc"],
+    deps = [
+        ":pagination_range",
+        "//kmsp11/test",
+        "@com_google_googleapis//google/bigtable/admin/v2:admin_cc_grpc",
+        "@com_google_googletest//:gtest_main",
     ],
 )
 
@@ -280,7 +300,6 @@ cc_library(
         ":status_details_cc_proto",
         "//kmsp11:cryptoki_headers",
         "@com_github_google_glog//:glog",
-        "@com_github_googleapis_google_cloud_cpp//google/cloud:google_cloud_cpp_grpc_utils",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",

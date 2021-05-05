@@ -3,7 +3,6 @@
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "google/cloud/status_or.h"
 #include "grpcpp/support/status.h"
 #include "kmsp11/cryptoki.h"
 
@@ -37,15 +36,6 @@ inline const absl::Status& ToStatus(const absl::StatusOr<T>& status_or) {
 inline absl::Status ToStatus(const grpc::Status& status) {
   return absl::Status(absl::StatusCode(status.error_code()),
                       status.error_message());
-}
-
-inline absl::Status ToStatus(const google::cloud::Status& status) {
-  return absl::Status(absl::StatusCode(status.code()), status.message());
-}
-
-template <typename T>
-inline absl::Status ToStatus(const google::cloud::StatusOr<T>& status_or) {
-  return ToStatus(status_or.status());
 }
 
 }  // namespace kmsp11

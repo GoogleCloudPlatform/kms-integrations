@@ -5,20 +5,20 @@
 #include "absl/strings/string_view.h"
 #include "absl/time/clock.h"
 #include "absl/time/time.h"
-#include "google/cloud/internal/pagination_range.h"
 #include "grpcpp/security/credentials.h"
 #include "kmsp11/util/kms_v1.h"
+#include "kmsp11/util/pagination_range.h"
 
 namespace kmsp11 {
 
 using CryptoKeysRange =
-    google::cloud::internal::PaginationRange<kms_v1::CryptoKey,
-                                             kms_v1::ListCryptoKeysRequest,
-                                             kms_v1::ListCryptoKeysResponse>;
+    PaginationRange<kms_v1::CryptoKey, kms_v1::ListCryptoKeysRequest,
+                    kms_v1::ListCryptoKeysResponse>;
 
-using CryptoKeyVersionsRange = google::cloud::internal::PaginationRange<
-    kms_v1::CryptoKeyVersion, kms_v1::ListCryptoKeyVersionsRequest,
-    kms_v1::ListCryptoKeyVersionsResponse>;
+using CryptoKeyVersionsRange =
+    PaginationRange<kms_v1::CryptoKeyVersion,
+                    kms_v1::ListCryptoKeyVersionsRequest,
+                    kms_v1::ListCryptoKeyVersionsResponse>;
 
 struct CryptoKeyAndVersion {
   kms_v1::CryptoKey crypto_key;
