@@ -21,11 +21,6 @@ cd "${PROJECT_ROOT}"
 export RESULTS_DIR="${KOKORO_ARTIFACTS_DIR}/results"
 mkdir "${RESULTS_DIR}"
 
-# Use the 'latest' package repository so that we can get Bazel 4.0.0
-# See https://www.freebsd.org/cgi/man.cgi?query=pkg.conf
-sudo mkdir -p /usr/local/etc/pkg/repos
-echo 'FreeBSD: { url: "pkg+http://pkg.FreeBSD.org/${ABI}/latest" }' |\
-  sudo tee /usr/local/etc/pkg/repos/FreeBSD.conf
 sudo pkg update -f
 sudo pkg install -y bazel-4.0.0 cmake ninja
 
