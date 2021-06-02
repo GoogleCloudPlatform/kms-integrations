@@ -40,6 +40,9 @@ _upload_artifacts() {
       "${RESULTS_DIR}/libkmsp11.so"
   fi
 
+  cp "${PROJECT_ROOT}/LICENSE" "${RESULTS_DIR}"
+  cp "${PROJECT_ROOT}/NOTICE" "${RESULTS_DIR}"
+
   python3 "${PROJECT_ROOT}/.kokoro/copy_test_outputs.py" \
     "${PROJECT_ROOT}/bazel-testlogs" "${RESULTS_DIR}/testlogs"
 }
