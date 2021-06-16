@@ -17,7 +17,7 @@ package fakekms
 import (
 	"testing"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -27,7 +27,7 @@ import (
 
 func TestAllowlistScalars(t *testing.T) {
 	var cases = []struct {
-		Message proto.GeneratedMessage
+		Message proto.Message
 		Path    string
 	}{
 		{
@@ -152,7 +152,7 @@ func TestAllowlistFailureMultipleFields(t *testing.T) {
 }
 
 func TestAllowlistFailsUnknownFields(t *testing.T) {
-	kr := proto.MessageV2(&kmspb.KeyRing{Name: "foo"})
+	kr := &kmspb.KeyRing{Name: "foo"}
 	kr.ProtoReflect().SetUnknown(protoreflect.RawFields{0xF0, 0x01})
 
 	err := allowlist("name").check(kr)

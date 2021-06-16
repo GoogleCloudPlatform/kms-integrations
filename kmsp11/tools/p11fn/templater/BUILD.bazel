@@ -6,6 +6,6 @@ go_binary(
     visibility = ["//kmsp11:__subpackages__"],
     deps = [
         "//kmsp11/tools/p11fn:function_def_go_proto",
-        "@com_github_golang_protobuf//proto:go_default_library",
+        "@org_golang_google_protobuf//encoding/prototext:go_default_library",
     ],
 )

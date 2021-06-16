@@ -19,8 +19,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/golang/protobuf/proto"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/proto"
 )
 
 func newLockInterceptor(mux *sync.RWMutex) grpc.UnaryServerInterceptor {

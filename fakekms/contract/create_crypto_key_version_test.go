@@ -20,7 +20,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/protobuf/ptypes"
 	"github.com/google/go-cmp/cmp"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -28,6 +27,7 @@ import (
 	"google.golang.org/protobuf/testing/protocmp"
 
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func TestCreateCryptoKeyVersionSequential(t *testing.T) {
@@ -51,8 +51,8 @@ func TestCreateCryptoKeyVersionSequential(t *testing.T) {
 
 	want := kmspb.CryptoKeyVersion{
 		Name:            ck.Name + "/cryptoKeyVersions/1",
-		CreateTime:      ptypes.TimestampNow(),
-		GenerateTime:    ptypes.TimestampNow(),
+		CreateTime:      timestamppb.Now(),
+		GenerateTime:    timestamppb.Now(),
 		ProtectionLevel: kmspb.ProtectionLevel_SOFTWARE,
 		Algorithm:       kmspb.CryptoKeyVersion_GOOGLE_SYMMETRIC_ENCRYPTION,
 		State:           kmspb.CryptoKeyVersion_ENABLED,
@@ -68,7 +68,7 @@ func TestCreateCryptoKeyVersionSequential(t *testing.T) {
 	}
 
 	want.Name = ck.Name + "/cryptoKeyVersions/2"
-	want.CreateTime = ptypes.TimestampNow()
+	want.CreateTime = timestamppb.Now()
 
 	if diff := cmp.Diff(want, got, ProtoDiffOpts()...); diff != "" {
 		t.Errorf("unexpected version 2 diff (-want, +got): %s", diff)
@@ -143,7 +143,7 @@ func TestCreateCryptoKeyVersionAsync(t *testing.T) {
 
 			want := &kmspb.CryptoKeyVersion{
 				Name:            fmt.Sprintf("%s/cryptoKeyVersions/1", ck.Name),
-				CreateTime:      ptypes.TimestampNow(),
+				CreateTime:      timestamppb.Now(),
 				ProtectionLevel: c.ProtectionLevel,
 				Algorithm:       c.Algorithm,
 				State:           kmspb.CryptoKeyVersion_PENDING_GENERATION,
@@ -165,7 +165,7 @@ func TestCreateCryptoKeyVersionAsync(t *testing.T) {
 			}
 
 			want.State = kmspb.CryptoKeyVersion_ENABLED
-			want.GenerateTime = ptypes.TimestampNow()
+			want.GenerateTime = timestamppb.Now()
 
 			// Real KMS returns an attestation for HSM keys. Ignore it, because we
 			// don't support attestations in the fake.

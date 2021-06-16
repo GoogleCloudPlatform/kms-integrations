@@ -24,7 +24,7 @@ import (
 	"os"
 	"text/template"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/encoding/prototext"
 )
 
 var (
@@ -32,19 +32,19 @@ var (
 	templatePath = flag.String("template_path", "", "path to template file")
 )
 
-func mustReadFile(filePath string) string {
+func mustReadFile(filePath string) []byte {
 	f, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		log.Fatalf("error reading file at %s: %+v", filePath, err)
 	}
-	return string(f)
+	return f
 }
 
 func main() {
 	flag.Parse()
 
 	funcs := new(kmsp11.CkFuncList)
-	if err := proto.UnmarshalText(mustReadFile(*funcListPath), funcs); err != nil {
+	if err := prototext.Unmarshal(mustReadFile(*funcListPath), funcs); err != nil {
 		log.Fatalf("error parsing function list textproto: %+v", err)
 	}
 

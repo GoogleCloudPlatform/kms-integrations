@@ -18,10 +18,9 @@ import (
 	"context"
 	"sort"
 
-	"github.com/golang/protobuf/ptypes"
-
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // CreateCryptoKey fakes a Cloud KMS API function.
@@ -73,7 +72,7 @@ func (f *fakeKMS) CreateCryptoKey(ctx context.Context, req *kmspb.CreateCryptoKe
 
 	pb := &kmspb.CryptoKey{
 		Name:       name.String(),
-		CreateTime: ptypes.TimestampNow(),
+		CreateTime: timestamppb.Now(),
 		Purpose:    purpose,
 		VersionTemplate: &kmspb.CryptoKeyVersionTemplate{
 			ProtectionLevel: protLevel,
