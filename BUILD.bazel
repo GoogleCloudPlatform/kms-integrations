@@ -39,6 +39,11 @@ config_setting(
     values = {"define": "openssl=1"},
 )
 
+config_setting(
+    name = "nocxxfs",
+    values = {"define": "nocxxfs=1"},
+)
+
 # A target to encompass tests that are tagged 'manual'
 # but should be run for release builds.
 test_suite(

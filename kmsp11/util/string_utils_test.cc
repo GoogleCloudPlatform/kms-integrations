@@ -14,6 +14,8 @@
 
 #include "kmsp11/util/string_utils.h"
 
+#include <fstream>
+
 #include "absl/strings/str_cat.h"
 #include "absl/types/span.h"
 #include "gmock/gmock.h"
@@ -25,6 +27,7 @@ namespace {
 using ::testing::ElementsAre;
 using ::testing::ElementsAreArray;
 using ::testing::Field;
+using ::testing::HasSubstr;
 using ::testing::Pointee;
 using ::testing::SizeIs;
 
@@ -122,6 +125,23 @@ TEST(MarshalTest, MarshalUnsignedLongList) {
 TEST(MarshalTest, MarshalUnsignedLongListEmpty) {
   std::string s = MarshalULongList(std::vector<unsigned long int>());
   EXPECT_THAT(s, SizeIs(0));
+}
+
+TEST(ReadFileToStringTest, FileContentMatches) {
+  // TODO: convert to std::filesystem when all build envs support it.
+  // This leaks temp files as-is.
+  std::string file_path = std::tmpnam(nullptr);
+  std::string content = "here is some content";
+  std::ofstream(file_path) << content;
+
+  EXPECT_THAT(ReadFileToString(file_path), IsOkAndHolds(content));
+}
+
+TEST(ReadFileToStringTest, NonExistentFileReturnsFailedPrecondition) {
+  std::string file_path = std::tmpnam(nullptr);
+  EXPECT_THAT(ReadFileToString(file_path),
+              StatusIs(absl::StatusCode::kFailedPrecondition,
+                       HasSubstr("failed to read file")));
 }
 
 }  // namespace

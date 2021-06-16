@@ -15,7 +15,6 @@
 #include "kmsp11/util/logging.h"
 
 #include <filesystem>
-#include <fstream>
 
 #include "absl/cleanup/cleanup.h"
 #include "absl/strings/escaping.h"
@@ -27,6 +26,7 @@
 #include "kmsp11/test/test_status_macros.h"
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/platform.h"
+#include "kmsp11/util/string_utils.h"
 
 namespace kmsp11 {
 namespace {
@@ -200,12 +200,10 @@ TEST_F(LogDirectoryTest, SingleFileContainsAllLogLevels) {
 
   std::vector<std::filesystem::directory_entry> files = LogDirectoryEntries();
   ASSERT_THAT(files, SizeIs(1));
-  std::ifstream in(files[0].path().string());
-  std::string log_content((std::istreambuf_iterator<char>(in)),
-                          (std::istreambuf_iterator<char>()));
-  EXPECT_THAT(log_content,
-              AllOf(HasSubstr(info_message), HasSubstr(warning_message),
-                    HasSubstr(error_message)));
+  EXPECT_THAT(
+      ReadFileToString(files[0].path().string()),
+      IsOkAndHolds(AllOf(HasSubstr(error_message), HasSubstr(warning_message),
+                         HasSubstr(info_message))));
 }
 
 TEST_F(LogDirectoryTest, GrpcErrorsAreLoggedToGlogDestination) {
@@ -214,8 +212,11 @@ TEST_F(LogDirectoryTest, GrpcErrorsAreLoggedToGlogDestination) {
   std::string debug_message = "Debug message";
   CaptureStderr();
 
-  SetEnvVariable("GRPC_VERBOSITY", "debug");
-  absl::Cleanup c = [] { ClearEnvVariable("GRPC_VERBOSITY"); };
+  // In customer code, this would be set using the GRPC_VERBOSITY environment
+  // variable. However, that environment variable is only read once per process,
+  // so isn't reliable in the context of unit tests that share a process.
+  gpr_set_log_verbosity(GPR_LOG_SEVERITY_DEBUG);
+  absl::Cleanup c = [] { gpr_set_log_verbosity(GPR_LOG_SEVERITY_ERROR); };
 
   {
     // Using a separate scope to ensure logfiles are flushed.
@@ -230,12 +231,10 @@ TEST_F(LogDirectoryTest, GrpcErrorsAreLoggedToGlogDestination) {
 
   std::vector<std::filesystem::directory_entry> files = LogDirectoryEntries();
   ASSERT_THAT(files, SizeIs(1));
-  std::ifstream in(files[0].path().string());
-  std::string log_content((std::istreambuf_iterator<char>(in)),
-                          (std::istreambuf_iterator<char>()));
-  EXPECT_THAT(log_content,
-              AllOf(HasSubstr(error_message), HasSubstr(info_message),
-                    HasSubstr(debug_message)));
+  EXPECT_THAT(
+      ReadFileToString(files[0].path().string()),
+      IsOkAndHolds(AllOf(HasSubstr(error_message), HasSubstr(info_message),
+                         HasSubstr(debug_message))));
   EXPECT_THAT(GetCapturedStderr(), IsEmpty());
 }
 

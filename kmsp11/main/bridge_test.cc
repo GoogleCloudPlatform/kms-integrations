@@ -135,54 +135,6 @@ TEST_F(BridgeTest, InitializeFailsWithArgsNoConfig) {
                        HasSubstr("cannot load configuration")));
 }
 
-TEST_F(BridgeTest, InitializationWarningsAreLogged) {
-  // Create a key that will be skipped at init time (purpose==ENCRYPT_DECRYPT)
-  auto fake_client = fake_server_->NewClient();
-  kms_v1::CryptoKey ck;
-  ck.set_purpose(kms_v1::CryptoKey::ENCRYPT_DECRYPT);
-  ck.mutable_version_template()->set_protection_level(kms_v1::HSM);
-  ck = CreateCryptoKeyOrDie(fake_client.get(), kr1_.name(), "ck", ck, true);
-
-  testing::internal::CaptureStderr();
-  ASSERT_OK(Initialize(&init_args_));
-  ASSERT_OK(Finalize(nullptr));
-
-  EXPECT_THAT(testing::internal::GetCapturedStderr(),
-              HasSubstr("unsupported purpose"));
-}
-
-TEST_F(BridgeTest, LoggingIsInitializedBeforeKmsCallsAreMade) {
-  // Create a key that will be skipped at init time (purpose==ENCRYPT_DECRYPT)
-  auto fake_client = fake_server_->NewClient();
-  kms_v1::CryptoKey ck;
-  ck.set_purpose(kms_v1::CryptoKey::ENCRYPT_DECRYPT);
-  ck.mutable_version_template()->set_protection_level(kms_v1::HSM);
-  ck = CreateCryptoKeyOrDie(fake_client.get(), kr1_.name(), "ck", ck, true);
-
-  testing::internal::CaptureStderr();
-  ASSERT_OK(Initialize(&init_args_));
-  ASSERT_OK(Finalize(nullptr));
-
-  EXPECT_THAT(testing::internal::GetCapturedStderr(),
-              Not(HasSubstr("WARNING: Logging before InitGoogleLogging()")));
-}
-
-TEST_F(BridgeTest, InitializationWithLogDirectoryDoesNotEmitToStandardError) {
-  // TODO(b/157499181): Move to std::filesystem when it's available on all
-  // platforms we support. This test leaks temp files as-is. :-(
-  std::string log_directory = std::tmpnam(nullptr);
-  std::ofstream(config_file_, std::ofstream::out | std::ofstream::app)
-      << "log_directory: " << log_directory << std::endl;
-  testing::internal::CaptureStderr();
-  SetEnvVariable("GRPC_VERBOSITY", "debug");
-  absl::Cleanup c = [] { ClearEnvVariable("GRPC_VERBOSITY"); };
-
-  ASSERT_OK(Initialize(&init_args_));
-  ASSERT_OK(Finalize(nullptr));
-
-  EXPECT_THAT(testing::internal::GetCapturedStderr(), IsEmpty());
-}
-
 TEST_F(BridgeTest, FinalizeFailsWithoutInitialize) {
   EXPECT_THAT(Finalize(nullptr), StatusRvIs(CKR_CRYPTOKI_NOT_INITIALIZED));
 }

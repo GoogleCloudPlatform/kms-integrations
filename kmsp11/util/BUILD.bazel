@@ -139,12 +139,14 @@ cc_test(
     name = "logging_test",
     size = "small",
     srcs = select({
-        "//:macos": [],  #TODO: Build on macOS as well when we move to a 10.15 build server.
+        "//:nocxxfs": [],
         "//conditions:default": ["logging_test.cc"],
     }),
     deps = [
         ":logging",
         ":platform",
+        ":string_utils",
+        "//fakekms/cpp:fakekms",
         "//kmsp11/test",
         "@com_google_absl//absl/cleanup",
         "@com_google_googletest//:gtest_main",

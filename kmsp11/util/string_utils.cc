@@ -14,6 +14,8 @@
 
 #include "kmsp11/util/string_utils.h"
 
+#include <fstream>
+
 #include "absl/strings/str_format.h"
 #include "kmsp11/util/errors.h"
 
@@ -66,6 +68,16 @@ absl::StatusOr<std::string> ExtractKeyId(absl::string_view version_name) {
         SOURCE_LOCATION);
   }
   return parts[7];
+}
+
+absl::StatusOr<std::string> ReadFileToString(const std::string& file_path) {
+  std::ifstream in(file_path.c_str());
+  if (in.fail()) {
+    return absl::FailedPreconditionError(
+        absl::StrCat("failed to read file ", file_path));
+  }
+  return std::string((std::istreambuf_iterator<char>(in)),
+                     (std::istreambuf_iterator<char>()));
 }
 
 }  // namespace kmsp11

@@ -64,6 +64,8 @@ _upload_artifacts() {
 trap _upload_artifacts EXIT
 
 export BAZEL_ARGS="-c opt --keep_going ${BAZEL_EXTRA_ARGS}"
+# Skip tests that rely on std::filesystem pending migration to 10.15 build server
+export BAZEL_ARGS="${BAZEL_ARGS} --define=nocxxfs=1"
 
 bazel test ${BAZEL_ARGS} ... :release_tests
 

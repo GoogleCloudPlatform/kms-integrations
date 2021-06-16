@@ -77,6 +77,11 @@ std::string MarshalULongList(absl::Span<const unsigned long int> value);
 // "projects/foo/locations/us/keyRings/bar/cryptoKeys/baz/cryptoKeyVersions/1".
 absl::StatusOr<std::string> ExtractKeyId(absl::string_view version_name);
 
+// Reads the file from the provided filesystem path to a string. Returns
+// FailedPrecondition on error; for example if the file does not exist, or there
+// are insufficient permissions to read it.
+absl::StatusOr<std::string> ReadFileToString(const std::string& file_path);
+
 }  // namespace kmsp11
 
 #endif  // KMSP11_UTIL_STRING_UTILS_H_

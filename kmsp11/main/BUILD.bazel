@@ -48,6 +48,24 @@ cc_test(
 )
 
 cc_test(
+    name = "bridge_logging_test",
+    size = "small",
+    srcs = select({
+        "//:nocxxfs": [],
+        "//conditions:default": ["bridge_logging_test.cc"],
+    }),
+    deps = [
+        ":bridge",
+        "//fakekms/cpp:fakekms",
+        "//kmsp11/test",
+        "//kmsp11/util:platform",
+        "//kmsp11/util:string_utils",
+        "@com_google_absl//absl/cleanup",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "fips_test",
     size = "small",
     srcs = select({
