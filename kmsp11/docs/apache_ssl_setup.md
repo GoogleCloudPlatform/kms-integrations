@@ -7,16 +7,19 @@ HSM key for TLS signing on Debian 10 (Buster). You may follow these instructions
 if you are using another OS or environment, but be aware that there may be
 slight differences.
 
-We need the `apache2` and `libengine-pkcs11-openssl` packages. Note that
-PKCS #11 URIs are only available in `apache2-2.4.42` and later, so you will need
-to enable backports and select that as the source for the `apache2` package.
+As a pre-requisite, you should complete the configuration documented in
+[OpenSSL Setup](openssl_setup.md).
+
+Once OpenSSL setup is complete, we must ensure that a recent version of
+Apache is installed.  PKCS #11 URIs are only available in `apache2-2.4.42`
+and later, so you will need to enable backports and select that as the source
+for the `apache2` package.
 
 ```
 # Add backports to your sources
 echo deb http://deb.debian.org/debian buster-backports main | sudo tee /etc/apt/sources.list.d/buster-backports.list
 
 sudo apt-get update
-sudo apt-get install libengine-pkcs11-openssl
 sudo apt-get install -t buster-backports apache2
 ```
 
@@ -26,60 +29,22 @@ sudo apt-get install -t buster-backports apache2
 > command above, or install from non-stable sources. For Debian instances: `sudo
 > apt install -t buster-backports apache2`
 
-## Downloading the latest PKCS #11 Cloud KMS Library version
-
-> TODO(b/175421728): Add non-internal build download link.
-
-The latest linux amd64 release build can be downloaded < here >.
-
-In order for `openssl` to use our PKCS #11 library, we need to set the
-`PKCS11_MODULE_PATH` environment variable:
-
-```
-export PKCS11_MODULE_PATH="/path/to/libkmsp11.so"
-```
-
 ## Configuration
 
 ### Creating a KMS-hosted signing key
 
-Create a Cloud KMS EC-P256-SHA256 signing key in your GCP project:
+Create a Cloud KMS EC-P256-SHA256 signing key in your GCP project, in the key ring
+that you previously configured for OpenSSL:
 
 ```
-# Create a fresh keyring
-gcloud kms keyrings create "apache-keyring" --project "your-project-name" --location "us-central1"
-
 # Create a new HSM-backed EC-P256-SHA256 signing key
-gcloud kms keys create "apache-key" --keyring "apache-keyring" --project "project-name" --location "us-central1" \
+gcloud kms keys create "apache-key" --keyring my-keyring" --project "project-name" --location "us-central1" \
   --purpose "asymmetric-signing" --default-algorithm "ec_sign_p256_sha256" --protection-level "hsm"
 ```
 
 NOTE: Make sure that your GCE service account has the right IAM permissions on
 the keyring to be able to use it. If you are not using a GCE VM, see the service
 account (instructions)[https://cloud.google.com/docs/authentication/production].
-
-### PKCS #11 Cloud KMS Library Configuration
-
-The library requires a YAML configuration file in order to locate Cloud KMS
-resources. The YAML must at a minimum configure a single PKCS #11 token, and
-ensure that the `refresh_interval_secs` field is set to 0.
-
-Sample configuration file:
-
-```yaml
----
-tokens:
-  - key_ring: "projects/my-project/locations/us-central1/keyRings/apache-keyring"
-log_directory: "/var/log/kmsp11"
-refresh_interval_secs: 0
-```
-
-You must set the permissions on the configuration file so that it is writable
-only by the file owner. Point `KMS_PKCS11_CONFIG` to your config file:
-
-```
-export KMS_PKCS11_CONFIG="/path/to/pkcs11-config.yaml"
-```
 
 ### Creating a self-signed certificate with OpenSSL
 
@@ -174,4 +139,3 @@ curl -vk https://127.0.0.1
 
 If you encounter any errors, the Apache error log is probably a good starting
 place to see what went wrong.
-

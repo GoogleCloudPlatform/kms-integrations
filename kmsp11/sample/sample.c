@@ -30,9 +30,9 @@
 #include "pkcs11.h"
 // End: Loading the OASIS PKCS#11 headers.
 
-// run_sample demonstrates loading libkmsp11.so dynamically from C using dlopen,
-// and using the loaded library to locate a key and create a digital signature.
-// It returns 0 on success, and a non-zero value on failure.
+// run_sample is a sample function that demonstrates loading the library
+// dynamically and using the loaded library to locate a key and create a
+// digital signature. It returns 0 on success, and a non-zero value on failure.
 int run_sample(const char* library_path, const char* config_file_path,
                const char* ec_p256_signing_key_id) {
   // Dynamically load the PKCS#11 shared library.
