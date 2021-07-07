@@ -74,15 +74,10 @@ absl::StatusOr<std::unique_ptr<Provider>> Provider::New(LibraryConfig config) {
     tokens.emplace_back(std::move(token));
   }
 
-  absl::Duration refresh_interval =
-      absl::Seconds(config.refresh_interval_secs());
-  if (!config.has_refresh_interval_secs()) {
-    refresh_interval = absl::Seconds(300);
-  }
-
   // using `new` to invoke a private constructor
-  return std::unique_ptr<Provider>(new Provider(
-      config, info, std::move(tokens), std::move(client), refresh_interval));
+  return std::unique_ptr<Provider>(
+      new Provider(config, info, std::move(tokens), std::move(client),
+                   absl::Seconds(config.refresh_interval_secs())));
 }
 
 absl::StatusOr<Token*> Provider::TokenAt(CK_SLOT_ID slot_id) {

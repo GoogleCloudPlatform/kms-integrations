@@ -129,7 +129,7 @@ log_directory: "/var/log/kmsp11"
 Item Name             | Type   | Required | Default | Description
 --------------------- | ------ | -------- | ------- | -----------
 tokens                | list   | Yes      | None    | A list of [token configuration items](#per-token-configuration), as specified in the next section. The tokens will be assigned to increasing slot numbers in the order they are defined, starting with 0.
-refresh_interval_secs | int    | No       | 300     | The interval (in seconds) between attempts to update the key change in this library with the latest state from Cloud KMS. A value of 0 means never refresh.
+refresh_interval_secs | int    | No       | 0       | The interval (in seconds) between attempts to update the key change in this library with the latest state from Cloud KMS. A value of 0 means never refresh.
 rpc_timeout_secs      | int    | No       | 30      | The timeout (in seconds) for RPCs made to Cloud KMS.
 log_directory         | string | No       | None    | A directory where application logs should be written. If unspecified, application logs will be written to standard error rather than to the filesystem.
 log_filename_suffix   | string | No       | None    | A suffix that will be appended to application log file names.
@@ -327,16 +327,17 @@ The PKCS #11 library ignores keys that don't conform to these requirements.
 At library initialization time, the library uses KMS RPC calls to read the
 entire contents of each configured key ring. Those contents are cached in
 memory, so that subsequent calls like `C_FindObjects` do not require network
-access. The cache is periodically refreshed, based on the configuration option
-`refresh_interval_secs`.
+access. The cache is periodically refreshed if the configuration option
+`refresh_interval_secs` is set to a non-zero value.
 
 This means that:
 
 *   You should expect initialization time (that is, the amount of time it takes
     for `C_Initialize` to complete) to increase with the number of keys that
     exist in your configured KeyRings.
-*   Keys that are created or modified after the library is initialized may take
-    up to `refresh_interval_secs` to become up-to-date in the library.
+*   Keys that are created or modified after the library is initialized will be
+    stale if `refresh_interval_secs` is unspecified, or else will take up to
+    that amount of time to become up-to-date in the library.
 
 [gcp-authn-getting-started]: https://cloud.google.com/docs/authentication/getting-started
 [gcp-authn-prod]: https://cloud.google.com/docs/authentication/production

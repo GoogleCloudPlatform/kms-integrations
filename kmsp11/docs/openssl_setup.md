@@ -37,7 +37,7 @@ resources. The YAML must at a minimum configure a single PKCS #11 token.
 
 If you are using OpenSSL with another process that may end up forking (for
 example, Apache or Nginx), you must also ensure that the
-`refresh_interval_secs` field is set to 0.
+`refresh_interval_secs` field remains unset, or is set to 0.
 
 Sample configuration file:
 
@@ -45,8 +45,6 @@ Sample configuration file:
 ---
 tokens:
   - key_ring: "projects/my-project/locations/us-central1/keyRings/my-keyring"
-log_directory: "/var/log/kmsp11"
-refresh_interval_secs: 0
 ```
 
 With this configuration, all asymmetric signing and decryption keys in

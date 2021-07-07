@@ -46,7 +46,6 @@ tokens:
   - key_ring: "%s"
 kms_endpoint: "%s"
 use_insecure_grpc_channel_credentials: true
-refresh_interval_secs: 0
 )",
                          kr.name(), fake_kms->listen_addr());
   absl::Cleanup c1 = [&] { std::remove(config_file.c_str()); };
