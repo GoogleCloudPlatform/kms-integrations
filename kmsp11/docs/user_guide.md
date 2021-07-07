@@ -34,13 +34,6 @@ architecture. The shared object file `libkmsp11.so` is compatible with any Linux
 distribution that contains glibc version 2.17 or greater. You do not need to
 compile the library yourself, and it does not require an installation routine.
 
-### FreeBSD system requirements
-
-The library is built and tested on FreeBSD 11.4, on the i386 and amd64
-architectures. The object file `libkmsp11.so` depends only on core system
-libraries that are available on any FreeBSD 11 system. You do not need to
-compile the library yourself, and it does not require an installation routine.
-
 ### Windows system requirements
 
 The library is built and tested on Windows Server (semi-annual channel), on the
@@ -48,13 +41,6 @@ amd64 architecture. The library is designed to be compatible with Windows Server
 2012 R2, Windows 8.1 (x64), and all subsequent server and x64 desktop releases.
 The library requires the preinstallation of the Visual C++ 2019 x64
 Redistributable package, which can be downloaded [here][msvc-redistributable].
-
-### macOS system requirements
-
-The library is built and tested on macOS 10.14 (Mojave) on the amd64
-architecture. The library is designed to be compatible with subsequent macOS
-releases, including 10.15 (Catalina) and 11.0 (Big Sur). You do not need to
-compile the library yourself, and it does not require an installation routine.
 
 ### Downloading and verifying the library
 
