@@ -1,14 +1,14 @@
 # Cloud KMS Integrations
 
 This repository contains clients that integrate Cloud KMS with standard
-cryptographic APIs. Presently, this includes the [PKCS #11 API](#pkcs-11).
+cryptographic APIs. Presently, this includes the library for PKCS #11.
 
 For                          | Go To
 ---------------------------- | -----
 Detailed Product Information | [cloud.google.com/kms](https://cloud.google.com/kms)
 Feedback                     | cloudkms-feedback@google.com
 
-## Cloud KMS Library for PKCS #11 {#pkcs-11}
+## Cloud KMS Library for PKCS #11
 
 The `libkmsp11` library exposes cryptographic and key management capabilities
 from Google Cloud KMS using the

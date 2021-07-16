@@ -1,6 +1,6 @@
 # Building
 
-The project is built using the [Bazel][https://bazel.build] build tool, version
+The project is built using the [Bazel](https://bazel.build) build tool, version
 4.0.0 or later.
 
 All targets can be built and tested by invoking `bazel test ...` at the
