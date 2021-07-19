@@ -36,7 +36,8 @@ export RESULTS_DIR="${KOKORO_ARTIFACTS_DIR}/results"
 mkdir "${RESULTS_DIR}"
 
 sudo pkg update -f
-sudo pkg install -y bazel-4.0.0 cmake ninja
+sudo pkg install -y cmake ninja
+sudo pkg install -y "${KOKORO_GFILE_DIR}/bazel-4.0.0-freebsd11-amd64.txz"
 
 # Make Bazel use a JDK that isn't a million years old, which fixes weird
 # gRPC connection issues with remote build cache. :-(
