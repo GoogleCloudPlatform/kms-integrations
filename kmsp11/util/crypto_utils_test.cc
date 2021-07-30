@@ -823,12 +823,9 @@ TEST(SslErrorToStringTest, ErrorEmitted) {
                     HasSubstr("unknown group")));  // OpenSSL message
 }
 
-TEST(SslErrorToStringTest, MessageEmittedOnNoError) {
-  bssl::UniquePtr<EC_KEY> ec_key(
-      EC_KEY_new_by_curve_name(NID_X9_62_prime256v1));
-  EXPECT_THAT(ec_key, Not(IsNull()));
-  EXPECT_EQ(ERR_peek_error(), 0);
-  EXPECT_THAT(SslErrorToString(), HasSubstr("error could not be retrieved"));
+TEST(SslErrorToStringTest, DefaultMessageEmittedOnNoError) {
+  ASSERT_EQ(ERR_peek_error(), 0);
+  EXPECT_EQ(SslErrorToString("abcd"), "abcd");
 }
 
 }  // namespace

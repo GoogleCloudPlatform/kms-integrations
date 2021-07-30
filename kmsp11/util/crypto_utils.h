@@ -149,7 +149,10 @@ absl::Status RsaVerifyRawPkcs1(RSA* public_key, absl::Span<const uint8_t> data,
 void SafeZeroMemory(volatile char* ptr, size_t size);
 
 // Retrieves the contents of BoringSSL's error stack, and dumps it to a string.
-std::string SslErrorToString();
+// If no errors are found on the stack, `default_message` is returned instead.
+std::string SslErrorToString(
+    absl::string_view default_message =
+        "(error could not be retrieved from the SSL stack)");
 
 }  // namespace kmsp11
 

@@ -197,5 +197,34 @@ TEST_F(BridgeLoggingTest, GrpcDebugEventEmittedWhenVerbosityIsDebug) {
               IsOkAndHolds(HasSubstr(message)));
 }
 
+TEST_F(BridgeLoggingTest, ExistingSslErrorIsClearedAndLogged) {
+  std::string log_directory = absl::StrCat(root_directory_, "/log");
+  ASSERT_TRUE(std::filesystem::create_directory(log_directory));
+  std::ofstream(config_file_, std::ofstream::out | std::ofstream::app)
+      << "log_directory: " << log_directory << std::endl;
+
+  {
+    ASSERT_OK(Initialize(&init_args_));
+    absl::Cleanup c = [] { ASSERT_OK(Finalize(nullptr)); };
+
+    // Add an OpenSSL error to the stack, and invoke a P11 function through the
+    // front door.
+    ASSERT_FALSE(EC_KEY_new_by_curve_name(NID_rsa));
+    ASSERT_NE(ERR_peek_error(), 0);
+    CK_INFO info;
+    ASSERT_EQ(C_GetInfo(&info), CKR_OK);
+  }
+
+  std::filesystem::recursive_directory_iterator log_iter(log_directory);
+  std::vector<std::filesystem::directory_entry> log_files(
+      std::filesystem::begin(log_iter), std::filesystem::end(log_iter));
+
+  ASSERT_THAT(log_files, SizeIs(1));
+  EXPECT_THAT(
+      ReadFileToString(log_files[0].path().string()),
+      IsOkAndHolds(HasSubstr("Found an existing OpenSSL error on the stack")));
+  EXPECT_EQ(ERR_peek_error(), 0);
+}
+
 }  // namespace
 }  // namespace kmsp11

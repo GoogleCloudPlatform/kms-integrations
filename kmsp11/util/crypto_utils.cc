@@ -573,14 +573,14 @@ void SafeZeroMemory(volatile char* ptr, size_t size) {
   }
 }
 
-std::string SslErrorToString() {
+std::string SslErrorToString(absl::string_view default_message) {
   CHECK(kCryptoLibraryInitialized);
   bssl::UniquePtr<BIO> bio(BIO_new(BIO_s_mem()));
   ERR_print_errors(bio.get());
   char* contents;
   int len = BIO_get_mem_data(bio.get(), &contents);
   if (len <= 0) {
-    return "(error could not be retrieved from the SSL stack)";
+    return std::string(default_message);
   }
   return std::string(contents, size_t(len));
 }
