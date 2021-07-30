@@ -1,15 +1,5 @@
 # PKCS #11 Library for Cloud KMS User Guide
 
-Version 0.21
-
-🧪 Preview. Google Confidential.
-
-This library is covered by the [Pre-GA Offerings Terms][gcp-service-terms] of
-the Google Cloud Platform Terms of Service. Pre-GA libraries may have limited
-support, and changes to pre-GA libraries may not be compatible with other pre-GA
-versions. For more information, see the
-[launch stage descriptions][gcp-launch-stages].
-
 ## Table of Contents
 
 1.  [Getting started](#getting-started)
@@ -26,6 +16,10 @@ versions. For more information, see the
 6.  [Limitations](#limitations)
 
 ## Getting started
+
+This library provides access to Google Cloud HSM through the industry standard
+PKCS #11 API. Official Google-built releases of this library are covered by the
+[Google Cloud Platform Terms of Service][gcp-service-terms].
 
 ### Linux system requirements
 
@@ -341,7 +335,6 @@ This means that:
 
 [gcp-authn-getting-started]: https://cloud.google.com/docs/authentication/getting-started
 [gcp-authn-prod]: https://cloud.google.com/docs/authentication/production
-[gcp-launch-stages]: https://cloud.google.com/products#product-launch-stages
 [gcp-service-terms]: https://cloud.google.com/terms/service-terms#1
 [java-p11-guide]: https://docs.oracle.com/javase/8/docs/technotes/guides/security/p11guide.html
 [kms-asymmetric-encrypt-algorithms]: https://cloud.google.com/kms/docs/algorithms#asymmetric_encryption_algorithms
