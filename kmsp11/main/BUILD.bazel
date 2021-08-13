@@ -118,13 +118,13 @@ cc_binary(
     name = "libkmsp11.so",
     linkopts = select({
         "//:freebsd": [
-            # Make all symbols hidden, except those that are specifially exported.
+            # Make all symbols hidden, except those that are specifically exported.
             "-Wl,--version-script,$(location :linux_exports.lds)",
             # Disallow undefined symbols in object files.
             "-z defs",
         ],
         "//:linux": [
-            # Make all symbols hidden, except those that are specifially exported.
+            # Make all symbols hidden, except those that are specifically exported.
             "-Wl,--version-script,$(location :linux_exports.lds)",
             # Disallow undefined symbols in object files.
             "-z defs",
@@ -133,7 +133,7 @@ cc_binary(
             "-static-libgcc",
         ],
         "//:macos": [
-            # Make all symbols hidden, except those that are specifially exported.
+            # Make all symbols hidden, except those that are specifically exported.
             "-Wl,-exported_symbols_list,$(location :macos_exports.lds)",
         ],
         "//conditions:default": [],
