@@ -49,7 +49,7 @@ bazel test %BAZEL_ARGS% ... :release_tests
 set RV=%ERRORLEVEL%
 
 bazel run %BAZEL_ARGS% //kmsp11/tools/buildsigner -- ^
-  -signing_key=projects/oss-tools-build/locations/us/keyRings/oss-tools-release-signing-dev/cryptoKeys/dev-signing-key-20210401/cryptoKeyVersions/1 ^
+  -signing_key=%BUILD_SIGNING_KEY% ^
   < "%PROJECT_ROOT%\bazel-bin\kmsp11\main\libkmsp11.so" ^
   > "%RESULTS_DIR%\kmsp11.dll.sig"
 set SIGN_RV=%ERRORLEVEL%

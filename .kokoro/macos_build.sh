@@ -70,6 +70,6 @@ export BAZEL_ARGS="${BAZEL_ARGS} --define=nocxxfs=1"
 bazel test ${BAZEL_ARGS} ... :release_tests
 
 bazel run ${BAZEL_ARGS} //kmsp11/tools/buildsigner -- \
-  -signing_key=projects/oss-tools-build/locations/us/keyRings/oss-tools-release-signing-dev/cryptoKeys/dev-signing-key-20210401/cryptoKeyVersions/1 \
+  -signing_key=${BUILD_SIGNING_KEY} \
   < bazel-bin/kmsp11/main/libkmsp11.so \
   > ${RESULTS_DIR}/libkmsp11.dylib.sig
