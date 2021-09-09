@@ -34,9 +34,8 @@ this if you are writing a new application.
 You can learn more about the PKCS #11 library in the
 [user guide](kmsp11/docs/user_guide.md).
 
-Binary distributions of this library are available from the
-[Cloud KMS site](https://cloud.google.com/kms). The binary distributions
-built and distributed by Google are covered by the
+Binary distributions of this library are available as Github releases. These
+binaries built and distributed by Google are covered by the
 [GCP Terms of Service](https://cloud.google.com/terms), and support is available
 from [Google Cloud support](https://cloud.google.com/support-hub).
 

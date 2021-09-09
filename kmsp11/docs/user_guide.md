@@ -38,30 +38,27 @@ Redistributable package, which can be downloaded [here][msvc-redistributable].
 
 ### Downloading and verifying the library
 
-Your account manager can help you enroll for access in the private preview, and
-can provide you with download links. If you're not sure who your account manager
-is, you can email
-[cloudkms-feedback@google.com](mailto:cloudkms-feedback@google.com) for help.
+The library is available for download in [GitHub Releases][releases].
 
 After you've downloaded the library, you can check the downloaded library for
 integrity by verifying the build signature against the preview release public
 signing key.
 
 Save this key on your filesystem, for example, in a file named
-`pkcs11-preview-signing-key.pem`:
+`pkcs11-release-signing-key.pem`:
 
 ```
 -----BEGIN PUBLIC KEY-----
-MHYwEAYHKoZIzj0CAQYFK4EEACIDYgAE2TkOo/xW4xUQ3L+F54s0wvL+3++rIHSl
-EKbRKIeNmNMCuZyW6DsVle/xfoWXe86QqAU2K6yKmwntSTaofy4Jw5CLZBRuxIJ8
-YRWxVfaoh8LPwon2v5raynbZnq2hgGUH
+MHYwEAYHKoZIzj0CAQYFK4EEACIDYgAEtfLbXkHUVc9oUPTNyaEK3hIwmuGRoTtd
+6zDhwqjJuYaMwNd1aaFQLMawTwZgR0Xn27ymVWtqJHBe0FU9BPIQ+SFmKw+9jSwu
+/FuqbJnLmTnWMJ1jRCtyHNZawvv2wbiB
 -----END PUBLIC KEY-----
 ```
 
 You can then verify the library signature using OpenSSL:
 
 ```sh
-openssl dgst -sha384 -verify pkcs11-preview-signing-key.pem \
+openssl dgst -sha384 -verify pkcs11-release-signing-key.pem \
   -signature libkmsp11.so.sig libkmsp11.so
 ```
 
@@ -343,6 +340,7 @@ This means that:
 [kms-rsa-sign-algorithms]: https://cloud.google.com/kms/docs/algorithms#rsa_signing_algorithms
 [msvc-redistributable]: https://aka.ms/vs/16/release/vc_redist.x64.exe
 [p11-extended-provider-profile]: http://docs.oasis-open.org/pkcs11/pkcs11-profiles/v2.40/os/pkcs11-profiles-v2.40-os.html#_Toc416960554
+[releases]: https://github.com/GoogleCloudPlatform/kms-integrations/releases
 [C_Initialize]: http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/errata01/os/pkcs11-base-v2.40-errata01-os-complete.html#_Toc323024102
 [C_Finalize]: http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/errata01/os/pkcs11-base-v2.40-errata01-os-complete.html#_Toc383864872
 [C_GetInfo]: http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/errata01/os/pkcs11-base-v2.40-errata01-os-complete.html#_Toc385057897
