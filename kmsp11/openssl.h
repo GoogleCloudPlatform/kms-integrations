@@ -105,6 +105,7 @@ void CRYPTO_library_init();
 
 #define OpenSSL_version SSLeay_version
 #define OPENSSL_VERSION SSLEAY_VERSION
+#define ASN1_STRING_get0_data ASN1_STRING_data
 
 EC_KEY* EVP_PKEY_get0_EC_KEY(EVP_PKEY* pkey);
 

@@ -75,11 +75,12 @@ absl::StatusOr<std::string> MarshalAsn1Integer(ASN1_INTEGER* value);
 // http://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/errata01/os/pkcs11-curr-v2.40-errata01-os-complete.html#_Toc468937842
 absl::StatusOr<std::string> MarshalEcParametersDer(BSSL_CONST EC_KEY* key);
 
-// Marshals the provided EC public key in DER format.
+// Marshals the provided EC public key to an ASN.1 Octet String in DER format.
 //
 // Required to populate the attribute CKA_EC_POINT:
 // http://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/errata01/os/pkcs11-curr-v2.40-errata01-os-complete.html#_Toc416960012
-absl::StatusOr<std::string> MarshalEcPointDer(BSSL_CONST EC_KEY* key);
+absl::StatusOr<std::string> MarshalEcPointToAsn1OctetStringDer(
+    BSSL_CONST EC_KEY* key);
 
 // Marshals an X.509 certificate in DER format.
 absl::StatusOr<std::string> MarshalX509CertificateDer(X509* cert);

@@ -176,7 +176,8 @@ TEST(NewKeyPairTest, EcKeyAttributes) {
   BSSL_CONST EC_KEY* ec_key = EVP_PKEY_get0_EC_KEY(pub.get());
 
   ASSERT_OK_AND_ASSIGN(std::string params, MarshalEcParametersDer(ec_key));
-  ASSERT_OK_AND_ASSIGN(std::string point, MarshalEcPointDer(ec_key));
+  ASSERT_OK_AND_ASSIGN(std::string point,
+                       MarshalEcPointToAsn1OctetStringDer(ec_key));
 
   ASSERT_OK_AND_ASSIGN(KeyPair key_pair, Object::NewKeyPair(ckv, pub.get()));
   const AttributeMap& pub_attrs = key_pair.public_key.attributes();

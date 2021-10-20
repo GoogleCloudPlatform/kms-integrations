@@ -378,20 +378,43 @@ TEST(MarshalEcPointTest, PointMarshaled) {
   EXPECT_TRUE(EC_KEY_generate_key(key.get()));
 
   // Serialize the public key point
-  ASSERT_OK_AND_ASSIGN(std::string point_der, MarshalEcPointDer(key.get()));
+  ASSERT_OK_AND_ASSIGN(std::string point_der,
+                       MarshalEcPointToAsn1OctetStringDer(key.get()));
 
-  // Deserialize the public key point
+  // Deserialize the public key point to an ASN.1 octet string
+  bssl::UniquePtr<ASN1_OCTET_STRING> point_string_owner(
+      ASN1_OCTET_STRING_new());
+  ASN1_OCTET_STRING* point_string = point_string_owner.get();
+  const uint8_t* point_data =
+      reinterpret_cast<const uint8_t*>(point_der.data());
+  EXPECT_TRUE(
+      d2i_ASN1_OCTET_STRING(&point_string, &point_data, point_der.size()));
+
+  // Deserialize the octet string's contents to an EC_POINT
   bssl::UniquePtr<EC_POINT> point(EC_POINT_new(group.get()));
   bssl::UniquePtr<BN_CTX> bn_ctx(BN_CTX_new());
-  EXPECT_TRUE(
-      EC_POINT_oct2point(group.get(), point.get(),
-                         reinterpret_cast<const uint8_t*>(point_der.data()),
-                         point_der.size(), bn_ctx.get()));
+  EXPECT_TRUE(EC_POINT_oct2point(
+      group.get(), point.get(), ASN1_STRING_get0_data(point_string),
+      ASN1_STRING_length(point_string), bn_ctx.get()));
 
-  // Ensure the deserialized point matches the original
+  // Ensure the retrieved point matches the original
   EXPECT_EQ(EC_POINT_cmp(group.get(), EC_KEY_get0_public_key(key.get()),
                          point.get(), bn_ctx.get()),
             0);
+}
+
+TEST(MarshalEcPointTest, PointMatchesExpected) {
+  ASSERT_OK_AND_ASSIGN(std::string spki_der,
+                       LoadTestRunfile("ec_p256_public.der"));
+  ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> key,
+                       ParseX509PublicKeyDer(spki_der));
+
+  ASSERT_OK_AND_ASSIGN(std::string point_asn1_octet_string,
+                       LoadTestRunfile("ec_p256_point_asn1_octet_string.der"));
+
+  EXPECT_THAT(
+      MarshalEcPointToAsn1OctetStringDer(EVP_PKEY_get0_EC_KEY(key.get())),
+      IsOkAndHolds(point_asn1_octet_string));
 }
 
 TEST(ParseAndMarshalX509CertificateTest, MarshalPemToDerSuccess) {

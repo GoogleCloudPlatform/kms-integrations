@@ -46,8 +46,12 @@ absl::StatusOr<std::string> LoadTestRunfile(absl::string_view filename) {
   std::string location = RunfileLocation(
       absl::StrCat("com_google_kmstools/kmsp11/test/testdata/", filename));
   std::ifstream runfile(location, std::ifstream::in | std::ifstream::binary);
-  return std::string((std::istreambuf_iterator<char>(runfile)),
+  std::string result((std::istreambuf_iterator<char>(runfile)),
                      (std::istreambuf_iterator<char>()));
+  if (result.empty()) {
+    return absl::InternalError(absl::StrCat("No file contents at ", filename));
+  }
+  return result;
 }
 
 }  // namespace kmsp11

@@ -363,8 +363,20 @@ absl::StatusOr<std::string> MarshalEcParametersDer(BSSL_CONST EC_KEY* key) {
                     &i2d_ASN1_OBJECT);
 }
 
-absl::StatusOr<std::string> MarshalEcPointDer(BSSL_CONST EC_KEY* key) {
-  return MarshalDer(key, &i2o_ECPublicKey);
+absl::StatusOr<std::string> MarshalEcPointToAsn1OctetStringDer(
+    BSSL_CONST EC_KEY* key) {
+  ASSIGN_OR_RETURN(std::string ec_point_der, MarshalDer(key, &i2o_ECPublicKey));
+  bssl::UniquePtr<ASN1_OCTET_STRING> octet_string(ASN1_OCTET_STRING_new());
+  if (!octet_string || ASN1_OCTET_STRING_set(octet_string.get(),
+                                             reinterpret_cast<const uint8_t*>(
+                                                 ec_point_der.data()),
+                                             ec_point_der.size()) != 1) {
+    return NewInternalError(
+        absl::StrCat("error creating ASN.1 octet string from EC Point DER: ",
+                     SslErrorToString()),
+        SOURCE_LOCATION);
+  }
+  return MarshalDer(octet_string.get(), &i2d_ASN1_OCTET_STRING);
 }
 
 absl::StatusOr<std::string> MarshalX509CertificateDer(X509* cert) {

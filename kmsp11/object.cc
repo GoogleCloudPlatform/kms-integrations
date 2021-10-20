@@ -111,7 +111,8 @@ absl::Status AddPrivateKeyAttributes(AttributeMap* attrs,
 absl::Status AddEcPublicKeyAttributes(AttributeMap* attrs,
                                       BSSL_CONST EC_KEY* public_key) {
   ASSIGN_OR_RETURN(std::string params, MarshalEcParametersDer(public_key));
-  ASSIGN_OR_RETURN(std::string ec_point, MarshalEcPointDer(public_key));
+  ASSIGN_OR_RETURN(std::string ec_point,
+                   MarshalEcPointToAsn1OctetStringDer(public_key));
 
   // 2.3.3 ECDSA public key objects
   attrs->Put(CKA_EC_PARAMS, params);
