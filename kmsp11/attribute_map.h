@@ -17,9 +17,10 @@
 #ifndef KMSP11_ATTRIBUTE_MAP_H_
 #define KMSP11_ATTRIBUTE_MAP_H_
 
+#include <variant>
+
 #include "absl/container/flat_hash_map.h"
 #include "absl/status/statusor.h"
-#include "absl/types/variant.h"
 #include "kmsp11/cryptoki.h"
 #include "kmsp11/openssl.h"
 #include "kmsp11/util/string_utils.h"
@@ -76,7 +77,7 @@ class AttributeMap {
   //  * Populated attributes have a std::string value that corresponds to the
   //    attribute's definition. For example, a CK_ULONG attribute will be
   //    modeled as a std::string of size sizeof(CK_ULONG).
-  using AttributeValue = absl::variant<std::string, SensitiveValue>;
+  using AttributeValue = std::variant<std::string, SensitiveValue>;
 
   absl::flat_hash_map<CK_ATTRIBUTE_TYPE, AttributeValue> attrs_;
 };

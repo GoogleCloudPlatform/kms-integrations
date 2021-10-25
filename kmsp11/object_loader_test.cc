@@ -36,7 +36,7 @@ class BuildStateTest : public testing::Test {
     key_ring_ = CreateKeyRingOrDie(kms_stub_.get(), kTestLocation, RandomId(),
                                    key_ring_);
 
-    client_ = absl::make_unique<KmsClient>(fake_server_->listen_addr(),
+    client_ = std::make_unique<KmsClient>(fake_server_->listen_addr(),
                                            grpc::InsecureChannelCredentials(),
                                            absl::Seconds(1));
   }

@@ -80,7 +80,7 @@ class Session {
   KmsClient* kms_client_;
 
   absl::Mutex op_mutex_;
-  absl::optional<Operation> op_ ABSL_GUARDED_BY(op_mutex_);
+  std::optional<Operation> op_ ABSL_GUARDED_BY(op_mutex_);
 };
 
 }  // namespace kmsp11

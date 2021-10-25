@@ -43,7 +43,7 @@ class TokenTest : public testing::Test {
                                    key_ring_);
 
     config_.set_key_ring(key_ring_.name());
-    client_ = absl::make_unique<KmsClient>(fake_server_->listen_addr(),
+    client_ = std::make_unique<KmsClient>(fake_server_->listen_addr(),
                                            grpc::InsecureChannelCredentials(),
                                            absl::Seconds(1));
   }

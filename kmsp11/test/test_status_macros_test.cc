@@ -64,7 +64,7 @@ TEST(AssertOkAndAssignTest, OkCopyableNewVar) {
 TEST(AssertOkAndAssignTest, OkMovableExistingVar) {
   std::unique_ptr<int> i;
   auto f = []() -> absl::StatusOr<std::unique_ptr<int>> {
-    return absl::make_unique<int>(3);
+    return std::make_unique<int>(3);
   };
   ASSERT_OK_AND_ASSIGN(i, f());
   EXPECT_EQ(*i, 3);
@@ -72,7 +72,7 @@ TEST(AssertOkAndAssignTest, OkMovableExistingVar) {
 
 TEST(AssertOkAndAssignTest, OkMovableNewVar) {
   auto f = []() -> absl::StatusOr<std::unique_ptr<int>> {
-    return absl::make_unique<int>(3);
+    return std::make_unique<int>(3);
   };
   ASSERT_OK_AND_ASSIGN(auto i, f());
   EXPECT_EQ(*i, 3);

@@ -92,7 +92,7 @@ absl::StatusOr<std::unique_ptr<Server>> Server::New() {
 
       std::string address(line, len);
       free(line);
-      return absl::make_unique<PosixServer>(address, pid);
+      return std::make_unique<PosixServer>(address, pid);
     }
   }
 }

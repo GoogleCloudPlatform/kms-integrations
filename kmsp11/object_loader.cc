@@ -76,7 +76,7 @@ AsymmetricKey* ObjectLoader::Cache::Get(absl::string_view ckv_name) {
 AsymmetricKey* ObjectLoader::Cache::Store(const kms_v1::CryptoKeyVersion& ckv,
                                           absl::string_view public_key_der,
                                           absl::string_view certificate_der) {
-  keys_[ckv.name()] = absl::make_unique<AsymmetricKey>();
+  keys_[ckv.name()] = std::make_unique<AsymmetricKey>();
   AsymmetricKey* key = keys_[ckv.name()].get();
 
   *key->mutable_crypto_key_version() = ckv;

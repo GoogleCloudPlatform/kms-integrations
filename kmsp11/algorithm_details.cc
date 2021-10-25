@@ -178,7 +178,7 @@ static const auto* const kAlgorithmDetails = new absl::btree_set<
         CKK_RSA,                    // key_type
         2048,                       // key_size
         CKM_RSA_PKCS_KEY_PAIR_GEN,  // key_gen_mechanism
-        absl::nullopt,              // digest_mechanism
+        std::nullopt,               // digest_mechanism
     },
     {
         kms_v1::CryptoKeyVersion::RSA_SIGN_RAW_PKCS1_3072,  // algorithm
@@ -187,7 +187,7 @@ static const auto* const kAlgorithmDetails = new absl::btree_set<
         CKK_RSA,                    // key_type
         3072,                       // key_size
         CKM_RSA_PKCS_KEY_PAIR_GEN,  // key_gen_mechanism
-        absl::nullopt,              // digest_mechanism
+        std::nullopt,               // digest_mechanism
     },
     {
         kms_v1::CryptoKeyVersion::RSA_SIGN_RAW_PKCS1_4096,  // algorithm
@@ -196,7 +196,7 @@ static const auto* const kAlgorithmDetails = new absl::btree_set<
         CKK_RSA,                    // key_type
         4096,                       // key_size
         CKM_RSA_PKCS_KEY_PAIR_GEN,  // key_gen_mechanism
-        absl::nullopt,              // digest_mechanism
+        std::nullopt,               // digest_mechanism
     },
 };
 

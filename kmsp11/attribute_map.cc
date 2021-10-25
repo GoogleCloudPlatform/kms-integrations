@@ -32,11 +32,11 @@ bool AttributeMap::Contains(const CK_ATTRIBUTE& attribute) const {
   if (it == attrs_.end()) {
     return false;
   }
-  if (absl::holds_alternative<SensitiveValue>(it->second)) {
+  if (std::holds_alternative<SensitiveValue>(it->second)) {
     return false;
   }
 
-  return absl::get<std::string>(it->second) ==
+  return std::get<std::string>(it->second) ==
          absl::string_view(static_cast<char*>(attribute.pValue),
                            attribute.ulValueLen);
 }
@@ -49,12 +49,12 @@ absl::StatusOr<absl::string_view> AttributeMap::Value(
                     absl::StrFormat("attribute not found: %#x", type),
                     CKR_ATTRIBUTE_TYPE_INVALID, SOURCE_LOCATION);
   }
-  if (absl::holds_alternative<SensitiveValue>(it->second)) {
+  if (std::holds_alternative<SensitiveValue>(it->second)) {
     return NewError(absl::StatusCode::kPermissionDenied,
                     absl::StrFormat("attribute value sensitive: %#x", type),
                     CKR_ATTRIBUTE_SENSITIVE, SOURCE_LOCATION);
   }
-  const std::string& s = absl::get<std::string>(it->second);
+  const std::string& s = std::get<std::string>(it->second);
   return absl::string_view(s);
 }
 

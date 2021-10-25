@@ -125,7 +125,7 @@ absl::StatusOr<absl::Span<const uint8_t>> RsaOaepDecrypter::Decrypt(
 
   kms_v1::AsymmetricDecryptResponse resp = std::move(resp_or).value();
 
-  result_ = absl::make_unique<RsaOaepDecryptResult>(
+  result_ = std::make_unique<RsaOaepDecryptResult>(
       ciphertext,
       std::unique_ptr<std::string, ZeroDelete>(resp.release_plaintext()));
   return result_->plaintext();

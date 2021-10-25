@@ -30,7 +30,7 @@ namespace {
 std::unique_ptr<KmsClient> NewClient(
     absl::string_view listen_addr,
     absl::Duration rpc_timeout = absl::Milliseconds(500)) {
-  return absl::make_unique<KmsClient>(
+  return std::make_unique<KmsClient>(
       listen_addr, grpc::InsecureChannelCredentials(), rpc_timeout);
 }
 

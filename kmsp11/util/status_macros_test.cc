@@ -81,7 +81,7 @@ TEST(AssignOrReturnTest, InitializeStateOnOkStatus) {
 
 TEST(AssignOrReturnTest, MoveConstructibleIsMoved) {
   auto f = []() -> absl::StatusOr<std::unique_ptr<int>> {
-    return absl::make_unique<int>(3);
+    return std::make_unique<int>(3);
   };
   absl::StatusOr<int> s = [&f]() -> absl::StatusOr<int> {
     ASSIGN_OR_RETURN(std::unique_ptr<int> i, f());

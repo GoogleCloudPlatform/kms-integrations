@@ -15,13 +15,13 @@
 #include "kmsp11/util/status_utils.h"
 
 #include <cstring>
+#include <optional>
 #include <string>
 
 #include "absl/status/status_payload_printer.h"
 #include "absl/strings/cord.h"
 #include "absl/strings/escaping.h"
 #include "absl/strings/str_format.h"
-#include "absl/types/optional.h"
 #include "glog/logging.h"
 #include "kmsp11/util/status_details.pb.h"
 
@@ -47,10 +47,10 @@ CK_RV ExtractRvFromCord(const absl::Cord& cord) {
   return details.ck_rv();
 }
 
-absl::optional<std::string> PrintPayload(absl::string_view type_url,
-                                         const absl::Cord& content) {
+std::optional<std::string> PrintPayload(absl::string_view type_url,
+                                        const absl::Cord& content) {
   if (type_url != kTypeUrl) {
-    return absl::nullopt;
+    return std::nullopt;
   }
   return absl::StrFormat("CK_RV=%#x", ExtractRvFromCord(content));
 }
@@ -75,7 +75,7 @@ CK_RV GetCkRv(const absl::Status& status) {
     return CKR_OK;
   }
 
-  absl::optional<absl::Cord> payload = status.GetPayload(kTypeUrl);
+  std::optional<absl::Cord> payload = status.GetPayload(kTypeUrl);
   if (!payload.has_value()) {
     return kDefaultErrorCkRv;
   }

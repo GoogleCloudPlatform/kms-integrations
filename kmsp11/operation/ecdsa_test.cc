@@ -99,7 +99,7 @@ class EcdsaTest : public testing::Test {
  protected:
   void SetUp() override {
     ASSERT_OK_AND_ASSIGN(fake_server_, fakekms::Server::New());
-    client_ = absl::make_unique<KmsClient>(fake_server_->listen_addr(),
+    client_ = std::make_unique<KmsClient>(fake_server_->listen_addr(),
                                            grpc::InsecureChannelCredentials(),
                                            absl::Seconds(1));
 

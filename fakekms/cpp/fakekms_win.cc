@@ -96,7 +96,7 @@ absl::StatusOr<std::unique_ptr<Server>> Server::New() {
   }
 
   std::string address(buf, len);
-  return absl::make_unique<WindowsServer>(address, process_info.hProcess);
+  return std::make_unique<WindowsServer>(address, process_info.hProcess);
 }
 
 }  // namespace fakekms

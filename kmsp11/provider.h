@@ -87,7 +87,7 @@ class Provider {
   HandleMap<Session> sessions_;
   std::unique_ptr<KmsClient> kms_client_;
   int64_t creation_process_id_;
-  absl::optional<Refresher> refresher_;
+  std::optional<Refresher> refresher_;
 };
 
 }  // namespace kmsp11

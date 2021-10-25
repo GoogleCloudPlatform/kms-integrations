@@ -154,7 +154,7 @@ std::vector<CK_OBJECT_HANDLE> ObjectStore::Find(
 
 absl::StatusOr<CK_OBJECT_HANDLE> ObjectStore::FindSingle(
     std::function<bool(const Object&)> predicate) const {
-  absl::optional<CK_OBJECT_HANDLE> match;
+  std::optional<CK_OBJECT_HANDLE> match;
   for (const auto& [handle, object] : entries_) {
     if (predicate(*object)) {
       if (match.has_value()) {
