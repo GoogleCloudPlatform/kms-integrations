@@ -26,7 +26,7 @@ using google::protobuf::Message;
 using google::protobuf::MessageFactory;
 using google::protobuf::Reflection;
 
-absl::Status YamlError(absl::string_view message, YAML::Mark mark,
+absl::Status YamlError(std::string_view message, YAML::Mark mark,
                        SourceLocation source_location) {
   return NewInvalidArgumentError(
       absl::StrFormat("error in YAML document at line %d, column %d: %s",

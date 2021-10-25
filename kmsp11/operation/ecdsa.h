@@ -17,7 +17,8 @@
 #ifndef KMSP11_OPERATION_ECDSA_H_
 #define KMSP11_OPERATION_ECDSA_H_
 
-#include "absl/strings/string_view.h"
+#include <string_view>
+
 #include "kmsp11/openssl.h"
 #include "kmsp11/operation/kms_digest_signer.h"
 #include "kmsp11/util/crypto_utils.h"
@@ -34,7 +35,7 @@ class EcdsaSigner : public KmsDigestSigner {
 
   size_t signature_length() override;
 
-  absl::Status CopySignature(absl::string_view src,
+  absl::Status CopySignature(std::string_view src,
                              absl::Span<uint8_t> dest) override;
 
   virtual ~EcdsaSigner() {}

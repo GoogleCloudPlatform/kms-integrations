@@ -359,7 +359,7 @@ TEST(EncryptRsaOaepTest, InvalidArgumentErrorCiphertextTooLong) {
 
 TEST(MarshalEcParametersTest, CurveOidMarshaled) {
   // The ASN.1 encoding of the OID 1.3.132.0.34
-  constexpr absl::string_view kP384Oid("\x06\x05\x2b\x81\x04\x00\x22", 7);
+  constexpr std::string_view kP384Oid("\x06\x05\x2b\x81\x04\x00\x22", 7);
 
   // Generate a new P-384 key
   bssl::UniquePtr<EC_KEY> key(EC_KEY_new_by_curve_name(NID_secp384r1));

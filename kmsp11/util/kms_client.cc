@@ -45,8 +45,8 @@ std::string ComputeUserAgentPrefix() {
 }  // namespace
 
 void KmsClient::AddContextSettings(grpc::ClientContext* ctx,
-                                   absl::string_view relative_resource,
-                                   absl::string_view resource_name,
+                                   std::string_view relative_resource,
+                                   std::string_view resource_name,
                                    absl::Time rpc_deadline) const {
   // See https://cloud.google.com/kms/docs/grpc
   ctx->AddMetadata("x-goog-request-params",
@@ -61,10 +61,10 @@ void KmsClient::AddContextSettings(grpc::ClientContext* ctx,
   ctx->set_idempotent(true);
 }
 
-KmsClient::KmsClient(absl::string_view endpoint_address,
+KmsClient::KmsClient(std::string_view endpoint_address,
                      const std::shared_ptr<grpc::ChannelCredentials>& creds,
                      absl::Duration rpc_timeout,
-                     absl::string_view user_project_override)
+                     std::string_view user_project_override)
     : rpc_timeout_(rpc_timeout), user_project_override_(user_project_override) {
   grpc::ChannelArguments args;
   args.SetUserAgentPrefix(ComputeUserAgentPrefix());

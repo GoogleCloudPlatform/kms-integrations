@@ -110,7 +110,7 @@ TEST_F(CertAuthorityTest, EndDateMatchesRFC) {
 
   // Format Mmm DD HH:MM:SS YYYY [GMT] is specified at
   // https://www.openssl.org/docs/manmaster/man3/ASN1_TIME_adj.html
-  EXPECT_EQ(absl::string_view(buf, len), "Dec 31 23:59:59 9999 GMT");
+  EXPECT_EQ(std::string_view(buf, len), "Dec 31 23:59:59 9999 GMT");
 }
 
 TEST_F(CertAuthorityTest, SubjectCnEqualsKeyId) {

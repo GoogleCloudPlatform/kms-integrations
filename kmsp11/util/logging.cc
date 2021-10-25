@@ -53,8 +53,8 @@ void GrpcLog(gpr_log_func_args* args) {
 
 }  // namespace
 
-absl::Status InitializeLogging(absl::string_view output_directory,
-                               absl::string_view output_filename_suffix) {
+absl::Status InitializeLogging(std::string_view output_directory,
+                               std::string_view output_filename_suffix) {
   absl::WriterMutexLock lock(&logging_lock);
 
   if (logging_initialized) {
@@ -105,7 +105,7 @@ void ShutdownLogging() {
   }
 }
 
-CK_RV LogAndResolve(absl::string_view function_name,
+CK_RV LogAndResolve(std::string_view function_name,
                     const absl::Status& status) {
   if (status.ok()) {
     return CKR_OK;

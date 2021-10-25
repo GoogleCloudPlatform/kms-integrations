@@ -26,7 +26,7 @@ namespace {
 class WindowsServer : public Server {
  public:
   static absl::StatusOr<std::unique_ptr<WindowsServer>> New(
-      absl::string_view flags);
+      std::string_view flags);
 
   WindowsServer(std::string listen_addr, HANDLE process_handle)
       : Server(listen_addr), process_handle_(process_handle) {}
@@ -40,7 +40,7 @@ class WindowsServer : public Server {
   HANDLE process_handle_;
 };
 
-absl::Status Win32ErrorToStatus(absl::string_view message) {
+absl::Status Win32ErrorToStatus(std::string_view message) {
   char* error_text = nullptr;
   DWORD error_code = GetLastError();
 

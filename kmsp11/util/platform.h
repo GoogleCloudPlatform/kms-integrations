@@ -56,7 +56,7 @@ absl::Status SetMode(const char* filename, int mode);
 int64_t GetProcessId();
 
 // Returns "x86" or "amd64" indicating the target platform for this binary.
-absl::string_view GetTargetPlatform();
+std::string_view GetTargetPlatform();
 
 // Return a string that provides host platform information suitable for
 // inclusion an a user-agent header. Note that the host platform may vary from

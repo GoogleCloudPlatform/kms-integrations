@@ -121,7 +121,7 @@ absl::StatusOr<kms_v1::CryptoKeyVersion> CreateNewVersionOfExistingKey(
 }
 
 absl::StatusOr<CryptoKeyAndVersion> CreateKeyAndVersion(
-    const KmsClient& client, absl::string_view key_ring_name,
+    const KmsClient& client, std::string_view key_ring_name,
     const KeyGenerationParams& prv_gen_params,
     bool experimental_create_multiple_versions) {
   if (experimental_create_multiple_versions) {

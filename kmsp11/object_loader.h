@@ -31,14 +31,14 @@ namespace kmsp11 {
 class ObjectLoader {
  public:
   static absl::StatusOr<std::unique_ptr<ObjectLoader>> New(
-      absl::string_view key_ring_name, bool generate_certs);
+      std::string_view key_ring_name, bool generate_certs);
 
-  inline absl::string_view key_ring_name() const { return key_ring_name_; }
+  inline std::string_view key_ring_name() const { return key_ring_name_; }
 
   absl::StatusOr<ObjectStoreState> BuildState(const KmsClient& client);
 
  private:
-  ObjectLoader(absl::string_view key_ring_name,
+  ObjectLoader(std::string_view key_ring_name,
                std::unique_ptr<CertAuthority> cert_authority)
       : key_ring_name_(key_ring_name),
         cert_authority_(std::move(cert_authority)) {}
@@ -48,10 +48,10 @@ class ObjectLoader {
 
   class Cache {
    public:
-    AsymmetricKey* Get(absl::string_view ckv_name);
+    AsymmetricKey* Get(std::string_view ckv_name);
     AsymmetricKey* Store(const kms_v1::CryptoKeyVersion& ckv,
-                         absl::string_view public_key_der,
-                         absl::string_view certificate_der);
+                         std::string_view public_key_der,
+                         std::string_view certificate_der);
     void EvictUnused(const ObjectStoreState& state);
 
    private:

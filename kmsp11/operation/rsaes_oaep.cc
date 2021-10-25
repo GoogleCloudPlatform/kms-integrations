@@ -61,7 +61,7 @@ absl::StatusOr<std::unique_ptr<EncrypterInterface>> RsaOaepEncrypter::New(
   RETURN_IF_ERROR(ValidateRsaOaepParameters(key.get(), mechanism->pParameter,
                                             mechanism->ulParameterLen));
 
-  ASSIGN_OR_RETURN(absl::string_view key_der,
+  ASSIGN_OR_RETURN(std::string_view key_der,
                    key->attributes().Value(CKA_PUBLIC_KEY_INFO));
   ASSIGN_OR_RETURN(bssl::UniquePtr<EVP_PKEY> parsed_key,
                    ParseX509PublicKeyDer(key_der));

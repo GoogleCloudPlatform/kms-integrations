@@ -67,7 +67,7 @@ absl::Status KmsDigestSigner::Sign(KmsClient* client,
   return absl::OkStatus();
 }
 
-absl::Status KmsDigestSigner::CopySignature(absl::string_view src,
+absl::Status KmsDigestSigner::CopySignature(std::string_view src,
                                             absl::Span<uint8_t> dest) {
   if (src.size() != signature_length()) {
     return NewInternalError(

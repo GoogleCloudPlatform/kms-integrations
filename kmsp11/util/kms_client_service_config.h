@@ -17,13 +17,13 @@
 #ifndef KMSP11_UTIL_KMS_CLIENT_SERVICE_CONFIG_H_
 #define KMSP11_UTIL_KMS_CLIENT_SERVICE_CONFIG_H_
 
-#include "absl/strings/string_view.h"
+#include <string_view>
 
 namespace kmsp11 {
 
 // TODO(bdhess): Pull this in dynamically from the Bazel dependency
 // once cl/362932396 is available in the googleapis version we consume.
-constexpr absl::string_view kDefaultKmsServiceConfig = R"(
+constexpr std::string_view kDefaultKmsServiceConfig = R"(
 {
   "methodConfig": [
     {

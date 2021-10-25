@@ -92,7 +92,7 @@ absl::StatusOr<std::string> MarshalDer(const T* obj,
 // the deserialized object.
 template <typename T>
 absl::StatusOr<bssl::UniquePtr<T>> ParseDer(
-    absl::string_view der_string, T* d2i_function(T**, const uint8_t**, long)) {
+    std::string_view der_string, T* d2i_function(T**, const uint8_t**, long)) {
   const uint8_t* der_bytes =
       reinterpret_cast<const uint8_t*>(der_string.data());
 
@@ -198,7 +198,7 @@ absl::StatusOr<const EVP_MD*> DigestForMechanism(CK_MECHANISM_TYPE mechanism) {
 }
 
 absl::StatusOr<std::vector<uint8_t>> EcdsaSigAsn1ToP1363(
-    absl::string_view asn1_sig, const EC_GROUP* group) {
+    std::string_view asn1_sig, const EC_GROUP* group) {
   const uint8_t* sig_data = reinterpret_cast<const uint8_t*>(asn1_sig.data());
   bssl::UniquePtr<ECDSA_SIG> sig(
       d2i_ECDSA_SIG(nullptr, &sig_data, asn1_sig.size()));
@@ -396,7 +396,7 @@ absl::StatusOr<std::string> MarshalX509Sig(X509_SIG* value) {
 }
 
 absl::StatusOr<bssl::UniquePtr<EVP_PKEY>> ParsePkcs8PrivateKeyPem(
-    absl::string_view private_key_pem) {
+    std::string_view private_key_pem) {
   bssl::UniquePtr<BIO> bio(
       BIO_new_mem_buf(private_key_pem.data(), private_key_pem.size()));
   if (!bio) {
@@ -417,17 +417,17 @@ absl::StatusOr<bssl::UniquePtr<EVP_PKEY>> ParsePkcs8PrivateKeyPem(
 }
 
 absl::StatusOr<bssl::UniquePtr<X509>> ParseX509CertificateDer(
-    absl::string_view certificate_der) {
+    std::string_view certificate_der) {
   return ParseDer(certificate_der, &d2i_X509);
 }
 
 absl::StatusOr<bssl::UniquePtr<EVP_PKEY>> ParseX509PublicKeyDer(
-    absl::string_view public_key_der) {
+    std::string_view public_key_der) {
   return ParseDer(public_key_der, &d2i_PUBKEY);
 }
 
 absl::StatusOr<bssl::UniquePtr<EVP_PKEY>> ParseX509PublicKeyPem(
-    absl::string_view public_key_pem) {
+    std::string_view public_key_pem) {
   bssl::UniquePtr<BIO> bio(
       BIO_new_mem_buf(public_key_pem.data(), public_key_pem.size()));
   if (!bio) {
@@ -585,7 +585,7 @@ void SafeZeroMemory(volatile char* ptr, size_t size) {
   }
 }
 
-std::string SslErrorToString(absl::string_view default_message) {
+std::string SslErrorToString(std::string_view default_message) {
   CHECK(kCryptoLibraryInitialized);
   bssl::UniquePtr<BIO> bio(BIO_new(BIO_s_mem()));
   ERR_print_errors(bio.get());

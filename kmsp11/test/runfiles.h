@@ -24,10 +24,10 @@
 namespace kmsp11 {
 
 // Resolves the absolute location of the provided runfile.
-std::string RunfileLocation(absl::string_view filename);
+std::string RunfileLocation(std::string_view filename);
 
 // Loads the testdata file with the provided filename into a string.
-absl::StatusOr<std::string> LoadTestRunfile(absl::string_view filename);
+absl::StatusOr<std::string> LoadTestRunfile(std::string_view filename);
 
 }  // namespace kmsp11
 

@@ -18,7 +18,7 @@
 
 namespace kmsp11 {
 
-void AttributeMap::Put(CK_ATTRIBUTE_TYPE type, absl::string_view value) {
+void AttributeMap::Put(CK_ATTRIBUTE_TYPE type, std::string_view value) {
   attrs_[type] = std::string(value.data(), value.size());
 }
 
@@ -37,11 +37,11 @@ bool AttributeMap::Contains(const CK_ATTRIBUTE& attribute) const {
   }
 
   return std::get<std::string>(it->second) ==
-         absl::string_view(static_cast<char*>(attribute.pValue),
-                           attribute.ulValueLen);
+         std::string_view(static_cast<char*>(attribute.pValue),
+                          attribute.ulValueLen);
 }
 
-absl::StatusOr<absl::string_view> AttributeMap::Value(
+absl::StatusOr<std::string_view> AttributeMap::Value(
     CK_ATTRIBUTE_TYPE type) const {
   auto it = attrs_.find(type);
   if (it == attrs_.end()) {
@@ -55,7 +55,7 @@ absl::StatusOr<absl::string_view> AttributeMap::Value(
                     CKR_ATTRIBUTE_SENSITIVE, SOURCE_LOCATION);
   }
   const std::string& s = std::get<std::string>(it->second);
-  return absl::string_view(s);
+  return std::string_view(s);
 }
 
 }  // namespace kmsp11

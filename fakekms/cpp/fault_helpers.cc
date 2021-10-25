@@ -21,7 +21,7 @@
 namespace fakekms {
 
 namespace {
-void AddResponseActionOrDie(const Server& server, absl::string_view method_name,
+void AddResponseActionOrDie(const Server& server, std::string_view method_name,
                             ResponseAction response_action) {
   Fault fault;
   if (!method_name.empty()) {
@@ -40,7 +40,7 @@ void AddResponseActionOrDie(const Server& server, absl::string_view method_name,
 }  // namespace
 
 void AddDelayOrDie(const Server& server, absl::Duration delay,
-                   absl::string_view method_name) {
+                   std::string_view method_name) {
   ResponseAction action;
   // Cribbed directly from util_time::EncodeGoogleApiProto
   const int64_t s = absl::IDivDuration(delay, absl::Seconds(1), &delay);
@@ -51,7 +51,7 @@ void AddDelayOrDie(const Server& server, absl::Duration delay,
 }
 
 void AddErrorOrDie(const Server& server, absl::Status error,
-                   absl::string_view method_name) {
+                   std::string_view method_name) {
   ResponseAction action;
   action.mutable_error()->set_code(error.raw_code());
   action.mutable_error()->set_message(std::string(error.message()));

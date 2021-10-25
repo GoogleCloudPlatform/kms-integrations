@@ -31,7 +31,7 @@ namespace {
 // The URL we'll use for storing a custom payload in the status.
 // Notes on the naming convention are at
 // https://github.com/abseil/abseil-cpp/blob/bf6166a635ab57fe0559b00dcd3ff09a8c42de2e/absl/status/status.h#L149
-constexpr absl::string_view kTypeUrl =
+constexpr std::string_view kTypeUrl =
     "type.googleapis.com/kmsp11.StatusDetails";
 
 CK_RV ExtractRvFromCord(const absl::Cord& cord) {
@@ -47,7 +47,7 @@ CK_RV ExtractRvFromCord(const absl::Cord& cord) {
   return details.ck_rv();
 }
 
-std::optional<std::string> PrintPayload(absl::string_view type_url,
+std::optional<std::string> PrintPayload(std::string_view type_url,
                                         const absl::Cord& content) {
   if (type_url != kTypeUrl) {
     return std::nullopt;

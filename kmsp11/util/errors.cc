@@ -19,7 +19,7 @@
 
 namespace kmsp11 {
 
-absl::Status NewError(absl::StatusCode code, absl::string_view msg, CK_RV ck_rv,
+absl::Status NewError(absl::StatusCode code, std::string_view msg, CK_RV ck_rv,
                       const SourceLocation& source_location) {
   CHECK(code != absl::StatusCode::kOk)
       << "errors::New cannot be called with code=OK; original location="

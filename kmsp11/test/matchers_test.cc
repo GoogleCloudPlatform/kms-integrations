@@ -14,8 +14,9 @@
 
 #include "kmsp11/test/matchers.h"
 
+#include <string_view>
+
 #include "absl/status/statusor.h"
-#include "absl/strings/string_view.h"
 #include "gmock/gmock.h"
 #include "kmsp11/cryptoki.h"
 #include "kmsp11/test/test_message.pb.h"
@@ -40,7 +41,7 @@ TEST(MatchesStdRegexTest, NotMatchesSmokeTest) {
 
 TEST(MatchesStdRegexTest, StringView) {
   std::string value("abcde");
-  EXPECT_THAT(absl::string_view(value), MatchesStdRegex("a\\w+e"));
+  EXPECT_THAT(std::string_view(value), MatchesStdRegex("a\\w+e"));
 }
 
 TEST(IsOkTest, OkStatus) { EXPECT_THAT(absl::OkStatus(), IsOk()); }

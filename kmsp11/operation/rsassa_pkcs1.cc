@@ -14,7 +14,8 @@
 
 #include "kmsp11/operation/rsassa_pkcs1.h"
 
-#include "absl/strings/string_view.h"
+#include <string_view>
+
 #include "kmsp11/operation/crypter_interfaces.h"
 #include "kmsp11/operation/preconditions.h"
 #include "kmsp11/util/crypto_utils.h"
@@ -60,7 +61,7 @@ absl::StatusOr<std::unique_ptr<SignerInterface>> RsaPkcs1Signer::New(
       CheckKeyPreconditions(CKK_RSA, CKO_PRIVATE_KEY, CKM_RSA_PKCS, key.get()));
   RETURN_IF_ERROR(EnsureNoParameters(mechanism));
 
-  ASSIGN_OR_RETURN(absl::string_view key_der,
+  ASSIGN_OR_RETURN(std::string_view key_der,
                    key->attributes().Value(CKA_PUBLIC_KEY_INFO));
   ASSIGN_OR_RETURN(bssl::UniquePtr<EVP_PKEY> parsed_key,
                    ParseX509PublicKeyDer(key_der));
@@ -87,7 +88,7 @@ absl::StatusOr<std::unique_ptr<VerifierInterface>> RsaPkcs1Verifier::New(
       CheckKeyPreconditions(CKK_RSA, CKO_PUBLIC_KEY, CKM_RSA_PKCS, key.get()));
   RETURN_IF_ERROR(EnsureNoParameters(mechanism));
 
-  ASSIGN_OR_RETURN(absl::string_view key_der,
+  ASSIGN_OR_RETURN(std::string_view key_der,
                    key->attributes().Value(CKA_PUBLIC_KEY_INFO));
   ASSIGN_OR_RETURN(bssl::UniquePtr<EVP_PKEY> parsed_key,
                    ParseX509PublicKeyDer(key_der));

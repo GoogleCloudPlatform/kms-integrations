@@ -22,12 +22,12 @@
 
 namespace kmsp11 {
 
-const absl::string_view kTestLocation =
+const std::string_view kTestLocation =
     "projects/kmsp11-test/locations/us-central1";
 
 kms_v1::KeyRing CreateKeyRingOrDie(kms_v1::KeyManagementService::Stub* kms_stub,
-                                   absl::string_view location_name,
-                                   absl::string_view key_ring_id,
+                                   std::string_view location_name,
+                                   std::string_view key_ring_id,
                                    const kms_v1::KeyRing& key_ring) {
   kms_v1::CreateKeyRingRequest req;
   req.set_parent(std::string(location_name));
@@ -43,7 +43,7 @@ kms_v1::KeyRing CreateKeyRingOrDie(kms_v1::KeyManagementService::Stub* kms_stub,
 
 kms_v1::CryptoKey CreateCryptoKeyOrDie(
     kms_v1::KeyManagementService::Stub* kms_stub,
-    absl::string_view key_ring_name, absl::string_view crypto_key_id,
+    std::string_view key_ring_name, std::string_view crypto_key_id,
     const kms_v1::CryptoKey& crypto_key, bool skip_initial_version_creation) {
   kms_v1::CreateCryptoKeyRequest req;
   req.set_parent(std::string(key_ring_name));
@@ -60,7 +60,7 @@ kms_v1::CryptoKey CreateCryptoKeyOrDie(
 
 kms_v1::CryptoKeyVersion CreateCryptoKeyVersionOrDie(
     kms_v1::KeyManagementService::Stub* kms_stub,
-    absl::string_view crypto_key_name,
+    std::string_view crypto_key_name,
     const kms_v1::CryptoKeyVersion& crypto_key_version) {
   kms_v1::CreateCryptoKeyVersionRequest req;
   req.set_parent(std::string(crypto_key_name));
@@ -75,7 +75,7 @@ kms_v1::CryptoKeyVersion CreateCryptoKeyVersionOrDie(
 
 kms_v1::CryptoKey GetCryptoKeyOrDie(
     kms_v1::KeyManagementService::Stub* kms_stub,
-    absl::string_view crypto_key_name) {
+    std::string_view crypto_key_name) {
   kms_v1::GetCryptoKeyRequest req;
   req.set_name(std::string(crypto_key_name));
 
@@ -88,7 +88,7 @@ kms_v1::CryptoKey GetCryptoKeyOrDie(
 
 kms_v1::CryptoKeyVersion GetCryptoKeyVersionOrDie(
     kms_v1::KeyManagementService::Stub* kms_stub,
-    absl::string_view crypto_key_version_name) {
+    std::string_view crypto_key_version_name) {
   kms_v1::GetCryptoKeyVersionRequest req;
   req.set_name(std::string(crypto_key_version_name));
 
@@ -144,14 +144,14 @@ kms_v1::PublicKey GetPublicKey(
   return pub;
 }
 
-std::string RandomId(absl::string_view prefix) {
+std::string RandomId(std::string_view prefix) {
   return absl::StrFormat("%s-%s", prefix,
                          absl::BytesToHexString(RandBytes(12)));
 }
 
 absl::StatusOr<KeyPair> NewMockKeyPair(
     kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm,
-    absl::string_view public_key_runfile) {
+    std::string_view public_key_runfile) {
   kms_v1::CryptoKeyVersion ckv;
   ckv.set_name(
       "projects/foo/locations/bar/keyRings/baz/cryptoKeys/qux/"

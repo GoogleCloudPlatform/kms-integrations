@@ -25,7 +25,7 @@ TEST(AttributeMapTest, PopulatedValue) {
   AttributeMap m;
   m.Put(CKA_LABEL, "my_important_key");
 
-  ASSERT_OK_AND_ASSIGN(absl::string_view got, m.Value(CKA_LABEL));
+  ASSERT_OK_AND_ASSIGN(std::string_view got, m.Value(CKA_LABEL));
   EXPECT_EQ(got, "my_important_key");
 }
 
@@ -33,7 +33,7 @@ TEST(AttributeMapTest, EmptyValue) {
   AttributeMap m;
   m.Put(CKA_ID, "");
 
-  ASSERT_OK_AND_ASSIGN(absl::string_view got, m.Value(CKA_ID));
+  ASSERT_OK_AND_ASSIGN(std::string_view got, m.Value(CKA_ID));
   EXPECT_TRUE(got.empty());
 }
 
@@ -54,7 +54,7 @@ TEST(AttributeMapTest, PutBool) {
   AttributeMap m;
   m.PutBool(CKA_ENCRYPT, false);
 
-  ASSERT_OK_AND_ASSIGN(absl::string_view got, m.Value(CKA_ENCRYPT));
+  ASSERT_OK_AND_ASSIGN(std::string_view got, m.Value(CKA_ENCRYPT));
   EXPECT_EQ(got, std::string("\x00", 1));
 }
 
@@ -65,7 +65,7 @@ TEST(AttributeMapTest, PutBigNum) {
   AttributeMap m;
   m.PutBigNum(CKA_PUBLIC_EXPONENT, bn.get());
 
-  ASSERT_OK_AND_ASSIGN(absl::string_view got, m.Value(CKA_PUBLIC_EXPONENT));
+  ASSERT_OK_AND_ASSIGN(std::string_view got, m.Value(CKA_PUBLIC_EXPONENT));
   EXPECT_EQ(got, std::string("\x01\x00\x01", 3));
 }
 
@@ -73,7 +73,7 @@ TEST(AttributeMapTest, PutDate) {
   AttributeMap m;
   m.PutDate(CKA_START_DATE, absl::FromUnixSeconds(0));
 
-  ASSERT_OK_AND_ASSIGN(absl::string_view got, m.Value(CKA_START_DATE));
+  ASSERT_OK_AND_ASSIGN(std::string_view got, m.Value(CKA_START_DATE));
   EXPECT_EQ(got, "19700101");
 }
 
@@ -83,7 +83,7 @@ TEST(AttributeMapTest, PutULong) {
   AttributeMap m;
   m.PutULong(CKA_CLASS, value);
 
-  ASSERT_OK_AND_ASSIGN(absl::string_view got, m.Value(CKA_CLASS));
+  ASSERT_OK_AND_ASSIGN(std::string_view got, m.Value(CKA_CLASS));
   EXPECT_EQ(got, MarshalULong(value));
 }
 
@@ -93,7 +93,7 @@ TEST(AttributeMapTest, PutULongList) {
   AttributeMap m;
   m.PutULongList(CKA_ALLOWED_MECHANISMS, value);
 
-  ASSERT_OK_AND_ASSIGN(absl::string_view got, m.Value(CKA_ALLOWED_MECHANISMS));
+  ASSERT_OK_AND_ASSIGN(std::string_view got, m.Value(CKA_ALLOWED_MECHANISMS));
   EXPECT_EQ(got, MarshalULongList(value));
 }
 
@@ -105,10 +105,10 @@ TEST(AttributeMapTest, PutAndGetMultipleValues) {
   m.Put(CKA_ID, id_value);
   m.Put(CKA_LABEL, label_value);
 
-  ASSERT_OK_AND_ASSIGN(absl::string_view got_id, m.Value(CKA_ID));
+  ASSERT_OK_AND_ASSIGN(std::string_view got_id, m.Value(CKA_ID));
   EXPECT_EQ(got_id, id_value);
 
-  ASSERT_OK_AND_ASSIGN(absl::string_view got_label, m.Value(CKA_LABEL));
+  ASSERT_OK_AND_ASSIGN(std::string_view got_label, m.Value(CKA_LABEL));
   EXPECT_EQ(got_label, label_value);
 }
 

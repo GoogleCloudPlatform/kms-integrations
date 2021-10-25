@@ -21,7 +21,7 @@
 
 namespace kmsp11 {
 
-absl::Status CryptokiStrCopy(absl::string_view src, absl::Span<uint8_t> dest,
+absl::Status CryptokiStrCopy(std::string_view src, absl::Span<uint8_t> dest,
                              char pad_char) {
   if (src.length() > dest.length()) {
     return NewError(
@@ -58,7 +58,7 @@ std::string MarshalULongList(absl::Span<const unsigned long int> value) {
                      value.size() * sizeof(unsigned long int));
 }
 
-absl::StatusOr<std::string> ExtractKeyId(absl::string_view version_name) {
+absl::StatusOr<std::string> ExtractKeyId(std::string_view version_name) {
   std::vector<std::string> parts = absl::StrSplit(version_name, '/');
   if (parts.size() != 10 || parts[0] != "projects" || parts[2] != "locations" ||
       parts[4] != "keyRings" || parts[6] != "cryptoKeys" ||

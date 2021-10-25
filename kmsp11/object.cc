@@ -64,7 +64,7 @@ absl::Status AddKeyAttributes(AttributeMap* attrs,
 
 absl::Status AddPublicKeyAttributes(AttributeMap* attrs,
                                     const kms_v1::CryptoKeyVersion& ckv,
-                                    absl::string_view public_key_der) {
+                                    std::string_view public_key_der) {
   ASSIGN_OR_RETURN(AlgorithmDetails algorithm, GetDetails(ckv.algorithm()));
 
   // 4.8 Public key objects
@@ -83,7 +83,7 @@ absl::Status AddPublicKeyAttributes(AttributeMap* attrs,
 
 absl::Status AddPrivateKeyAttributes(AttributeMap* attrs,
                                      const kms_v1::CryptoKeyVersion& ckv,
-                                     absl::string_view public_key_der) {
+                                     std::string_view public_key_der) {
   ASSIGN_OR_RETURN(AlgorithmDetails algorithm, GetDetails(ckv.algorithm()));
 
   // Override CKA_DESTROYABLE (from 4.4 Storage Objects)
@@ -193,7 +193,7 @@ absl::Status AddX509CertificateAttributes(AttributeMap* attrs,
   attrs->PutBool(CKA_TRUSTED, false);
   attrs->PutULong(CKA_CERTIFICATE_CATEGORY,
                   CK_CERTIFICATE_CATEGORY_UNSPECIFIED);
-  attrs->Put(CKA_CHECK_VALUE, absl::string_view(cert_der_sha1, 3));
+  attrs->Put(CKA_CHECK_VALUE, std::string_view(cert_der_sha1, 3));
   attrs->PutDate(CKA_START_DATE, not_before);
   attrs->PutDate(CKA_END_DATE, not_after);
   attrs->Put(CKA_PUBLIC_KEY_INFO, public_key_info);

@@ -127,7 +127,7 @@ int64_t GetProcessId() {
   return _getpid();
 }
 
-absl::string_view GetTargetPlatform() {
+std::string_view GetTargetPlatform() {
 #if _WIN64
   return "amd64";
 #elif _WIN32

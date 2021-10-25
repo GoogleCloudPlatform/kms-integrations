@@ -70,7 +70,7 @@ int64_t GetProcessId() {
   return getpid();
 }
 
-absl::string_view GetTargetPlatform() {
+std::string_view GetTargetPlatform() {
 #if defined(__amd64__)
   return "amd64";
 #elif defined(__i386__)

@@ -14,9 +14,10 @@
 
 #include "kmsp11/token.h"
 
+#include <string_view>
+
 #include "absl/container/flat_hash_set.h"
 #include "absl/status/statusor.h"
-#include "absl/strings/string_view.h"
 #include "kmsp11/object_loader.h"
 #include "kmsp11/object_store_state.pb.h"
 #include "kmsp11/util/errors.h"
@@ -42,8 +43,7 @@ absl::StatusOr<CK_SLOT_INFO> NewSlotInfo() {
   return info;
 }
 
-absl::StatusOr<CK_TOKEN_INFO> NewTokenInfo(
-    absl::string_view token_label) {
+absl::StatusOr<CK_TOKEN_INFO> NewTokenInfo(std::string_view token_label) {
   CK_TOKEN_INFO info = {
       {0},  // label (set with ' ' padding below)
       {0},  // manufacturerID (set with ' ' padding below)

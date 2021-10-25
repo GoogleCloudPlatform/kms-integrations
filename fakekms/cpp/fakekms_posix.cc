@@ -24,7 +24,7 @@ namespace {
 class PosixServer : public Server {
  public:
   static absl::StatusOr<std::unique_ptr<PosixServer>> New(
-      absl::string_view flags);
+      std::string_view flags);
 
   PosixServer(std::string listen_addr, pid_t pid)
       : Server(listen_addr), pid_(pid) {}
@@ -35,7 +35,7 @@ class PosixServer : public Server {
   pid_t pid_;
 };
 
-absl::Status PosixErrorToStatus(absl::string_view prefix) {
+absl::Status PosixErrorToStatus(std::string_view prefix) {
   return absl::InternalError(
       absl::StrFormat("%s: %s", prefix, strerror(errno)));
 }

@@ -17,7 +17,8 @@
 #ifndef KMSP11_OPERATION_KMS_SIGNER_H_
 #define KMSP11_OPERATION_KMS_SIGNER_H_
 
-#include "absl/strings/string_view.h"
+#include <string_view>
+
 #include "kmsp11/operation/crypter_interfaces.h"
 #include "kmsp11/util/string_utils.h"
 
@@ -36,7 +37,7 @@ class KmsDigestSigner : public SignerInterface {
 
   // Copy a signature from src to dest. Virtual in order to allow conversion
   // between signature types for ECDSA signatures.
-  virtual absl::Status CopySignature(absl::string_view src,
+  virtual absl::Status CopySignature(std::string_view src,
                                      absl::Span<uint8_t> dest);
 
   Object* object() { return object_.get(); }

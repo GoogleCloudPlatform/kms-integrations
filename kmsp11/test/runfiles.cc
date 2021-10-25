@@ -38,11 +38,11 @@ Runfiles* GetRunfiles() {
 
 }  // namespace
 
-std::string RunfileLocation(absl::string_view filename) {
+std::string RunfileLocation(std::string_view filename) {
   return GetRunfiles()->Rlocation(std::string(filename));
 }
 
-absl::StatusOr<std::string> LoadTestRunfile(absl::string_view filename) {
+absl::StatusOr<std::string> LoadTestRunfile(std::string_view filename) {
   std::string location = RunfileLocation(
       absl::StrCat("com_google_kmstools/kmsp11/test/testdata/", filename));
   std::ifstream runfile(location, std::ifstream::in | std::ifstream::binary);

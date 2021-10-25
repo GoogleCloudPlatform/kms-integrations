@@ -37,12 +37,12 @@ class BuildStateTest : public testing::Test {
                                    key_ring_);
 
     client_ = std::make_unique<KmsClient>(fake_server_->listen_addr(),
-                                           grpc::InsecureChannelCredentials(),
-                                           absl::Seconds(1));
+                                          grpc::InsecureChannelCredentials(),
+                                          absl::Seconds(1));
   }
 
   kms_v1::CryptoKeyVersion AddKeyAndInitialVersion(
-      absl::string_view key_name, kms_v1::CryptoKey::CryptoKeyPurpose purpose,
+      std::string_view key_name, kms_v1::CryptoKey::CryptoKeyPurpose purpose,
       kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm,
       kms_v1::ProtectionLevel protection_level = kms_v1::HSM) {
     kms_v1::CryptoKey ck;

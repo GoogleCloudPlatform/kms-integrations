@@ -68,7 +68,7 @@ class Server {
   }
 
   inline static std::string BinaryLocation(
-      absl::string_view binary_suffix = "") {
+      std::string_view binary_suffix = "") {
     using ::bazel::tools::cpp::runfiles::Runfiles;
     std::string error;
     std::unique_ptr<Runfiles> runfiles =

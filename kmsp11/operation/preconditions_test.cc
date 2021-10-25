@@ -26,7 +26,7 @@ namespace {
 
 absl::StatusOr<KeyPair> NewMockKeyPair(
     kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm,
-    absl::string_view public_key_runfile) {
+    std::string_view public_key_runfile) {
   kms_v1::CryptoKeyVersion ckv;
   ckv.set_name(
       "projects/foo/locations/bar/keyRings/baz/cryptoKeys/qux/"

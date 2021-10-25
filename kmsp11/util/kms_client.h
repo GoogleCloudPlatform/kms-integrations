@@ -17,8 +17,9 @@
 #ifndef KMSP11_UTIL_KMS_CLIENT_H_
 #define KMSP11_UTIL_KMS_CLIENT_H_
 
+#include <string_view>
+
 #include "absl/status/statusor.h"
-#include "absl/strings/string_view.h"
 #include "absl/time/clock.h"
 #include "absl/time/time.h"
 #include "grpcpp/security/credentials.h"
@@ -43,10 +44,10 @@ struct CryptoKeyAndVersion {
 
 class KmsClient {
  public:
-  KmsClient(absl::string_view endpoint_address,
+  KmsClient(std::string_view endpoint_address,
             const std::shared_ptr<grpc::ChannelCredentials>& creds,
             absl::Duration rpc_timeout,
-            absl::string_view user_project_override = "");
+            std::string_view user_project_override = "");
 
   kms_v1::KeyManagementService::Stub* kms_stub() { return kms_stub_.get(); }
 
@@ -85,13 +86,13 @@ class KmsClient {
                                  absl::Time deadline) const;
 
   void AddContextSettings(grpc::ClientContext* ctx,
-                          absl::string_view relative_resource,
-                          absl::string_view resource_name,
+                          std::string_view relative_resource,
+                          std::string_view resource_name,
                           absl::Time rpc_deadline) const;
 
   inline void AddContextSettings(grpc::ClientContext* ctx,
-                                 absl::string_view relative_resource,
-                                 absl::string_view resource_name) const {
+                                 std::string_view relative_resource,
+                                 std::string_view resource_name) const {
     return AddContextSettings(ctx, relative_resource, resource_name,
                               absl::Now() + rpc_timeout_);
   }

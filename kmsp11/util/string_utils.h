@@ -18,10 +18,10 @@
 #define KMSP11_UTIL_STRING_UTILS_H_
 
 #include <cstdint>
+#include <string_view>
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/strings/string_view.h"
 #include "absl/time/time.h"
 #include "absl/types/span.h"
 #include "kmsp11/openssl.h"
@@ -44,7 +44,7 @@ inline std::string StrFromBytes(absl::Span<const uint8_t> data) {
 // This is a Cryptoki convention for filling character data in info structs.
 // CK_INFO.manufacturerID is an example of a field that is filled this way:
 // http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/errata01/os/pkcs11-base-v2.40-errata01-os-complete.html#_Toc235002241
-absl::Status CryptokiStrCopy(absl::string_view src, absl::Span<uint8_t> dest,
+absl::Status CryptokiStrCopy(std::string_view src, absl::Span<uint8_t> dest,
                              char pad_char = ' ');
 
 // Marshals an OpenSSL BIGNUM into the string format expected by Cryptoki.
@@ -75,7 +75,7 @@ std::string MarshalULongList(absl::Span<const unsigned long int> value);
 // Extracts the CryptoKey ID component from the provided CryptoKeyVersion name.
 // For example, returns "baz" if provided an input of
 // "projects/foo/locations/us/keyRings/bar/cryptoKeys/baz/cryptoKeyVersions/1".
-absl::StatusOr<std::string> ExtractKeyId(absl::string_view version_name);
+absl::StatusOr<std::string> ExtractKeyId(std::string_view version_name);
 
 // Reads the file from the provided filesystem path to a string. Returns
 // FailedPrecondition on error; for example if the file does not exist, or there

@@ -46,7 +46,7 @@ absl::StatusOr<const EVP_MD*> DigestForMechanism(CK_MECHANISM_TYPE mechanism);
 // Converts a signature in ASN.1 format (as returned by OpenSSL and Cloud KMS)
 // into IEEE P-1363 format (as required by PKCS #11).
 absl::StatusOr<std::vector<uint8_t>> EcdsaSigAsn1ToP1363(
-    absl::string_view asn1_sig, const EC_GROUP* group);
+    std::string_view asn1_sig, const EC_GROUP* group);
 
 // Returns the length of a signature in IEEE P-1363 format (with leading zeroes)
 // for the provided group.
@@ -97,7 +97,7 @@ absl::StatusOr<std::string> MarshalX509PublicKeyDer(BSSL_CONST EVP_PKEY* key);
 // Parses a private key in PKCS #8 PrivateKey PEM format. Returns
 // InvalidArgument if the provided key is malformed.
 absl::StatusOr<bssl::UniquePtr<EVP_PKEY>> ParsePkcs8PrivateKeyPem(
-    absl::string_view private_key_pem);
+    std::string_view private_key_pem);
 
 // Marshals an ASN.1 DigestInfo in DER format.
 absl::StatusOr<std::string> MarshalX509Sig(X509_SIG* value);
@@ -105,18 +105,18 @@ absl::StatusOr<std::string> MarshalX509Sig(X509_SIG* value);
 // Parses an X.509 certificate in DER format. Returns InvalidArgument if
 // the provided certificate is malformed.
 absl::StatusOr<bssl::UniquePtr<X509>> ParseX509CertificateDer(
-    absl::string_view certificate_der);
+    std::string_view certificate_der);
 
 // Parses a public key in X.509 SubjectPublicKeyInfo DER format. Returns
 // InvalidArgument if the provided key is malformed.
 absl::StatusOr<bssl::UniquePtr<EVP_PKEY>> ParseX509PublicKeyDer(
-    absl::string_view public_key_der);
+    std::string_view public_key_der);
 
 // Parses a public key in X.509 SubjectPublicKeyInfo PEM format. Returns
 // InvalidArgument if the provided key is malformed.
 // Required to parse PEM public keys retrieved from Cloud KMS.
 absl::StatusOr<bssl::UniquePtr<EVP_PKEY>> ParseX509PublicKeyPem(
-    absl::string_view public_key_pem);
+    std::string_view public_key_pem);
 
 // Retrieves len bytes of randomness from Boring's CSPRNG.
 std::string RandBytes(size_t len);
@@ -152,7 +152,7 @@ void SafeZeroMemory(volatile char* ptr, size_t size);
 // Retrieves the contents of BoringSSL's error stack, and dumps it to a string.
 // If no errors are found on the stack, `default_message` is returned instead.
 std::string SslErrorToString(
-    absl::string_view default_message =
+    std::string_view default_message =
         "(error could not be retrieved from the SSL stack)");
 
 }  // namespace kmsp11

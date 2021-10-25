@@ -64,7 +64,7 @@ bool IsLoadable(const kms_v1::CryptoKeyVersion& ckv) {
 
 }  // namespace
 
-AsymmetricKey* ObjectLoader::Cache::Get(absl::string_view ckv_name) {
+AsymmetricKey* ObjectLoader::Cache::Get(std::string_view ckv_name) {
   auto it = keys_.find(ckv_name);
   if (it == keys_.end()) {
     return nullptr;
@@ -74,8 +74,8 @@ AsymmetricKey* ObjectLoader::Cache::Get(absl::string_view ckv_name) {
 }
 
 AsymmetricKey* ObjectLoader::Cache::Store(const kms_v1::CryptoKeyVersion& ckv,
-                                          absl::string_view public_key_der,
-                                          absl::string_view certificate_der) {
+                                          std::string_view public_key_der,
+                                          std::string_view certificate_der) {
   keys_[ckv.name()] = std::make_unique<AsymmetricKey>();
   AsymmetricKey* key = keys_[ckv.name()].get();
 
@@ -124,7 +124,7 @@ CK_OBJECT_HANDLE ObjectLoader::Cache::NewHandle() {
 }
 
 absl::StatusOr<std::unique_ptr<ObjectLoader>> ObjectLoader::New(
-    absl::string_view key_ring_name, bool generate_certs) {
+    std::string_view key_ring_name, bool generate_certs) {
   std::unique_ptr<CertAuthority> cert_authority;
   if (generate_certs) {
     ASSIGN_OR_RETURN(cert_authority, CertAuthority::New());

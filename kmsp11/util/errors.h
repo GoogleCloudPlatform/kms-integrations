@@ -27,12 +27,12 @@ namespace kmsp11 {
 
 // Creates a new error status with the provided parameters.
 // `code` and `ck_rv` must not be OK; these requirements are CHECKed.
-absl::Status NewError(absl::StatusCode code, absl::string_view msg, CK_RV ck_rv,
+absl::Status NewError(absl::StatusCode code, std::string_view msg, CK_RV ck_rv,
                       const SourceLocation& source_location);
 
 // Creates a new FailedPrecondition error with the provided CK_RV.
 inline absl::Status FailedPreconditionError(
-    absl::string_view msg, CK_RV ck_rv, const SourceLocation& source_location) {
+    std::string_view msg, CK_RV ck_rv, const SourceLocation& source_location) {
   return NewError(absl::StatusCode::kFailedPrecondition, msg, ck_rv,
                   source_location);
 }
@@ -47,7 +47,7 @@ inline absl::Status HandleNotFoundError(CK_ULONG handle, CK_RV rv,
 
 // Creates a new InvalidArgument error with ck_rv = CKR_MECHANISM_INVALID.
 inline absl::Status InvalidMechanismError(
-    CK_MECHANISM_TYPE mechanism_type, absl::string_view operation,
+    CK_MECHANISM_TYPE mechanism_type, std::string_view operation,
     const SourceLocation& source_location) {
   return NewError(absl::StatusCode::kInvalidArgument,
                   absl::StrFormat("mechanism %#x is not valid for operation %s",
@@ -57,14 +57,14 @@ inline absl::Status InvalidMechanismError(
 
 // Creates a new InvalidArgument error with ck_rv = CKR_MECHANISM_PARAM_INVALID.
 inline absl::Status InvalidMechanismParamError(
-    absl::string_view message, const SourceLocation& source_location) {
+    std::string_view message, const SourceLocation& source_location) {
   return NewError(absl::StatusCode::kInvalidArgument, message,
                   CKR_MECHANISM_PARAM_INVALID, source_location);
 }
 
 // Creates a new Internal error with a return value of
 // CKR_GENERAL_ERROR.
-inline absl::Status NewInternalError(absl::string_view msg,
+inline absl::Status NewInternalError(std::string_view msg,
                                      const SourceLocation& source_location) {
   return NewError(absl::StatusCode::kInternal, msg, CKR_GENERAL_ERROR,
                   source_location);
@@ -72,13 +72,13 @@ inline absl::Status NewInternalError(absl::string_view msg,
 
 // Creates a new InvalidArgument error with the provided CK_RV.
 inline absl::Status NewInvalidArgumentError(
-    absl::string_view msg, CK_RV ck_rv, const SourceLocation& source_location) {
+    std::string_view msg, CK_RV ck_rv, const SourceLocation& source_location) {
   return NewError(absl::StatusCode::kInvalidArgument, msg, ck_rv,
                   source_location);
 }
 
 // Creates a new InvalidArgument error with rv = CKR_ARGUMENTS_BAD.
-inline absl::Status NullArgumentError(absl::string_view arg_name,
+inline absl::Status NullArgumentError(std::string_view arg_name,
                                       const SourceLocation& source_location) {
   return NewInvalidArgumentError(
       absl::StrFormat("argument %s was unexpectedly null", arg_name),
@@ -105,7 +105,7 @@ inline absl::Status OperationActiveError(
 // Creates a new FailedPrecondition error with a return value of
 // CKR_OPERATION_NOT_INITIALIZED.
 inline absl::Status OperationNotInitializedError(
-    absl::string_view operation_name, const SourceLocation& source_location) {
+    std::string_view operation_name, const SourceLocation& source_location) {
   return NewError(
       absl::StatusCode::kFailedPrecondition,
       absl::StrFormat("operation '%s' is not active", operation_name),
@@ -114,7 +114,7 @@ inline absl::Status OperationNotInitializedError(
 
 // Creates a new error with status code OutOfRange and return value of
 // CKR_BUFFER_TOO_SMALL.
-inline absl::Status OutOfRangeError(absl::string_view msg,
+inline absl::Status OutOfRangeError(std::string_view msg,
                                     const SourceLocation& source_location) {
   return NewError(absl::StatusCode::kOutOfRange, msg, CKR_BUFFER_TOO_SMALL,
                   source_location);

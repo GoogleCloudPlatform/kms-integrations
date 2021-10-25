@@ -17,7 +17,8 @@
 #ifndef KMSP11_OPERATION_RSASSA_RAW_PKCS1_H_
 #define KMSP11_OPERATION_RSASSA_RAW_PKCS1_H_
 
-#include "absl/strings/string_view.h"
+#include <string_view>
+
 #include "kmsp11/openssl.h"
 #include "kmsp11/operation/crypter_interfaces.h"
 #include "kmsp11/util/crypto_utils.h"

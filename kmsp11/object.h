@@ -17,8 +17,9 @@
 #ifndef KMSP11_OBJECT_H_
 #define KMSP11_OBJECT_H_
 
+#include <string_view>
+
 #include "absl/status/statusor.h"
-#include "absl/strings/string_view.h"
 #include "google/cloud/kms/v1/resources.pb.h"
 #include "kmsp11/algorithm_details.h"
 #include "kmsp11/attribute_map.h"
@@ -41,7 +42,7 @@ class Object {
   static absl::StatusOr<Object> NewCertificate(
       const kms_v1::CryptoKeyVersion& ckv, X509* certificate);
 
-  absl::string_view kms_key_name() const { return kms_key_name_; }
+  std::string_view kms_key_name() const { return kms_key_name_; }
   CK_OBJECT_CLASS object_class() const { return object_class_; }
   const AlgorithmDetails& algorithm() const { return algorithm_; }
   const AttributeMap& attributes() const { return attributes_; }

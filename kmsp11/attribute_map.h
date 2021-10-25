@@ -31,7 +31,7 @@ namespace kmsp11 {
 // http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/errata01/os/pkcs11-base-v2.40-errata01-os-complete.html#_Toc235002350
 class AttributeMap {
  public:
-  void Put(CK_ATTRIBUTE_TYPE type, absl::string_view value);
+  void Put(CK_ATTRIBUTE_TYPE type, std::string_view value);
   void PutSensitive(CK_ATTRIBUTE_TYPE type);
 
   inline void PutBool(CK_ATTRIBUTE_TYPE type, bool value) {
@@ -56,7 +56,7 @@ class AttributeMap {
   }
 
   bool Contains(const CK_ATTRIBUTE& attribute) const;
-  absl::StatusOr<absl::string_view> Value(CK_ATTRIBUTE_TYPE type) const;
+  absl::StatusOr<std::string_view> Value(CK_ATTRIBUTE_TYPE type) const;
 
  private:
   class SensitiveValue {};
