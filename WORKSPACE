@@ -53,10 +53,10 @@ http_archive(
 )
 
 http_archive(
-    name = "com_github_jbeder_yaml_cpp",  # 2020-04-29
-    sha256 = "736326d88059b5ebe77cb1d3825ade55c8708898817e067a05931444a7843faa",
-    strip_prefix = "yaml-cpp-9fb51534877d16597cfd94c18890d87af0879d65",
-    url = "https://github.com/jbeder/yaml-cpp/archive/9fb51534877d16597cfd94c18890d87af0879d65.tar.gz",
+    name = "com_github_jbeder_yaml_cpp",  # v0.7.0 // 2021-07-10
+    sha256 = "43e6a9fcb146ad871515f0d0873947e5d497a1c9c60c58cb102a97b47208b7c3",
+    strip_prefix = "yaml-cpp-yaml-cpp-0.7.0",
+    url = "https://github.com/jbeder/yaml-cpp/archive/yaml-cpp-0.7.0.tar.gz",
 )
 
 http_archive(
