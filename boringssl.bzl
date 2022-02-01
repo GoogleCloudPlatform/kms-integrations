@@ -141,10 +141,10 @@ def _crypto_library_impl(repo_ctx):
 
     if library == "boringssl":
         repo_ctx.download_and_extract(
-            # 2021-03-18
-            url = "https://github.com/google/boringssl/archive/dfa7c61bc554788901ee60940b30e5f3fc83f5ac.tar.gz",
-            sha256 = "9f263cce1eb9d3429809637c8f62961e9f7b14d814902ca330a1678e9ddf49cd",
-            stripPrefix = "boringssl-dfa7c61bc554788901ee60940b30e5f3fc83f5ac",
+            # 2022-01-25
+            url = "https://github.com/google/boringssl/archive/0d800dd2372b4d190fb1e61e68521a537c3218ca.tar.gz",
+            sha256 = "ed4c868b89630469a184da0575833f9da2dd91be239839e8959ea12c3532511c",
+            stripPrefix = "boringssl-0d800dd2372b4d190fb1e61e68521a537c3218ca",
         )
         return
 
