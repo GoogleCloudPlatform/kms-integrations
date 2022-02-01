@@ -42,14 +42,21 @@ go run ./.kokoro/unwrap_key.go \
   -wrapped_key_file=${KOKORO_GFILE_DIR}/oss-tools-ci-key.json.enc \
   > ${GOOGLE_APPLICATION_CREDENTIALS}
 
-use_bazel.sh 4.0.0
+export USE_BAZEL_VERSION=4.0.0
 
 # Configure user.bazelrc with remote build caching options
 cp .kokoro/remote_cache.bazelrc user.bazelrc
 echo "build --remote_default_exec_properties=cache-silo-key=macos" >> user.bazelrc
 
-# Ensure that build outputs and test logs are uploaded even on failure
-_upload_artifacts() {
+# Ensure that bazel is shut down, and build outputs and test logs
+# are uploaded even on failure.
+_finish() {
+  set +e
+
+  # Explicit shutdown seems to be needed on Catalina and later or the
+  # build hangs; see b/196832502.
+  bazelisk shutdown
+
   if [ -e "${PROJECT_ROOT}/bazel-bin/kmsp11/main/libkmsp11.so" ]; then
     cp "${PROJECT_ROOT}/bazel-bin/kmsp11/main/libkmsp11.so" \
       "${RESULTS_DIR}/libkmsp11.dylib"
@@ -61,15 +68,13 @@ _upload_artifacts() {
   python3 "${PROJECT_ROOT}/.kokoro/copy_test_outputs.py" \
     "${PROJECT_ROOT}/bazel-testlogs" "${RESULTS_DIR}/testlogs"
 }
-trap _upload_artifacts EXIT
+trap _finish EXIT
 
 export BAZEL_ARGS="-c opt --keep_going ${BAZEL_EXTRA_ARGS}"
-# Skip tests that rely on std::filesystem pending migration to 10.15 build server
-export BAZEL_ARGS="${BAZEL_ARGS} --define=nocxxfs=1"
 
-bazel test ${BAZEL_ARGS} ... :release_tests
+bazelisk test ${BAZEL_ARGS} ... :release_tests
 
-bazel run ${BAZEL_ARGS} //kmsp11/tools/buildsigner -- \
+bazelisk run ${BAZEL_ARGS} //kmsp11/tools/buildsigner -- \
   -signing_key=${BUILD_SIGNING_KEY} \
   < bazel-bin/kmsp11/main/libkmsp11.so \
   > ${RESULTS_DIR}/libkmsp11.dylib.sig

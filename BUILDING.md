@@ -30,9 +30,9 @@ The project is built and tested by Google on the following platforms.
 
 ### macOS
 
-* Operating System: macOS 10.14+
+* Operating System: macOS 10.15+
 * Architecture: amd64
-* Compiler: Apple Clang (Xcode 11.3)
+* Compiler: Apple Clang (Xcode 12)
 
 ### Windows
 

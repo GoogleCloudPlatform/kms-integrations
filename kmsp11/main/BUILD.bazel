@@ -50,10 +50,7 @@ cc_test(
 cc_test(
     name = "bridge_logging_test",
     size = "small",
-    srcs = select({
-        "//:nocxxfs": [],
-        "//conditions:default": ["bridge_logging_test.cc"],
-    }),
+    srcs = ["bridge_logging_test.cc"],
     deps = [
         ":bridge",
         "//fakekms/cpp:fakekms",

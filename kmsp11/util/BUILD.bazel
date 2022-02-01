@@ -138,10 +138,7 @@ cc_library(
 cc_test(
     name = "logging_test",
     size = "small",
-    srcs = select({
-        "//:nocxxfs": [],
-        "//conditions:default": ["logging_test.cc"],
-    }),
+    srcs = ["logging_test.cc"],
     deps = [
         ":logging",
         ":platform",
