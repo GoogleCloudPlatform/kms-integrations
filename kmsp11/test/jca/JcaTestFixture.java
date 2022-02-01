@@ -121,7 +121,7 @@ public class JcaTestFixture implements AutoCloseable {
     s.append("use_insecure_grpc_channel_credentials: true");
     s.append(System.lineSeparator());
 
-    s.append("experimental_generate_certs: true");
+    s.append("generate_certs: true");
     s.append(System.lineSeparator());
 
     return s.toString();
