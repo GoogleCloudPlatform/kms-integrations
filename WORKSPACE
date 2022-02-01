@@ -60,10 +60,17 @@ http_archive(
 )
 
 http_archive(
-    name = "com_google_absl",  # 2021-02-23
-    sha256 = "c1f1c9182a11adecb776a4b9dfa16552bde7f8ffa7f8a3a32d41cc683ae73a84",
-    strip_prefix = "abseil-cpp-998805a4c79d5d7a771f7e5a8ee3cbbbcba04f94",
-    url = "https://github.com/abseil/abseil-cpp/archive/998805a4c79d5d7a771f7e5a8ee3cbbbcba04f94.zip",
+    name = "com_google_absl",  # 20211102.0 // 2021-11-02
+    # Patch is upstreamed at cl/425532352; and should no longer be needed after
+    # that makes it to OSS.
+    patch_args = [
+        "-E",
+        "-p1",
+    ],
+    patches = ["//:third_party/abseil_freebsd_i386.patch"],
+    sha256 = "dcf71b9cba8dc0ca9940c4b316a0c796be8fab42b070bb6b7cab62b48f0e66c4",
+    strip_prefix = "abseil-cpp-20211102.0",
+    url = "https://github.com/abseil/abseil-cpp/archive/20211102.0.tar.gz",
 )
 
 http_archive(
