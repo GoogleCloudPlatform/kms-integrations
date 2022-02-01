@@ -75,6 +75,8 @@ std::string_view GetTargetPlatform() {
   return "amd64";
 #elif defined(__i386__)
   return "x86";
+#elif defined(__aarch64__)
+  return "aarch64";
 #else
   static_assert(false, "unhandled processor type");
 #endif
