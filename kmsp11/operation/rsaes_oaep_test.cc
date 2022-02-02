@@ -58,6 +58,20 @@ TEST(NewOaepDecrypterTest, Success) {
   EXPECT_OK(RsaOaepDecrypter::New(key, &mechanism));
 }
 
+TEST(NewOaepDecrypterTest, SuccessSourceIsZero) {
+  ASSERT_OK_AND_ASSIGN(
+      KeyPair kp,
+      NewMockKeyPair(kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256,
+                     "rsa_2048_public.pem"));
+  std::shared_ptr<Object> key = std::make_shared<Object>(kp.private_key);
+
+  CK_RSA_PKCS_OAEP_PARAMS params = NewOaepParams();
+  params.source = 0;
+  CK_MECHANISM mechanism = NewOaepMechanism(&params);
+
+  EXPECT_OK(RsaOaepDecrypter::New(key, &mechanism));
+}
+
 TEST(NewOaepDecrypterTest, FailureWrongKeyType) {
   ASSERT_OK_AND_ASSIGN(
       KeyPair kp, NewMockKeyPair(kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256,
@@ -146,7 +160,7 @@ TEST(NewOaepDecrypterTest, FailureWrongMgf) {
               StatusRvIs(CKR_MECHANISM_PARAM_INVALID));
 }
 
-TEST(NewOaepDecrypterTest, FailureSourceUnspecified) {
+TEST(NewOaepDecrypterTest, FailureSourceUnknown) {
   ASSERT_OK_AND_ASSIGN(
       KeyPair kp,
       NewMockKeyPair(kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256,
@@ -154,7 +168,7 @@ TEST(NewOaepDecrypterTest, FailureSourceUnspecified) {
   std::shared_ptr<Object> key = std::make_shared<Object>(kp.private_key);
 
   CK_RSA_PKCS_OAEP_PARAMS params = NewOaepParams();
-  params.source = 0;
+  params.source = 2;
   CK_MECHANISM mechanism = NewOaepMechanism(&params);
 
   EXPECT_THAT(RsaOaepDecrypter::New(key, &mechanism),
@@ -187,6 +201,20 @@ TEST(NewOaepEncrypterTest, Success) {
   std::shared_ptr<Object> key = std::make_shared<Object>(kp.public_key);
 
   CK_RSA_PKCS_OAEP_PARAMS params = NewOaepParams();
+  CK_MECHANISM mechanism = NewOaepMechanism(&params);
+
+  EXPECT_OK(RsaOaepEncrypter::New(key, &mechanism));
+}
+
+TEST(NewOaepEncrypterTest, SuccessSourceIsZero) {
+  ASSERT_OK_AND_ASSIGN(
+      KeyPair kp,
+      NewMockKeyPair(kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256,
+                     "rsa_2048_public.pem"));
+  std::shared_ptr<Object> key = std::make_shared<Object>(kp.public_key);
+
+  CK_RSA_PKCS_OAEP_PARAMS params = NewOaepParams();
+  params.source = 0;
   CK_MECHANISM mechanism = NewOaepMechanism(&params);
 
   EXPECT_OK(RsaOaepEncrypter::New(key, &mechanism));
@@ -280,7 +308,7 @@ TEST(NewOaepEncrypterTest, FailureWrongMgf) {
               StatusRvIs(CKR_MECHANISM_PARAM_INVALID));
 }
 
-TEST(NewOaepEncrypterTest, FailureSourceUnspecified) {
+TEST(NewOaepEncrypterTest, FailureSourceUnknown) {
   ASSERT_OK_AND_ASSIGN(
       KeyPair kp,
       NewMockKeyPair(kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256,
@@ -288,7 +316,7 @@ TEST(NewOaepEncrypterTest, FailureSourceUnspecified) {
   std::shared_ptr<Object> key = std::make_shared<Object>(kp.public_key);
 
   CK_RSA_PKCS_OAEP_PARAMS params = NewOaepParams();
-  params.source = 0;
+  params.source = 2;
   CK_MECHANISM mechanism = NewOaepMechanism(&params);
 
   EXPECT_THAT(RsaOaepEncrypter::New(key, &mechanism),

@@ -40,9 +40,13 @@ absl::Status ValidateRsaOaepParameters(Object* key, void* parameters,
   RETURN_IF_ERROR(EnsureHashMatches(params->hashAlg, digest));
   RETURN_IF_ERROR(EnsureMgf1HashMatches(params->mgf, digest));
 
-  if (params->source != CKZ_DATA_SPECIFIED) {
-    return InvalidMechanismParamError(
-        "source for OAEP must be CKZ_DATA_SPECIFIED", SOURCE_LOCATION);
+  switch (params->source) {
+    case 0: // For compatibility. See b/217419373.
+    case CKZ_DATA_SPECIFIED:
+      break;
+    default:
+      return InvalidMechanismParamError(
+          "source for OAEP must be 0 or CKZ_DATA_SPECIFIED", SOURCE_LOCATION);
   }
   if (params->pSourceData != nullptr || params->ulSourceDataLen != 0) {
     return InvalidMechanismParamError("OAEP labels are not supported",
