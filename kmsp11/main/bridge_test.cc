@@ -927,7 +927,7 @@ TEST_F(BridgeTest, FindCertificate) {
   ckv = WaitForEnablement(fake_client.get(), ckv);
 
   std::ofstream(config_file_, std::ofstream::out | std::ofstream::app)
-      << "experimental_generate_certs: true" << std::endl;
+      << "generate_certs: true" << std::endl;
 
   EXPECT_OK(Initialize(&init_args_));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
