@@ -74,10 +74,10 @@ http_archive(
 )
 
 http_archive(
-    name = "com_google_protobuf",  # 2021-03-02
-    sha256 = "c006a8b936442237f8b4e08e9758c5bf47affb44c4c99130d1c3011b3ac98095",
-    strip_prefix = "protobuf-3172ab8ff97aab005d7734627409faa166174232",
-    url = "https://github.com/protocolbuffers/protobuf/archive/3172ab8ff97aab005d7734627409faa166174232.zip",
+    name = "com_google_protobuf",  # v3.19.4 // 2022-01-2
+    sha256 = "3bd7828aa5af4b13b99c191e8b1e884ebfa9ad371b0ce264605d347f135d2568",
+    strip_prefix = "protobuf-3.19.4",
+    url = "https://github.com/protocolbuffers/protobuf/archive/v3.19.4.tar.gz",
 )
 
 # Keep this sync'd to the version used in rules_go, above. Otherwise, we're
