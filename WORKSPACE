@@ -4,26 +4,20 @@ workspace(name = "com_google_kmstools")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_file")
 
 http_archive(
-    name = "bazel_gazelle",  # v0.23.0 / 2021-03-08
-    sha256 = "62ca106be173579c0a167deb23358fdfe71ffa1e4cfdddf5582af26520f1c66f",
+    name = "bazel_gazelle",  # v0.24.0 / 2021-10-11
+    sha256 = "de69a09dc70417580aabf20a28619bb3ef60d038470c7cf8442fafcf627c21cb",
     urls = [
-        "https://storage.googleapis.com/bazel-mirror/github.com/bazelbuild/bazel-gazelle/releases/download/v0.23.0/bazel-gazelle-v0.23.0.tar.gz",
-        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.23.0/bazel-gazelle-v0.23.0.tar.gz",
+        "https://mirror.bazel.build/github.com/bazelbuild/bazel-gazelle/releases/download/v0.24.0/bazel-gazelle-v0.24.0.tar.gz",
+        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.24.0/bazel-gazelle-v0.24.0.tar.gz",
     ],
 )
 
 http_archive(
-    name = "io_bazel_rules_go",  # v0.26.0 / 2021-03-08
-    # Patch raw PKCS #1 support into rules_go's copy of googleapis.
-    patch_args = [
-        "-E",
-        "-p1",
-    ],
-    patches = ["//:third_party/rules_go.patch"],
-    sha256 = "7c10271940c6bce577d51a075ae77728964db285dac0a46614a7934dc34303e6",
+    name = "io_bazel_rules_go",  # v0.30.0 / 2022-01-24
+    sha256 = "d6b2513456fe2229811da7eb67a444be7785f5323c6708b38d851d2b51e54d83",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.26.0/rules_go-v0.26.0.tar.gz",
-        "https://github.com/bazelbuild/rules_go/releases/download/v0.26.0/rules_go-v0.26.0.tar.gz",
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.30.0/rules_go-v0.30.0.zip",
+        "https://github.com/bazelbuild/rules_go/releases/download/v0.30.0/rules_go-v0.30.0.zip",
     ],
 )
 
@@ -87,22 +81,16 @@ http_archive(
     url = "https://github.com/protocolbuffers/protobuf/archive/v3.19.4.tar.gz",
 )
 
-# Keep this sync'd to the version used in rules_go, above. Otherwise, we're
-# working with two versions of the same repo.
-# https://github.com/bazelbuild/rules_go/blob/v0.26.0/go/private/repositories.bzl#L243
+# In general it's best to keep this sync'd with the version used in rules_go,
+# above. Otherwise, we're working with two versions of the same repo.
+# https://github.com/bazelbuild/rules_go/blob/v0.30.0/go/private/repositories.bzl#L259
 http_archive(
-    name = "com_google_googleapis",  # 2021-03-05
-    # Patch raw PKCS #1 support into googleapis.
-    patch_args = [
-        "-E",
-        "-p1",
-    ],
-    patches = ["//:third_party/googleapis.patch"],
-    sha256 = "711bc79bd40406dda685a8633f7478979baabaab19eeac664d53f7621866bebc",
-    strip_prefix = "googleapis-d4cd8d96ed6eb5dd7c997aab68a1d6bb0825090c",
+    name = "com_google_googleapis",  # 2022-01-24
+    sha256 = "ad0a426b3cf0a8464c495627286c1cefdebefdabb96cc256aaeac9f501665cdd",
+    strip_prefix = "googleapis-d12b615374583712e7832c914d1fbef8c507f10f",
     urls = [
-        "https://mirror.bazel.build/github.com/googleapis/googleapis/archive/d4cd8d96ed6eb5dd7c997aab68a1d6bb0825090c.zip",
-        "https://github.com/googleapis/googleapis/archive/d4cd8d96ed6eb5dd7c997aab68a1d6bb0825090c.zip",
+        "https://mirror.bazel.build/github.com/googleapis/googleapis/archive/d12b615374583712e7832c914d1fbef8c507f10f.zip",
+        "https://github.com/googleapis/googleapis/archive/d12b615374583712e7832c914d1fbef8c507f10f.zip",
     ],
 )
 
@@ -196,28 +184,22 @@ maven_install(
 )
 
 ## Golang
+load("//:go.bzl", "go_repositories")
+
+# gazelle:repository_macro go.bzl%go_repositories
+go_repositories()
+
 load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
 
 go_rules_dependencies()
 
 go_register_toolchains("1.16.1")
 
-load("@io_bazel_rules_go//extras:embed_data_deps.bzl", "go_embed_data_dependencies")
+load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
 
-go_embed_data_dependencies()
+gazelle_dependencies()
 
 ## Protobuf
 load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
 
 protobuf_deps()
-
-## Gazelle (go + bazel)
-
-load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
-
-gazelle_dependencies()
-
-load("//:go.bzl", "go_repositories")
-
-# gazelle:repository_macro go.bzl%go_repositories
-go_repositories()
