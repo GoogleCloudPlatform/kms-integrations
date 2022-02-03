@@ -15,7 +15,7 @@
 syntax = "proto3";
 
 package kmsp11;
-option go_package = ".;kmsp11";
+option go_package = "cloud.google.com/kms/integrations/kmsp11/tools/p11fn/p11fnpb";
 
 message CkFuncList {
   repeated CkFunc functions = 1;

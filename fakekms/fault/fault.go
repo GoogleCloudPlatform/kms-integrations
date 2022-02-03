@@ -23,7 +23,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/status"
 
-	"cloud.google.com/kms/oss/fakekms/fault/faultpb"
+	"cloud.google.com/kms/integrations/fakekms/fault/faultpb"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 

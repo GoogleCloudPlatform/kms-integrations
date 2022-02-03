@@ -16,7 +16,7 @@ syntax = "proto3";
 
 package math;
 
-option go_package = "cloud.google.com/kms/oss/fakekms/mathpb";
+option go_package = "cloud.google.com/kms/integrations/fakekms/mathpb";
 
 message AddRequest {
   int64 x = 1;

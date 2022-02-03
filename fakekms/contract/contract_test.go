@@ -29,7 +29,7 @@ import (
 	"google.golang.org/grpc"
 
 	kms "cloud.google.com/go/kms/apiv1"
-	"cloud.google.com/kms/oss/fakekms"
+	"cloud.google.com/kms/integrations/fakekms"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 

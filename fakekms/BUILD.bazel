@@ -7,7 +7,7 @@ go_library(
         exclude = ["*_test.go"],
     ),
     embedsrcs = glob(["testdata/*"]),
-    importpath = "cloud.google.com/kms/oss/fakekms",
+    importpath = "cloud.google.com/kms/integrations/fakekms",
     visibility = ["//visibility:public"],
     deps = [
         "//fakekms/fault",

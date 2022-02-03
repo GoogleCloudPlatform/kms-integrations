@@ -16,7 +16,7 @@ syntax = "proto3";
 
 package fakekms;
 
-option go_package = "cloud.google.com/kms/oss/fakekms/fault/faultpb";
+option go_package = "cloud.google.com/kms/integrations/fakekms/fault/faultpb";
 
 import "google/protobuf/duration.proto";
 import "google/protobuf/empty.proto";

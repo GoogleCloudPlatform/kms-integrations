@@ -22,12 +22,13 @@ import (
 	"testing"
 
 	kms "cloud.google.com/go/kms/apiv1"
-	"cloud.google.com/kms/oss/fakekms"
+	"cloud.google.com/kms/integrations/fakekms"
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/miekg/pkcs11"
 	"google.golang.org/api/option"
-	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 	"google.golang.org/grpc"
+
+	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 )
 
 const (

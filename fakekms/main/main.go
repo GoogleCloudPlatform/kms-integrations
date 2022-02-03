@@ -25,7 +25,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"cloud.google.com/kms/oss/fakekms"
+	"cloud.google.com/kms/integrations/fakekms"
 )
 
 func main() {

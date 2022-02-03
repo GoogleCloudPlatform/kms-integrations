@@ -21,10 +21,10 @@ import (
 	"sync"
 	"time"
 
-	"cloud.google.com/kms/oss/fakekms/fault"
+	"cloud.google.com/kms/integrations/fakekms/fault"
 	"google.golang.org/grpc"
 
-	"cloud.google.com/kms/oss/fakekms/fault/faultpb"
+	"cloud.google.com/kms/integrations/fakekms/fault/faultpb"
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 )
 

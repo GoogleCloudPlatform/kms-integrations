@@ -25,8 +25,8 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/bufconn"
 
-	"cloud.google.com/kms/oss/fakekms/fault/faultpb"
-	"cloud.google.com/kms/oss/fakekms/fault/mathpb"
+	"cloud.google.com/kms/integrations/fakekms/fault/faultpb"
+	"cloud.google.com/kms/integrations/fakekms/fault/mathpb"
 	statuspb "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/protobuf/types/known/durationpb"
 )

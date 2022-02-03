@@ -1,4 +1,4 @@
-module cloud.google.com/kms/oss
+module cloud.google.com/kms/integrations
 
 go 1.16
 

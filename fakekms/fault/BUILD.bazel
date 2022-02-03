@@ -8,7 +8,7 @@ package(default_visibility = ["//:__subpackages__"])
 go_library(
     name = "fault",
     srcs = ["fault.go"],
-    importpath = "cloud.google.com/kms/oss/fakekms/fault",
+    importpath = "cloud.google.com/kms/integrations/fakekms/fault",
     deps = [
         ":fault_go_proto",
         "@org_golang_google_grpc//:go_default_library",
@@ -35,7 +35,7 @@ go_test(
 go_proto_library(
     name = "fault_go_proto",
     compilers = ["@io_bazel_rules_go//proto:go_grpc"],
-    importpath = "cloud.google.com/kms/oss/fakekms/fault/faultpb",
+    importpath = "cloud.google.com/kms/integrations/fakekms/fault/faultpb",
     proto = ":fault_proto",
     deps = ["@go_googleapis//google/rpc:status_go_proto"],
 )
@@ -72,6 +72,6 @@ go_proto_library(
     name = "math_go_proto",
     testonly = True,
     compilers = ["@io_bazel_rules_go//proto:go_grpc"],
-    importpath = "cloud.google.com/kms/oss/fakekms/fault/mathpb",
+    importpath = "cloud.google.com/kms/integrations/fakekms/fault/mathpb",
     proto = ":math_proto",
 )

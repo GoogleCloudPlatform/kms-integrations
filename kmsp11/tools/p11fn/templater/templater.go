@@ -19,12 +19,13 @@ package main
 import (
 	"flag"
 	"io/ioutil"
-	"kmsp11"
 	"log"
 	"os"
 	"text/template"
 
 	"google.golang.org/protobuf/encoding/prototext"
+
+	"cloud.google.com/kms/integrations/kmsp11/tools/p11fn/p11fnpb"
 )
 
 var (
@@ -43,7 +44,7 @@ func mustReadFile(filePath string) []byte {
 func main() {
 	flag.Parse()
 
-	funcs := new(kmsp11.CkFuncList)
+	funcs := new(p11fnpb.CkFuncList)
 	if err := prototext.Unmarshal(mustReadFile(*funcListPath), funcs); err != nil {
 		log.Fatalf("error parsing function list textproto: %+v", err)
 	}

@@ -30,7 +30,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"google.golang.org/protobuf/encoding/prototext"
 
-	"kmsp11"
+	"cloud.google.com/kms/integrations/kmsp11/tools/p11fn/p11fnpb"
 )
 
 var (
@@ -99,7 +99,7 @@ func loadP11FunctionNames(t *testing.T) []string {
 		t.Fatalf("error reading function list textproto: %v", err)
 	}
 
-	list := new(kmsp11.CkFuncList)
+	list := new(p11fnpb.CkFuncList)
 	if err := prototext.Unmarshal(f, list); err != nil {
 		log.Fatalf("error parsing function list textproto: %+v", err)
 	}
