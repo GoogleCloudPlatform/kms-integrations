@@ -44,7 +44,7 @@ sudo tar xf "${KOKORO_GFILE_DIR}/${LLVM_DIST}.tar.xz" -C /opt
 echo "BAZEL_EXTRA_ARGS:"
 echo "${BAZEL_EXTRA_ARGS}"
 
-use_bazel.sh 4.0.0
+use_bazel.sh 4.2.1
 
 # Configure user.bazelrc with remote build caching options
 cp .kokoro/remote_cache.bazelrc user.bazelrc

@@ -23,7 +23,7 @@ cd "%PROJECT_ROOT%"
 set RESULTS_DIR=%KOKORO_ARTIFACTS_DIR%\results
 mkdir "%RESULTS_DIR%"
 
-choco install -y bazel --version 4.0.0
+choco install -y bazel --version 4.2.1
 
 :: Configure user.bazelrc with remote build caching options
 copy .kokoro\remote_cache.bazelrc user.bazelrc

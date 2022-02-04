@@ -37,7 +37,7 @@ mkdir "${RESULTS_DIR}"
 
 sudo pkg update -f
 sudo pkg install -y cmake ninja
-sudo pkg install -y "${KOKORO_GFILE_DIR}/bazel-4.0.0-freebsd11-amd64.txz"
+sudo pkg install -y ${KOKORO_GFILE_DIR}/bazel-4.2.1-freebsd11-amd64.txz
 
 # Make Bazel use a JDK that isn't a million years old, which fixes weird
 # gRPC connection issues with remote build cache. :-(

@@ -42,7 +42,7 @@ go run ./.kokoro/unwrap_key.go \
   -wrapped_key_file=${KOKORO_GFILE_DIR}/oss-tools-ci-key.json.enc \
   > ${GOOGLE_APPLICATION_CREDENTIALS}
 
-export USE_BAZEL_VERSION=4.0.0
+export USE_BAZEL_VERSION=4.2.1
 
 # Configure user.bazelrc with remote build caching options
 cp .kokoro/remote_cache.bazelrc user.bazelrc

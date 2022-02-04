@@ -1,7 +1,8 @@
 # Building
 
-The project is built using the [Bazel](https://bazel.build) build tool, version
-4.0.0 or later.
+The project is built using the [Bazel](https://bazel.build) build tool, version 4,
+release 4.2.1 or later. As of this 2022-02-04, the project is compatible with
+Bazel 5.x.
 
 All targets can be built and tested by invoking `bazel test ...` at the
 command line.

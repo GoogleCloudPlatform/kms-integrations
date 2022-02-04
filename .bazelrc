@@ -39,8 +39,6 @@ build:linux --java_toolchain=@bazel_tools//tools/jdk:toolchain_java11
 # macOS-specific options
 # Ensure compatibility with all macOS versions currently supported by Apple.
 build:macos --copt=-mmacosx-version-min=10.15
-# Workaround for release bug in Bazel 4.0.0 for macos: https://github.com/bazelbuild/bazel/pull/12882
-build:macos --features=-debug_prefix_map_pwd_is_dot
 # Workaround for build issue: https://github.com/bazelbuild/bazel/issues/4341#issuecomment-572050759
 build:macos --copt=-DGRPC_BAZEL_BUILD
 # Workaround for build issue: https://github.com/bazelbuild/bazel/issues/4341#issuecomment-758361769

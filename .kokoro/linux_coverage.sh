@@ -32,7 +32,7 @@ export LLVM_DIST="clang+llvm-${LLVM_VERSION}-x86_64-linux-gnu-ubuntu-16.04"
 export LLVM_ROOT=/opt/${LLVM_DIST}
 sudo tar xf "${KOKORO_GFILE_DIR}/${LLVM_DIST}.tar.xz" -C /opt
 
-use_bazel.sh 4.0.0
+use_bazel.sh 4.2.1
 
 # Configure user.bazelrc with remote build caching options
 cp .kokoro/remote_cache.bazelrc user.bazelrc
