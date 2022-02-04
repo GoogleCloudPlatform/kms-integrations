@@ -116,10 +116,10 @@ http_file(
 )
 
 http_archive(
-    name = "rules_jvm_external",  # v4.0 // 2021-01-06
-    sha256 = "31d226a6b3f5362b59d261abf9601116094ea4ae2aa9f28789b6c105e4cada68",
-    strip_prefix = "rules_jvm_external-4.0",
-    url = "https://github.com/bazelbuild/rules_jvm_external/archive/4.0.tar.gz",
+    name = "rules_jvm_external",  # v4.2 // 2021-11-23
+    sha256 = "2cd77de091e5376afaf9cc391c15f093ebd0105192373b334f0a855d89092ad5",
+    strip_prefix = "rules_jvm_external-4.2",
+    url = "https://github.com/bazelbuild/rules_jvm_external/archive/4.2.tar.gz",
 )
 
 http_archive(
@@ -173,9 +173,9 @@ load("@rules_jvm_external//:defs.bzl", "maven_install")
 
 maven_install(
     artifacts = [
-        "com.google.cloud:google-cloud-kms:1.39.0",
-        "com.google.guava:guava:28.2-jre",
-        "junit:junit:4.13",
+        "com.google.cloud:google-cloud-kms:2.4.0",
+        "com.google.guava:guava:31.0.1-jre",
+        "junit:junit:4.13.2",
     ],
     fetch_sources = True,
     repositories = [
