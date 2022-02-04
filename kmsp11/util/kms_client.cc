@@ -56,9 +56,6 @@ void KmsClient::AddContextSettings(grpc::ClientContext* ctx,
   if (!user_project_override_.empty()) {
     ctx->AddMetadata("x-goog-user-project", user_project_override_);
   }
-
-  // note this should be unset for CreateCKV and ImportCKV
-  ctx->set_idempotent(true);
 }
 
 KmsClient::KmsClient(std::string_view endpoint_address,
@@ -110,7 +107,6 @@ absl::StatusOr<kms_v1::CryptoKey> KmsClient::CreateCryptoKey(
     const kms_v1::CreateCryptoKeyRequest& request) const {
   grpc::ClientContext ctx;
   AddContextSettings(&ctx, "parent", request.parent());
-  ctx.set_idempotent(false);
 
   kms_v1::CryptoKey response;
   absl::Status rpc_result =

@@ -193,7 +193,7 @@ load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_depe
 
 go_rules_dependencies()
 
-go_register_toolchains("1.16.1")
+go_register_toolchains("1.17.6")
 
 load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
 
