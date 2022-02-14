@@ -58,9 +58,9 @@ message LibraryConfig {
   // CryptoKey to be created. Default is false
   bool experimental_create_multiple_versions = 9;
 
-  // Optional. If true, enables an experiment that requires that BoringSSL has
-  // been built in FIPS mode. Default is false.
-  bool experimental_require_fips_mode = 10;
+  // Optional. If true, enables an initialization time check that requires that
+  // BoringSSL has been built in FIPS mode. Default is false.
+  bool require_fips_mode = 10;
 }
 
 message TokenConfig {

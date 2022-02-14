@@ -27,8 +27,7 @@ using ::testing::HasSubstr;
 
 TEST(FipsTest, InitializeFailsFipsSelfTestFipsModeRequired) {
   std::string config_file = std::tmpnam(nullptr);
-  std::ofstream(config_file)
-      << "experimental_require_fips_mode: true" << std::endl;
+  std::ofstream(config_file) << "require_fips_mode: true" << std::endl;
   absl::Cleanup c = [&] { std::remove(config_file.c_str()); };
 
   CK_C_INITIALIZE_ARGS init_args = {0};

@@ -33,7 +33,7 @@ TEST(FipsTest, InitializePassesFipsSelfTestFipsModeRequired) {
       << absl::StrFormat(R"(
 kms_endpoint: %s
 use_insecure_grpc_channel_credentials: true
-experimental_require_fips_mode: true
+require_fips_mode: true
 )",
                          fake_kms->listen_addr());
   absl::Cleanup c = [&] { std::remove(config_file.c_str()); };
