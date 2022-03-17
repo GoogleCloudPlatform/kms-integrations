@@ -79,7 +79,7 @@ absl::Status RsaPkcs1Signer::Sign(KmsClient* client,
                    DigestForMechanism(*object()->algorithm().digest_mechanism));
   ASSIGN_OR_RETURN(std::vector<uint8_t> digest,
                    ExtractDigest(data, EVP_MD_type(md)));
-  return KmsDigestSigner::Sign(client, digest, signature);
+  return KmsPrehashedSigner::Sign(client, digest, signature);
 }
 
 absl::StatusOr<std::unique_ptr<VerifierInterface>> RsaPkcs1Verifier::New(

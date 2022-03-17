@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "kmsp11/operation/kms_digest_signer.h"
+#include "kmsp11/operation/kms_prehashed_signer.h"
 
 #include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/errors.h"
@@ -20,9 +20,9 @@
 
 namespace kmsp11 {
 
-absl::Status KmsDigestSigner::Sign(KmsClient* client,
-                                   absl::Span<const uint8_t> digest,
-                                   absl::Span<uint8_t> signature) {
+absl::Status KmsPrehashedSigner::Sign(KmsClient* client,
+                                      absl::Span<const uint8_t> digest,
+                                      absl::Span<uint8_t> signature) {
   ASSIGN_OR_RETURN(const EVP_MD* md,
                    DigestForMechanism(*object_->algorithm().digest_mechanism));
 
@@ -67,7 +67,7 @@ absl::Status KmsDigestSigner::Sign(KmsClient* client,
   return absl::OkStatus();
 }
 
-absl::Status KmsDigestSigner::CopySignature(std::string_view src,
+absl::Status KmsPrehashedSigner::CopySignature(std::string_view src,
                                             absl::Span<uint8_t> dest) {
   if (src.size() != signature_length()) {
     return NewInternalError(

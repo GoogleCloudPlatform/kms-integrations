@@ -20,7 +20,7 @@
 #include <string_view>
 
 #include "kmsp11/openssl.h"
-#include "kmsp11/operation/kms_digest_signer.h"
+#include "kmsp11/operation/kms_prehashed_signer.h"
 #include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/string_utils.h"
 
@@ -28,7 +28,7 @@ namespace kmsp11 {
 
 // An implementation of SignerInterface that makes ECDSA signatures using Cloud
 // KMS.
-class EcdsaSigner : public KmsDigestSigner {
+class EcdsaSigner : public KmsPrehashedSigner {
  public:
   static absl::StatusOr<std::unique_ptr<SignerInterface>> New(
       std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
@@ -42,7 +42,7 @@ class EcdsaSigner : public KmsDigestSigner {
 
  private:
   EcdsaSigner(std::shared_ptr<Object> object, bssl::UniquePtr<EC_KEY> key)
-      : KmsDigestSigner(object), key_(std::move(key)) {}
+      : KmsPrehashedSigner(object), key_(std::move(key)) {}
 
   bssl::UniquePtr<EC_KEY> key_;
 };
