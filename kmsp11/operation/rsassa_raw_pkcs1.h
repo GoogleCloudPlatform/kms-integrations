@@ -35,6 +35,7 @@ class RsaRawPkcs1Signer : public SignerInterface {
       std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
 
   size_t signature_length() override;
+  Object* object() override { return object_.get(); };
 
   absl::Status Sign(KmsClient* client, absl::Span<const uint8_t> data,
                     absl::Span<uint8_t> signature) override;

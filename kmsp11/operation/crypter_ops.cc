@@ -15,6 +15,7 @@
 #include "kmsp11/operation/crypter_ops.h"
 
 #include "kmsp11/operation/ecdsa.h"
+#include "kmsp11/operation/kms_digesting_signer.h"
 #include "kmsp11/operation/rsaes_oaep.h"
 #include "kmsp11/operation/rsassa_pkcs1.h"
 #include "kmsp11/operation/rsassa_pss.h"
@@ -57,6 +58,9 @@ absl::StatusOr<SignOp> NewSignOp(std::shared_ptr<Object> key,
       return RsaPkcs1Signer::New(key, mechanism);
     case CKM_RSA_PKCS_PSS:
       return RsaPssSigner::New(key, mechanism);
+    case CKM_ECDSA_SHA256:
+    case CKM_ECDSA_SHA384:
+      return KmsDigestingSigner::New(key, mechanism);
     default:
       return InvalidMechanismError(mechanism->mechanism, "sign",
                                    SOURCE_LOCATION);

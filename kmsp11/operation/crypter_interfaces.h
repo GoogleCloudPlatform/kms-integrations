@@ -42,6 +42,7 @@ class DecrypterInterface {
 class SignerInterface {
  public:
   virtual size_t signature_length() = 0;
+  virtual Object* object() = 0;
 
   virtual absl::Status Sign(KmsClient* client, absl::Span<const uint8_t> data,
                             absl::Span<uint8_t> signature) = 0;

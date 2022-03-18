@@ -27,6 +27,8 @@ namespace kmsp11 {
 // An abstract SignerInterface that makes signatures using Cloud KMS.
 class KmsPrehashedSigner : public SignerInterface {
  public:
+  Object* object() override { return object_.get(); }
+
   virtual absl::Status Sign(KmsClient* client, absl::Span<const uint8_t> digest,
                             absl::Span<uint8_t> signature) override;
 
@@ -39,8 +41,6 @@ class KmsPrehashedSigner : public SignerInterface {
   // between signature types for ECDSA signatures.
   virtual absl::Status CopySignature(std::string_view src,
                                      absl::Span<uint8_t> dest);
-
-  Object* object() { return object_.get(); }
 
  private:
   std::shared_ptr<Object> object_;
