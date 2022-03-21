@@ -529,7 +529,7 @@ absl::Status Encrypt(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pData,
   return absl::OkStatus();
 }
 
-// Begin a sign operation.
+// Begin a single-part or multi-part sign operation.
 // http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc235002372
 absl::Status SignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechanism,
                       CK_OBJECT_HANDLE hKey) {
@@ -542,7 +542,7 @@ absl::Status SignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechanism,
   return session->SignInit(key, pMechanism);
 }
 
-// Complete a sign operation.
+// Complete a single-part sign operation.
 // http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc235002373
 absl::Status Sign(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pData,
                   CK_ULONG ulDataLen, CK_BYTE_PTR pSignature,
@@ -577,6 +577,66 @@ absl::Status Sign(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pData,
   session->ReleaseOperation();
   if (result.ok()) {
     *pulSignatureLen = sig_length;
+  }
+  return result;
+}
+
+// Continue a multi-part sign operation.
+// https://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc323024145
+absl::Status SignUpdate(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pPart,
+                        CK_ULONG ulPartLen) {
+  ASSIGN_OR_RETURN(std::shared_ptr<Session> session, GetSession(hSession));
+  if (!pPart) {
+    session->ReleaseOperation();
+    return NullArgumentError("pData", SOURCE_LOCATION);
+  }
+
+  absl::Status result =
+      session->SignUpdate(absl::MakeConstSpan(pPart, ulPartLen));
+
+  if (!result.ok()) {
+    session->ReleaseOperation();
+  }
+  return result;
+}
+
+// Complete a multi-part sign operation.
+// http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc323024146
+absl::Status SignFinal(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pSignature,
+                       CK_ULONG_PTR pulSignatureLen) {
+  ASSIGN_OR_RETURN(std::shared_ptr<Session> session, GetSession(hSession));
+  if (!pulSignatureLen) {
+    session->ReleaseOperation();
+    return NullArgumentError("pulSignatureLen", SOURCE_LOCATION);
+  }
+
+  absl::StatusOr<size_t> sig_length = session->SignatureLength();
+  if (!sig_length.ok()) {
+    session->ReleaseOperation();
+    return sig_length.status();
+  }
+
+  if (!pSignature) {
+    *pulSignatureLen = *sig_length;
+    return absl::OkStatus();
+  }
+
+  if (*pulSignatureLen < *sig_length) {
+    session->ReleaseOperation();
+    absl::Status result = OutOfRangeError(
+        absl::StrFormat(
+            "signature of length %d cannot fit in buffer of length %d",
+            *sig_length, *pulSignatureLen),
+        SOURCE_LOCATION);
+    *pulSignatureLen = *sig_length;
+    return result;
+  }
+
+  absl::Status result =
+      session->SignFinal(absl::MakeSpan(pSignature, *sig_length));
+  session->ReleaseOperation();
+  if (result.ok()) {
+    *pulSignatureLen = *sig_length;
   }
   return result;
 }

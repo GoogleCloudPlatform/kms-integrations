@@ -35,6 +35,10 @@ class KmsDigestingSigner : public SignerInterface {
 
   virtual absl::Status Sign(KmsClient* client, absl::Span<const uint8_t> data,
                             absl::Span<uint8_t> signature) override;
+  absl::Status SignUpdate(KmsClient* client,
+                          absl::Span<const uint8_t> data) override;
+  absl::Status SignFinal(KmsClient* client,
+                         absl::Span<uint8_t> signature) override;
 
   size_t signature_length() override;
   Object* object() override { return inner_signer_->object(); };
@@ -42,15 +46,13 @@ class KmsDigestingSigner : public SignerInterface {
   virtual ~KmsDigestingSigner() {}
 
  protected:
-  KmsDigestingSigner(std::unique_ptr<SignerInterface> signer,
-                     bssl::UniquePtr<EVP_MD_CTX> ctx)
-      : inner_signer_(std::move(signer)) {
-    md_ctx_ = std::move(ctx);
-  }
+  KmsDigestingSigner(std::unique_ptr<SignerInterface> signer, const EVP_MD* md)
+      : inner_signer_(std::move(signer)), md_(md) {}
 
  private:
   std::unique_ptr<SignerInterface> inner_signer_;
   bssl::UniquePtr<EVP_MD_CTX> md_ctx_;
+  const EVP_MD* md_;
 };
 
 }  // namespace kmsp11

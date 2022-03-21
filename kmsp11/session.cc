@@ -319,6 +319,26 @@ absl::Status Session::Sign(absl::Span<const uint8_t> digest,
   return std::get<SignOp>(op_.value())->Sign(kms_client_, digest, signature);
 }
 
+absl::Status Session::SignUpdate(absl::Span<const uint8_t> data) {
+  absl::MutexLock l(&op_mutex_);
+
+  if (!op_.has_value() || !std::holds_alternative<SignOp>(*op_)) {
+    return OperationNotInitializedError("sign", SOURCE_LOCATION);
+  }
+
+  return std::get<SignOp>(*op_)->SignUpdate(kms_client_, data);
+}
+
+absl::Status Session::SignFinal(absl::Span<uint8_t> signature) {
+  absl::MutexLock l(&op_mutex_);
+
+  if (!op_.has_value() || !std::holds_alternative<SignOp>(*op_)) {
+    return OperationNotInitializedError("sign", SOURCE_LOCATION);
+  }
+
+  return std::get<SignOp>(*op_)->SignFinal(kms_client_, signature);
+}
+
 absl::StatusOr<size_t> Session::SignatureLength() {
   absl::MutexLock l(&op_mutex_);
 

@@ -1833,6 +1833,29 @@ TEST_F(AsymmetricSignTest, SignVerifySuccess) {
       StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
+TEST_F(AsymmetricSignTest, SignMultiPartSuccess) {
+  std::vector<uint8_t> data_part1 = {0xDE, 0xAD};
+  std::vector<uint8_t> data_part2 = {0xBE, 0xEF};
+
+  CK_MECHANISM mech{CKM_ECDSA_SHA256, nullptr, 0};
+
+  EXPECT_OK(SignInit(session_, &mech, private_key_));
+
+  EXPECT_OK(SignUpdate(session_, data_part1.data(), data_part1.size()));
+  EXPECT_OK(SignUpdate(session_, data_part2.data(), data_part2.size()));
+
+  CK_ULONG signature_size;
+  EXPECT_OK(SignFinal(session_, nullptr, &signature_size));
+  EXPECT_EQ(signature_size, 64);
+
+  std::vector<uint8_t> signature(signature_size);
+  EXPECT_OK(SignFinal(session_, signature.data(), &signature_size));
+
+  // Operation should be terminated after success
+  EXPECT_THAT(SignUpdate(session_, data_part1.data(), data_part1.size()),
+              StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
+}
+
 TEST_F(AsymmetricSignTest, SignHashTooSmall) {
   CK_MECHANISM mech{CKM_ECDSA, nullptr, 0};
   EXPECT_OK(SignInit(session_, &mech, private_key_));
@@ -1904,6 +1927,39 @@ TEST_F(AsymmetricSignTest, SignFailsOperationNotInitialized) {
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
+TEST_F(AsymmetricSignTest, SignUpdateFailsOperationNotInitialized) {
+  uint8_t data[32];
+  EXPECT_THAT(SignUpdate(session_, data, sizeof(data)),
+              StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
+}
+
+TEST_F(AsymmetricSignTest, SignFinalFailsOperationNotInitialized) {
+  CK_ULONG signature_size;
+  EXPECT_THAT(SignFinal(session_, nullptr, &signature_size),
+              StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
+}
+
+TEST_F(AsymmetricSignTest, SignFinalFailsWithoutUpdate) {
+  CK_MECHANISM mech{CKM_ECDSA_SHA256, nullptr, 0};
+  EXPECT_OK(SignInit(session_, &mech, private_key_));
+  CK_ULONG signature_size = 64;
+  std::vector<uint8_t> signature(signature_size);
+  EXPECT_THAT(SignFinal(session_, signature.data(), &signature_size),
+              StatusRvIs(CKR_FUNCTION_FAILED));
+}
+
+TEST_F(AsymmetricSignTest, SignSinglePartFailsAfterUpdate) {
+  CK_MECHANISM mech{CKM_ECDSA_SHA256, nullptr, 0};
+  EXPECT_OK(SignInit(session_, &mech, private_key_));
+  std::vector<uint8_t> data = {0xDE, 0xAD, 0xBE, 0xEF};
+  CK_ULONG signature_size = 64;
+  std::vector<uint8_t> signature(signature_size);
+  EXPECT_OK(SignUpdate(session_, data.data(), data.size()));
+  EXPECT_THAT(Sign(session_, data.data(), data.size(), signature.data(),
+                   &signature_size),
+              StatusRvIs(CKR_FUNCTION_FAILED));
+}
+
 TEST_F(AsymmetricSignTest, SignFailsNullHash) {
   CK_MECHANISM mech{CKM_ECDSA, nullptr, 0};
   EXPECT_OK(SignInit(session_, &mech, private_key_));
@@ -1911,6 +1967,23 @@ TEST_F(AsymmetricSignTest, SignFailsNullHash) {
   CK_ULONG signature_size;
   EXPECT_THAT(Sign(session_, nullptr, 0, nullptr, &signature_size),
               StatusRvIs(CKR_ARGUMENTS_BAD));
+}
+
+TEST_F(AsymmetricSignTest, SignUpdateInvalidMechanism) {
+  CK_MECHANISM mech{CKM_ECDSA, nullptr, 0};
+  EXPECT_OK(SignInit(session_, &mech, private_key_));
+  uint8_t data[32];
+  EXPECT_THAT(SignUpdate(session_, data, sizeof(data)),
+              StatusRvIs(CKR_FUNCTION_FAILED));
+}
+
+TEST_F(AsymmetricSignTest, SignFinalInvalidMechanism) {
+  CK_MECHANISM mech{CKM_ECDSA, nullptr, 0};
+  EXPECT_OK(SignInit(session_, &mech, private_key_));
+  CK_ULONG signature_size = 64;
+  std::vector<uint8_t> signature(signature_size);
+  EXPECT_THAT(SignFinal(session_, signature.data(), &signature_size),
+              StatusRvIs(CKR_FUNCTION_FAILED));
 }
 
 TEST_F(AsymmetricSignTest, VerifyFailsNullSignatureSize) {

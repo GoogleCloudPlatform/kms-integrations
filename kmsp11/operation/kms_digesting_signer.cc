@@ -32,24 +32,55 @@ absl::StatusOr<std::unique_ptr<SignerInterface>> KmsDigestingSigner::New(
 
   ASSIGN_OR_RETURN(std::unique_ptr<SignerInterface> inner_signer,
                    EcdsaSigner::New(key, &inner_mechanism));
-  bssl::UniquePtr<EVP_MD_CTX> ctx(EVP_MD_CTX_new());
+  ASSIGN_OR_RETURN(const EVP_MD* md,
+                   DigestForMechanism(*key->algorithm().digest_mechanism));
 
   return std::unique_ptr<SignerInterface>(
-      new KmsDigestingSigner(std::move(inner_signer), std::move(ctx)));
+      new KmsDigestingSigner(std::move(inner_signer), md));
 }
 
 absl::Status KmsDigestingSigner::Sign(KmsClient* client,
                                       absl::Span<const uint8_t> data,
                                       absl::Span<uint8_t> signature) {
-  ASSIGN_OR_RETURN(const EVP_MD* md,
-                   DigestForMechanism(*object()->algorithm().digest_mechanism));
+  if (md_ctx_) {
+    return FailedPreconditionError(
+        "Sign cannot be used to terminate a multi-part signing operation",
+        CKR_FUNCTION_FAILED, SOURCE_LOCATION);
+  }
 
-  if (EVP_DigestInit(md_ctx_.get(), md) != 1) {
+  const size_t md_size = EVP_MD_size(md_);
+  std::vector<uint8_t> evp_digest(md_size);
+  unsigned int digest_len;
+  bssl::UniquePtr<EVP_MD_CTX> ctx(EVP_MD_CTX_new());
+  if (EVP_Digest(data.data(), data.size(), evp_digest.data(), &digest_len, md_,
+                 nullptr) != 1) {
     return NewInternalError(
-        absl::StrFormat(
-            "failed while initializing EVP digest with digest size %d",
-            EVP_MD_size(md)),
+        absl::StrFormat("failed while computing EVP digest with digest size %d",
+                        md_size),
         SOURCE_LOCATION);
+  }
+
+  if (digest_len != md_size) {
+    return NewInternalError(
+        absl::StrFormat("computed digest has incorrect size (got %d, want %d)",
+                        digest_len, md_size),
+        SOURCE_LOCATION);
+  }
+
+  return inner_signer_->Sign(client, evp_digest, signature);
+}
+
+absl::Status KmsDigestingSigner::SignUpdate(KmsClient* client,
+                                            absl::Span<const uint8_t> data) {
+  if (!md_ctx_) {
+    md_ctx_ = bssl::UniquePtr<EVP_MD_CTX>(EVP_MD_CTX_new());
+    if (EVP_DigestInit(md_ctx_.get(), md_) != 1) {
+      return NewInternalError(
+          absl::StrFormat(
+              "failed while initializing EVP digest with digest size %d",
+              EVP_MD_size(md_)),
+          SOURCE_LOCATION);
+    }
   }
 
   if (EVP_DigestUpdate(md_ctx_.get(), data.data(), data.size()) != 1) {
@@ -57,17 +88,29 @@ absl::Status KmsDigestingSigner::Sign(KmsClient* client,
                             SOURCE_LOCATION);
   }
 
-  std::vector<uint8_t> evp_digest(EVP_MD_size(md));
+  return absl::OkStatus();
+}
+
+absl::Status KmsDigestingSigner::SignFinal(KmsClient* client,
+                                           absl::Span<uint8_t> signature) {
+  if (!md_ctx_) {
+    return FailedPreconditionError(
+        "SignUpdate needs to be called prior to terminating a multi-part "
+        "signing operation",
+        CKR_FUNCTION_FAILED, SOURCE_LOCATION);
+  }
+
+  std::vector<uint8_t> evp_digest(EVP_MD_size(md_));
   unsigned int digest_len;
   if (EVP_DigestFinal(md_ctx_.get(), evp_digest.data(), &digest_len) != 1) {
     return NewInternalError("failed while finalizing EVP digest",
                             SOURCE_LOCATION);
   }
 
-  if (digest_len != EVP_MD_size(md)) {
+  if (digest_len != EVP_MD_size(md_)) {
     return NewInternalError(
         absl::StrFormat("computed digest has incorrect size (got %d, want %d)",
-                        digest_len, EVP_MD_size(md)),
+                        digest_len, EVP_MD_size(md_)),
         SOURCE_LOCATION);
   }
 

@@ -128,5 +128,49 @@ TEST_F(KmsDigestingSignerTest, SignSignatureLengthInvalid) {
                     StatusRvIs(CKR_GENERAL_ERROR)));
 }
 
+TEST_F(KmsDigestingSignerTest, SignMultiPartSuccess) {
+  std::vector<uint8_t> data = {0xDE, 0xAD, 0xBE, 0xEF};
+  std::vector<uint8_t> data_part1 = {0xDE, 0xAD};
+  std::vector<uint8_t> data_part2 = {0xBE, 0xEF};
+
+  CK_MECHANISM mech{CKM_ECDSA_SHA256, nullptr, 0};
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<SignerInterface> signer,
+                       KmsDigestingSigner::New(prv_, &mech));
+  std::vector<uint8_t> sig(signer->signature_length());
+  EXPECT_OK(signer->SignUpdate(client_.get(), data_part1));
+  EXPECT_OK(signer->SignUpdate(client_.get(), data_part2));
+  EXPECT_OK(signer->SignFinal(client_.get(), absl::MakeSpan(sig)));
+
+  uint8_t digest[32];
+  SHA256(data.data(), data.size(), digest);
+  EXPECT_OK(EcdsaVerifyP1363(EVP_PKEY_get0_EC_KEY(public_key_.get()),
+                             EVP_sha256(), digest, sig));
+}
+
+TEST_F(KmsDigestingSignerTest, SignFinalWithoutUpdateFails) {
+  std::vector<uint8_t> data = {0xDE, 0xAD, 0xBE, 0xEF};
+
+  CK_MECHANISM mech{CKM_ECDSA_SHA256, nullptr, 0};
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<SignerInterface> signer,
+                       KmsDigestingSigner::New(prv_, &mech));
+  std::vector<uint8_t> sig(signer->signature_length());
+  EXPECT_THAT(signer->SignFinal(client_.get(), absl::MakeSpan(sig)),
+              AllOf(StatusIs(absl::StatusCode::kFailedPrecondition),
+                    StatusRvIs(CKR_FUNCTION_FAILED)));
+}
+
+TEST_F(KmsDigestingSignerTest, SignSinglePartAfterUpdateFails) {
+  std::vector<uint8_t> data = {0xDE, 0xAD, 0xBE, 0xEF};
+
+  CK_MECHANISM mech{CKM_ECDSA_SHA256, nullptr, 0};
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<SignerInterface> signer,
+                       KmsDigestingSigner::New(prv_, &mech));
+  std::vector<uint8_t> sig(signer->signature_length());
+  EXPECT_OK(signer->SignUpdate(client_.get(), data));
+  EXPECT_THAT(signer->Sign(client_.get(), data, absl::MakeSpan(sig)),
+              AllOf(StatusIs(absl::StatusCode::kFailedPrecondition),
+                    StatusRvIs(CKR_FUNCTION_FAILED)));
+}
+
 }  // namespace
 }  // namespace kmsp11

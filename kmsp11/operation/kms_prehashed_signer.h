@@ -31,6 +31,10 @@ class KmsPrehashedSigner : public SignerInterface {
 
   virtual absl::Status Sign(KmsClient* client, absl::Span<const uint8_t> digest,
                             absl::Span<uint8_t> signature) override;
+  absl::Status SignUpdate(KmsClient* client,
+                          absl::Span<const uint8_t> data) override;
+  absl::Status SignFinal(KmsClient* client,
+                         absl::Span<uint8_t> signature) override;
 
   virtual ~KmsPrehashedSigner() {}
 

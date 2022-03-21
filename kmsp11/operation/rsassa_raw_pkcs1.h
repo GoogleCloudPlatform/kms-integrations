@@ -39,6 +39,10 @@ class RsaRawPkcs1Signer : public SignerInterface {
 
   absl::Status Sign(KmsClient* client, absl::Span<const uint8_t> data,
                     absl::Span<uint8_t> signature) override;
+  absl::Status SignUpdate(KmsClient* client,
+                          absl::Span<const uint8_t> data) override;
+  absl::Status SignFinal(KmsClient* client,
+                         absl::Span<uint8_t> signature) override;
 
   virtual ~RsaRawPkcs1Signer() {}
 

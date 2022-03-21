@@ -46,6 +46,10 @@ class SignerInterface {
 
   virtual absl::Status Sign(KmsClient* client, absl::Span<const uint8_t> data,
                             absl::Span<uint8_t> signature) = 0;
+  virtual absl::Status SignUpdate(KmsClient* client,
+                                  absl::Span<const uint8_t> data) = 0;
+  virtual absl::Status SignFinal(KmsClient* client,
+                                 absl::Span<uint8_t> signature) = 0;
 
   virtual ~SignerInterface() {}
 };

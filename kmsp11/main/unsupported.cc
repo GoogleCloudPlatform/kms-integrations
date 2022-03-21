@@ -127,16 +127,6 @@ absl::Status DigestFinal(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pDigest,
   return UnsupportedError(SOURCE_LOCATION);
 }
 
-absl::Status SignUpdate(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pPart,
-                        CK_ULONG ulPartLen) {
-  return UnsupportedError(SOURCE_LOCATION);
-}
-
-absl::Status SignFinal(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pSignature,
-                       CK_ULONG_PTR pulSignatureLen) {
-  return UnsupportedError(SOURCE_LOCATION);
-}
-
 absl::Status SignRecoverInit(CK_SESSION_HANDLE hSession,
                              CK_MECHANISM_PTR pMechanism,
                              CK_OBJECT_HANDLE hKey) {

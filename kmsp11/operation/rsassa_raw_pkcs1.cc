@@ -81,6 +81,24 @@ absl::Status RsaRawPkcs1Signer::Sign(KmsClient* client,
   return absl::OkStatus();
 }
 
+absl::Status RsaRawPkcs1Signer::SignUpdate(KmsClient* client,
+                                           absl::Span<const uint8_t> data) {
+  return NewInvalidArgumentError(
+      absl::StrFormat(
+          "provided mechanism %d does not support multi-part signing",
+          object_->algorithm().algorithm),
+      CKR_ARGUMENTS_BAD, SOURCE_LOCATION);
+}
+
+absl::Status RsaRawPkcs1Signer::SignFinal(KmsClient* client,
+                                          absl::Span<uint8_t> signature) {
+  return NewInvalidArgumentError(
+      absl::StrFormat(
+          "provided mechanism %d does not support multi-part signing",
+          object_->algorithm().algorithm),
+      CKR_ARGUMENTS_BAD, SOURCE_LOCATION);
+}
+
 absl::StatusOr<std::unique_ptr<VerifierInterface>> RsaRawPkcs1Verifier::New(
     std::shared_ptr<Object> key, const CK_MECHANISM* mechanism) {
   RETURN_IF_ERROR(
