@@ -27,6 +27,7 @@
 #include "kmsp11/util/global_provider.h"
 #include "kmsp11/util/logging.h"
 #include "kmsp11/util/status_macros.h"
+#include "kmsp11/util/status_utils.h"
 
 namespace kmsp11 {
 namespace {
@@ -446,33 +447,38 @@ absl::Status Decrypt(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pEncryptedData,
                      CK_ULONG_PTR pulDataLen) {
   ASSIGN_OR_RETURN(std::shared_ptr<Session> session, GetSession(hSession));
   if (!pEncryptedData) {
+    session->ReleaseOperation();
     return NullArgumentError("pEncryptedData", SOURCE_LOCATION);
   }
   if (!pulDataLen) {
+    session->ReleaseOperation();
     return NullArgumentError("pulDataLen", SOURCE_LOCATION);
   }
 
-  ASSIGN_OR_RETURN(absl::Span<const uint8_t> plaintext,
-                   session->Decrypt(absl::MakeConstSpan(pEncryptedData,
-                                                        ulEncryptedDataLen)));
+  absl::StatusOr<absl::Span<const uint8_t>> plaintext =
+      session->Decrypt(absl::MakeConstSpan(pEncryptedData, ulEncryptedDataLen));
+  if (!plaintext.ok()) {
+    session->ReleaseOperation();
+    return plaintext.status();
+  }
 
   if (!pData) {
-    *pulDataLen = plaintext.size();
+    *pulDataLen = plaintext->size();
     return absl::OkStatus();
   }
 
-  if (*pulDataLen < plaintext.size()) {
+  if (*pulDataLen < plaintext->size()) {
     absl::Status result = OutOfRangeError(
         absl::StrFormat(
             "plaintext of length %d cannot fit in buffer of length %d",
-            plaintext.size(), *pulDataLen),
+            plaintext->size(), *pulDataLen),
         SOURCE_LOCATION);
-    *pulDataLen = plaintext.size();
+    *pulDataLen = plaintext->size();
     return result;
   }
 
-  std::copy(plaintext.begin(), plaintext.end(), pData);
-  *pulDataLen = plaintext.size();
+  std::copy(plaintext->begin(), plaintext->end(), pData);
+  *pulDataLen = plaintext->size();
 
   session->ReleaseOperation();
   return absl::OkStatus();
@@ -498,32 +504,38 @@ absl::Status Encrypt(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pData,
                      CK_ULONG_PTR pulEncryptedDataLen) {
   ASSIGN_OR_RETURN(std::shared_ptr<Session> session, GetSession(hSession));
   if (!pData) {
+    session->ReleaseOperation();
     return NullArgumentError("pData", SOURCE_LOCATION);
   }
   if (!pulEncryptedDataLen) {
+    session->ReleaseOperation();
     return NullArgumentError("pulEncryptedDataLen", SOURCE_LOCATION);
   }
 
-  ASSIGN_OR_RETURN(absl::Span<const uint8_t> ciphertext,
-                   session->Encrypt(absl::MakeConstSpan(pData, ulDataLen)));
+  absl::StatusOr<absl::Span<const uint8_t>> ciphertext =
+      session->Encrypt(absl::MakeConstSpan(pData, ulDataLen));
+  if (!ciphertext.ok()) {
+    session->ReleaseOperation();
+    return ciphertext.status();
+  }
 
   if (!pEncryptedData) {
-    *pulEncryptedDataLen = ciphertext.size();
+    *pulEncryptedDataLen = ciphertext->size();
     return absl::OkStatus();
   }
 
-  if (*pulEncryptedDataLen < ciphertext.size()) {
+  if (*pulEncryptedDataLen < ciphertext->size()) {
     absl::Status result = OutOfRangeError(
         absl::StrFormat(
             "ciphertext of length %d cannot fit in buffer of length %d",
-            ciphertext.size(), *pulEncryptedDataLen),
+            ciphertext->size(), *pulEncryptedDataLen),
         SOURCE_LOCATION);
-    *pulEncryptedDataLen = ciphertext.size();
+    *pulEncryptedDataLen = ciphertext->size();
     return result;
   }
 
-  std::copy(ciphertext.begin(), ciphertext.end(), pEncryptedData);
-  *pulEncryptedDataLen = ciphertext.size();
+  std::copy(ciphertext->begin(), ciphertext->end(), pEncryptedData);
+  *pulEncryptedDataLen = ciphertext->size();
 
   session->ReleaseOperation();
   return absl::OkStatus();
@@ -549,34 +561,40 @@ absl::Status Sign(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pData,
                   CK_ULONG_PTR pulSignatureLen) {
   ASSIGN_OR_RETURN(std::shared_ptr<Session> session, GetSession(hSession));
   if (!pData) {
+    session->ReleaseOperation();
     return NullArgumentError("pData", SOURCE_LOCATION);
   }
   if (!pulSignatureLen) {
+    session->ReleaseOperation();
     return NullArgumentError("pulSignatureLen", SOURCE_LOCATION);
   }
 
-  ASSIGN_OR_RETURN(size_t sig_length, session->SignatureLength());
+  absl::StatusOr<size_t> sig_length = session->SignatureLength();
+  if (!sig_length.ok()) {
+    session->ReleaseOperation();
+    return sig_length.status();
+  }
 
   if (!pSignature) {
-    *pulSignatureLen = sig_length;
+    *pulSignatureLen = *sig_length;
     return absl::OkStatus();
   }
 
-  if (*pulSignatureLen < sig_length) {
+  if (*pulSignatureLen < *sig_length) {
     absl::Status result = OutOfRangeError(
         absl::StrFormat(
             "signature of length %d cannot fit in buffer of length %d",
-            sig_length, *pulSignatureLen),
+            *sig_length, *pulSignatureLen),
         SOURCE_LOCATION);
-    *pulSignatureLen = sig_length;
+    *pulSignatureLen = *sig_length;
     return result;
   }
 
   absl::Status result = session->Sign(absl::MakeConstSpan(pData, ulDataLen),
-                                      absl::MakeSpan(pSignature, sig_length));
+                                      absl::MakeSpan(pSignature, *sig_length));
   session->ReleaseOperation();
   if (result.ok()) {
-    *pulSignatureLen = sig_length;
+    *pulSignatureLen = *sig_length;
   }
   return result;
 }
@@ -622,7 +640,6 @@ absl::Status SignFinal(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pSignature,
   }
 
   if (*pulSignatureLen < *sig_length) {
-    session->ReleaseOperation();
     absl::Status result = OutOfRangeError(
         absl::StrFormat(
             "signature of length %d cannot fit in buffer of length %d",
@@ -661,9 +678,11 @@ absl::Status Verify(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pData,
                     CK_ULONG ulSignatureLen) {
   ASSIGN_OR_RETURN(std::shared_ptr<Session> session, GetSession(hSession));
   if (!pData) {
+    session->ReleaseOperation();
     return NullArgumentError("pData", SOURCE_LOCATION);
   }
   if (!pSignature) {
+    session->ReleaseOperation();
     return NullArgumentError("pSignature", SOURCE_LOCATION);
   }
 

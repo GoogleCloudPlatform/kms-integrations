@@ -1593,6 +1593,12 @@ TEST_F(AsymmetricCryptTest, DecryptFailsNullCiphertext) {
   CK_ULONG plaintext_size;
   EXPECT_THAT(Decrypt(session_, nullptr, 0, nullptr, &plaintext_size),
               StatusRvIs(CKR_ARGUMENTS_BAD));
+
+  uint8_t ciphertext[256];
+  // Operation should now be terminated.
+  EXPECT_THAT(Decrypt(session_, ciphertext, sizeof(ciphertext), nullptr,
+                      &plaintext_size),
+              StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
 TEST_F(AsymmetricCryptTest, DecryptFailsNullPlaintextSize) {
@@ -1606,6 +1612,12 @@ TEST_F(AsymmetricCryptTest, DecryptFailsNullPlaintextSize) {
   EXPECT_THAT(
       Decrypt(session_, ciphertext, sizeof(ciphertext), nullptr, nullptr),
       StatusRvIs(CKR_ARGUMENTS_BAD));
+
+  CK_ULONG plaintext_size;
+  // Operation should now be terminated.
+  EXPECT_THAT(Decrypt(session_, ciphertext, sizeof(ciphertext), nullptr,
+                      &plaintext_size),
+              StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
 TEST_F(AsymmetricCryptTest, EncryptSuccess) {
@@ -1739,6 +1751,12 @@ TEST_F(AsymmetricCryptTest, EncryptFailsNullPLaintext) {
   CK_ULONG ciphertext_size;
   EXPECT_THAT(Encrypt(session_, nullptr, 0, nullptr, &ciphertext_size),
               StatusRvIs(CKR_ARGUMENTS_BAD));
+
+  uint8_t plaintext[32];
+  // Operation should now be terminated.
+  EXPECT_THAT(Encrypt(session_, plaintext, sizeof(plaintext), nullptr,
+                      &ciphertext_size),
+              StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
 TEST_F(AsymmetricCryptTest, EncryptFailsNullCiphertextSize) {
@@ -1751,6 +1769,12 @@ TEST_F(AsymmetricCryptTest, EncryptFailsNullCiphertextSize) {
   uint8_t plaintext[32];
   EXPECT_THAT(Encrypt(session_, plaintext, sizeof(plaintext), nullptr, nullptr),
               StatusRvIs(CKR_ARGUMENTS_BAD));
+
+  CK_ULONG ciphertext_size;
+  // Operation should now be terminated.
+  EXPECT_THAT(Encrypt(session_, plaintext, sizeof(plaintext), nullptr,
+                      &ciphertext_size),
+              StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
 class AsymmetricSignTest : public BridgeTest {
@@ -1967,6 +1991,12 @@ TEST_F(AsymmetricSignTest, SignFailsNullHash) {
   CK_ULONG signature_size;
   EXPECT_THAT(Sign(session_, nullptr, 0, nullptr, &signature_size),
               StatusRvIs(CKR_ARGUMENTS_BAD));
+
+  std::vector<uint8_t> hash(32), sig(64);
+  // Operation should now be terminated.
+  EXPECT_THAT(
+      Sign(session_, hash.data(), hash.size(), sig.data(), &signature_size),
+      StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
 TEST_F(AsymmetricSignTest, SignUpdateInvalidMechanism) {
@@ -2083,6 +2113,11 @@ TEST_F(AsymmetricSignTest, VerifyFailsNullHash) {
   uint8_t sig[64];
   EXPECT_THAT(Verify(session_, nullptr, 0, sig, sizeof(sig)),
               StatusRvIs(CKR_ARGUMENTS_BAD));
+
+  uint8_t hash[32];
+  // Operation should be terminated after failure
+  EXPECT_THAT(Verify(session_, hash, sizeof(hash), sig, sizeof(sig)),
+              StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
 TEST_F(AsymmetricSignTest, VerifyFailsNullSignature) {
@@ -2092,6 +2127,11 @@ TEST_F(AsymmetricSignTest, VerifyFailsNullSignature) {
   uint8_t hash[32];
   EXPECT_THAT(Verify(session_, hash, sizeof(hash), nullptr, 0),
               StatusRvIs(CKR_ARGUMENTS_BAD));
+
+  uint8_t sig[64];
+  // Operation should be terminated after failure
+  EXPECT_THAT(Verify(session_, hash, sizeof(hash), sig, sizeof(sig)),
+              StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
 }  // namespace
