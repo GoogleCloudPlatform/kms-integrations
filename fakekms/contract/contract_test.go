@@ -47,24 +47,24 @@ func TestMain(m *testing.M) {
 		"the duration to sleep between Get requests when waiting on asynchronous events")
 	kmsEndpoint := flag.String("kms_endpoint", "",
 		"the KMS endpoint to use for requests; if unspecified, fakekms will be used")
-	credsFilePath := flag.String("credentials_file", "",
-		"the google application credentials file to use for authentication; ignored for fake runs")
+	quotaProject := flag.String("quota_project", "",
+		"the quota project to use with real KMS; ignored for fake runs")
 	flag.Parse()
 
 	if *kmsEndpoint == "" {
 		testFakeKMS(m)
 	} else {
-		testRealKMS(m, *kmsEndpoint, *credsFilePath)
+		testRealKMS(m, *kmsEndpoint, *quotaProject)
 	}
 }
 
-func testRealKMS(m *testing.M, kmsEndpoint, credsFilePath string) {
+func testRealKMS(m *testing.M, kmsEndpoint, quotaProject string) {
 	initCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	opts := []option.ClientOption{option.WithEndpoint(kmsEndpoint)}
-	if credsFilePath != "" {
-		opts = append(opts, option.WithCredentialsFile(credsFilePath))
+	if quotaProject != "" {
+		opts = append(opts, option.WithQuotaProject(quotaProject))
 	}
 
 	c, err := kms.NewKeyManagementClient(initCtx, opts...)
