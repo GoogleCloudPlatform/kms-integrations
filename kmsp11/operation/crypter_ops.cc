@@ -62,6 +62,8 @@ absl::StatusOr<SignOp> NewSignOp(std::shared_ptr<Object> key,
     case CKM_ECDSA_SHA384:
     case CKM_SHA256_RSA_PKCS:
     case CKM_SHA512_RSA_PKCS:
+    case CKM_SHA256_RSA_PKCS_PSS:
+    case CKM_SHA512_RSA_PKCS_PSS:
       return KmsDigestingSigner::New(key, mechanism);
     default:
       return InvalidMechanismError(mechanism->mechanism, "sign",

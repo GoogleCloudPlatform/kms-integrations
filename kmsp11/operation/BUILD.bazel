@@ -86,6 +86,7 @@ cc_library(
         ":crypter_interfaces",
         ":ecdsa",
         ":rsassa_pkcs1",
+        ":rsassa_pss",
         ":kms_prehashed_signer",
         ":preconditions",
         "//kmsp11:cryptoki_headers",
@@ -103,6 +104,7 @@ cc_test(
     deps = [
         ":kms_digesting_signer",
         ":rsassa_pkcs1",
+        ":rsassa_pss",
         "//fakekms/cpp:fakekms",
         "//kmsp11/test",
         "@com_google_googletest//:gtest_main",

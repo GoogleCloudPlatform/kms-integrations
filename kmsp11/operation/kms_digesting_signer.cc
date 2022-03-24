@@ -18,6 +18,7 @@
 #include "kmsp11/operation/kms_prehashed_signer.h"
 #include "kmsp11/operation/preconditions.h"
 #include "kmsp11/operation/rsassa_pkcs1.h"
+#include "kmsp11/operation/rsassa_pss.h"
 #include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/status_macros.h"
@@ -43,6 +44,13 @@ absl::StatusOr<std::unique_ptr<SignerInterface>> KmsDigestingSigner::New(
       ASSIGN_OR_RETURN(
           inner_signer,
           RsaPkcs1Signer::New(key, &inner_mechanism, ExpectedInput::kDigest));
+      break;
+    }
+    case CKM_SHA256_RSA_PKCS_PSS:
+    case CKM_SHA512_RSA_PKCS_PSS: {
+      inner_mechanism = {CKM_RSA_PKCS_PSS, mechanism->pParameter,
+                         mechanism->ulParameterLen};
+      ASSIGN_OR_RETURN(inner_signer, RsaPssSigner::New(key, &inner_mechanism));
       break;
     }
     default:
