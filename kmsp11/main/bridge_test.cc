@@ -34,10 +34,12 @@ namespace {
 using ::testing::AllOf;
 using ::testing::AnyOf;
 using ::testing::ElementsAre;
+using ::testing::ElementsAreArray;
 using ::testing::Ge;
 using ::testing::HasSubstr;
 using ::testing::IsEmpty;
 using ::testing::IsSupersetOf;
+using ::testing::Not;
 
 class BridgeTest : public testing::Test {
  protected:
@@ -1402,6 +1404,43 @@ TEST_F(BridgeTest, DestroyObjectSuccessPrivateKey) {
   EXPECT_OK(FindObjectsFinal(session));
 
   EXPECT_OK(DestroyObject(session, handle));
+}
+
+TEST_F(BridgeTest, GenerateRandomSuccess) {
+  EXPECT_OK(Initialize(&init_args_));
+  absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
+
+  std::vector<uint8_t> zeroes(32, '\0');
+  std::vector<uint8_t> rand(zeroes);
+  EXPECT_OK(GenerateRandom(session, rand.data(), rand.size()));
+  EXPECT_THAT(rand, Not(ElementsAreArray(zeroes)));
+}
+
+TEST_F(BridgeTest, GenerateRandomFailsNotInitialized) {
+  EXPECT_THAT(GenerateRandom(0, nullptr, 0),
+              StatusRvIs(CKR_CRYPTOKI_NOT_INITIALIZED));
+}
+
+TEST_F(BridgeTest, GenerateRandomFailsInvalidSessionHandle) {
+  EXPECT_OK(Initialize(&init_args_));
+  absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
+
+  EXPECT_THAT(GenerateRandom(0, nullptr, 0),
+              StatusRvIs(CKR_SESSION_HANDLE_INVALID));
+}
+
+TEST_F(BridgeTest, GenerateRandomFailsNullBuffer) {
+  EXPECT_OK(Initialize(&init_args_));
+  absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
+
+  EXPECT_THAT(GenerateRandom(session, nullptr, 0),
+              StatusRvIs(CKR_ARGUMENTS_BAD));
 }
 
 class AsymmetricCryptTest : public BridgeTest {

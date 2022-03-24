@@ -78,6 +78,8 @@ class Session {
 
   absl::Status DestroyObject(std::shared_ptr<Object> object);
 
+  absl::Status GenerateRandom(absl::Span<uint8_t> buffer);
+
  private:
   Token* token_;
   const SessionType session_type_;

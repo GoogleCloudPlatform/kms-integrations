@@ -469,4 +469,30 @@ absl::Status Session::DestroyObject(std::shared_ptr<Object> key) {
   return absl::OkStatus();
 }
 
+absl::Status Session::GenerateRandom(absl::Span<uint8_t> buffer) {
+  if (buffer.size() < 8 || buffer.size() > 1024) {
+    return NewError(
+        absl::StatusCode::kInvalidArgument,
+        "GenerateRandom buffer length must be between 8 and 1024 bytes",
+        CKR_ARGUMENTS_BAD, SOURCE_LOCATION);
+  }
+
+  kms_v1::GenerateRandomBytesRequest req;
+  req.set_protection_level(kms_v1::HSM);
+  req.set_length_bytes(buffer.size());
+  req.set_location(*ExtractLocationName(token_->key_ring_name()));
+
+  ASSIGN_OR_RETURN(kms_v1::GenerateRandomBytesResponse resp,
+                   kms_client_->GenerateRandomBytes(req));
+  if (resp.data().size() != buffer.size()) {
+    return NewInternalError(
+        absl::StrFormat("requested %d bytes of data from KMS but received %d",
+                        buffer.size(), resp.data().size()),
+        SOURCE_LOCATION);
+  }
+
+  std::copy(resp.data().begin(), resp.data().end(), buffer.data());
+  return absl::OkStatus();
+}
+
 }  // namespace kmsp11

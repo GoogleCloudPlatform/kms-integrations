@@ -17,6 +17,7 @@
 #include <fstream>
 
 #include "absl/strings/str_format.h"
+#include "absl/strings/str_join.h"
 #include "kmsp11/util/errors.h"
 
 namespace kmsp11 {
@@ -68,6 +69,17 @@ absl::StatusOr<std::string> ExtractKeyId(std::string_view version_name) {
         SOURCE_LOCATION);
   }
   return parts[7];
+}
+
+absl::StatusOr<std::string> ExtractLocationName(
+    std::string_view key_ring_name) {
+  std::vector<std::string> parts = absl::StrSplit(key_ring_name, '/');
+  if (parts.size() != 6 || parts[0] != "projects" || parts[2] != "locations" ||
+      parts[4] != "keyRings") {
+    return NewInternalError(
+        absl::StrCat("invalid KeyRing name: ", key_ring_name), SOURCE_LOCATION);
+  }
+  return absl::StrJoin(absl::Span<std::string>(parts.data(), 4), "/");
 }
 
 absl::StatusOr<std::string> ReadFileToString(const std::string& file_path) {

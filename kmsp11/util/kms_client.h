@@ -81,6 +81,9 @@ class KmsClient {
   CryptoKeyVersionsRange ListCryptoKeyVersions(
       const kms_v1::ListCryptoKeyVersionsRequest& request) const;
 
+  absl::StatusOr<kms_v1::GenerateRandomBytesResponse> GenerateRandomBytes(
+      const kms_v1::GenerateRandomBytesRequest& request) const;
+
  private:
   absl::Status WaitForGeneration(kms_v1::CryptoKeyVersion& ckv,
                                  absl::Time deadline) const;

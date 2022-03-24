@@ -27,6 +27,8 @@
 namespace kmsp11 {
 namespace {
 
+using ::testing::SizeIs;
+
 std::unique_ptr<KmsClient> NewClient(
     std::string_view listen_addr,
     absl::Duration rpc_timeout = absl::Milliseconds(500)) {
@@ -598,6 +600,23 @@ TEST(KmsClientTest, ClientRetriesTransparentlyOnServerDeadlineExceeded) {
   // Expecting OK status because our retry policy should retry on
   // DEADLINE_EXCEEDED.
   EXPECT_THAT(got_ck, EqualsProto(ck));
+}
+
+TEST(KmsClientTest, GenerateRandomBytesSuccess) {
+  constexpr size_t kByteLength = 64;
+
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake,
+                       fakekms::Server::New());
+  std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
+
+  kms_v1::GenerateRandomBytesRequest req;
+  req.set_location(std::string(kTestLocation));
+  req.set_protection_level(kms_v1::HSM);
+  req.set_length_bytes(kByteLength);
+
+  ASSERT_OK_AND_ASSIGN(kms_v1::GenerateRandomBytesResponse resp,
+                       client->GenerateRandomBytes(req));
+  EXPECT_THAT(resp.data(), SizeIs(kByteLength));
 }
 
 }  // namespace

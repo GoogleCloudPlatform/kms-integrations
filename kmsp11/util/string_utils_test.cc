@@ -144,5 +144,30 @@ TEST(ReadFileToStringTest, NonExistentFileReturnsFailedPrecondition) {
                        HasSubstr("failed to read file")));
 }
 
+TEST(ExtractorTest, ExtractKeyIdSuccess) {
+  EXPECT_THAT(ExtractKeyId("projects/foo/locations/global/keyRings/bar/"
+                           "cryptoKeys/baz/cryptoKeyVersions/1"),
+              IsOkAndHolds("baz"));
+}
+
+TEST(ExtractorTest, ExtractKeyIdFailure) {
+  EXPECT_THAT(ExtractKeyId("projects/foo/locations/global/keyRings/bar/"
+                           "cryptoKeys/baz"),
+              StatusIs(absl::StatusCode::kInternal,
+                       HasSubstr("invalid CryptoKeyVersion name")));
+}
+
+TEST(ExtractorTest, ExtractLocationNameSuccess) {
+  EXPECT_THAT(ExtractLocationName("projects/foo/locations/global/keyRings/bar"),
+              IsOkAndHolds("projects/foo/locations/global"));
+}
+
+TEST(ExtractorTest, ExtractLocationNameFailure) {
+  EXPECT_THAT(
+      ExtractLocationName(
+          "projects/foo/locations/global/keyRings/bar/cryptoKeys/baz"),
+      StatusIs(absl::StatusCode::kInternal, HasSubstr("invalid KeyRing name")));
+}
+
 }  // namespace
 }  // namespace kmsp11

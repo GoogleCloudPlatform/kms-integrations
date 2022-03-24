@@ -268,6 +268,22 @@ CryptoKeyVersionsRange KmsClient::ListCryptoKeyVersions(
       });
 }
 
+absl::StatusOr<kms_v1::GenerateRandomBytesResponse>
+KmsClient::GenerateRandomBytes(
+    const kms_v1::GenerateRandomBytesRequest& request) const {
+  grpc::ClientContext ctx;
+  AddContextSettings(&ctx, "location", request.location());
+
+  kms_v1::GenerateRandomBytesResponse response;
+  absl::Status rpc_result =
+      ToStatus(kms_stub_->GenerateRandomBytes(&ctx, request, &response));
+  if (!rpc_result.ok()) {
+    SetErrorRv(rpc_result, CKR_DEVICE_ERROR);
+    return rpc_result;
+  }
+  return response;
+}
+
 absl::Status KmsClient::WaitForGeneration(kms_v1::CryptoKeyVersion& ckv,
                                           absl::Time deadline) const {
   // The time for newly generated HSM keys to flip to enabled in (real) KMS

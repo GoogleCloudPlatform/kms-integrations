@@ -49,8 +49,8 @@ absl::StatusOr<CK_TOKEN_INFO> NewTokenInfo(std::string_view token_label) {
       {0},  // manufacturerID (set with ' ' padding below)
       {0},  // model (set with ' ' padding below)
       {0},  // serialNumber (set below)
-      CKF_USER_PIN_INITIALIZED | CKF_TOKEN_INITIALIZED |
-          CKF_SO_PIN_LOCKED,       // flags
+      CKF_USER_PIN_INITIALIZED | CKF_TOKEN_INITIALIZED | CKF_SO_PIN_LOCKED |
+          CKF_RNG,                 // flags
       CK_EFFECTIVELY_INFINITE,     // ulMaxSessionCount
       CK_UNAVAILABLE_INFORMATION,  // ulSessionCount
       CK_EFFECTIVELY_INFINITE,     // ulMaxRwSessionCount

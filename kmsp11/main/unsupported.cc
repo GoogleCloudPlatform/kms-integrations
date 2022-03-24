@@ -208,11 +208,6 @@ absl::Status SeedRandom(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pSeed,
   return UnsupportedError(SOURCE_LOCATION);
 }
 
-absl::Status GenerateRandom(CK_SESSION_HANDLE hSession, CK_BYTE_PTR RandomData,
-                            CK_ULONG ulRandomLen) {
-  return UnsupportedError(SOURCE_LOCATION);
-}
-
 absl::Status GetFunctionStatus(CK_SESSION_HANDLE hSession) {
   return UnsupportedError(SOURCE_LOCATION);
 }

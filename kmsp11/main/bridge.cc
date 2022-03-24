@@ -785,4 +785,15 @@ absl::Status DestroyObject(CK_SESSION_HANDLE hSession,
   return session->DestroyObject(object);
 }
 
+// Retrieve HSM randomness.
+// http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/errata01/os/pkcs11-base-v2.40-errata01-os-complete.html#_Toc323024163
+absl::Status GenerateRandom(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pRandomData,
+                            CK_ULONG ulRandomLen) {
+  ASSIGN_OR_RETURN(std::shared_ptr<Session> session, GetSession(hSession));
+  if (!pRandomData) {
+    return NullArgumentError("pRandomData", SOURCE_LOCATION);
+  }
+  return session->GenerateRandom(absl::MakeSpan(pRandomData, ulRandomLen));
+}
+
 }  // namespace kmsp11

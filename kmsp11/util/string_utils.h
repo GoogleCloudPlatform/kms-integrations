@@ -77,6 +77,11 @@ std::string MarshalULongList(absl::Span<const unsigned long int> value);
 // "projects/foo/locations/us/keyRings/bar/cryptoKeys/baz/cryptoKeyVersions/1".
 absl::StatusOr<std::string> ExtractKeyId(std::string_view version_name);
 
+// Extracts the Location name component from the provided KeyRing name.
+// For example, returns "projects/foo/locations/us" if provided an input of
+// "projects/foo/locations/us/keyRings/bar".
+absl::StatusOr<std::string> ExtractLocationName(std::string_view key_ring_name);
+
 // Reads the file from the provided filesystem path to a string. Returns
 // FailedPrecondition on error; for example if the file does not exist, or there
 // are insufficient permissions to read it.

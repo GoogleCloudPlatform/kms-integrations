@@ -25,8 +25,10 @@ namespace kmsp11 {
 namespace {
 
 using ::testing::AllOf;
+using ::testing::ElementsAreArray;
 using ::testing::HasSubstr;
 using ::testing::IsEmpty;
+using ::testing::Not;
 using ::testing::Pointee;
 using ::testing::Property;
 using ::testing::SizeIs;
@@ -42,8 +44,8 @@ class SessionTest : public testing::Test {
 
     config_.set_key_ring(key_ring_.name());
     client_ = std::make_unique<KmsClient>(fake_server_->listen_addr(),
-                                           grpc::InsecureChannelCredentials(),
-                                           absl::Seconds(5));
+                                          grpc::InsecureChannelCredentials(),
+                                          absl::Seconds(5));
   }
 
   std::unique_ptr<fakekms::Server> fake_server_;
@@ -894,6 +896,61 @@ TEST_F(SessionTest, SignVerifyMultiPartSuccess) {
   EXPECT_OK(s.VerifyInit(pub, &mech));
   EXPECT_OK(s.VerifyUpdate(data));
   EXPECT_OK(s.VerifyFinal(absl::MakeSpan(signature)));
+}
+
+TEST_F(SessionTest, GenerateRandomSuccess) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
+
+  std::vector<uint8_t> zero(32, '\0');
+  std::vector<uint8_t> rand(zero);
+  EXPECT_OK(s.GenerateRandom(absl::MakeSpan(rand)));
+  EXPECT_THAT(rand, Not(ElementsAreArray(zero)));
+}
+
+TEST_F(SessionTest, GenerateRandomSuccessMinBufferSize) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
+
+  std::vector<uint8_t> zero(8, '\0');
+  std::vector<uint8_t> rand(zero);
+  EXPECT_OK(s.GenerateRandom(absl::MakeSpan(rand)));
+  EXPECT_THAT(rand, Not(ElementsAreArray(zero)));
+}
+
+TEST_F(SessionTest, GenerateRandomSuccessMaxBufferSize) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
+
+  std::vector<uint8_t> zero(1024, '\0');
+  std::vector<uint8_t> rand(zero);
+  EXPECT_OK(s.GenerateRandom(absl::MakeSpan(rand)));
+  EXPECT_THAT(rand, Not(ElementsAreArray(zero)));
+}
+
+TEST_F(SessionTest, GenerateRandomFailureUndersizedBuffer) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
+
+  std::vector<uint8_t> rand(7);
+  EXPECT_THAT(s.GenerateRandom(absl::MakeSpan(rand)),
+              AllOf(StatusIs(absl::StatusCode::kInvalidArgument),
+                    StatusRvIs(CKR_ARGUMENTS_BAD)));
+}
+
+TEST_F(SessionTest, GenerateRandomFailureOversizedBuffer) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
+
+  std::vector<uint8_t> rand(1025);
+  EXPECT_THAT(s.GenerateRandom(absl::MakeSpan(rand)),
+              AllOf(StatusIs(absl::StatusCode::kInvalidArgument),
+                    StatusRvIs(CKR_ARGUMENTS_BAD)));
 }
 
 class GenerateKeyPairTest : public SessionTest {};

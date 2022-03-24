@@ -216,7 +216,7 @@ Function                                         | Status | Notes
 [`C_UnwrapKey`][C_UnwrapKey]                     | ❌      |
 [`C_DeriveKey`][C_DeriveKey]                     | ❌      |
 [`C_SeedRandom`][C_SeedRandom]                   | ❌      |
-[`C_GenerateRandom`][C_GenerateRandom]           | ❌      |
+[`C_GenerateRandom`][C_GenerateRandom]           | ✅      | Retrieves between 8 and 1024 bytes of randomness from Cloud HSM.
 [`C_GetFunctionStatus`][C_GetFunctionStatus]     | ❌      |
 [`C_CancelFunction`][C_CancelFunction]           | ❌      |
 
