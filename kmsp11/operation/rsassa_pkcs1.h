@@ -26,12 +26,16 @@
 
 namespace kmsp11 {
 
+// Enum representing if the input data is a plain digest or an ASN.1 DigestInfo.
+enum class ExpectedInput { kDigest, kAsn1DigestInfo };
+
 // An implementation of SignerInterface that makes RSASSA-PKCS1 signatures using
 // Cloud KMS.
 class RsaPkcs1Signer : public KmsPrehashedSigner {
  public:
   static absl::StatusOr<std::unique_ptr<SignerInterface>> New(
-      std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
+      std::shared_ptr<Object> key, const CK_MECHANISM* mechanism,
+      ExpectedInput input_type = ExpectedInput::kAsn1DigestInfo);
 
   size_t signature_length() override;
 
@@ -41,10 +45,14 @@ class RsaPkcs1Signer : public KmsPrehashedSigner {
   virtual ~RsaPkcs1Signer() {}
 
  private:
-  RsaPkcs1Signer(std::shared_ptr<Object> object, bssl::UniquePtr<RSA> key)
-      : KmsPrehashedSigner(object), key_(std::move(key)) {}
+  RsaPkcs1Signer(std::shared_ptr<Object> object, bssl::UniquePtr<RSA> key,
+                 ExpectedInput input_type)
+      : KmsPrehashedSigner(object),
+        key_(std::move(key)),
+        input_type_(input_type) {}
 
   bssl::UniquePtr<RSA> key_;
+  ExpectedInput input_type_;
 };
 
 class RsaPkcs1Verifier : public VerifierInterface {

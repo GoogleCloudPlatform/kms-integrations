@@ -56,7 +56,8 @@ absl::StatusOr<std::vector<uint8_t>> ExtractDigest(
 }  // namespace
 
 absl::StatusOr<std::unique_ptr<SignerInterface>> RsaPkcs1Signer::New(
-    std::shared_ptr<Object> key, const CK_MECHANISM* mechanism) {
+    std::shared_ptr<Object> key, const CK_MECHANISM* mechanism,
+    ExpectedInput input_type) {
   RETURN_IF_ERROR(
       CheckKeyPreconditions(CKK_RSA, CKO_PRIVATE_KEY, CKM_RSA_PKCS, key.get()));
   RETURN_IF_ERROR(EnsureNoParameters(mechanism));
@@ -67,7 +68,8 @@ absl::StatusOr<std::unique_ptr<SignerInterface>> RsaPkcs1Signer::New(
                    ParseX509PublicKeyDer(key_der));
 
   return std::unique_ptr<SignerInterface>(new RsaPkcs1Signer(
-      key, bssl::UniquePtr<RSA>(EVP_PKEY_get1_RSA(parsed_key.get()))));
+      key, bssl::UniquePtr<RSA>(EVP_PKEY_get1_RSA(parsed_key.get())),
+      input_type));
 }
 
 size_t RsaPkcs1Signer::signature_length() { return RSA_size(key_.get()); }
@@ -75,6 +77,10 @@ size_t RsaPkcs1Signer::signature_length() { return RSA_size(key_.get()); }
 absl::Status RsaPkcs1Signer::Sign(KmsClient* client,
                                   absl::Span<const uint8_t> data,
                                   absl::Span<uint8_t> signature) {
+  if (input_type_ == ExpectedInput::kDigest) {
+    return KmsPrehashedSigner::Sign(client, data, signature);
+  }
+
   ASSIGN_OR_RETURN(const EVP_MD* md,
                    DigestForMechanism(*object()->algorithm().digest_mechanism));
   ASSIGN_OR_RETURN(std::vector<uint8_t> digest,

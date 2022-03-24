@@ -17,6 +17,7 @@
 #include "kmsp11/operation/ecdsa.h"
 #include "kmsp11/operation/kms_prehashed_signer.h"
 #include "kmsp11/operation/preconditions.h"
+#include "kmsp11/operation/rsassa_pkcs1.h"
 #include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/status_macros.h"
@@ -25,13 +26,32 @@ namespace kmsp11 {
 
 absl::StatusOr<std::unique_ptr<SignerInterface>> KmsDigestingSigner::New(
     std::shared_ptr<Object> key, const CK_MECHANISM* mechanism) {
-  CK_MECHANISM inner_mechanism{CKM_ECDSA, nullptr, 0};
-  RETURN_IF_ERROR(CheckKeyPreconditions(CKK_EC, CKO_PRIVATE_KEY,
-                                        inner_mechanism.mechanism, key.get()));
-  RETURN_IF_ERROR(EnsureNoParameters(mechanism));
+  CK_MECHANISM inner_mechanism;
+  std::unique_ptr<SignerInterface> inner_signer;
+  switch (mechanism->mechanism) {
+    case CKM_ECDSA_SHA256:
+    case CKM_ECDSA_SHA384: {
+      inner_mechanism = {CKM_ECDSA, nullptr, 0};
+      RETURN_IF_ERROR(EnsureNoParameters(mechanism));
+      ASSIGN_OR_RETURN(inner_signer, EcdsaSigner::New(key, &inner_mechanism));
+      break;
+    }
+    case CKM_SHA256_RSA_PKCS:
+    case CKM_SHA512_RSA_PKCS: {
+      inner_mechanism = {CKM_RSA_PKCS, nullptr, 0};
+      RETURN_IF_ERROR(EnsureNoParameters(mechanism));
+      ASSIGN_OR_RETURN(
+          inner_signer,
+          RsaPkcs1Signer::New(key, &inner_mechanism, ExpectedInput::kDigest));
+      break;
+    }
+    default:
+      return NewInternalError(
+          absl::StrFormat("KmsDigestingSigner does not support mechanism %d",
+                          mechanism->mechanism),
+          SOURCE_LOCATION);
+  }
 
-  ASSIGN_OR_RETURN(std::unique_ptr<SignerInterface> inner_signer,
-                   EcdsaSigner::New(key, &inner_mechanism));
   ASSIGN_OR_RETURN(const EVP_MD* md,
                    DigestForMechanism(*key->algorithm().digest_mechanism));
 

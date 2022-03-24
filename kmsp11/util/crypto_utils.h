@@ -141,6 +141,12 @@ absl::Status RsaVerifyPss(EVP_PKEY* public_key, const EVP_MD* hash,
 absl::Status RsaVerifyRawPkcs1(RSA* public_key, absl::Span<const uint8_t> data,
                                absl::Span<const uint8_t> signature);
 
+// Build a DigestInfo structure, which is the expected input into a CKM_RSA_PKCS
+// signing operation.
+// http://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/errata01/os/pkcs11-curr-v2.40-errata01-os-complete.html#_Toc441850410
+absl::StatusOr<std::vector<uint8_t>> BuildRsaDigestInfo(
+    int digest_nid, absl::Span<const uint8_t> digest);
+
 // Clear the memory at the provided location, taking care to avoid letting the
 // compiler optimize this out.
 //

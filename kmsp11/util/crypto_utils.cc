@@ -579,6 +579,34 @@ absl::Status RsaVerifyRawPkcs1(RSA* public_key, absl::Span<const uint8_t> data,
   return absl::OkStatus();
 }
 
+// Build a DigestInfo structure, which is the expected input into a CKM_RSA_PKCS
+// signing operation.
+// http://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/errata01/os/pkcs11-curr-v2.40-errata01-os-complete.html#_Toc441850410
+absl::StatusOr<std::vector<uint8_t>> BuildRsaDigestInfo(
+    int digest_nid, absl::Span<const uint8_t> digest) {
+  X509_ALGOR* algorithm;
+  ASN1_OCTET_STRING* dig;
+  bssl::UniquePtr<X509_SIG> digest_info(X509_SIG_new());
+  X509_SIG_getm(digest_info.get(), &algorithm, &dig);
+
+  if (X509_ALGOR_set0(algorithm, OBJ_nid2obj(digest_nid), V_ASN1_NULL,
+                      nullptr) != 1) {
+    return absl::InternalError(absl::StrCat(
+        "failure setting algorithm parameters: ", SslErrorToString()));
+  }
+  if (ASN1_OCTET_STRING_set(dig, digest.data(), digest.size()) != 1) {
+    return absl::InternalError(
+        absl::StrCat("failure setting digest value: ", SslErrorToString()));
+  }
+
+  ASSIGN_OR_RETURN(std::string digest_info_der,
+                   MarshalX509Sig(digest_info.get()));
+  return std::vector<uint8_t>(
+      reinterpret_cast<const uint8_t*>(digest_info_der.data()),
+      reinterpret_cast<const uint8_t*>(digest_info_der.data() +
+                                       digest_info_der.size()));
+}
+
 void SafeZeroMemory(volatile char* ptr, size_t size) {
   while (size--) {
     *ptr++ = 0;

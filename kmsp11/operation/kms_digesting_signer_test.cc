@@ -16,6 +16,7 @@
 
 #include "fakekms/cpp/fakekms.h"
 #include "kmsp11/object.h"
+#include "kmsp11/operation/rsassa_pkcs1.h"
 #include "kmsp11/test/resource_helpers.h"
 #include "kmsp11/test/test_status_macros.h"
 #include "kmsp11/util/crypto_utils.h"
@@ -32,7 +33,7 @@ TEST(NewSignerTest, ParamInvalid) {
   std::shared_ptr<Object> key = std::make_shared<Object>(kp.private_key);
 
   char buf[1];
-  CK_MECHANISM mechanism{CKM_ECDSA, buf, sizeof(buf)};
+  CK_MECHANISM mechanism{CKM_ECDSA_SHA256, buf, sizeof(buf)};
   EXPECT_THAT(KmsDigestingSigner::New(key, &mechanism),
               StatusRvIs(CKR_MECHANISM_PARAM_INVALID));
 }
@@ -44,7 +45,7 @@ TEST(NewSignerTest, FailureWrongKeyType) {
                      "rsa_2048_public.pem"));
   std::shared_ptr<Object> key = std::make_shared<Object>(kp.private_key);
 
-  CK_MECHANISM mechanism{CKM_ECDSA, nullptr, 0};
+  CK_MECHANISM mechanism{CKM_ECDSA_SHA256, nullptr, 0};
   EXPECT_THAT(KmsDigestingSigner::New(key, &mechanism),
               StatusRvIs(CKR_KEY_TYPE_INCONSISTENT));
 }
@@ -55,14 +56,26 @@ TEST(NewSignerTest, FailureWrongObjectClass) {
                                  "ec_p256_public.pem"));
   std::shared_ptr<Object> key = std::make_shared<Object>(kp.public_key);
 
-  CK_MECHANISM mechanism{CKM_ECDSA, nullptr, 0};
+  CK_MECHANISM mechanism{CKM_ECDSA_SHA256, nullptr, 0};
   EXPECT_THAT(KmsDigestingSigner::New(key, &mechanism),
               StatusRvIs(CKR_KEY_FUNCTION_NOT_PERMITTED));
 }
 
+TEST(NewSignerTest, FailureWrongMechanism) {
+  ASSERT_OK_AND_ASSIGN(
+      KeyPair kp, NewMockKeyPair(kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256,
+                                 "ec_p256_public.pem"));
+  std::shared_ptr<Object> key = std::make_shared<Object>(kp.public_key);
+
+  CK_MECHANISM mechanism{CKM_AES_MAC, nullptr, 0};
+  EXPECT_THAT(KmsDigestingSigner::New(key, &mechanism),
+              StatusRvIs(CKR_GENERAL_ERROR));
+}
+
 class KmsDigestingSignerTest : public testing::Test {
  protected:
-  void SetUp() override {
+  void SetUp(google::cloud::kms::v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm
+                 algorithm) {
     ASSERT_OK_AND_ASSIGN(fake_server_, fakekms::Server::New());
     client_ = std::make_unique<KmsClient>(fake_server_->listen_addr(),
                                           grpc::InsecureChannelCredentials(),
@@ -75,8 +88,7 @@ class KmsDigestingSignerTest : public testing::Test {
 
     kms_v1::CryptoKey ck;
     ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
-    ck.mutable_version_template()->set_algorithm(
-        kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+    ck.mutable_version_template()->set_algorithm(algorithm);
     ck = CreateCryptoKeyOrDie(fake_client.get(), kr.name(), "ck", ck, true);
 
     kms_v1::CryptoKeyVersion ckv;
@@ -102,6 +114,7 @@ class KmsDigestingSignerTest : public testing::Test {
 };
 
 TEST_F(KmsDigestingSignerTest, SignSuccess) {
+  SetUp(kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
   std::vector<uint8_t> data = {0xDE, 0xAD, 0xBE, 0xEF};
 
   CK_MECHANISM mech{CKM_ECDSA_SHA256, nullptr, 0};
@@ -117,6 +130,7 @@ TEST_F(KmsDigestingSignerTest, SignSuccess) {
 }
 
 TEST_F(KmsDigestingSignerTest, SignSignatureLengthInvalid) {
+  SetUp(kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
   uint8_t data[123], sig[97];
 
   CK_MECHANISM mech{CKM_ECDSA_SHA256, nullptr, 0};
@@ -129,6 +143,7 @@ TEST_F(KmsDigestingSignerTest, SignSignatureLengthInvalid) {
 }
 
 TEST_F(KmsDigestingSignerTest, SignMultiPartSuccess) {
+  SetUp(kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
   std::vector<uint8_t> data = {0xDE, 0xAD, 0xBE, 0xEF};
   std::vector<uint8_t> data_part1 = {0xDE, 0xAD};
   std::vector<uint8_t> data_part2 = {0xBE, 0xEF};
@@ -148,6 +163,7 @@ TEST_F(KmsDigestingSignerTest, SignMultiPartSuccess) {
 }
 
 TEST_F(KmsDigestingSignerTest, SignFinalWithoutUpdateFails) {
+  SetUp(kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
   std::vector<uint8_t> data = {0xDE, 0xAD, 0xBE, 0xEF};
 
   CK_MECHANISM mech{CKM_ECDSA_SHA256, nullptr, 0};
@@ -160,6 +176,7 @@ TEST_F(KmsDigestingSignerTest, SignFinalWithoutUpdateFails) {
 }
 
 TEST_F(KmsDigestingSignerTest, SignSinglePartAfterUpdateFails) {
+  SetUp(kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
   std::vector<uint8_t> data = {0xDE, 0xAD, 0xBE, 0xEF};
 
   CK_MECHANISM mech{CKM_ECDSA_SHA256, nullptr, 0};
@@ -170,6 +187,29 @@ TEST_F(KmsDigestingSignerTest, SignSinglePartAfterUpdateFails) {
   EXPECT_THAT(signer->Sign(client_.get(), data, absl::MakeSpan(sig)),
               AllOf(StatusIs(absl::StatusCode::kFailedPrecondition),
                     StatusRvIs(CKR_FUNCTION_FAILED)));
+}
+
+TEST_F(KmsDigestingSignerTest, Pkcs1SignSuccess) {
+  SetUp(kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_2048_SHA256);
+  std::vector<uint8_t> data = {0xDE, 0xAD, 0xBE, 0xEF};
+
+  CK_MECHANISM mech{CKM_SHA256_RSA_PKCS, nullptr, 0};
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<SignerInterface> signer,
+                       KmsDigestingSigner::New(prv_, &mech));
+  std::vector<uint8_t> sig(signer->signature_length());
+  EXPECT_OK(signer->Sign(client_.get(), data, absl::MakeSpan(sig)));
+
+  uint8_t digest[32];
+  std::vector<uint8_t> prehashed_sig(signer->signature_length());
+  SHA256(data.data(), data.size(), digest);
+  ASSERT_OK_AND_ASSIGN(std::vector<uint8_t> digest_info,
+                       BuildRsaDigestInfo(NID_sha256, digest));
+  CK_MECHANISM inner_mech{CKM_RSA_PKCS, nullptr, 0};
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<SignerInterface> inner_signer,
+                       RsaPkcs1Signer::New(prv_, &inner_mech));
+  EXPECT_OK(inner_signer->Sign(client_.get(), digest_info,
+                               absl::MakeSpan(prehashed_sig)));
+  EXPECT_EQ(prehashed_sig, sig);
 }
 
 }  // namespace
