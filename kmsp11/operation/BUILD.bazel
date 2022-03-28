@@ -21,6 +21,7 @@ cc_library(
         ":crypter_interfaces",
         ":ecdsa",
         ":kms_digesting_signer",
+        ":kms_digesting_verifier",
         ":rsaes_oaep",
         ":rsassa_pkcs1",
         ":rsassa_pss",
@@ -105,6 +106,37 @@ cc_test(
         ":kms_digesting_signer",
         ":rsassa_pkcs1",
         ":rsassa_pss",
+        "//fakekms/cpp:fakekms",
+        "//kmsp11/test",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "kms_digesting_verifier",
+    srcs = ["kms_digesting_verifier.cc"],
+    hdrs = ["kms_digesting_verifier.h"],
+    deps = [
+        ":crypter_interfaces",
+        ":ecdsa",
+        ":preconditions",
+        ":rsassa_pkcs1",
+        ":rsassa_pss",
+        "//kmsp11:cryptoki_headers",
+        "//kmsp11/util:crypto_utils",
+        "//kmsp11/util:kms_client",
+        "//kmsp11/util:status_macros",
+        "@com_google_absl//absl/status:statusor",
+    ],
+)
+
+cc_test(
+    name = "kms_digesting_verifier_test",
+    size= "small",
+    srcs = ["kms_digesting_verifier_test.cc"],
+    deps = [
+        ":kms_digesting_verifier",
+        ":kms_digesting_signer",
         "//fakekms/cpp:fakekms",
         "//kmsp11/test",
         "@com_google_googletest//:gtest_main",

@@ -16,6 +16,7 @@
 
 #include "kmsp11/operation/ecdsa.h"
 #include "kmsp11/operation/kms_digesting_signer.h"
+#include "kmsp11/operation/kms_digesting_verifier.h"
 #include "kmsp11/operation/rsaes_oaep.h"
 #include "kmsp11/operation/rsassa_pkcs1.h"
 #include "kmsp11/operation/rsassa_pss.h"
@@ -83,6 +84,13 @@ absl::StatusOr<VerifyOp> NewVerifyOp(std::shared_ptr<Object> key,
       return RsaPkcs1Verifier::New(key, mechanism);
     case CKM_RSA_PKCS_PSS:
       return RsaPssVerifier::New(key, mechanism);
+    case CKM_ECDSA_SHA256:
+    case CKM_ECDSA_SHA384:
+    case CKM_SHA256_RSA_PKCS:
+    case CKM_SHA512_RSA_PKCS:
+    case CKM_SHA256_RSA_PKCS_PSS:
+    case CKM_SHA512_RSA_PKCS_PSS:
+      return KmsDigestingVerifier::New(key, mechanism);
     default:
       return InvalidMechanismError(mechanism->mechanism, "verify",
                                    SOURCE_LOCATION);

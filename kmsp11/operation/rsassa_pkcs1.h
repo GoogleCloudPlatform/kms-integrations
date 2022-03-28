@@ -58,7 +58,8 @@ class RsaPkcs1Signer : public KmsPrehashedSigner {
 class RsaPkcs1Verifier : public VerifierInterface {
  public:
   static absl::StatusOr<std::unique_ptr<VerifierInterface>> New(
-      std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
+      std::shared_ptr<Object> key, const CK_MECHANISM* mechanism,
+      ExpectedInput input_type = ExpectedInput::kAsn1DigestInfo);
 
   absl::Status Verify(KmsClient* client, absl::Span<const uint8_t> data,
                       absl::Span<const uint8_t> signature) override;
@@ -66,11 +67,13 @@ class RsaPkcs1Verifier : public VerifierInterface {
   virtual ~RsaPkcs1Verifier() {}
 
  private:
-  RsaPkcs1Verifier(std::shared_ptr<Object> object, bssl::UniquePtr<RSA> key)
-      : object_(object), key_(std::move(key)) {}
+  RsaPkcs1Verifier(std::shared_ptr<Object> object, bssl::UniquePtr<RSA> key,
+                   ExpectedInput input_type)
+      : object_(object), key_(std::move(key)), input_type_(input_type) {}
 
   std::shared_ptr<Object> object_;
   bssl::UniquePtr<RSA> key_;
+  ExpectedInput input_type_;
 };
 
 }  // namespace kmsp11

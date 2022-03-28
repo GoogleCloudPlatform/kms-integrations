@@ -89,7 +89,8 @@ absl::Status RsaPkcs1Signer::Sign(KmsClient* client,
 }
 
 absl::StatusOr<std::unique_ptr<VerifierInterface>> RsaPkcs1Verifier::New(
-    std::shared_ptr<Object> key, const CK_MECHANISM* mechanism) {
+    std::shared_ptr<Object> key, const CK_MECHANISM* mechanism,
+    ExpectedInput input_type) {
   RETURN_IF_ERROR(
       CheckKeyPreconditions(CKK_RSA, CKO_PUBLIC_KEY, CKM_RSA_PKCS, key.get()));
   RETURN_IF_ERROR(EnsureNoParameters(mechanism));
@@ -100,7 +101,8 @@ absl::StatusOr<std::unique_ptr<VerifierInterface>> RsaPkcs1Verifier::New(
                    ParseX509PublicKeyDer(key_der));
 
   return std::unique_ptr<VerifierInterface>(new RsaPkcs1Verifier(
-      key, bssl::UniquePtr<RSA>(EVP_PKEY_get1_RSA(parsed_key.get()))));
+      key, bssl::UniquePtr<RSA>(EVP_PKEY_get1_RSA(parsed_key.get())),
+      input_type));
 }
 
 absl::Status RsaPkcs1Verifier::Verify(KmsClient* client,
@@ -108,6 +110,10 @@ absl::Status RsaPkcs1Verifier::Verify(KmsClient* client,
                                       absl::Span<const uint8_t> signature) {
   ASSIGN_OR_RETURN(const EVP_MD* md,
                    DigestForMechanism(*object_->algorithm().digest_mechanism));
+  if (input_type_ == ExpectedInput::kDigest) {
+    return RsaVerifyPkcs1(key_.get(), md, data, signature);
+  }
+
   ASSIGN_OR_RETURN(std::vector<uint8_t> digest,
                    ExtractDigest(data, EVP_MD_type(md)));
   return RsaVerifyPkcs1(key_.get(), md, digest, signature);

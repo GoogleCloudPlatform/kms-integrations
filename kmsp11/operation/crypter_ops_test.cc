@@ -119,6 +119,16 @@ TEST(VerifyOpTest, ValidMechanismSuccess) {
   EXPECT_OK(NewVerifyOp(key, &mechanism));
 }
 
+TEST(VerifyOpTest, ValidDigestingMechanismSuccess) {
+  ASSERT_OK_AND_ASSIGN(
+      KeyPair kp, NewMockKeyPair(kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256,
+                                 "ec_p256_public.pem"));
+  std::shared_ptr<Object> key = std::make_shared<Object>(kp.public_key);
+
+  CK_MECHANISM mechanism{CKM_ECDSA_SHA256, nullptr, 0};
+  EXPECT_OK(NewVerifyOp(key, &mechanism));
+}
+
 TEST(VerifyOpTest, InvalidMechanismFailure) {
   CK_MECHANISM mech = {CKM_SHA_1_HMAC};
   EXPECT_THAT(NewVerifyOp(nullptr, &mech), StatusRvIs(CKR_MECHANISM_INVALID));
