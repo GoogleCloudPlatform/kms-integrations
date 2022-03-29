@@ -255,6 +255,13 @@ absl::Status CloseSession(CK_SESSION_HANDLE hSession) {
   return provider->CloseSession(hSession);
 }
 
+// Close all sessions between an application and a token.
+// http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc235002339
+absl::Status CloseAllSessions(CK_SLOT_ID slotID) {
+  ASSIGN_OR_RETURN(Provider * provider, GetProvider());
+  return provider->CloseAllSessions(slotID);
+}
+
 // Get information about a session.
 // http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc235002340
 absl::Status GetSessionInfo(CK_SESSION_HANDLE hSession,

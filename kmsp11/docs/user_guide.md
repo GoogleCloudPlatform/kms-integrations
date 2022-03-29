@@ -166,7 +166,7 @@ Function                                         | Status | Notes
 [`C_SetPIN`][C_SetPIN]                           | ❌      |
 [`C_OpenSession`][C_OpenSession]                 | ✅      | The flag `CKF_SERIAL_SESSION` must be supplied. The library does not make callbacks, so the arguments `pApplication` and `Notify` are ignored.
 [`C_CloseSession`][C_CloseSession]               | ✅      |
-[`C_CloseAllSessions`][C_CloseAllSessions]       | ❌      |
+[`C_CloseAllSessions`][C_CloseAllSessions]       | ✅      |
 [`C_GetSessionInfo`][C_GetSessionInfo]           | ✅      |
 [`C_GetOperationState`][C_GetOperationState]     | ❌      |
 [`C_SetOperationState`][C_SetOperationState]     | ❌      |

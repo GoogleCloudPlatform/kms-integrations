@@ -341,6 +341,34 @@ TEST_F(BridgeTest, CloseSessionFailsAlreadyClosed) {
   EXPECT_THAT(CloseSession(handle), StatusRvIs(CKR_SESSION_HANDLE_INVALID));
 }
 
+TEST_F(BridgeTest, CloseAllSessionsSuccessfullyClosesCorrectSessions) {
+  EXPECT_OK(Initialize(&init_args_));
+  absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
+
+  CK_SESSION_HANDLE h1, h2, h3, h4;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &h1));
+  EXPECT_OK(OpenSession(1, CKF_SERIAL_SESSION, nullptr, nullptr, &h2));
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &h3));
+  EXPECT_OK(OpenSession(1, CKF_SERIAL_SESSION, nullptr, nullptr, &h4));
+  EXPECT_OK(CloseAllSessions(0));
+
+  EXPECT_THAT(CloseSession(h1), StatusRvIs(CKR_SESSION_HANDLE_INVALID));
+  EXPECT_OK(CloseSession(h2));
+  EXPECT_THAT(CloseSession(h3), StatusRvIs(CKR_SESSION_HANDLE_INVALID));
+  EXPECT_OK(CloseSession(h4));
+}
+
+TEST_F(BridgeTest, CloseAllSessionsFailsNotInitialized) {
+  EXPECT_THAT(CloseAllSessions(0), StatusRvIs(CKR_CRYPTOKI_NOT_INITIALIZED));
+}
+
+TEST_F(BridgeTest, CloseAllSessionFailsInvalidSlotId) {
+  EXPECT_OK(Initialize(&init_args_));
+  absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
+
+  EXPECT_THAT(CloseAllSessions(1337), StatusRvIs(CKR_SLOT_ID_INVALID));
+}
+
 TEST_F(BridgeTest, GetSessionInfoSuccess) {
   EXPECT_OK(Initialize(&init_args_));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };

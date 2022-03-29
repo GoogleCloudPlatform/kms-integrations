@@ -81,5 +81,20 @@ TEST(HandleMapTest, RemoveInvalidHandle) {
   EXPECT_THAT(map.Remove(5), StatusRvIs(CKR_SESSION_HANDLE_INVALID));
 }
 
+TEST(HandleMapTest, RemoveIfRemovesOnPredicate) {
+  HandleMap<int> map(CKR_SESSION_HANDLE_INVALID);
+  CK_ULONG h1 = map.Add(1);
+  CK_ULONG h2 = map.Add(2);
+  CK_ULONG h3 = map.Add(3);
+  CK_ULONG h4 = map.Add(4);
+
+  map.RemoveIf([](const int& i) -> bool { return i % 2 == 0; });
+
+  EXPECT_OK(map.Get(h1));
+  EXPECT_THAT(map.Get(h2), StatusRvIs(CKR_SESSION_HANDLE_INVALID));
+  EXPECT_OK(map.Get(h3));
+  EXPECT_THAT(map.Get(h4), StatusRvIs(CKR_SESSION_HANDLE_INVALID));
+}
+
 }  // namespace
 }  // namespace kmsp11

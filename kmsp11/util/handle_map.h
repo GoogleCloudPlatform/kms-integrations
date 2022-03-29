@@ -18,6 +18,7 @@
 #define KMSP11_UTIL_HANDLE_MAP_H_
 
 #include "absl/container/flat_hash_map.h"
+#include "absl/functional/function_ref.h"
 #include "absl/status/statusor.h"
 #include "kmsp11/cryptoki.h"
 #include "kmsp11/util/crypto_utils.h"
@@ -78,6 +79,20 @@ class HandleMap {
 
     items_.erase(it);
     return absl::OkStatus();
+  }
+
+  // Removes all map elements that match the provided predicate.
+  inline void RemoveIf(absl::FunctionRef<bool(const T&)> predicate) {
+    absl::WriterMutexLock lock(&mutex_);
+
+    auto it = items_.begin();
+    while (it != items_.end()) {
+      if (predicate(*it->second)) {
+        items_.erase(it++);
+      } else {
+        it++;
+      }
+    }
   }
 
  private:

@@ -56,7 +56,7 @@ std::unique_ptr<KmsClient> NewKmsClient(const LibraryConfig& config) {
                                    : absl::Seconds(config.rpc_timeout_secs());
 
   return std::make_unique<KmsClient>(endpoint_address, creds, rpc_timeout,
-                                      config.user_project_override());
+                                     config.user_project_override());
 }
 
 }  // namespace
@@ -102,6 +102,13 @@ absl::StatusOr<std::shared_ptr<Session>> Provider::GetSession(
 
 absl::Status Provider::CloseSession(CK_SESSION_HANDLE session_handle) {
   return sessions_.Remove(session_handle);
+}
+
+absl::Status Provider::CloseAllSessions(CK_SLOT_ID slot_id) {
+  RETURN_IF_ERROR(TokenAt(slot_id));
+  sessions_.RemoveIf(
+      [&](const Session& s) { return s.token()->slot_id() == slot_id; });
+  return absl::OkStatus();
 }
 
 Provider::Refresher::Refresher(Provider* provider, absl::Duration interval)

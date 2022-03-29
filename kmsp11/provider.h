@@ -54,6 +54,7 @@ class Provider {
   absl::StatusOr<std::shared_ptr<Session>> GetSession(
       CK_SESSION_HANDLE session_handle);
   absl::Status CloseSession(CK_SESSION_HANDLE session_handle);
+  absl::Status CloseAllSessions(CK_SLOT_ID slot_id);
 
  private:
   class Refresher {

@@ -37,10 +37,6 @@ absl::Status SetPIN(CK_SESSION_HANDLE hSession, CK_UTF8CHAR_PTR pOldPin,
   return UnsupportedError(SOURCE_LOCATION);
 }
 
-absl::Status CloseAllSessions(CK_SLOT_ID slotID) {
-  return UnsupportedError(SOURCE_LOCATION);
-}
-
 absl::Status GetOperationState(CK_SESSION_HANDLE hSession,
                                CK_BYTE_PTR pOperationState,
                                CK_ULONG_PTR pulOperationStateLen) {
