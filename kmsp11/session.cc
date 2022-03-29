@@ -372,6 +372,26 @@ absl::Status Session::Verify(absl::Span<const uint8_t> digest,
   return std::get<VerifyOp>(*op_)->Verify(kms_client_, digest, signature);
 }
 
+absl::Status Session::VerifyUpdate(absl::Span<const uint8_t> data) {
+  absl::MutexLock l(&op_mutex_);
+
+  if (!op_.has_value() || !std::holds_alternative<VerifyOp>(*op_)) {
+    return OperationNotInitializedError("verify", SOURCE_LOCATION);
+  }
+
+  return std::get<VerifyOp>(*op_)->VerifyUpdate(kms_client_, data);
+}
+
+absl::Status Session::VerifyFinal(absl::Span<const uint8_t> signature) {
+  absl::MutexLock l(&op_mutex_);
+
+  if (!op_.has_value() || !std::holds_alternative<VerifyOp>(*op_)) {
+    return OperationNotInitializedError("verify", SOURCE_LOCATION);
+  }
+
+  return std::get<VerifyOp>(*op_)->VerifyFinal(kms_client_, signature);
+}
+
 absl::StatusOr<AsymmetricHandleSet> Session::GenerateKeyPair(
     const CK_MECHANISM& mechanism,
     absl::Span<const CK_ATTRIBUTE> public_key_attrs,

@@ -658,7 +658,7 @@ absl::Status SignFinal(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pSignature,
   return result;
 }
 
-// Begin a verify operation.
+// Begin a single-part or multi-part verify operation.
 // http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc235002379
 absl::Status VerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechanism,
                         CK_OBJECT_HANDLE hKey) {
@@ -671,7 +671,7 @@ absl::Status VerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechanism,
   return session->VerifyInit(key, pMechanism);
 }
 
-// Complete a verify operation.
+// Complete a single-part verify operation.
 // http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc235002380
 absl::Status Verify(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pData,
                     CK_ULONG ulDataLen, CK_BYTE_PTR pSignature,
@@ -689,6 +689,41 @@ absl::Status Verify(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pData,
   absl::Status result =
       session->Verify(absl::MakeConstSpan(pData, ulDataLen),
                       absl::MakeConstSpan(pSignature, ulSignatureLen));
+  session->ReleaseOperation();
+  return result;
+}
+
+// Continue a multi-part verify operation.
+// http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc323024151
+absl::Status VerifyUpdate(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pPart,
+                          CK_ULONG ulPartLen) {
+  ASSIGN_OR_RETURN(std::shared_ptr<Session> session, GetSession(hSession));
+  if (!pPart) {
+    session->ReleaseOperation();
+    return NullArgumentError("pData", SOURCE_LOCATION);
+  }
+
+  absl::Status result =
+      session->VerifyUpdate(absl::MakeConstSpan(pPart, ulPartLen));
+
+  if (!result.ok()) {
+    session->ReleaseOperation();
+  }
+  return result;
+}
+
+// Complete a multi-part verify operation.
+// http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc323024152
+absl::Status VerifyFinal(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pSignature,
+                         CK_ULONG ulSignatureLen) {
+  ASSIGN_OR_RETURN(std::shared_ptr<Session> session, GetSession(hSession));
+  if (!pSignature) {
+    session->ReleaseOperation();
+    return NullArgumentError("pSignature", SOURCE_LOCATION);
+  }
+
+  absl::Status result =
+      session->VerifyFinal(absl::MakeConstSpan(pSignature, ulSignatureLen));
   session->ReleaseOperation();
   return result;
 }

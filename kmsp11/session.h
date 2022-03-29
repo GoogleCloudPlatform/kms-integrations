@@ -67,6 +67,8 @@ class Session {
   absl::Status VerifyInit(std::shared_ptr<Object> key, CK_MECHANISM* mechanism);
   absl::Status Verify(absl::Span<const uint8_t> digest,
                       absl::Span<const uint8_t> signature);
+  absl::Status VerifyUpdate(absl::Span<const uint8_t> data);
+  absl::Status VerifyFinal(absl::Span<const uint8_t> signature);
 
   absl::StatusOr<AsymmetricHandleSet> GenerateKeyPair(
       const CK_MECHANISM& mechanism,

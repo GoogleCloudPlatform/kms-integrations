@@ -139,16 +139,6 @@ absl::Status SignRecover(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pData,
   return UnsupportedError(SOURCE_LOCATION);
 }
 
-absl::Status VerifyUpdate(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pPart,
-                          CK_ULONG ulPartLen) {
-  return UnsupportedError(SOURCE_LOCATION);
-}
-
-absl::Status VerifyFinal(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pSignature,
-                         CK_ULONG ulSignatureLen) {
-  return UnsupportedError(SOURCE_LOCATION);
-}
-
 absl::Status VerifyRecoverInit(CK_SESSION_HANDLE hSession,
                                CK_MECHANISM_PTR pMechanism,
                                CK_OBJECT_HANDLE hKey) {

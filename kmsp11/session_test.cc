@@ -785,6 +785,117 @@ TEST_F(SessionTest, VerifyNotInitialized) {
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
+TEST_F(SessionTest, VerifyUpdateNotInitialized) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
+
+  uint8_t data[32];
+  EXPECT_THAT(s.VerifyUpdate(data), StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
+}
+
+TEST_F(SessionTest, VerifyFinalNotInitialized) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
+
+  uint8_t signature[64];
+  EXPECT_THAT(s.VerifyFinal(absl::MakeSpan(signature)),
+              StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
+}
+
+TEST_F(SessionTest, VerifyFinalWithoutUpdateFails) {
+  auto kms_client = fake_server_->NewClient();
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM);
+  ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), "ck", ck, true);
+
+  kms_v1::CryptoKeyVersion ckv;
+  ckv = CreateCryptoKeyVersionOrDie(kms_client.get(), ck.name(), ckv);
+  ckv = WaitForEnablement(kms_client.get(), ckv);
+
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
+
+  std::vector<CK_OBJECT_HANDLE> handles =
+      s.token()->FindObjects([&](const Object& o) -> bool {
+        return o.kms_key_name() == ckv.name() &&
+               o.object_class() == CKO_PRIVATE_KEY;
+      });
+  EXPECT_EQ(handles.size(), 1);
+  ASSERT_OK_AND_ASSIGN(std::shared_ptr<Object> prv,
+                       s.token()->GetObject(handles[0]));
+
+  handles = s.token()->FindObjects([&](const Object& o) -> bool {
+    return o.kms_key_name() == ckv.name() && o.object_class() == CKO_PUBLIC_KEY;
+  });
+  EXPECT_EQ(handles.size(), 1);
+  ASSERT_OK_AND_ASSIGN(std::shared_ptr<Object> pub,
+                       s.token()->GetObject(handles[0]));
+
+  CK_MECHANISM mech{CKM_ECDSA_SHA256, nullptr, 0};
+
+  uint8_t signature[64];
+  EXPECT_OK(s.VerifyInit(pub, &mech));
+  EXPECT_THAT(s.VerifyFinal(absl::MakeSpan(signature)),
+              StatusRvIs(CKR_FUNCTION_FAILED));
+}
+
+TEST_F(SessionTest, SignVerifyMultiPartSuccess) {
+  auto kms_client = fake_server_->NewClient();
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM);
+  ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), "ck", ck, true);
+
+  kms_v1::CryptoKeyVersion ckv;
+  ckv = CreateCryptoKeyVersionOrDie(kms_client.get(), ck.name(), ckv);
+  ckv = WaitForEnablement(kms_client.get(), ckv);
+
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
+
+  std::vector<CK_OBJECT_HANDLE> handles =
+      s.token()->FindObjects([&](const Object& o) -> bool {
+        return o.kms_key_name() == ckv.name() &&
+               o.object_class() == CKO_PRIVATE_KEY;
+      });
+  EXPECT_EQ(handles.size(), 1);
+  ASSERT_OK_AND_ASSIGN(std::shared_ptr<Object> prv,
+                       s.token()->GetObject(handles[0]));
+
+  handles = s.token()->FindObjects([&](const Object& o) -> bool {
+    return o.kms_key_name() == ckv.name() && o.object_class() == CKO_PUBLIC_KEY;
+  });
+  EXPECT_EQ(handles.size(), 1);
+  ASSERT_OK_AND_ASSIGN(std::shared_ptr<Object> pub,
+                       s.token()->GetObject(handles[0]));
+
+  CK_MECHANISM mech{CKM_ECDSA_SHA256, nullptr, 0};
+
+  uint8_t data[32], signature[64];
+  EXPECT_OK(s.SignInit(prv, &mech));
+  EXPECT_OK(s.SignUpdate(data));
+  EXPECT_OK(s.SignFinal(absl::MakeSpan(signature)));
+
+  s.ReleaseOperation();
+
+  EXPECT_OK(s.VerifyInit(pub, &mech));
+  EXPECT_OK(s.VerifyUpdate(data));
+  EXPECT_OK(s.VerifyFinal(absl::MakeSpan(signature)));
+}
+
 class GenerateKeyPairTest : public SessionTest {};
 
 TEST_F(GenerateKeyPairTest, ReadOnlySessionReturnsFailedPrecondition) {

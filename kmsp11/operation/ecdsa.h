@@ -54,6 +54,10 @@ class EcdsaVerifier : public VerifierInterface {
 
   absl::Status Verify(KmsClient* client, absl::Span<const uint8_t> digest,
                       absl::Span<const uint8_t> signature) override;
+  absl::Status VerifyUpdate(KmsClient* client,
+                            absl::Span<const uint8_t> data) override;
+  absl::Status VerifyFinal(KmsClient* client,
+                           absl::Span<const uint8_t> signature) override;
 
   virtual ~EcdsaVerifier() {}
 

@@ -1857,7 +1857,7 @@ TEST_F(AsymmetricSignTest, SignVerifySuccess) {
       StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
-TEST_F(AsymmetricSignTest, SignMultiPartSuccess) {
+TEST_F(AsymmetricSignTest, SignVerifyMultiPartSuccess) {
   std::vector<uint8_t> data_part1 = {0xDE, 0xAD};
   std::vector<uint8_t> data_part2 = {0xBE, 0xEF};
 
@@ -1877,6 +1877,17 @@ TEST_F(AsymmetricSignTest, SignMultiPartSuccess) {
 
   // Operation should be terminated after success
   EXPECT_THAT(SignUpdate(session_, data_part1.data(), data_part1.size()),
+              StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
+
+  EXPECT_OK(VerifyInit(session_, &mech, public_key_));
+
+  EXPECT_OK(VerifyUpdate(session_, data_part1.data(), data_part1.size()));
+  EXPECT_OK(VerifyUpdate(session_, data_part2.data(), data_part2.size()));
+
+  EXPECT_OK(VerifyFinal(session_, signature.data(), signature_size));
+
+  // Operation should be terminated after success
+  EXPECT_THAT(VerifyUpdate(session_, data_part1.data(), data_part1.size()),
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
@@ -1969,7 +1980,9 @@ TEST_F(AsymmetricSignTest, SignFinalFailsWithoutUpdate) {
   CK_ULONG signature_size = 64;
   std::vector<uint8_t> signature(signature_size);
   EXPECT_THAT(SignFinal(session_, signature.data(), &signature_size),
-              StatusRvIs(CKR_FUNCTION_FAILED));
+              AllOf(StatusIs(absl::StatusCode::kFailedPrecondition,
+                             HasSubstr("SignUpdate needs to be called")),
+                    StatusRvIs(CKR_FUNCTION_FAILED)));
 }
 
 TEST_F(AsymmetricSignTest, SignSinglePartFailsAfterUpdate) {
@@ -1981,7 +1994,9 @@ TEST_F(AsymmetricSignTest, SignSinglePartFailsAfterUpdate) {
   EXPECT_OK(SignUpdate(session_, data.data(), data.size()));
   EXPECT_THAT(Sign(session_, data.data(), data.size(), signature.data(),
                    &signature_size),
-              StatusRvIs(CKR_FUNCTION_FAILED));
+              AllOf(StatusIs(absl::StatusCode::kFailedPrecondition,
+                             HasSubstr("Sign cannot be used to terminate")),
+                    StatusRvIs(CKR_FUNCTION_FAILED)));
 }
 
 TEST_F(AsymmetricSignTest, SignFailsNullHash) {
@@ -2004,7 +2019,9 @@ TEST_F(AsymmetricSignTest, SignUpdateInvalidMechanism) {
   EXPECT_OK(SignInit(session_, &mech, private_key_));
   uint8_t data[32];
   EXPECT_THAT(SignUpdate(session_, data, sizeof(data)),
-              StatusRvIs(CKR_FUNCTION_FAILED));
+              AllOf(StatusIs(absl::StatusCode::kFailedPrecondition,
+                             HasSubstr("does not support multi-part signing")),
+                    StatusRvIs(CKR_FUNCTION_FAILED)));
 }
 
 TEST_F(AsymmetricSignTest, SignFinalInvalidMechanism) {
@@ -2013,7 +2030,9 @@ TEST_F(AsymmetricSignTest, SignFinalInvalidMechanism) {
   CK_ULONG signature_size = 64;
   std::vector<uint8_t> signature(signature_size);
   EXPECT_THAT(SignFinal(session_, signature.data(), &signature_size),
-              StatusRvIs(CKR_FUNCTION_FAILED));
+              AllOf(StatusIs(absl::StatusCode::kFailedPrecondition,
+                             HasSubstr("does not support multi-part signing")),
+                    StatusRvIs(CKR_FUNCTION_FAILED)));
 }
 
 TEST_F(AsymmetricSignTest, VerifyFailsNullSignatureSize) {
@@ -2106,6 +2125,44 @@ TEST_F(AsymmetricSignTest, VerifyFailsOperationNotInitialized) {
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
+TEST_F(AsymmetricSignTest, VerifyUpdateFailsOperationNotInitialized) {
+  uint8_t data[32];
+  EXPECT_THAT(VerifyUpdate(session_, data, sizeof(data)),
+              StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
+}
+
+TEST_F(AsymmetricSignTest, VerifyFinalFailsOperationNotInitialized) {
+  CK_ULONG signature_size = 64;
+  std::vector<uint8_t> signature(signature_size);
+  EXPECT_THAT(VerifyFinal(session_, signature.data(), signature_size),
+              StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
+}
+
+TEST_F(AsymmetricSignTest, VerifyFinalFailsWithoutUpdate) {
+  CK_MECHANISM mech{CKM_ECDSA_SHA256, nullptr, 0};
+  EXPECT_OK(VerifyInit(session_, &mech, public_key_));
+  CK_ULONG signature_size = 64;
+  std::vector<uint8_t> signature(signature_size);
+  EXPECT_THAT(VerifyFinal(session_, signature.data(), signature_size),
+              AllOf(StatusIs(absl::StatusCode::kFailedPrecondition,
+                             HasSubstr("VerifyUpdate needs to be called")),
+                    StatusRvIs(CKR_FUNCTION_FAILED)));
+}
+
+TEST_F(AsymmetricSignTest, VerifySinglePartFailsAfterUpdate) {
+  CK_MECHANISM mech{CKM_ECDSA_SHA256, nullptr, 0};
+  EXPECT_OK(VerifyInit(session_, &mech, public_key_));
+  std::vector<uint8_t> data = {0xDE, 0xAD, 0xBE, 0xEF};
+  CK_ULONG signature_size = 64;
+  std::vector<uint8_t> signature(signature_size);
+  EXPECT_OK(VerifyUpdate(session_, data.data(), data.size()));
+  EXPECT_THAT(Verify(session_, data.data(), data.size(), signature.data(),
+                     signature_size),
+              AllOf(StatusIs(absl::StatusCode::kFailedPrecondition,
+                             HasSubstr("Verify cannot be used to terminate")),
+                    StatusRvIs(CKR_FUNCTION_FAILED)));
+}
+
 TEST_F(AsymmetricSignTest, VerifyFailsNullHash) {
   CK_MECHANISM mech{CKM_ECDSA, nullptr, 0};
   EXPECT_OK(VerifyInit(session_, &mech, public_key_));
@@ -2132,6 +2189,27 @@ TEST_F(AsymmetricSignTest, VerifyFailsNullSignature) {
   // Operation should be terminated after failure
   EXPECT_THAT(Verify(session_, hash, sizeof(hash), sig, sizeof(sig)),
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
+}
+
+TEST_F(AsymmetricSignTest, VerifyUpdateInvalidMechanism) {
+  CK_MECHANISM mech{CKM_ECDSA, nullptr, 0};
+  EXPECT_OK(VerifyInit(session_, &mech, public_key_));
+  uint8_t data[32];
+  EXPECT_THAT(VerifyUpdate(session_, data, sizeof(data)),
+              AllOf(StatusIs(absl::StatusCode::kFailedPrecondition,
+                             HasSubstr("does not support multi-part verify")),
+                    StatusRvIs(CKR_FUNCTION_FAILED)));
+}
+
+TEST_F(AsymmetricSignTest, VerifyFinalInvalidMechanism) {
+  CK_MECHANISM mech{CKM_ECDSA, nullptr, 0};
+  EXPECT_OK(VerifyInit(session_, &mech, public_key_));
+  CK_ULONG signature_size = 64;
+  std::vector<uint8_t> signature(signature_size);
+  EXPECT_THAT(VerifyFinal(session_, signature.data(), signature_size),
+              AllOf(StatusIs(absl::StatusCode::kFailedPrecondition,
+                             HasSubstr("does not support multi-part verify")),
+                    StatusRvIs(CKR_FUNCTION_FAILED)));
 }
 
 }  // namespace

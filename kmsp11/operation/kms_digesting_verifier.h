@@ -32,8 +32,12 @@ class KmsDigestingVerifier : public VerifierInterface {
   static absl::StatusOr<std::unique_ptr<VerifierInterface>> New(
       std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
 
-  virtual absl::Status Verify(KmsClient* client, absl::Span<const uint8_t> data,
-                              absl::Span<const uint8_t> signature) override;
+  absl::Status Verify(KmsClient* client, absl::Span<const uint8_t> data,
+                      absl::Span<const uint8_t> signature) override;
+  absl::Status VerifyUpdate(KmsClient* client,
+                            absl::Span<const uint8_t> data) override;
+  absl::Status VerifyFinal(KmsClient* client,
+                           absl::Span<const uint8_t> signature) override;
 
   virtual ~KmsDigestingVerifier() {}
 

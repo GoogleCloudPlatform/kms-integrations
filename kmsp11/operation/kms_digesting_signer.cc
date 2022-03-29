@@ -83,15 +83,17 @@ absl::Status KmsDigestingSigner::Sign(KmsClient* client,
   if (EVP_Digest(data.data(), data.size(), evp_digest.data(), &digest_len, md_,
                  nullptr) != 1) {
     return NewInternalError(
-        absl::StrFormat("failed while computing EVP digest with digest size %d",
-                        md_size),
+        absl::StrFormat(
+            "failed while computing EVP digest with digest size %d: %s",
+            md_size, SslErrorToString()),
         SOURCE_LOCATION);
   }
 
   if (digest_len != md_size) {
     return NewInternalError(
-        absl::StrFormat("computed digest has incorrect size (got %d, want %d)",
-                        digest_len, md_size),
+        absl::StrFormat(
+            "computed digest has incorrect size (got %d, want %d): %s",
+            digest_len, md_size, SslErrorToString()),
         SOURCE_LOCATION);
   }
 
@@ -105,15 +107,17 @@ absl::Status KmsDigestingSigner::SignUpdate(KmsClient* client,
     if (EVP_DigestInit(md_ctx_.get(), md_) != 1) {
       return NewInternalError(
           absl::StrFormat(
-              "failed while initializing EVP digest with digest size %d",
-              EVP_MD_size(md_)),
+              "failed while initializing EVP digest with digest size %d: %s",
+              EVP_MD_size(md_), SslErrorToString()),
           SOURCE_LOCATION);
     }
   }
 
   if (EVP_DigestUpdate(md_ctx_.get(), data.data(), data.size()) != 1) {
-    return NewInternalError("failed while updating EVP digest with input data",
-                            SOURCE_LOCATION);
+    return NewInternalError(
+        absl::StrCat("failed while updating EVP digest with input data: ",
+                     SslErrorToString()),
+        SOURCE_LOCATION);
   }
 
   return absl::OkStatus();
@@ -131,14 +135,16 @@ absl::Status KmsDigestingSigner::SignFinal(KmsClient* client,
   std::vector<uint8_t> evp_digest(EVP_MD_size(md_));
   unsigned int digest_len;
   if (EVP_DigestFinal(md_ctx_.get(), evp_digest.data(), &digest_len) != 1) {
-    return NewInternalError("failed while finalizing EVP digest",
+    return NewInternalError(absl::StrCat("failed while finalizing EVP digest: ",
+                                         SslErrorToString()),
                             SOURCE_LOCATION);
   }
 
   if (digest_len != EVP_MD_size(md_)) {
     return NewInternalError(
-        absl::StrFormat("computed digest has incorrect size (got %d, want %d)",
-                        digest_len, EVP_MD_size(md_)),
+        absl::StrFormat(
+            "computed digest has incorrect size (got %d, want %d): %s",
+            digest_len, EVP_MD_size(md_), SslErrorToString()),
         SOURCE_LOCATION);
   }
 

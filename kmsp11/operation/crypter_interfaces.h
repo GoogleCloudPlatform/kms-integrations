@@ -58,6 +58,11 @@ class VerifierInterface {
  public:
   virtual absl::Status Verify(KmsClient* client, absl::Span<const uint8_t> data,
                               absl::Span<const uint8_t> signature) = 0;
+  virtual absl::Status VerifyUpdate(KmsClient* client,
+                                    absl::Span<const uint8_t> data) = 0;
+  virtual absl::Status VerifyFinal(KmsClient* client,
+                                   absl::Span<const uint8_t> signature) = 0;
+
   virtual ~VerifierInterface() {}
 };
 

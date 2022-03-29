@@ -120,4 +120,18 @@ absl::Status RsaRawPkcs1Verifier::Verify(KmsClient* client,
   return RsaVerifyRawPkcs1(key_.get(), data, signature);
 }
 
+absl::Status RsaRawPkcs1Verifier::VerifyUpdate(KmsClient* client,
+                                               absl::Span<const uint8_t> data) {
+  return FailedPreconditionError(
+      "provided mechanism CKM_RSA_PKCS does not support multi-part verify",
+      CKR_FUNCTION_FAILED, SOURCE_LOCATION);
+}
+
+absl::Status RsaRawPkcs1Verifier::VerifyFinal(
+    KmsClient* client, absl::Span<const uint8_t> signature) {
+  return FailedPreconditionError(
+      "provided mechanism CKM_RSA_PKCS does not support multi-part verify",
+      CKR_FUNCTION_FAILED, SOURCE_LOCATION);
+}
+
 }  // namespace kmsp11

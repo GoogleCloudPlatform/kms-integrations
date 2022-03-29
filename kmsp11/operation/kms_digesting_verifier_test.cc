@@ -140,6 +140,53 @@ TEST_F(KmsDigestingVerifierTest, VerifySignatureLengthInvalid) {
               StatusIs(absl::StatusCode::kInvalidArgument));
 }
 
+TEST_F(KmsDigestingVerifierTest, SignVerifyMultiPartSuccess) {
+  SetUp(kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+  std::vector<uint8_t> data_part1 = {0xDE, 0xAD};
+  std::vector<uint8_t> data_part2 = {0xBE, 0xEF};
+
+  CK_MECHANISM mech{CKM_ECDSA_SHA256, nullptr, 0};
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<SignerInterface> signer,
+                       KmsDigestingSigner::New(prv_, &mech));
+  std::vector<uint8_t> sig(signer->signature_length());
+  EXPECT_OK(signer->SignUpdate(client_.get(), data_part1));
+  EXPECT_OK(signer->SignUpdate(client_.get(), data_part2));
+  EXPECT_OK(signer->SignFinal(client_.get(), absl::MakeSpan(sig)));
+
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<VerifierInterface> verifier,
+                       KmsDigestingVerifier::New(pub_, &mech));
+  EXPECT_OK(verifier->VerifyUpdate(client_.get(), data_part1));
+  EXPECT_OK(verifier->VerifyUpdate(client_.get(), data_part2));
+  EXPECT_OK(verifier->VerifyFinal(client_.get(), absl::MakeSpan(sig)));
+}
+
+TEST_F(KmsDigestingVerifierTest, VerifyFinalWithoutUpdateFails) {
+  SetUp(kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+  std::vector<uint8_t> data = {0xDE, 0xAD, 0xBE, 0xEF};
+
+  CK_MECHANISM mech{CKM_ECDSA_SHA256, nullptr, 0};
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<VerifierInterface> verifier,
+                       KmsDigestingVerifier::New(pub_, &mech));
+  std::vector<uint8_t> sig(98);
+  EXPECT_THAT(verifier->VerifyFinal(client_.get(), absl::MakeSpan(sig)),
+              AllOf(StatusIs(absl::StatusCode::kFailedPrecondition),
+                    StatusRvIs(CKR_FUNCTION_FAILED)));
+}
+
+TEST_F(KmsDigestingVerifierTest, VerifySinglePartAfterUpdateFails) {
+  SetUp(kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+  std::vector<uint8_t> data = {0xDE, 0xAD, 0xBE, 0xEF};
+
+  CK_MECHANISM mech{CKM_ECDSA_SHA256, nullptr, 0};
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<VerifierInterface> verifier,
+                       KmsDigestingVerifier::New(pub_, &mech));
+  std::vector<uint8_t> sig(98);
+  EXPECT_OK(verifier->VerifyUpdate(client_.get(), data));
+  EXPECT_THAT(verifier->Verify(client_.get(), data, absl::MakeSpan(sig)),
+              AllOf(StatusIs(absl::StatusCode::kFailedPrecondition),
+                    StatusRvIs(CKR_FUNCTION_FAILED)));
+}
+
 TEST_F(KmsDigestingVerifierTest, RsaPkcs1SignVerifySuccess) {
   SetUp(kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_2048_SHA256);
   std::vector<uint8_t> data = {0xDE, 0xAD, 0xBE, 0xEF};

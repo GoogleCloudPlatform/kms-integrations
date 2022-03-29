@@ -61,6 +61,10 @@ class RsaRawPkcs1Verifier : public VerifierInterface {
 
   absl::Status Verify(KmsClient* client, absl::Span<const uint8_t> data,
                       absl::Span<const uint8_t> signature) override;
+  absl::Status VerifyUpdate(KmsClient* client,
+                            absl::Span<const uint8_t> data) override;
+  absl::Status VerifyFinal(KmsClient* client,
+                           absl::Span<const uint8_t> signature) override;
 
   virtual ~RsaRawPkcs1Verifier() {}
 
