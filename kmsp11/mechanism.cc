@@ -35,6 +35,22 @@ static const auto* const kMechanisms =
 
         },
         {
+            CKM_ECDSA_SHA256,
+            {
+                256,                              // ulMinKeySize
+                256,                              // ulMaxKeySize
+                CKF_SIGN | CKF_VERIFY | kEcFlags  // flags
+            },
+        },
+        {
+            CKM_ECDSA_SHA384,
+            {
+                384,                              // ulMinKeySize
+                384,                              // ulMaxKeySize
+                CKF_SIGN | CKF_VERIFY | kEcFlags  // flags
+            },
+        },
+        {
             CKM_EC_KEY_PAIR_GEN,
             {
                 256,                                       // ulMinKeySize
@@ -44,6 +60,24 @@ static const auto* const kMechanisms =
         },
         {
             CKM_RSA_PKCS,
+            {
+                2048,                  // ulMinKeySize
+                4096,                  // ulMaxKeySize
+                CKF_SIGN | CKF_VERIFY  // flags
+            },
+
+        },
+        {
+            CKM_SHA256_RSA_PKCS,
+            {
+                2048,                  // ulMinKeySize
+                4096,                  // ulMaxKeySize
+                CKF_SIGN | CKF_VERIFY  // flags
+            },
+
+        },
+        {
+            CKM_SHA512_RSA_PKCS,
             {
                 2048,                  // ulMinKeySize
                 4096,                  // ulMaxKeySize
@@ -63,6 +97,22 @@ static const auto* const kMechanisms =
             CKM_RSA_PKCS_PSS,
             {
                 2048,                  // ulMinKeySize
+                4096,                  // ulMaxKeySize
+                CKF_SIGN | CKF_VERIFY  // flags
+            },
+        },
+        {
+            CKM_SHA256_RSA_PKCS_PSS,
+            {
+                2048,                  // ulMinKeySize
+                4096,                  // ulMaxKeySize
+                CKF_SIGN | CKF_VERIFY  // flags
+            },
+        },
+        {
+            CKM_SHA512_RSA_PKCS_PSS,
+            {
+                4096,                  // ulMinKeySize
                 4096,                  // ulMaxKeySize
                 CKF_SIGN | CKF_VERIFY  // flags
             },

@@ -42,6 +42,8 @@ absl::StatusOr<std::unique_ptr<SignerInterface>> KmsDigestingSigner::New(
     case CKM_SHA512_RSA_PKCS: {
       inner_mechanism = {CKM_RSA_PKCS, nullptr, 0};
       RETURN_IF_ERROR(EnsureNoParameters(mechanism));
+      RETURN_IF_ERROR(CheckKeyPreconditions(CKK_RSA, CKO_PRIVATE_KEY,
+                                            mechanism->mechanism, key.get()));
       if (IsRawRsaAlgorithm(key->algorithm().algorithm)) {
         ASSIGN_OR_RETURN(inner_signer,
                          RsaRawPkcs1Signer::New(key, &inner_mechanism));

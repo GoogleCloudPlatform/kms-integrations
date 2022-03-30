@@ -196,14 +196,14 @@ Function                                         | Status | Notes
 [`C_DigestFinal`][C_DigestFinal]                 | ❌      |
 [`C_SignInit`][C_SignInit]                       | ✅      | Consult the [cryptographic operations](#cryptographic-operations) documentation for details on which signing algorithms are supported.
 [`C_Sign`][C_Sign]                               | ✅      |
-[`C_SignUpdate`][C_SignUpdate]                   | ❌      | None of the implemented mechanisms supports multi-part signing.
-[`C_SignFinal`][C_SignFinal]                     | ❌      |
+[`C_SignUpdate`][C_SignUpdate]                   | ✅      | Consult the [cryptographic operations](#cryptographic-operations) documentation for details on which signing algorithms support  multi-part signing.
+[`C_SignFinal`][C_SignFinal]                     | ✅      | Consult the [cryptographic operations](#cryptographic-operations) documentation for details on which signing algorithms support  multi-part signing.
 [`C_SignRecoverInit`][C_SignRecoverInit]         | ❌      |
 [`C_SignRecover`][C_SignRecover]                 | ❌      |
 [`C_VerifyInit`][C_VerifyInit]                   | ✅      | Consult the [cryptographic operations](#cryptographic-operations) documentation for details on which verification algorithms are supported.
 [`C_Verify`][C_Verify]                           | ✅      |
-[`C_VerifyUpdate`][C_VerifyUpdate]               | ❌      | None of the implemented mechanisms supports multi-part verification.
-[`C_VerifyFinal`][C_VerifyFinal]                 | ❌      |
+[`C_VerifyUpdate`][C_VerifyUpdate]               | ✅      | Consult the [cryptographic operations](#cryptographic-operations) documentation for details on which signing algorithms support  multi-part verification.
+[`C_VerifyFinal`][C_VerifyFinal]                 | ✅      | Consult the [cryptographic operations](#cryptographic-operations) documentation for details on which signing algorithms support  multi-part verification.
 [`C_VerifyRecoverInit`][C_VerifyRecoverInit]     | ❌      |
 [`C_VerifyRecover`][C_VerifyRecover]             | ❌      |
 [`C_DigestEncryptUpdate`][C_DigestEncryptUpdate] | ❌      |
@@ -238,13 +238,21 @@ Cloud KMS Algorithm           | [`EC_SIGN_P256_SHA256`][kms-ec-algorithms], [`EC
 ### ECDSA Signing and Verification
 
 The library may be used for ECDSA signing and verification. The expected input
-for a signing or verification operation is a message digest of the appropriate
-length for the Cloud KMS algorithm.
+for a signing or verification operation varies by mechanism, and is either a
+message digest of the appropriate length for the Cloud KMS algorithm, or plain
+input data.
 
 Compatibility                | Compatible With
 ---------------------------- | ---------------
 PKCS #11 Functions           | [`C_Sign`][C_Sign], [`C_Verify`][C_Verify]
-PKCS #11 Mechanism           | [`CKM_ECDSA`][CKM_ECDSA]
+PKCS #11 Mechanism           | [`CKM_ECDSA`][CKM_ECDSA], [`CKM_ECDSA_SHA256`][CKM_ECDSA_SHA256], [`CKM_ECDSA_SHA384`][CKM_ECDSA_SHA384]
+PKCS #11 Mechanism Parameter | None
+Cloud KMS Algorithm          | [`EC_SIGN_P256_SHA256`][kms-ec-algorithms], [`EC_SIGN_P384_SHA384`][kms-ec-algorithms]
+
+Compatibility                | Compatible With
+---------------------------- | ---------------
+PKCS #11 Functions           | [`C_SignUpdate`][C_SignUpdate], [`C_SignFinal`][C_SignFinal], [`C_VerifyUpdate`][C_VerifyUpdate], [`C_VerifyFinal`][C_VerifyFinal]
+PKCS #11 Mechanism           | [`CKM_ECDSA_SHA256`][CKM_ECDSA_SHA256], [`CKM_ECDSA_SHA384`][CKM_ECDSA_SHA384]
 PKCS #11 Mechanism Parameter | None
 Cloud KMS Algorithm          | [`EC_SIGN_P256_SHA256`][kms-ec-algorithms], [`EC_SIGN_P384_SHA384`][kms-ec-algorithms]
 
@@ -274,30 +282,47 @@ Cloud KMS Algorithm          | [`RSA_DECRYPT_OAEP_2048_SHA256`][kms-asymmetric-e
 
 ### RSA-PKCS1 Signing and Verification
 
-The library may be used for RSASSA-PKCS1 signing and verification.
+The library may be used for RSASSA-PKCS1 single-part or multi-part signing and
+verification.
 
 For Cloud KMS keys with an algorithm name that includes a digest type, the
-expected input for a signing or verification operation is a PKCS #1 DigestInfo
-with the appropriate digest algorithm. For Cloud KMS keys without a digest type
-("Raw PKCS#1" keys), arbitrary input is accepted.
+expected input for a signing or verification operation varies by mechanism and
+is either a PKCS #1 DigestInfo with the appropriate digest algorithm, or plain
+input data. For Cloud KMS keys without a digest type ("Raw PKCS#1" keys),
+arbitrary input is accepted.
 
 Compatibility                | Compatible With
 ---------------------------- | ---------------
 PKCS #11 Functions           | [`C_Sign`][C_Sign], [`C_Verify`][C_Verify]
-PKCS #11 Mechanism           | [`CKM_RSA_PKCS`][CKM_RSA_PKCS]
+PKCS #11 Mechanism           | [`CKM_RSA_PKCS`][CKM_RSA_PKCS], [`CKM_RSA_PKCS_SHA256`][CKM_RSA_PKCS_SHA256], [`CKM_RSA_PKCS_SHA512`][CKM_RSA_PKCS_SHA512]
+PKCS #11 Mechanism Parameter | None
+Cloud KMS Algorithm          | [`RSA_SIGN_PKCS1_2048_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PKCS1_3072_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PKCS1_4096_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PKCS1_4096_SHA512`][kms-rsa-sign-algorithms], [`RSA_SIGN_RAW_PKCS1_2048_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_RAW_PKCS1_3072_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_RAW_PKCS1_4096_SHA256`][kms-rsa-sign-algorithms]
+
+Compatibility                | Compatible With
+---------------------------- | ---------------
+PKCS #11 Functions           | [`C_SignUpdate`][C_SignUpdate], [`C_SignFinal`][C_SignFinal], [`C_VerifyUpdate`][C_VerifyUpdate], [`C_VerifyFinal`][C_VerifyFinal]
+PKCS #11 Mechanism           | [`CKM_RSA_PKCS_SHA256`][CKM_RSA_PKCS_SHA256], [`CKM_RSA_PKCS_SHA512`][CKM_RSA_PKCS_SHA512]
 PKCS #11 Mechanism Parameter | None
 Cloud KMS Algorithm          | [`RSA_SIGN_PKCS1_2048_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PKCS1_3072_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PKCS1_4096_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PKCS1_4096_SHA512`][kms-rsa-sign-algorithms], [`RSA_SIGN_RAW_PKCS1_2048_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_RAW_PKCS1_3072_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_RAW_PKCS1_4096_SHA256`][kms-rsa-sign-algorithms]
 
 ### RSA-PSS Signing and Verification
 
-The library may be used for RSASSA-PSS signing and verification. The expected
-input for a signing or verification operation is a message digest of the
-appropriate length for the Cloud KMS algorithm.
+The library may be used for RSASSA-PSS single-part or multi-part signing and
+verification. The expected input for a signing or verification operation varies
+by mechanism and is either a message digest of the appropriate length for the
+Cloud KMS algorithm, or plain input data.
 
 Compatibility                | Compatible With
 ---------------------------- | ---------------
 PKCS #11 Functions           | [`C_Sign`][C_Sign], [`C_Verify`][C_Verify]
 PKCS #11 Mechanism           | [`CKM_RSA_PKCS_PSS`][CKM_RSA_PKCS_PSS]
+PKCS #11 Mechanism Parameter | [`CK_RSA_PKCS_PSS_PARAMS`][CK_RSA_PKCS_PSS_PARAMS]
+Cloud KMS Algorithm          | [`RSA_SIGN_PSS_2048_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PSS_3072_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PSS_4096_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PSS_4096_SHA512`][kms-rsa-sign-algorithms]
+
+Compatibility                | Compatible With
+---------------------------- | ---------------
+PKCS #11 Functions           | [`C_SignUpdate`][C_SignUpdate], [`C_SignFinal`][C_SignFinal], [`C_VerifyUpdate`][C_VerifyUpdate], [`C_VerifyFinal`][C_VerifyFinal]
+PKCS #11 Mechanism           | [`CKM_RSA_PKCS_PSS_SHA256`][CKM_RSA_PKCS_PSS_SHA256], [`CKM_RSA_PKCS_PSS_SHA512`][CKM_RSA_PKCS_PSS_SHA512]
 PKCS #11 Mechanism Parameter | [`CK_RSA_PKCS_PSS_PARAMS`][CK_RSA_PKCS_PSS_PARAMS]
 Cloud KMS Algorithm          | [`RSA_SIGN_PSS_2048_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PSS_3072_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PSS_4096_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PSS_4096_SHA512`][kms-rsa-sign-algorithms]
 

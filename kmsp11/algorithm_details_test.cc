@@ -28,7 +28,8 @@ TEST(GetAlgorithmDetailsTest, AlgorithmEc) {
 
   EXPECT_EQ(details.algorithm, kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384);
   EXPECT_EQ(details.purpose, kms_v1::CryptoKey::ASYMMETRIC_SIGN);
-  EXPECT_THAT(details.allowed_mechanisms, ElementsAre(CKM_ECDSA));
+  EXPECT_THAT(details.allowed_mechanisms,
+              ElementsAre(CKM_ECDSA, CKM_ECDSA_SHA384));
   EXPECT_EQ(details.key_type, CKK_EC);
   EXPECT_EQ(details.key_bit_length, 384);
   EXPECT_EQ(details.key_gen_mechanism, CKM_EC_KEY_PAIR_GEN);
