@@ -18,6 +18,7 @@
 #include "kmsp11/object.h"
 #include "kmsp11/operation/rsassa_pkcs1.h"
 #include "kmsp11/operation/rsassa_pss.h"
+#include "kmsp11/operation/rsassa_raw_pkcs1.h"
 #include "kmsp11/test/resource_helpers.h"
 #include "kmsp11/test/test_status_macros.h"
 #include "kmsp11/util/crypto_utils.h"
@@ -145,20 +146,20 @@ TEST_F(KmsDigestingSignerTest, SignSignatureLengthInvalid) {
 
 TEST_F(KmsDigestingSignerTest, SignMultiPartSuccess) {
   SetUp(kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
-  std::vector<uint8_t> data = {0xDE, 0xAD, 0xBE, 0xEF};
-  std::vector<uint8_t> data_part1 = {0xDE, 0xAD};
-  std::vector<uint8_t> data_part2 = {0xBE, 0xEF};
+  uint8_t data[4] = {0xDE, 0xAD, 0xBE, 0xEF};
 
   CK_MECHANISM mech{CKM_ECDSA_SHA256, nullptr, 0};
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<SignerInterface> signer,
                        KmsDigestingSigner::New(prv_, &mech));
   std::vector<uint8_t> sig(signer->signature_length());
-  EXPECT_OK(signer->SignUpdate(client_.get(), data_part1));
-  EXPECT_OK(signer->SignUpdate(client_.get(), data_part2));
+  EXPECT_OK(
+      signer->SignUpdate(client_.get(), absl::MakeConstSpan(&data[0], 2)));
+  EXPECT_OK(
+      signer->SignUpdate(client_.get(), absl::MakeConstSpan(&data[2], 2)));
   EXPECT_OK(signer->SignFinal(client_.get(), absl::MakeSpan(sig)));
 
   uint8_t digest[32];
-  SHA256(data.data(), data.size(), digest);
+  SHA256(data, 4, digest);
   EXPECT_OK(EcdsaVerifyP1363(EVP_PKEY_get0_EC_KEY(public_key_.get()),
                              EVP_sha256(), digest, sig));
 }
@@ -208,6 +209,33 @@ TEST_F(KmsDigestingSignerTest, RsaPkcs1SignSuccess) {
   CK_MECHANISM inner_mech{CKM_RSA_PKCS, nullptr, 0};
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<SignerInterface> inner_signer,
                        RsaPkcs1Signer::New(prv_, &inner_mech));
+  EXPECT_OK(inner_signer->Sign(client_.get(), digest_info,
+                               absl::MakeSpan(prehashed_sig)));
+  EXPECT_EQ(prehashed_sig, sig);
+}
+
+TEST_F(KmsDigestingSignerTest, RsaRawPkcs1SignMultiPartSuccess) {
+  SetUp(kms_v1::CryptoKeyVersion::RSA_SIGN_RAW_PKCS1_2048);
+  uint8_t data[4] = {0xDE, 0xAD, 0xBE, 0xEF};
+
+  CK_MECHANISM mech{CKM_SHA256_RSA_PKCS, nullptr, 0};
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<SignerInterface> signer,
+                       KmsDigestingSigner::New(prv_, &mech));
+  std::vector<uint8_t> sig(signer->signature_length());
+  EXPECT_OK(
+      signer->SignUpdate(client_.get(), absl::MakeConstSpan(&data[0], 2)));
+  EXPECT_OK(
+      signer->SignUpdate(client_.get(), absl::MakeConstSpan(&data[2], 2)));
+  EXPECT_OK(signer->SignFinal(client_.get(), absl::MakeSpan(sig)));
+
+  uint8_t digest[32];
+  std::vector<uint8_t> prehashed_sig(signer->signature_length());
+  SHA256(data, 4, digest);
+  ASSERT_OK_AND_ASSIGN(std::vector<uint8_t> digest_info,
+                       BuildRsaDigestInfo(NID_sha256, digest));
+  CK_MECHANISM inner_mech{CKM_RSA_PKCS, nullptr, 0};
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<SignerInterface> inner_signer,
+                       RsaRawPkcs1Signer::New(prv_, &inner_mech));
   EXPECT_OK(inner_signer->Sign(client_.get(), digest_info,
                                absl::MakeSpan(prehashed_sig)));
   EXPECT_EQ(prehashed_sig, sig);

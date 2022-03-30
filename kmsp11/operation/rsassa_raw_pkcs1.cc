@@ -111,7 +111,7 @@ absl::StatusOr<std::unique_ptr<VerifierInterface>> RsaRawPkcs1Verifier::New(
                    ParseX509PublicKeyDer(key_der));
 
   return std::unique_ptr<VerifierInterface>(new RsaRawPkcs1Verifier(
-      bssl::UniquePtr<RSA>(EVP_PKEY_get1_RSA(parsed_key.get()))));
+      key, bssl::UniquePtr<RSA>(EVP_PKEY_get1_RSA(parsed_key.get()))));
 }
 
 absl::Status RsaRawPkcs1Verifier::Verify(KmsClient* client,

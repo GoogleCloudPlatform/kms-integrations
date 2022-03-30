@@ -59,6 +59,8 @@ class RsaRawPkcs1Verifier : public VerifierInterface {
   static absl::StatusOr<std::unique_ptr<VerifierInterface>> New(
       std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
 
+  Object* object() override { return object_.get(); };
+
   absl::Status Verify(KmsClient* client, absl::Span<const uint8_t> data,
                       absl::Span<const uint8_t> signature) override;
   absl::Status VerifyUpdate(KmsClient* client,
@@ -69,8 +71,10 @@ class RsaRawPkcs1Verifier : public VerifierInterface {
   virtual ~RsaRawPkcs1Verifier() {}
 
  private:
-  RsaRawPkcs1Verifier(bssl::UniquePtr<RSA> key) : key_(std::move(key)) {}
+  RsaRawPkcs1Verifier(std::shared_ptr<Object> object, bssl::UniquePtr<RSA> key)
+      : object_(object), key_(std::move(key)) {}
 
+  std::shared_ptr<Object> object_;
   bssl::UniquePtr<RSA> key_;
 };
 

@@ -185,10 +185,16 @@ absl::Status CheckFipsSelfTest() {
 absl::StatusOr<const EVP_MD*> DigestForMechanism(CK_MECHANISM_TYPE mechanism) {
   switch (mechanism) {
     case CKM_SHA256:
+    case CKM_ECDSA_SHA256:
+    case CKM_SHA256_RSA_PKCS:
+    case CKM_SHA256_RSA_PKCS_PSS:
       return EVP_sha256();
     case CKM_SHA384:
+    case CKM_ECDSA_SHA384:
       return EVP_sha384();
     case CKM_SHA512:
+    case CKM_SHA512_RSA_PKCS:
+    case CKM_SHA512_RSA_PKCS_PSS:
       return EVP_sha512();
     default:
       return NewInternalError(
@@ -577,6 +583,16 @@ absl::Status RsaVerifyRawPkcs1(RSA* public_key, absl::Span<const uint8_t> data,
   }
 
   return absl::OkStatus();
+}
+
+bool IsRawRsaAlgorithm(
+    kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm) {
+  if (algorithm == kms_v1::CryptoKeyVersion::RSA_SIGN_RAW_PKCS1_2048 ||
+      algorithm == kms_v1::CryptoKeyVersion::RSA_SIGN_RAW_PKCS1_3072 ||
+      algorithm == kms_v1::CryptoKeyVersion::RSA_SIGN_RAW_PKCS1_4096) {
+    return true;
+  }
+  return false;
 }
 
 // Build a DigestInfo structure, which is the expected input into a CKM_RSA_PKCS

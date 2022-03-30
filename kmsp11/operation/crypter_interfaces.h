@@ -56,6 +56,8 @@ class SignerInterface {
 
 class VerifierInterface {
  public:
+  virtual Object* object() = 0;
+
   virtual absl::Status Verify(KmsClient* client, absl::Span<const uint8_t> data,
                               absl::Span<const uint8_t> signature) = 0;
   virtual absl::Status VerifyUpdate(KmsClient* client,

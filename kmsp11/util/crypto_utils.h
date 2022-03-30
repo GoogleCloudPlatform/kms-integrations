@@ -24,6 +24,7 @@
 #include "absl/time/time.h"
 #include "kmsp11/cryptoki.h"
 #include "kmsp11/openssl.h"
+#include "kmsp11/util/kms_v1.h"
 
 namespace kmsp11 {
 
@@ -140,6 +141,10 @@ absl::Status RsaVerifyPss(EVP_PKEY* public_key, const EVP_MD* hash,
 // Verifies that the provided raw RSA PKCS #1 signature is valid over data.
 absl::Status RsaVerifyRawPkcs1(RSA* public_key, absl::Span<const uint8_t> data,
                                absl::Span<const uint8_t> signature);
+
+// Returns whether or not the algorithm is a raw RSA PKCS #1 algorithm.
+bool IsRawRsaAlgorithm(
+    kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm);
 
 // Build a DigestInfo structure, which is the expected input into a CKM_RSA_PKCS
 // signing operation.

@@ -19,6 +19,7 @@
 #include "kmsp11/operation/preconditions.h"
 #include "kmsp11/operation/rsassa_pkcs1.h"
 #include "kmsp11/operation/rsassa_pss.h"
+#include "kmsp11/operation/rsassa_raw_pkcs1.h"
 #include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/status_macros.h"
@@ -41,6 +42,11 @@ absl::StatusOr<std::unique_ptr<SignerInterface>> KmsDigestingSigner::New(
     case CKM_SHA512_RSA_PKCS: {
       inner_mechanism = {CKM_RSA_PKCS, nullptr, 0};
       RETURN_IF_ERROR(EnsureNoParameters(mechanism));
+      if (IsRawRsaAlgorithm(key->algorithm().algorithm)) {
+        ASSIGN_OR_RETURN(inner_signer,
+                         RsaRawPkcs1Signer::New(key, &inner_mechanism));
+        break;
+      }
       ASSIGN_OR_RETURN(
           inner_signer,
           RsaPkcs1Signer::New(key, &inner_mechanism, ExpectedInput::kDigest));
@@ -55,13 +61,12 @@ absl::StatusOr<std::unique_ptr<SignerInterface>> KmsDigestingSigner::New(
     }
     default:
       return NewInternalError(
-          absl::StrFormat("KmsDigestingSigner does not support mechanism %d",
+          absl::StrFormat("KmsDigestingSigner does not support mechanism %#x",
                           mechanism->mechanism),
           SOURCE_LOCATION);
   }
 
-  ASSIGN_OR_RETURN(const EVP_MD* md,
-                   DigestForMechanism(*key->algorithm().digest_mechanism));
+  ASSIGN_OR_RETURN(const EVP_MD* md, DigestForMechanism(mechanism->mechanism));
 
   return std::unique_ptr<SignerInterface>(
       new KmsDigestingSigner(std::move(inner_signer), md));
@@ -95,6 +100,12 @@ absl::Status KmsDigestingSigner::Sign(KmsClient* client,
             "computed digest has incorrect size (got %d, want %d): %s",
             digest_len, md_size, SslErrorToString()),
         SOURCE_LOCATION);
+  }
+
+  if (IsRawRsaAlgorithm(object()->algorithm().algorithm)) {
+    ASSIGN_OR_RETURN(std::vector<uint8_t> digest_info,
+                     BuildRsaDigestInfo(EVP_MD_type(md_), evp_digest));
+    return inner_signer_->Sign(client, digest_info, signature);
   }
 
   return inner_signer_->Sign(client, evp_digest, signature);
@@ -146,6 +157,12 @@ absl::Status KmsDigestingSigner::SignFinal(KmsClient* client,
             "computed digest has incorrect size (got %d, want %d): %s",
             digest_len, EVP_MD_size(md_), SslErrorToString()),
         SOURCE_LOCATION);
+  }
+
+  if (IsRawRsaAlgorithm(object()->algorithm().algorithm)) {
+    ASSIGN_OR_RETURN(std::vector<uint8_t> digest_info,
+                     BuildRsaDigestInfo(EVP_MD_type(md_), evp_digest));
+    return inner_signer_->Sign(client, digest_info, signature);
   }
 
   return inner_signer_->Sign(client, evp_digest, signature);

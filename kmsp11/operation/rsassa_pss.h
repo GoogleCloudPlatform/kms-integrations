@@ -49,6 +49,8 @@ class RsaPssVerifier : public VerifierInterface {
   static absl::StatusOr<std::unique_ptr<VerifierInterface>> New(
       std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
 
+  Object* object() override { return object_.get(); };
+
   absl::Status Verify(KmsClient* client, absl::Span<const uint8_t> digest,
                       absl::Span<const uint8_t> signature) override;
   absl::Status VerifyUpdate(KmsClient* client,

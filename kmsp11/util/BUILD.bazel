@@ -33,6 +33,7 @@ cc_library(
         ":status_macros",
         "//kmsp11:cryptoki_headers",
         "//kmsp11:openssl",
+        "//kmsp11/util:kms_v1",
         "@com_google_absl//absl/random",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/synchronization",
