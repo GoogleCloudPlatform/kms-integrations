@@ -31,6 +31,10 @@ class KmsDigestingVerifier : public VerifierInterface {
  public:
   static absl::StatusOr<std::unique_ptr<VerifierInterface>> New(
       std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
+  static absl::StatusOr<std::unique_ptr<VerifierInterface>> New(
+      std::shared_ptr<Object> key,
+      std::unique_ptr<VerifierInterface> inner_verifier,
+      const CK_MECHANISM* mechanism);
 
   Object* object() override { return inner_verifier_->object(); };
 

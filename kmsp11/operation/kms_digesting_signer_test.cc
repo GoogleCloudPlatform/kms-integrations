@@ -28,51 +28,24 @@ namespace {
 
 using ::testing::AllOf;
 
-TEST(NewSignerTest, ParamInvalid) {
-  ASSERT_OK_AND_ASSIGN(
-      KeyPair kp, NewMockKeyPair(kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256,
-                                 "ec_p256_public.pem"));
-  std::shared_ptr<Object> key = std::make_shared<Object>(kp.private_key);
+class MockSigner : public SignerInterface {
+ public:
+  size_t signature_length() override { return 0; };
+  Object* object() override { return nullptr; };
 
-  char buf[1];
-  CK_MECHANISM mechanism{CKM_ECDSA_SHA256, buf, sizeof(buf)};
-  EXPECT_THAT(KmsDigestingSigner::New(key, &mechanism),
-              StatusRvIs(CKR_MECHANISM_PARAM_INVALID));
-}
+  absl::Status Sign(KmsClient* client, absl::Span<const uint8_t> data,
+                    absl::Span<uint8_t> signature) {
+    return absl::OkStatus();
+  };
+  absl::Status SignUpdate(KmsClient* client, absl::Span<const uint8_t> data) {
+    return absl::OkStatus();
+  };
+  absl::Status SignFinal(KmsClient* client, absl::Span<uint8_t> signature) {
+    return absl::OkStatus();
+  };
 
-TEST(NewSignerTest, FailureWrongKeyType) {
-  ASSERT_OK_AND_ASSIGN(
-      KeyPair kp,
-      NewMockKeyPair(kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256,
-                     "rsa_2048_public.pem"));
-  std::shared_ptr<Object> key = std::make_shared<Object>(kp.private_key);
-
-  CK_MECHANISM mechanism{CKM_ECDSA_SHA256, nullptr, 0};
-  EXPECT_THAT(KmsDigestingSigner::New(key, &mechanism),
-              StatusRvIs(CKR_KEY_TYPE_INCONSISTENT));
-}
-
-TEST(NewSignerTest, FailureWrongObjectClass) {
-  ASSERT_OK_AND_ASSIGN(
-      KeyPair kp, NewMockKeyPair(kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256,
-                                 "ec_p256_public.pem"));
-  std::shared_ptr<Object> key = std::make_shared<Object>(kp.public_key);
-
-  CK_MECHANISM mechanism{CKM_ECDSA_SHA256, nullptr, 0};
-  EXPECT_THAT(KmsDigestingSigner::New(key, &mechanism),
-              StatusRvIs(CKR_KEY_FUNCTION_NOT_PERMITTED));
-}
-
-TEST(NewSignerTest, FailureWrongMechanism) {
-  ASSERT_OK_AND_ASSIGN(
-      KeyPair kp, NewMockKeyPair(kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256,
-                                 "ec_p256_public.pem"));
-  std::shared_ptr<Object> key = std::make_shared<Object>(kp.public_key);
-
-  CK_MECHANISM mechanism{CKM_AES_MAC, nullptr, 0};
-  EXPECT_THAT(KmsDigestingSigner::New(key, &mechanism),
-              StatusRvIs(CKR_GENERAL_ERROR));
-}
+  virtual ~MockSigner() {}
+};
 
 class KmsDigestingSignerTest : public testing::Test {
  protected:
@@ -115,76 +88,29 @@ class KmsDigestingSignerTest : public testing::Test {
   std::shared_ptr<Object> pub_, prv_;
 };
 
-TEST_F(KmsDigestingSignerTest, SignSuccess) {
-  SetUp(kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
-  std::vector<uint8_t> data = {0xDE, 0xAD, 0xBE, 0xEF};
-
-  CK_MECHANISM mech{CKM_ECDSA_SHA256, nullptr, 0};
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<SignerInterface> signer,
-                       KmsDigestingSigner::New(prv_, &mech));
-  std::vector<uint8_t> sig(signer->signature_length());
-  EXPECT_OK(signer->Sign(client_.get(), data, absl::MakeSpan(sig)));
-
-  uint8_t digest[32];
-  SHA256(data.data(), data.size(), digest);
-  EXPECT_OK(EcdsaVerifyP1363(EVP_PKEY_get0_EC_KEY(public_key_.get()),
-                             EVP_sha256(), digest, sig));
-}
-
-TEST_F(KmsDigestingSignerTest, SignSignatureLengthInvalid) {
-  SetUp(kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
-  uint8_t data[123], sig[97];
-
-  CK_MECHANISM mech{CKM_ECDSA_SHA256, nullptr, 0};
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<SignerInterface> signer,
-                       KmsDigestingSigner::New(prv_, &mech));
-
-  EXPECT_THAT(signer->Sign(client_.get(), data, absl::MakeSpan(sig)),
-              AllOf(StatusIs(absl::StatusCode::kInternal),
-                    StatusRvIs(CKR_GENERAL_ERROR)));
-}
-
-TEST_F(KmsDigestingSignerTest, SignMultiPartSuccess) {
-  SetUp(kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
-  uint8_t data[4] = {0xDE, 0xAD, 0xBE, 0xEF};
-
-  CK_MECHANISM mech{CKM_ECDSA_SHA256, nullptr, 0};
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<SignerInterface> signer,
-                       KmsDigestingSigner::New(prv_, &mech));
-  std::vector<uint8_t> sig(signer->signature_length());
-  EXPECT_OK(
-      signer->SignUpdate(client_.get(), absl::MakeConstSpan(&data[0], 2)));
-  EXPECT_OK(
-      signer->SignUpdate(client_.get(), absl::MakeConstSpan(&data[2], 2)));
-  EXPECT_OK(signer->SignFinal(client_.get(), absl::MakeSpan(sig)));
-
-  uint8_t digest[32];
-  SHA256(data, 4, digest);
-  EXPECT_OK(EcdsaVerifyP1363(EVP_PKEY_get0_EC_KEY(public_key_.get()),
-                             EVP_sha256(), digest, sig));
-}
-
 TEST_F(KmsDigestingSignerTest, SignFinalWithoutUpdateFails) {
-  SetUp(kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
   std::vector<uint8_t> data = {0xDE, 0xAD, 0xBE, 0xEF};
 
   CK_MECHANISM mech{CKM_ECDSA_SHA256, nullptr, 0};
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<SignerInterface> signer,
-                       KmsDigestingSigner::New(prv_, &mech));
-  std::vector<uint8_t> sig(signer->signature_length());
+  ASSERT_OK_AND_ASSIGN(
+      std::unique_ptr<SignerInterface> signer,
+      KmsDigestingSigner::New(
+          nullptr, std::unique_ptr<SignerInterface>(new MockSigner()), &mech));
+  std::vector<uint8_t> sig(1337);
   EXPECT_THAT(signer->SignFinal(client_.get(), absl::MakeSpan(sig)),
               AllOf(StatusIs(absl::StatusCode::kFailedPrecondition),
                     StatusRvIs(CKR_FUNCTION_FAILED)));
 }
 
 TEST_F(KmsDigestingSignerTest, SignSinglePartAfterUpdateFails) {
-  SetUp(kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
   std::vector<uint8_t> data = {0xDE, 0xAD, 0xBE, 0xEF};
 
   CK_MECHANISM mech{CKM_ECDSA_SHA256, nullptr, 0};
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<SignerInterface> signer,
-                       KmsDigestingSigner::New(prv_, &mech));
-  std::vector<uint8_t> sig(signer->signature_length());
+  ASSERT_OK_AND_ASSIGN(
+      std::unique_ptr<SignerInterface> signer,
+      KmsDigestingSigner::New(
+          nullptr, std::unique_ptr<SignerInterface>(new MockSigner()), &mech));
+  std::vector<uint8_t> sig(1337);
   EXPECT_OK(signer->SignUpdate(client_.get(), data));
   EXPECT_THAT(signer->Sign(client_.get(), data, absl::MakeSpan(sig)),
               AllOf(StatusIs(absl::StatusCode::kFailedPrecondition),

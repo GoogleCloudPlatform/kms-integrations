@@ -17,59 +17,19 @@
 #ifndef KMSP11_OPERATION_ECDSA_H_
 #define KMSP11_OPERATION_ECDSA_H_
 
-#include <string_view>
-
-#include "kmsp11/openssl.h"
-#include "kmsp11/operation/kms_prehashed_signer.h"
+#include "kmsp11/operation/crypter_interfaces.h"
 #include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/string_utils.h"
 
 namespace kmsp11 {
 
-// An implementation of SignerInterface that makes ECDSA signatures using Cloud
-// KMS.
-class EcdsaSigner : public KmsPrehashedSigner {
- public:
-  static absl::StatusOr<std::unique_ptr<SignerInterface>> New(
-      std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
+// Returns either an EcdsaSigner or a KmsDigestingSigner based on mechanism.
+absl::StatusOr<std::unique_ptr<SignerInterface>> NewEcdsaSigner(
+    std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
 
-  size_t signature_length() override;
-
-  absl::Status CopySignature(std::string_view src,
-                             absl::Span<uint8_t> dest) override;
-
-  virtual ~EcdsaSigner() {}
-
- private:
-  EcdsaSigner(std::shared_ptr<Object> object, bssl::UniquePtr<EC_KEY> key)
-      : KmsPrehashedSigner(object), key_(std::move(key)) {}
-
-  bssl::UniquePtr<EC_KEY> key_;
-};
-
-class EcdsaVerifier : public VerifierInterface {
- public:
-  static absl::StatusOr<std::unique_ptr<VerifierInterface>> New(
-      std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
-
-  Object* object() override { return object_.get(); };
-
-  absl::Status Verify(KmsClient* client, absl::Span<const uint8_t> digest,
-                      absl::Span<const uint8_t> signature) override;
-  absl::Status VerifyUpdate(KmsClient* client,
-                            absl::Span<const uint8_t> data) override;
-  absl::Status VerifyFinal(KmsClient* client,
-                           absl::Span<const uint8_t> signature) override;
-
-  virtual ~EcdsaVerifier() {}
-
- private:
-  EcdsaVerifier(std::shared_ptr<Object> object, bssl::UniquePtr<EC_KEY> key)
-      : object_(object), key_(std::move(key)) {}
-
-  std::shared_ptr<Object> object_;
-  bssl::UniquePtr<EC_KEY> key_;
-};
+// Returns either an EcdsaVerifier or a KmsDigestingVerifier based on mechanism.
+absl::StatusOr<std::unique_ptr<VerifierInterface>> NewEcdsaVerifier(
+    std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
 
 }  // namespace kmsp11
 

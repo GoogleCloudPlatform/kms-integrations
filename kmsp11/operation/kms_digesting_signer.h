@@ -33,6 +33,11 @@ class KmsDigestingSigner : public SignerInterface {
   static absl::StatusOr<std::unique_ptr<SignerInterface>> New(
       std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
 
+  static absl::StatusOr<std::unique_ptr<SignerInterface>> New(
+      std::shared_ptr<Object> key,
+      std::unique_ptr<SignerInterface> inner_signer,
+      const CK_MECHANISM* mechanism);
+
   absl::Status Sign(KmsClient* client, absl::Span<const uint8_t> data,
                     absl::Span<uint8_t> signature) override;
   absl::Status SignUpdate(KmsClient* client,

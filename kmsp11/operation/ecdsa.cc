@@ -16,7 +16,11 @@
 
 #include <string_view>
 
+#include "kmsp11/openssl.h"
 #include "kmsp11/operation/crypter_interfaces.h"
+#include "kmsp11/operation/kms_digesting_signer.h"
+#include "kmsp11/operation/kms_digesting_verifier.h"
+#include "kmsp11/operation/kms_prehashed_signer.h"
 #include "kmsp11/operation/preconditions.h"
 #include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/errors.h"
@@ -24,10 +28,50 @@
 
 namespace kmsp11 {
 
+// An implementation of SignerInterface that makes ECDSA signatures using Cloud
+// KMS.
+class EcdsaSigner : public KmsPrehashedSigner {
+ public:
+  static absl::StatusOr<std::unique_ptr<SignerInterface>> New(
+      std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
+
+  size_t signature_length() override;
+
+  absl::Status CopySignature(std::string_view src,
+                             absl::Span<uint8_t> dest) override;
+
+  virtual ~EcdsaSigner() {}
+
+ private:
+  EcdsaSigner(std::shared_ptr<Object> object, bssl::UniquePtr<EC_KEY> key)
+      : KmsPrehashedSigner(object), key_(std::move(key)) {}
+
+  bssl::UniquePtr<EC_KEY> key_;
+};
+
+absl::StatusOr<std::unique_ptr<SignerInterface>> NewEcdsaSigner(
+    std::shared_ptr<Object> key, const CK_MECHANISM* mechanism) {
+  CK_MECHANISM inner_mechanism = {CKM_ECDSA, mechanism->pParameter,
+                                  mechanism->ulParameterLen};
+  ASSIGN_OR_RETURN(auto signer, EcdsaSigner::New(key, &inner_mechanism));
+  switch (mechanism->mechanism) {
+    case CKM_ECDSA:
+      return signer;
+    case CKM_ECDSA_SHA256:
+    case CKM_ECDSA_SHA384:
+      return KmsDigestingSigner::New(key, std::move(signer), mechanism);
+    default:
+      return NewInternalError(
+          absl::StrFormat("Mechanism %#x not supported for ECDSA signing",
+                          mechanism->mechanism),
+          SOURCE_LOCATION);
+  }
+}
+
 absl::StatusOr<std::unique_ptr<SignerInterface>> EcdsaSigner::New(
     std::shared_ptr<Object> key, const CK_MECHANISM* mechanism) {
-  RETURN_IF_ERROR(
-      CheckKeyPreconditions(CKK_EC, CKO_PRIVATE_KEY, CKM_ECDSA, key.get()));
+  RETURN_IF_ERROR(CheckKeyPreconditions(CKK_EC, CKO_PRIVATE_KEY,
+                                        mechanism->mechanism, key.get()));
   RETURN_IF_ERROR(EnsureNoParameters(mechanism));
 
   ASSIGN_OR_RETURN(std::string_view key_der,
@@ -55,6 +99,49 @@ absl::Status EcdsaSigner::CopySignature(std::string_view src,
   }
   std::copy(p1363_sig.begin(), p1363_sig.end(), dest.data());
   return absl::OkStatus();
+}
+
+class EcdsaVerifier : public VerifierInterface {
+ public:
+  static absl::StatusOr<std::unique_ptr<VerifierInterface>> New(
+      std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
+
+  Object* object() override { return object_.get(); };
+
+  absl::Status Verify(KmsClient* client, absl::Span<const uint8_t> digest,
+                      absl::Span<const uint8_t> signature) override;
+  absl::Status VerifyUpdate(KmsClient* client,
+                            absl::Span<const uint8_t> data) override;
+  absl::Status VerifyFinal(KmsClient* client,
+                           absl::Span<const uint8_t> signature) override;
+
+  virtual ~EcdsaVerifier() {}
+
+ private:
+  EcdsaVerifier(std::shared_ptr<Object> object, bssl::UniquePtr<EC_KEY> key)
+      : object_(object), key_(std::move(key)) {}
+
+  std::shared_ptr<Object> object_;
+  bssl::UniquePtr<EC_KEY> key_;
+};
+
+absl::StatusOr<std::unique_ptr<VerifierInterface>> NewEcdsaVerifier(
+    std::shared_ptr<Object> key, const CK_MECHANISM* mechanism) {
+  CK_MECHANISM inner_mechanism = {CKM_ECDSA, mechanism->pParameter,
+                                  mechanism->ulParameterLen};
+  ASSIGN_OR_RETURN(auto verifier, EcdsaVerifier::New(key, &inner_mechanism));
+  switch (mechanism->mechanism) {
+    case CKM_ECDSA:
+      return verifier;
+    case CKM_ECDSA_SHA256:
+    case CKM_ECDSA_SHA384:
+      return KmsDigestingVerifier::New(key, std::move(verifier), mechanism);
+    default:
+      return NewInternalError(
+          absl::StrFormat("Mechanism %#x not supported for ECDSA verification",
+                          mechanism->mechanism),
+          SOURCE_LOCATION);
+  }
 }
 
 absl::StatusOr<std::unique_ptr<VerifierInterface>> EcdsaVerifier::New(

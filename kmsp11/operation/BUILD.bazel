@@ -47,6 +47,8 @@ cc_library(
     hdrs = ["ecdsa.h"],
     deps = [
         ":crypter_interfaces",
+        ":kms_digesting_signer",
+        ":kms_digesting_verifier",
         ":kms_prehashed_signer",
         ":preconditions",
         "//kmsp11:cryptoki_headers",
@@ -85,7 +87,6 @@ cc_library(
     hdrs = ["kms_digesting_signer.h"],
     deps = [
         ":crypter_interfaces",
-        ":ecdsa",
         ":rsassa_pkcs1",
         ":rsassa_pss",
         ":rsassa_raw_pkcs1",
@@ -120,7 +121,6 @@ cc_library(
     hdrs = ["kms_digesting_verifier.h"],
     deps = [
         ":crypter_interfaces",
-        ":ecdsa",
         ":preconditions",
         ":rsassa_pkcs1",
         ":rsassa_pss",
@@ -138,6 +138,7 @@ cc_test(
     size= "small",
     srcs = ["kms_digesting_verifier_test.cc"],
     deps = [
+        ":ecdsa",
         ":kms_digesting_verifier",
         ":kms_digesting_signer",
         "//fakekms/cpp:fakekms",

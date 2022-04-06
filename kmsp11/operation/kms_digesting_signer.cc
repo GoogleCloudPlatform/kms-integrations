@@ -14,7 +14,6 @@
 
 #include "kmsp11/operation/kms_digesting_signer.h"
 
-#include "kmsp11/operation/ecdsa.h"
 #include "kmsp11/operation/kms_prehashed_signer.h"
 #include "kmsp11/operation/preconditions.h"
 #include "kmsp11/operation/rsassa_pkcs1.h"
@@ -27,17 +26,18 @@
 namespace kmsp11 {
 
 absl::StatusOr<std::unique_ptr<SignerInterface>> KmsDigestingSigner::New(
+    std::shared_ptr<Object> key, std::unique_ptr<SignerInterface> inner_signer,
+    const CK_MECHANISM* mechanism) {
+  ASSIGN_OR_RETURN(const EVP_MD* md, DigestForMechanism(mechanism->mechanism));
+  return std::unique_ptr<SignerInterface>(
+      new KmsDigestingSigner(std::move(inner_signer), md));
+}
+
+absl::StatusOr<std::unique_ptr<SignerInterface>> KmsDigestingSigner::New(
     std::shared_ptr<Object> key, const CK_MECHANISM* mechanism) {
   CK_MECHANISM inner_mechanism;
   std::unique_ptr<SignerInterface> inner_signer;
   switch (mechanism->mechanism) {
-    case CKM_ECDSA_SHA256:
-    case CKM_ECDSA_SHA384: {
-      inner_mechanism = {CKM_ECDSA, nullptr, 0};
-      RETURN_IF_ERROR(EnsureNoParameters(mechanism));
-      ASSIGN_OR_RETURN(inner_signer, EcdsaSigner::New(key, &inner_mechanism));
-      break;
-    }
     case CKM_SHA256_RSA_PKCS:
     case CKM_SHA512_RSA_PKCS: {
       inner_mechanism = {CKM_RSA_PKCS, nullptr, 0};

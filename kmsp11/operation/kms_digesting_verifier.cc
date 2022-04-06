@@ -14,7 +14,6 @@
 
 #include "kmsp11/operation/kms_digesting_verifier.h"
 
-#include "kmsp11/operation/ecdsa.h"
 #include "kmsp11/operation/preconditions.h"
 #include "kmsp11/operation/rsassa_pkcs1.h"
 #include "kmsp11/operation/rsassa_pss.h"
@@ -26,18 +25,19 @@
 namespace kmsp11 {
 
 absl::StatusOr<std::unique_ptr<VerifierInterface>> KmsDigestingVerifier::New(
+    std::shared_ptr<Object> key,
+    std::unique_ptr<VerifierInterface> inner_verifier,
+    const CK_MECHANISM* mechanism) {
+  ASSIGN_OR_RETURN(const EVP_MD* md, DigestForMechanism(mechanism->mechanism));
+  return std::unique_ptr<VerifierInterface>(
+      new KmsDigestingVerifier(std::move(inner_verifier), md));
+}
+
+absl::StatusOr<std::unique_ptr<VerifierInterface>> KmsDigestingVerifier::New(
     std::shared_ptr<Object> key, const CK_MECHANISM* mechanism) {
   CK_MECHANISM inner_mechanism;
   std::unique_ptr<VerifierInterface> inner_verifier;
   switch (mechanism->mechanism) {
-    case CKM_ECDSA_SHA256:
-    case CKM_ECDSA_SHA384: {
-      inner_mechanism = {CKM_ECDSA, nullptr, 0};
-      RETURN_IF_ERROR(EnsureNoParameters(mechanism));
-      ASSIGN_OR_RETURN(inner_verifier,
-                       EcdsaVerifier::New(key, &inner_mechanism));
-      break;
-    }
     case CKM_SHA256_RSA_PKCS:
     case CKM_SHA512_RSA_PKCS: {
       inner_mechanism = {CKM_RSA_PKCS, nullptr, 0};

@@ -51,7 +51,9 @@ absl::StatusOr<SignOp> NewSignOp(std::shared_ptr<Object> key,
                                  const CK_MECHANISM* mechanism) {
   switch (mechanism->mechanism) {
     case CKM_ECDSA:
-      return EcdsaSigner::New(key, mechanism);
+    case CKM_ECDSA_SHA256:
+    case CKM_ECDSA_SHA384:
+      return NewEcdsaSigner(key, mechanism);
     case CKM_RSA_PKCS:
       if (!key->algorithm().digest_mechanism.has_value()) {
         return RsaRawPkcs1Signer::New(key, mechanism);
@@ -59,8 +61,6 @@ absl::StatusOr<SignOp> NewSignOp(std::shared_ptr<Object> key,
       return RsaPkcs1Signer::New(key, mechanism);
     case CKM_RSA_PKCS_PSS:
       return RsaPssSigner::New(key, mechanism);
-    case CKM_ECDSA_SHA256:
-    case CKM_ECDSA_SHA384:
     case CKM_SHA256_RSA_PKCS:
     case CKM_SHA512_RSA_PKCS:
     case CKM_SHA256_RSA_PKCS_PSS:
@@ -76,7 +76,9 @@ absl::StatusOr<VerifyOp> NewVerifyOp(std::shared_ptr<Object> key,
                                      const CK_MECHANISM* mechanism) {
   switch (mechanism->mechanism) {
     case CKM_ECDSA:
-      return EcdsaVerifier::New(key, mechanism);
+    case CKM_ECDSA_SHA256:
+    case CKM_ECDSA_SHA384:
+      return NewEcdsaVerifier(key, mechanism);
     case CKM_RSA_PKCS:
       if (!key->algorithm().digest_mechanism.has_value()) {
         return RsaRawPkcs1Verifier::New(key, mechanism);
@@ -84,8 +86,6 @@ absl::StatusOr<VerifyOp> NewVerifyOp(std::shared_ptr<Object> key,
       return RsaPkcs1Verifier::New(key, mechanism);
     case CKM_RSA_PKCS_PSS:
       return RsaPssVerifier::New(key, mechanism);
-    case CKM_ECDSA_SHA256:
-    case CKM_ECDSA_SHA384:
     case CKM_SHA256_RSA_PKCS:
     case CKM_SHA512_RSA_PKCS:
     case CKM_SHA256_RSA_PKCS_PSS:
