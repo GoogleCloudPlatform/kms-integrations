@@ -60,11 +60,11 @@ absl::StatusOr<SignOp> NewSignOp(std::shared_ptr<Object> key,
       }
       return RsaPkcs1Signer::New(key, mechanism);
     case CKM_RSA_PKCS_PSS:
-      return RsaPssSigner::New(key, mechanism);
-    case CKM_SHA256_RSA_PKCS:
-    case CKM_SHA512_RSA_PKCS:
     case CKM_SHA256_RSA_PKCS_PSS:
     case CKM_SHA512_RSA_PKCS_PSS:
+      return NewRsaPssSigner(key, mechanism);
+    case CKM_SHA256_RSA_PKCS:
+    case CKM_SHA512_RSA_PKCS:
       return KmsDigestingSigner::New(key, mechanism);
     default:
       return InvalidMechanismError(mechanism->mechanism, "sign",
@@ -85,11 +85,11 @@ absl::StatusOr<VerifyOp> NewVerifyOp(std::shared_ptr<Object> key,
       }
       return RsaPkcs1Verifier::New(key, mechanism);
     case CKM_RSA_PKCS_PSS:
-      return RsaPssVerifier::New(key, mechanism);
-    case CKM_SHA256_RSA_PKCS:
-    case CKM_SHA512_RSA_PKCS:
     case CKM_SHA256_RSA_PKCS_PSS:
     case CKM_SHA512_RSA_PKCS_PSS:
+      return NewRsaPssVerifier(key, mechanism);
+    case CKM_SHA256_RSA_PKCS:
+    case CKM_SHA512_RSA_PKCS:
       return KmsDigestingVerifier::New(key, mechanism);
     default:
       return InvalidMechanismError(mechanism->mechanism, "verify",

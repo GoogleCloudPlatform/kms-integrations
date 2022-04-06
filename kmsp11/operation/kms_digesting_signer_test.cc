@@ -17,7 +17,6 @@
 #include "fakekms/cpp/fakekms.h"
 #include "kmsp11/object.h"
 #include "kmsp11/operation/rsassa_pkcs1.h"
-#include "kmsp11/operation/rsassa_pss.h"
 #include "kmsp11/operation/rsassa_raw_pkcs1.h"
 #include "kmsp11/test/resource_helpers.h"
 #include "kmsp11/test/test_status_macros.h"
@@ -165,22 +164,6 @@ TEST_F(KmsDigestingSignerTest, RsaRawPkcs1SignMultiPartSuccess) {
   EXPECT_OK(inner_signer->Sign(client_.get(), digest_info,
                                absl::MakeSpan(prehashed_sig)));
   EXPECT_EQ(prehashed_sig, sig);
-}
-
-TEST_F(KmsDigestingSignerTest, RsaPssSignSuccess) {
-  SetUp(kms_v1::CryptoKeyVersion::RSA_SIGN_PSS_2048_SHA256);
-  std::vector<uint8_t> data = {0xDE, 0xAD, 0xBE, 0xEF};
-  CK_RSA_PKCS_PSS_PARAMS params{CKM_SHA256, CKG_MGF1_SHA256, 32};
-  CK_MECHANISM mech{CKM_SHA256_RSA_PKCS_PSS, &params, sizeof(params)};
-
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<SignerInterface> signer,
-                       KmsDigestingSigner::New(prv_, &mech));
-  std::vector<uint8_t> sig(signer->signature_length());
-  EXPECT_OK(signer->Sign(client_.get(), data, absl::MakeSpan(sig)));
-
-  uint8_t digest[32];
-  SHA256(data.data(), data.size(), digest);
-  EXPECT_OK(RsaVerifyPss(public_key_.get(), EVP_sha256(), digest, sig));
 }
 
 }  // namespace

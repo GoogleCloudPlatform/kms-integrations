@@ -16,7 +16,6 @@
 
 #include "kmsp11/operation/preconditions.h"
 #include "kmsp11/operation/rsassa_pkcs1.h"
-#include "kmsp11/operation/rsassa_pss.h"
 #include "kmsp11/operation/rsassa_raw_pkcs1.h"
 #include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/errors.h"
@@ -52,14 +51,6 @@ absl::StatusOr<std::unique_ptr<VerifierInterface>> KmsDigestingVerifier::New(
       ASSIGN_OR_RETURN(
           inner_verifier,
           RsaPkcs1Verifier::New(key, &inner_mechanism, ExpectedInput::kDigest));
-      break;
-    }
-    case CKM_SHA256_RSA_PKCS_PSS:
-    case CKM_SHA512_RSA_PKCS_PSS: {
-      inner_mechanism = {CKM_RSA_PKCS_PSS, mechanism->pParameter,
-                         mechanism->ulParameterLen};
-      ASSIGN_OR_RETURN(inner_verifier,
-                       RsaPssVerifier::New(key, &inner_mechanism));
       break;
     }
     default:

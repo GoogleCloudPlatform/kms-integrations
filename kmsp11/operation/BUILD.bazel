@@ -88,7 +88,6 @@ cc_library(
     deps = [
         ":crypter_interfaces",
         ":rsassa_pkcs1",
-        ":rsassa_pss",
         ":rsassa_raw_pkcs1",
         ":kms_prehashed_signer",
         ":preconditions",
@@ -123,7 +122,6 @@ cc_library(
         ":crypter_interfaces",
         ":preconditions",
         ":rsassa_pkcs1",
-        ":rsassa_pss",
         ":rsassa_raw_pkcs1",
         "//kmsp11:cryptoki_headers",
         "//kmsp11/util:crypto_utils",
@@ -257,6 +255,8 @@ cc_library(
     hdrs = ["rsassa_pss.h"],
     deps = [
         ":crypter_interfaces",
+        ":kms_digesting_signer",
+        ":kms_digesting_verifier",
         ":kms_prehashed_signer",
         ":preconditions",
         "//kmsp11:cryptoki_headers",

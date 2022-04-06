@@ -17,56 +17,20 @@
 #ifndef KMSP11_OPERATION_RSASSA_PSS_H_
 #define KMSP11_OPERATION_RSASSA_PSS_H_
 
-#include <string_view>
-
-#include "kmsp11/openssl.h"
-#include "kmsp11/operation/kms_prehashed_signer.h"
+#include "kmsp11/operation/crypter_interfaces.h"
 #include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/string_utils.h"
 
 namespace kmsp11 {
 
-// An implementation of SignerInterface that makes RSASSA-PSS signatures using
-// Cloud KMS.
-class RsaPssSigner : public KmsPrehashedSigner {
- public:
-  static absl::StatusOr<std::unique_ptr<SignerInterface>> New(
-      std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
+// Returns either an RsaPssSigner or a KmsDigestingSigner based on mechanism.
+absl::StatusOr<std::unique_ptr<SignerInterface>> NewRsaPssSigner(
+    std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
 
-  size_t signature_length() override;
-
-  virtual ~RsaPssSigner() {}
-
- private:
-  RsaPssSigner(std::shared_ptr<Object> object, bssl::UniquePtr<EVP_PKEY> key)
-      : KmsPrehashedSigner(object), key_(std::move(key)) {}
-
-  bssl::UniquePtr<EVP_PKEY> key_;
-};
-
-class RsaPssVerifier : public VerifierInterface {
- public:
-  static absl::StatusOr<std::unique_ptr<VerifierInterface>> New(
-      std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
-
-  Object* object() override { return object_.get(); };
-
-  absl::Status Verify(KmsClient* client, absl::Span<const uint8_t> digest,
-                      absl::Span<const uint8_t> signature) override;
-  absl::Status VerifyUpdate(KmsClient* client,
-                            absl::Span<const uint8_t> data) override;
-  absl::Status VerifyFinal(KmsClient* client,
-                           absl::Span<const uint8_t> signature) override;
-
-  virtual ~RsaPssVerifier() {}
-
- private:
-  RsaPssVerifier(std::shared_ptr<Object> object, bssl::UniquePtr<EVP_PKEY> key)
-      : object_(object), key_(std::move(key)) {}
-
-  std::shared_ptr<Object> object_;
-  bssl::UniquePtr<EVP_PKEY> key_;
-};
+// Returns either an RsaPssVerifier or a KmsDigestingVerifier based on
+// mechanism.
+absl::StatusOr<std::unique_ptr<VerifierInterface>> NewRsaPssVerifier(
+    std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
 
 }  // namespace kmsp11
 

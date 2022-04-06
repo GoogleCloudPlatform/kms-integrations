@@ -16,7 +16,11 @@
 
 #include <string_view>
 
+#include "kmsp11/openssl.h"
 #include "kmsp11/operation/crypter_interfaces.h"
+#include "kmsp11/operation/kms_digesting_signer.h"
+#include "kmsp11/operation/kms_digesting_verifier.h"
+#include "kmsp11/operation/kms_prehashed_signer.h"
 #include "kmsp11/operation/preconditions.h"
 #include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/errors.h"
@@ -54,6 +58,43 @@ absl::Status ValidatePssParameters(Object* key, void* parameters,
 
 }  // namespace
 
+// An implementation of SignerInterface that makes RSASSA-PSS signatures using
+// Cloud KMS.
+class RsaPssSigner : public KmsPrehashedSigner {
+ public:
+  static absl::StatusOr<std::unique_ptr<SignerInterface>> New(
+      std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
+
+  size_t signature_length() override;
+
+  virtual ~RsaPssSigner() {}
+
+ private:
+  RsaPssSigner(std::shared_ptr<Object> object, bssl::UniquePtr<EVP_PKEY> key)
+      : KmsPrehashedSigner(object), key_(std::move(key)) {}
+
+  bssl::UniquePtr<EVP_PKEY> key_;
+};
+
+absl::StatusOr<std::unique_ptr<SignerInterface>> NewRsaPssSigner(
+    std::shared_ptr<Object> key, const CK_MECHANISM* mechanism) {
+  CK_MECHANISM inner_mechanism = {CKM_RSA_PKCS_PSS, mechanism->pParameter,
+                                  mechanism->ulParameterLen};
+  ASSIGN_OR_RETURN(auto signer, RsaPssSigner::New(key, &inner_mechanism));
+  switch (mechanism->mechanism) {
+    case CKM_RSA_PKCS_PSS:
+      return signer;
+    case CKM_SHA256_RSA_PKCS_PSS:
+    case CKM_SHA512_RSA_PKCS_PSS:
+      return KmsDigestingSigner::New(key, std::move(signer), mechanism);
+    default:
+      return NewInternalError(
+          absl::StrFormat("Mechanism %#x not supported for RSA-PSS signing",
+                          mechanism->mechanism),
+          SOURCE_LOCATION);
+  }
+}
+
 absl::StatusOr<std::unique_ptr<SignerInterface>> RsaPssSigner::New(
     std::shared_ptr<Object> key, const CK_MECHANISM* mechanism) {
   RETURN_IF_ERROR(CheckKeyPreconditions(CKK_RSA, CKO_PRIVATE_KEY,
@@ -72,6 +113,50 @@ absl::StatusOr<std::unique_ptr<SignerInterface>> RsaPssSigner::New(
 
 size_t RsaPssSigner::signature_length() {
   return RSA_size(EVP_PKEY_get0_RSA(key_.get()));
+}
+
+class RsaPssVerifier : public VerifierInterface {
+ public:
+  static absl::StatusOr<std::unique_ptr<VerifierInterface>> New(
+      std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
+
+  Object* object() override { return object_.get(); };
+
+  absl::Status Verify(KmsClient* client, absl::Span<const uint8_t> digest,
+                      absl::Span<const uint8_t> signature) override;
+  absl::Status VerifyUpdate(KmsClient* client,
+                            absl::Span<const uint8_t> data) override;
+  absl::Status VerifyFinal(KmsClient* client,
+                           absl::Span<const uint8_t> signature) override;
+
+  virtual ~RsaPssVerifier() {}
+
+ private:
+  RsaPssVerifier(std::shared_ptr<Object> object, bssl::UniquePtr<EVP_PKEY> key)
+      : object_(object), key_(std::move(key)) {}
+
+  std::shared_ptr<Object> object_;
+  bssl::UniquePtr<EVP_PKEY> key_;
+};
+
+absl::StatusOr<std::unique_ptr<VerifierInterface>> NewRsaPssVerifier(
+    std::shared_ptr<Object> key, const CK_MECHANISM* mechanism) {
+  CK_MECHANISM inner_mechanism = {CKM_RSA_PKCS_PSS, mechanism->pParameter,
+                                  mechanism->ulParameterLen};
+  ASSIGN_OR_RETURN(auto verifier, RsaPssVerifier::New(key, &inner_mechanism));
+  switch (mechanism->mechanism) {
+    case CKM_RSA_PKCS_PSS:
+      return verifier;
+    case CKM_SHA256_RSA_PKCS_PSS:
+    case CKM_SHA512_RSA_PKCS_PSS:
+      return KmsDigestingVerifier::New(key, std::move(verifier), mechanism);
+    default:
+      return NewInternalError(
+          absl::StrFormat(
+              "Mechanism %#x not supported for RSA-PSS verification",
+              mechanism->mechanism),
+          SOURCE_LOCATION);
+  }
 }
 
 absl::StatusOr<std::unique_ptr<VerifierInterface>> RsaPssVerifier::New(

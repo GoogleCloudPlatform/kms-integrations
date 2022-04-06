@@ -152,21 +152,5 @@ TEST_F(KmsDigestingVerifierTest, RsaRawPkcs1VerifyMultiPartSuccess) {
   EXPECT_OK(verifier->VerifyFinal(client_.get(), absl::MakeSpan(sig)));
 }
 
-TEST_F(KmsDigestingVerifierTest, RsaPssSignVerifySuccess) {
-  SetUp(kms_v1::CryptoKeyVersion::RSA_SIGN_PSS_2048_SHA256);
-  std::vector<uint8_t> data = {0xDE, 0xAD, 0xBE, 0xEF};
-  CK_RSA_PKCS_PSS_PARAMS params{CKM_SHA256, CKG_MGF1_SHA256, 32};
-  CK_MECHANISM mech{CKM_SHA256_RSA_PKCS_PSS, &params, sizeof(params)};
-
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<SignerInterface> signer,
-                       KmsDigestingSigner::New(prv_, &mech));
-  std::vector<uint8_t> sig(signer->signature_length());
-  EXPECT_OK(signer->Sign(client_.get(), data, absl::MakeSpan(sig)));
-
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<VerifierInterface> verifier,
-                       KmsDigestingVerifier::New(pub_, &mech));
-  EXPECT_OK(verifier->Verify(client_.get(), data, absl::MakeSpan(sig)));
-}
-
 }  // namespace
 }  // namespace kmsp11
