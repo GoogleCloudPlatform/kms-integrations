@@ -102,6 +102,66 @@ func TestECSign(t *testing.T) {
 	verifyCRC32C(t, got.Signature, got.SignatureCrc32C)
 }
 
+func TestECSignData(t *testing.T) {
+	ctx := context.Background()
+	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
+	ck := client.CreateTestCK(ctx, t, &kmspb.CreateCryptoKeyRequest{
+		Parent: kr.Name,
+		CryptoKey: &kmspb.CryptoKey{
+			Purpose: kmspb.CryptoKey_ASYMMETRIC_SIGN,
+			VersionTemplate: &kmspb.CryptoKeyVersionTemplate{
+				ProtectionLevel: kmspb.ProtectionLevel_HSM,
+				Algorithm:       kmspb.CryptoKeyVersion_EC_SIGN_P384_SHA384,
+			},
+		},
+		SkipInitialVersionCreation: true,
+	})
+	ckv := client.CreateTestCKVAndWait(ctx, t, &kmspb.CreateCryptoKeyVersionRequest{
+		Parent: ck.Name,
+	})
+
+	pubResp, err := client.GetPublicKey(ctx, &kmspb.GetPublicKeyRequest{
+		Name: ckv.Name,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	pub := unmarshalPublicKeyPem(t, pubResp.Pem).(*ecdsa.PublicKey)
+
+	data := []byte("Here is some data to authenticate")
+	digest := sha512.Sum384(data)
+
+	got, err := client.AsymmetricSign(ctx, &kmspb.AsymmetricSignRequest{
+		Name: ckv.Name,
+		Data: data,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := &kmspb.AsymmetricSignResponse{
+		Name:            ckv.Name,
+		ProtectionLevel: kmspb.ProtectionLevel_HSM,
+	}
+
+	opts := append(ProtoDiffOpts(), ignoreSignatureAndSignatureCRC)
+	if diff := cmp.Diff(want, got, opts...); diff != "" {
+		t.Errorf("proto mismatch (-want +got): %s", diff)
+	}
+
+	sig := struct{ R, S *big.Int }{}
+	if _, err := asn1.Unmarshal(got.Signature, &sig); err != nil {
+		t.Fatal(err)
+	}
+
+	if !ecdsa.Verify(pub, digest[:], sig.R, sig.S) {
+		t.Error("signature verification failed")
+	}
+
+	verifyCRC32C(t, got.Signature, got.SignatureCrc32C)
+}
+
 func TestRSASignPKCS1(t *testing.T) {
 	ctx := context.Background()
 	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
@@ -344,6 +404,71 @@ func TestAsymmetricSignIncorrectDigestLength(t *testing.T) {
 		Digest: &kmspb.Digest{
 			Digest: &kmspb.Digest_Sha384{
 				Sha384: digest[:],
+			},
+		},
+	})
+	if status.Code(err) != codes.InvalidArgument {
+		t.Errorf("err=%v, want code=%s", err, codes.InvalidArgument)
+	}
+}
+
+func TestAsymmetricSignBothDigestAndData(t *testing.T) {
+	ctx := context.Background()
+	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
+	ck := client.CreateTestCK(ctx, t, &kmspb.CreateCryptoKeyRequest{
+		Parent: kr.Name,
+		CryptoKey: &kmspb.CryptoKey{
+			Purpose: kmspb.CryptoKey_ASYMMETRIC_SIGN,
+			VersionTemplate: &kmspb.CryptoKeyVersionTemplate{
+				Algorithm: kmspb.CryptoKeyVersion_EC_SIGN_P256_SHA256,
+			},
+		},
+		SkipInitialVersionCreation: true,
+	})
+	ckv := client.CreateTestCKVAndWait(ctx, t, &kmspb.CreateCryptoKeyVersionRequest{
+		Parent: ck.Name,
+	})
+
+	digest := sha256.Sum256([]byte("here is some data"))
+
+	_, err := client.AsymmetricSign(ctx, &kmspb.AsymmetricSignRequest{
+		Name: ckv.Name,
+		Digest: &kmspb.Digest{
+			Digest: &kmspb.Digest_Sha256{
+				Sha256: digest[:],
+			},
+		},
+		Data: []byte("here is some data"),
+	})
+	if status.Code(err) != codes.InvalidArgument {
+		t.Errorf("err=%v, want code=%s", err, codes.InvalidArgument)
+	}
+}
+
+func TestRawAsymmetricSignDigestInvalid(t *testing.T) {
+	ctx := context.Background()
+	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
+	ck := client.CreateTestCK(ctx, t, &kmspb.CreateCryptoKeyRequest{
+		Parent: kr.Name,
+		CryptoKey: &kmspb.CryptoKey{
+			Purpose: kmspb.CryptoKey_ASYMMETRIC_SIGN,
+			VersionTemplate: &kmspb.CryptoKeyVersionTemplate{
+				Algorithm: kmspb.CryptoKeyVersion_RSA_SIGN_RAW_PKCS1_2048,
+			},
+		},
+		SkipInitialVersionCreation: true,
+	})
+	ckv := client.CreateTestCKVAndWait(ctx, t, &kmspb.CreateCryptoKeyVersionRequest{
+		Parent: ck.Name,
+	})
+
+	digest := sha256.Sum256([]byte("here is some data"))
+
+	_, err := client.AsymmetricSign(ctx, &kmspb.AsymmetricSignRequest{
+		Name: ckv.Name,
+		Digest: &kmspb.Digest{
+			Digest: &kmspb.Digest_Sha256{
+				Sha256: digest[:],
 			},
 		},
 	})

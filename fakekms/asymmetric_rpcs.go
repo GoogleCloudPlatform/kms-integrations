@@ -144,23 +144,36 @@ func (f *fakeKMS) AsymmetricSign(ctx context.Context, req *kmspb.AsymmetricSignR
 	opts := def.Opts.(crypto.SignerOpts)
 
 	var data []byte
-	if opts.HashFunc() == crypto.Hash(0) {
+	switch {
+	case req.Digest != nil && req.Data != nil:
+		return nil, errInvalidArgument("only one of digest or data must be set")
+	case req.Digest == nil && req.Data == nil:
+		return nil, errInvalidArgument("at least one of digest or data must be set")
+	case opts.HashFunc() == crypto.Hash(0): // algorithm doesn't support prehashed data
+		if req.Data == nil {
+			return nil, errInvalidArgument("data is empty")
+		}
 		data = req.Data
-	} else {
-		switch opts.HashFunc() {
-		case crypto.SHA256:
-			data = req.Digest.GetSha256()
-		case crypto.SHA384:
-			data = req.Digest.GetSha384()
-		case crypto.SHA512:
-			data = req.Digest.GetSha512()
-		default:
-			return nil, errInternal("unsupported hash: %d", opts.HashFunc())
+	case req.Data != nil:
+		if req.Digest != nil {
+			return nil, errInvalidArgument("digest should be empty")
 		}
+		data = req.Data
+		h := opts.HashFunc().New()
+		h.Write(data)
+		data = h.Sum(nil)
+	case opts.HashFunc() == crypto.SHA256:
+		data = req.Digest.GetSha256()
+	case opts.HashFunc() == crypto.SHA384:
+		data = req.Digest.GetSha384()
+	case opts.HashFunc() == crypto.SHA512:
+		data = req.Digest.GetSha512()
+	default:
+		return nil, errInternal("unsupported hash: %d", opts.HashFunc())
+	}
 
-		if len(data) != opts.HashFunc().Size() {
-			return nil, errInvalidArgument("len(digest)=%d, want %d", len(data), opts.HashFunc().Size())
-		}
+	if opts.HashFunc() != crypto.Hash(0) && len(data) != opts.HashFunc().Size() {
+		return nil, errInvalidArgument("len(digest)=%d, want %d", len(data), opts.HashFunc().Size())
 	}
 
 	sig, err := ckv.keyMaterial.(crypto.Signer).Sign(rand.Reader, data, opts)
