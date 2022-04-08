@@ -15,8 +15,6 @@
 #include "kmsp11/operation/kms_digesting_verifier.h"
 
 #include "kmsp11/operation/preconditions.h"
-#include "kmsp11/operation/rsassa_pkcs1.h"
-#include "kmsp11/operation/rsassa_raw_pkcs1.h"
 #include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/status_macros.h"
@@ -28,40 +26,6 @@ absl::StatusOr<std::unique_ptr<VerifierInterface>> KmsDigestingVerifier::New(
     std::unique_ptr<VerifierInterface> inner_verifier,
     const CK_MECHANISM* mechanism) {
   ASSIGN_OR_RETURN(const EVP_MD* md, DigestForMechanism(mechanism->mechanism));
-  return std::unique_ptr<VerifierInterface>(
-      new KmsDigestingVerifier(std::move(inner_verifier), md));
-}
-
-absl::StatusOr<std::unique_ptr<VerifierInterface>> KmsDigestingVerifier::New(
-    std::shared_ptr<Object> key, const CK_MECHANISM* mechanism) {
-  CK_MECHANISM inner_mechanism;
-  std::unique_ptr<VerifierInterface> inner_verifier;
-  switch (mechanism->mechanism) {
-    case CKM_SHA256_RSA_PKCS:
-    case CKM_SHA512_RSA_PKCS: {
-      inner_mechanism = {CKM_RSA_PKCS, nullptr, 0};
-      RETURN_IF_ERROR(EnsureNoParameters(mechanism));
-      RETURN_IF_ERROR(CheckKeyPreconditions(CKK_RSA, CKO_PUBLIC_KEY,
-                                            mechanism->mechanism, key.get()));
-      if (IsRawRsaAlgorithm(key->algorithm().algorithm)) {
-        ASSIGN_OR_RETURN(inner_verifier,
-                         RsaRawPkcs1Verifier::New(key, &inner_mechanism));
-        break;
-      }
-      ASSIGN_OR_RETURN(
-          inner_verifier,
-          RsaPkcs1Verifier::New(key, &inner_mechanism, ExpectedInput::kDigest));
-      break;
-    }
-    default:
-      return NewInternalError(
-          absl::StrFormat("KmsDigestingVerifier does not support mechanism %#x",
-                          mechanism->mechanism),
-          SOURCE_LOCATION);
-  }
-
-  ASSIGN_OR_RETURN(const EVP_MD* md, DigestForMechanism(mechanism->mechanism));
-
   return std::unique_ptr<VerifierInterface>(
       new KmsDigestingVerifier(std::move(inner_verifier), md));
 }

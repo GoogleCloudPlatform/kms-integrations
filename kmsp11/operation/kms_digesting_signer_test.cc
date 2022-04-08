@@ -16,8 +16,6 @@
 
 #include "fakekms/cpp/fakekms.h"
 #include "kmsp11/object.h"
-#include "kmsp11/operation/rsassa_pkcs1.h"
-#include "kmsp11/operation/rsassa_raw_pkcs1.h"
 #include "kmsp11/test/resource_helpers.h"
 #include "kmsp11/test/test_status_macros.h"
 #include "kmsp11/util/crypto_utils.h"
@@ -114,56 +112,6 @@ TEST_F(KmsDigestingSignerTest, SignSinglePartAfterUpdateFails) {
   EXPECT_THAT(signer->Sign(client_.get(), data, absl::MakeSpan(sig)),
               AllOf(StatusIs(absl::StatusCode::kFailedPrecondition),
                     StatusRvIs(CKR_FUNCTION_FAILED)));
-}
-
-TEST_F(KmsDigestingSignerTest, RsaPkcs1SignSuccess) {
-  SetUp(kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_2048_SHA256);
-  std::vector<uint8_t> data = {0xDE, 0xAD, 0xBE, 0xEF};
-
-  CK_MECHANISM mech{CKM_SHA256_RSA_PKCS, nullptr, 0};
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<SignerInterface> signer,
-                       KmsDigestingSigner::New(prv_, &mech));
-  std::vector<uint8_t> sig(signer->signature_length());
-  EXPECT_OK(signer->Sign(client_.get(), data, absl::MakeSpan(sig)));
-
-  uint8_t digest[32];
-  std::vector<uint8_t> prehashed_sig(signer->signature_length());
-  SHA256(data.data(), data.size(), digest);
-  ASSERT_OK_AND_ASSIGN(std::vector<uint8_t> digest_info,
-                       BuildRsaDigestInfo(NID_sha256, digest));
-  CK_MECHANISM inner_mech{CKM_RSA_PKCS, nullptr, 0};
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<SignerInterface> inner_signer,
-                       RsaPkcs1Signer::New(prv_, &inner_mech));
-  EXPECT_OK(inner_signer->Sign(client_.get(), digest_info,
-                               absl::MakeSpan(prehashed_sig)));
-  EXPECT_EQ(prehashed_sig, sig);
-}
-
-TEST_F(KmsDigestingSignerTest, RsaRawPkcs1SignMultiPartSuccess) {
-  SetUp(kms_v1::CryptoKeyVersion::RSA_SIGN_RAW_PKCS1_2048);
-  uint8_t data[4] = {0xDE, 0xAD, 0xBE, 0xEF};
-
-  CK_MECHANISM mech{CKM_SHA256_RSA_PKCS, nullptr, 0};
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<SignerInterface> signer,
-                       KmsDigestingSigner::New(prv_, &mech));
-  std::vector<uint8_t> sig(signer->signature_length());
-  EXPECT_OK(
-      signer->SignUpdate(client_.get(), absl::MakeConstSpan(&data[0], 2)));
-  EXPECT_OK(
-      signer->SignUpdate(client_.get(), absl::MakeConstSpan(&data[2], 2)));
-  EXPECT_OK(signer->SignFinal(client_.get(), absl::MakeSpan(sig)));
-
-  uint8_t digest[32];
-  std::vector<uint8_t> prehashed_sig(signer->signature_length());
-  SHA256(data, 4, digest);
-  ASSERT_OK_AND_ASSIGN(std::vector<uint8_t> digest_info,
-                       BuildRsaDigestInfo(NID_sha256, digest));
-  CK_MECHANISM inner_mech{CKM_RSA_PKCS, nullptr, 0};
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<SignerInterface> inner_signer,
-                       RsaRawPkcs1Signer::New(prv_, &inner_mech));
-  EXPECT_OK(inner_signer->Sign(client_.get(), digest_info,
-                               absl::MakeSpan(prehashed_sig)));
-  EXPECT_EQ(prehashed_sig, sig);
 }
 
 }  // namespace

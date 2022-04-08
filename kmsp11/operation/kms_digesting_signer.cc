@@ -16,8 +16,6 @@
 
 #include "kmsp11/operation/kms_prehashed_signer.h"
 #include "kmsp11/operation/preconditions.h"
-#include "kmsp11/operation/rsassa_pkcs1.h"
-#include "kmsp11/operation/rsassa_raw_pkcs1.h"
 #include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/status_macros.h"
@@ -28,40 +26,6 @@ absl::StatusOr<std::unique_ptr<SignerInterface>> KmsDigestingSigner::New(
     std::shared_ptr<Object> key, std::unique_ptr<SignerInterface> inner_signer,
     const CK_MECHANISM* mechanism) {
   ASSIGN_OR_RETURN(const EVP_MD* md, DigestForMechanism(mechanism->mechanism));
-  return std::unique_ptr<SignerInterface>(
-      new KmsDigestingSigner(std::move(inner_signer), md));
-}
-
-absl::StatusOr<std::unique_ptr<SignerInterface>> KmsDigestingSigner::New(
-    std::shared_ptr<Object> key, const CK_MECHANISM* mechanism) {
-  CK_MECHANISM inner_mechanism;
-  std::unique_ptr<SignerInterface> inner_signer;
-  switch (mechanism->mechanism) {
-    case CKM_SHA256_RSA_PKCS:
-    case CKM_SHA512_RSA_PKCS: {
-      inner_mechanism = {CKM_RSA_PKCS, nullptr, 0};
-      RETURN_IF_ERROR(EnsureNoParameters(mechanism));
-      RETURN_IF_ERROR(CheckKeyPreconditions(CKK_RSA, CKO_PRIVATE_KEY,
-                                            mechanism->mechanism, key.get()));
-      if (IsRawRsaAlgorithm(key->algorithm().algorithm)) {
-        ASSIGN_OR_RETURN(inner_signer,
-                         RsaRawPkcs1Signer::New(key, &inner_mechanism));
-        break;
-      }
-      ASSIGN_OR_RETURN(
-          inner_signer,
-          RsaPkcs1Signer::New(key, &inner_mechanism, ExpectedInput::kDigest));
-      break;
-    }
-    default:
-      return NewInternalError(
-          absl::StrFormat("KmsDigestingSigner does not support mechanism %#x",
-                          mechanism->mechanism),
-          SOURCE_LOCATION);
-  }
-
-  ASSIGN_OR_RETURN(const EVP_MD* md, DigestForMechanism(mechanism->mechanism));
-
   return std::unique_ptr<SignerInterface>(
       new KmsDigestingSigner(std::move(inner_signer), md));
 }

@@ -17,13 +17,64 @@
 #include <string_view>
 
 #include "glog/logging.h"
+#include "kmsp11/openssl.h"
 #include "kmsp11/operation/crypter_interfaces.h"
+#include "kmsp11/operation/kms_digesting_signer.h"
+#include "kmsp11/operation/kms_digesting_verifier.h"
 #include "kmsp11/operation/preconditions.h"
 #include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/status_macros.h"
 
 namespace kmsp11 {
+
+// An implementation of SignerInterface that makes "raw" RSASSA-PKCS1 signatures
+// (i.e., without hashing/DigestInfo) using Cloud KMS.
+class RsaRawPkcs1Signer : public SignerInterface {
+ public:
+  static absl::StatusOr<std::unique_ptr<SignerInterface>> New(
+      std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
+
+  size_t signature_length() override;
+  Object* object() override { return object_.get(); };
+
+  absl::Status Sign(KmsClient* client, absl::Span<const uint8_t> data,
+                    absl::Span<uint8_t> signature) override;
+  absl::Status SignUpdate(KmsClient* client,
+                          absl::Span<const uint8_t> data) override;
+  absl::Status SignFinal(KmsClient* client,
+                         absl::Span<uint8_t> signature) override;
+
+  virtual ~RsaRawPkcs1Signer() {}
+
+ private:
+  RsaRawPkcs1Signer(std::shared_ptr<Object> object, bssl::UniquePtr<RSA> key)
+      : object_(object), key_(std::move(key)) {}
+
+  std::shared_ptr<Object> object_;
+  bssl::UniquePtr<RSA> key_;
+};
+
+absl::StatusOr<std::unique_ptr<SignerInterface>> NewRsaRawPkcs1Signer(
+    std::shared_ptr<Object> key, const CK_MECHANISM* mechanism) {
+  CK_MECHANISM inner_mechanism = {CKM_RSA_PKCS_PSS, mechanism->pParameter,
+                                  mechanism->ulParameterLen};
+  ASSIGN_OR_RETURN(auto signer, RsaRawPkcs1Signer::New(key, &inner_mechanism));
+  switch (mechanism->mechanism) {
+    case CKM_RSA_PKCS:
+      return signer;
+    case CKM_SHA256_RSA_PKCS:
+    case CKM_SHA512_RSA_PKCS: {
+      return KmsDigestingSigner::New(key, std::move(signer), mechanism);
+    }
+    default:
+      return NewInternalError(
+          absl::StrFormat(
+              "Mechanism %#x not supported for raw RSA-PKCS#1 signing",
+              mechanism->mechanism),
+          SOURCE_LOCATION);
+  }
+}
 
 absl::StatusOr<std::unique_ptr<SignerInterface>> RsaRawPkcs1Signer::New(
     std::shared_ptr<Object> key, const CK_MECHANISM* mechanism) {
@@ -97,6 +148,52 @@ absl::Status RsaRawPkcs1Signer::SignFinal(KmsClient* client,
           "provided mechanism %d does not support multi-part signing",
           object_->algorithm().algorithm),
       CKR_ARGUMENTS_BAD, SOURCE_LOCATION);
+}
+
+class RsaRawPkcs1Verifier : public VerifierInterface {
+ public:
+  static absl::StatusOr<std::unique_ptr<VerifierInterface>> New(
+      std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
+
+  Object* object() override { return object_.get(); };
+
+  absl::Status Verify(KmsClient* client, absl::Span<const uint8_t> data,
+                      absl::Span<const uint8_t> signature) override;
+  absl::Status VerifyUpdate(KmsClient* client,
+                            absl::Span<const uint8_t> data) override;
+  absl::Status VerifyFinal(KmsClient* client,
+                           absl::Span<const uint8_t> signature) override;
+
+  virtual ~RsaRawPkcs1Verifier() {}
+
+ private:
+  RsaRawPkcs1Verifier(std::shared_ptr<Object> object, bssl::UniquePtr<RSA> key)
+      : object_(object), key_(std::move(key)) {}
+
+  std::shared_ptr<Object> object_;
+  bssl::UniquePtr<RSA> key_;
+};
+
+absl::StatusOr<std::unique_ptr<VerifierInterface>> NewRsaRawPkcs1Verifier(
+    std::shared_ptr<Object> key, const CK_MECHANISM* mechanism) {
+  CK_MECHANISM inner_mechanism = {CKM_RSA_PKCS, mechanism->pParameter,
+                                  mechanism->ulParameterLen};
+  ASSIGN_OR_RETURN(auto verifier,
+                   RsaRawPkcs1Verifier::New(key, &inner_mechanism));
+  switch (mechanism->mechanism) {
+    case CKM_RSA_PKCS:
+      return verifier;
+    case CKM_SHA256_RSA_PKCS:
+    case CKM_SHA512_RSA_PKCS: {
+      return KmsDigestingVerifier::New(key, std::move(verifier), mechanism);
+    }
+    default:
+      return NewInternalError(
+          absl::StrFormat(
+              "Mechanism %#x not supported for raw RSA-PKCS#1 verification",
+              mechanism->mechanism),
+          SOURCE_LOCATION);
+  }
 }
 
 absl::StatusOr<std::unique_ptr<VerifierInterface>> RsaRawPkcs1Verifier::New(

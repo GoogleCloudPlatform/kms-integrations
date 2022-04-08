@@ -19,68 +19,20 @@
 
 #include <string_view>
 
-#include "kmsp11/openssl.h"
-#include "kmsp11/operation/kms_prehashed_signer.h"
+#include "kmsp11/operation/crypter_interfaces.h"
 #include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/string_utils.h"
 
 namespace kmsp11 {
 
-// Enum representing if the input data is a plain digest or an ASN.1 DigestInfo.
-enum class ExpectedInput { kDigest, kAsn1DigestInfo };
+// Returns either an RsaPkcs1Signer or a KmsDigestingSigner based on mechanism.
+absl::StatusOr<std::unique_ptr<SignerInterface>> NewRsaPkcs1Signer(
+    std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
 
-// An implementation of SignerInterface that makes RSASSA-PKCS1 signatures using
-// Cloud KMS.
-class RsaPkcs1Signer : public KmsPrehashedSigner {
- public:
-  static absl::StatusOr<std::unique_ptr<SignerInterface>> New(
-      std::shared_ptr<Object> key, const CK_MECHANISM* mechanism,
-      ExpectedInput input_type = ExpectedInput::kAsn1DigestInfo);
-
-  size_t signature_length() override;
-
-  absl::Status Sign(KmsClient* client, absl::Span<const uint8_t> data,
-                    absl::Span<uint8_t> signature) override;
-
-  virtual ~RsaPkcs1Signer() {}
-
- private:
-  RsaPkcs1Signer(std::shared_ptr<Object> object, bssl::UniquePtr<RSA> key,
-                 ExpectedInput input_type)
-      : KmsPrehashedSigner(object),
-        key_(std::move(key)),
-        input_type_(input_type) {}
-
-  bssl::UniquePtr<RSA> key_;
-  ExpectedInput input_type_;
-};
-
-class RsaPkcs1Verifier : public VerifierInterface {
- public:
-  static absl::StatusOr<std::unique_ptr<VerifierInterface>> New(
-      std::shared_ptr<Object> key, const CK_MECHANISM* mechanism,
-      ExpectedInput input_type = ExpectedInput::kAsn1DigestInfo);
-
-  Object* object() override { return object_.get(); };
-
-  absl::Status Verify(KmsClient* client, absl::Span<const uint8_t> data,
-                      absl::Span<const uint8_t> signature) override;
-  absl::Status VerifyUpdate(KmsClient* client,
-                            absl::Span<const uint8_t> data) override;
-  absl::Status VerifyFinal(KmsClient* client,
-                           absl::Span<const uint8_t> signature) override;
-
-  virtual ~RsaPkcs1Verifier() {}
-
- private:
-  RsaPkcs1Verifier(std::shared_ptr<Object> object, bssl::UniquePtr<RSA> key,
-                   ExpectedInput input_type)
-      : object_(object), key_(std::move(key)), input_type_(input_type) {}
-
-  std::shared_ptr<Object> object_;
-  bssl::UniquePtr<RSA> key_;
-  ExpectedInput input_type_;
-};
+// Returns either an RsaPkcs1Verifier or a KmsDigestingVerifier based on
+// mechanism.
+absl::StatusOr<std::unique_ptr<VerifierInterface>> NewRsaPkcs1Verifier(
+    std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
 
 }  // namespace kmsp11
 

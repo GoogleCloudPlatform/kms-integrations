@@ -15,8 +15,6 @@
 #include "kmsp11/operation/crypter_ops.h"
 
 #include "kmsp11/operation/ecdsa.h"
-#include "kmsp11/operation/kms_digesting_signer.h"
-#include "kmsp11/operation/kms_digesting_verifier.h"
 #include "kmsp11/operation/rsaes_oaep.h"
 #include "kmsp11/operation/rsassa_pkcs1.h"
 #include "kmsp11/operation/rsassa_pss.h"
@@ -55,17 +53,16 @@ absl::StatusOr<SignOp> NewSignOp(std::shared_ptr<Object> key,
     case CKM_ECDSA_SHA384:
       return NewEcdsaSigner(key, mechanism);
     case CKM_RSA_PKCS:
+    case CKM_SHA256_RSA_PKCS:
+    case CKM_SHA512_RSA_PKCS:
       if (!key->algorithm().digest_mechanism.has_value()) {
-        return RsaRawPkcs1Signer::New(key, mechanism);
+        return NewRsaRawPkcs1Signer(key, mechanism);
       }
-      return RsaPkcs1Signer::New(key, mechanism);
+      return NewRsaPkcs1Signer(key, mechanism);
     case CKM_RSA_PKCS_PSS:
     case CKM_SHA256_RSA_PKCS_PSS:
     case CKM_SHA512_RSA_PKCS_PSS:
       return NewRsaPssSigner(key, mechanism);
-    case CKM_SHA256_RSA_PKCS:
-    case CKM_SHA512_RSA_PKCS:
-      return KmsDigestingSigner::New(key, mechanism);
     default:
       return InvalidMechanismError(mechanism->mechanism, "sign",
                                    SOURCE_LOCATION);
@@ -80,17 +77,16 @@ absl::StatusOr<VerifyOp> NewVerifyOp(std::shared_ptr<Object> key,
     case CKM_ECDSA_SHA384:
       return NewEcdsaVerifier(key, mechanism);
     case CKM_RSA_PKCS:
+    case CKM_SHA256_RSA_PKCS:
+    case CKM_SHA512_RSA_PKCS:
       if (!key->algorithm().digest_mechanism.has_value()) {
-        return RsaRawPkcs1Verifier::New(key, mechanism);
+        return NewRsaRawPkcs1Verifier(key, mechanism);
       }
-      return RsaPkcs1Verifier::New(key, mechanism);
+      return NewRsaPkcs1Verifier(key, mechanism);
     case CKM_RSA_PKCS_PSS:
     case CKM_SHA256_RSA_PKCS_PSS:
     case CKM_SHA512_RSA_PKCS_PSS:
       return NewRsaPssVerifier(key, mechanism);
-    case CKM_SHA256_RSA_PKCS:
-    case CKM_SHA512_RSA_PKCS:
-      return KmsDigestingVerifier::New(key, mechanism);
     default:
       return InvalidMechanismError(mechanism->mechanism, "verify",
                                    SOURCE_LOCATION);

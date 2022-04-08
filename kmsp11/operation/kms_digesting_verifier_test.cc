@@ -118,39 +118,5 @@ TEST_F(KmsDigestingVerifierTest, VerifySinglePartAfterUpdateFails) {
                     StatusRvIs(CKR_FUNCTION_FAILED)));
 }
 
-TEST_F(KmsDigestingVerifierTest, RsaPkcs1SignVerifySuccess) {
-  SetUp(kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_2048_SHA256);
-  std::vector<uint8_t> data = {0xDE, 0xAD, 0xBE, 0xEF};
-
-  CK_MECHANISM mech{CKM_SHA256_RSA_PKCS, nullptr, 0};
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<SignerInterface> signer,
-                       KmsDigestingSigner::New(prv_, &mech));
-  std::vector<uint8_t> sig(signer->signature_length());
-  EXPECT_OK(signer->Sign(client_.get(), data, absl::MakeSpan(sig)));
-
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<VerifierInterface> verifier,
-                       KmsDigestingVerifier::New(pub_, &mech));
-  EXPECT_OK(verifier->Verify(client_.get(), data, absl::MakeSpan(sig)));
-}
-
-TEST_F(KmsDigestingVerifierTest, RsaRawPkcs1VerifyMultiPartSuccess) {
-  SetUp(kms_v1::CryptoKeyVersion::RSA_SIGN_RAW_PKCS1_2048);
-
-  CK_MECHANISM mech{CKM_SHA256_RSA_PKCS, nullptr, 0};
-  uint8_t data[4] = {0xDE, 0xAD, 0xBE, 0xEF};
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<SignerInterface> signer,
-                       KmsDigestingSigner::New(prv_, &mech));
-  std::vector<uint8_t> sig(signer->signature_length());
-  EXPECT_OK(signer->Sign(client_.get(), data, absl::MakeSpan(sig)));
-
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<VerifierInterface> verifier,
-                       KmsDigestingVerifier::New(pub_, &mech));
-  EXPECT_OK(
-      verifier->VerifyUpdate(client_.get(), absl::MakeConstSpan(&data[0], 2)));
-  EXPECT_OK(
-      verifier->VerifyUpdate(client_.get(), absl::MakeConstSpan(&data[2], 2)));
-  EXPECT_OK(verifier->VerifyFinal(client_.get(), absl::MakeSpan(sig)));
-}
-
 }  // namespace
 }  // namespace kmsp11

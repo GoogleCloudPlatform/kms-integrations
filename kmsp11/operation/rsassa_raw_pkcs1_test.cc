@@ -35,7 +35,7 @@ TEST(NewSignerTest, AnySuppliedParamIsInvalid) {
 
   char buf[1];
   CK_MECHANISM mechanism{CKM_RSA_PKCS, buf, sizeof(buf)};
-  EXPECT_THAT(RsaRawPkcs1Signer::New(key, &mechanism),
+  EXPECT_THAT(NewRsaRawPkcs1Signer(key, &mechanism),
               StatusRvIs(CKR_MECHANISM_PARAM_INVALID));
 }
 
@@ -46,7 +46,7 @@ TEST(NewSignerTest, KeyTypeInconsistentWhenEcKeyIsSupplied) {
   std::shared_ptr<Object> key = std::make_shared<Object>(kp.private_key);
 
   CK_MECHANISM mechanism{CKM_RSA_PKCS, nullptr, 0};
-  EXPECT_THAT(RsaRawPkcs1Signer::New(key, &mechanism),
+  EXPECT_THAT(NewRsaRawPkcs1Signer(key, &mechanism),
               StatusRvIs(CKR_KEY_TYPE_INCONSISTENT));
 }
 
@@ -58,7 +58,7 @@ TEST(NewSignerTest, KeyFunctionNotPermittedWhenPublicKeyIsSupplied) {
   std::shared_ptr<Object> key = std::make_shared<Object>(kp.public_key);
 
   CK_MECHANISM mechanism{CKM_RSA_PKCS, nullptr, 0};
-  EXPECT_THAT(RsaRawPkcs1Signer::New(key, &mechanism),
+  EXPECT_THAT(NewRsaRawPkcs1Signer(key, &mechanism),
               StatusRvIs(CKR_KEY_FUNCTION_NOT_PERMITTED));
 }
 
@@ -71,7 +71,7 @@ TEST(NewVerifierTest, AnySuppliedParamIsInvalid) {
 
   char buf[1];
   CK_MECHANISM mechanism{CKM_RSA_PKCS, buf, sizeof(buf)};
-  EXPECT_THAT(RsaRawPkcs1Verifier::New(key, &mechanism),
+  EXPECT_THAT(NewRsaRawPkcs1Verifier(key, &mechanism),
               StatusRvIs(CKR_MECHANISM_PARAM_INVALID));
 }
 
@@ -82,7 +82,7 @@ TEST(NewVerifierTest, KeyTypeInconsistentWhenEcKeyIsSupplied) {
   std::shared_ptr<Object> key = std::make_shared<Object>(kp.public_key);
 
   CK_MECHANISM mechanism{CKM_RSA_PKCS, nullptr, 0};
-  EXPECT_THAT(RsaRawPkcs1Verifier::New(key, &mechanism),
+  EXPECT_THAT(NewRsaRawPkcs1Verifier(key, &mechanism),
               StatusRvIs(CKR_KEY_TYPE_INCONSISTENT));
 }
 
@@ -94,7 +94,7 @@ TEST(NewVerifierTest, KeyFunctionNotPermittedWhenPrivateKeyIsSupplied) {
   std::shared_ptr<Object> key = std::make_shared<Object>(kp.private_key);
 
   CK_MECHANISM mechanism{CKM_RSA_PKCS, nullptr, 0};
-  EXPECT_THAT(RsaRawPkcs1Verifier::New(key, &mechanism),
+  EXPECT_THAT(NewRsaRawPkcs1Verifier(key, &mechanism),
               StatusRvIs(CKR_KEY_FUNCTION_NOT_PERMITTED));
 }
 
@@ -144,7 +144,7 @@ TEST_F(RsaRawPkcs1Test, SignSuccess) {
 
   CK_MECHANISM mech{CKM_RSA_PKCS, nullptr, 0};
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<SignerInterface> signer,
-                       RsaRawPkcs1Signer::New(prv_, &mech));
+                       NewRsaRawPkcs1Signer(prv_, &mech));
   std::vector<uint8_t> sig(signer->signature_length());
   EXPECT_OK(signer->Sign(client_.get(), data, absl::MakeSpan(sig)));
 
@@ -156,7 +156,7 @@ TEST_F(RsaRawPkcs1Test, SignDataLengthInvalid) {
 
   CK_MECHANISM mech{CKM_RSA_PKCS, nullptr, 0};
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<SignerInterface> signer,
-                       RsaRawPkcs1Signer::New(prv_, &mech));
+                       NewRsaRawPkcs1Signer(prv_, &mech));
 
   EXPECT_THAT(signer->Sign(client_.get(), data, absl::MakeSpan(sig)),
               AllOf(StatusIs(absl::StatusCode::kInvalidArgument),
@@ -168,7 +168,7 @@ TEST_F(RsaRawPkcs1Test, SignSignatureLengthInvalid) {
 
   CK_MECHANISM mech{CKM_RSA_PKCS, nullptr, 0};
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<SignerInterface> signer,
-                       RsaRawPkcs1Signer::New(prv_, &mech));
+                       NewRsaRawPkcs1Signer(prv_, &mech));
 
   EXPECT_THAT(signer->Sign(client_.get(), data, absl::MakeSpan(sig)),
               AllOf(StatusIs(absl::StatusCode::kInternal),
@@ -180,12 +180,12 @@ TEST_F(RsaRawPkcs1Test, SignVerifySuccess) {
 
   CK_MECHANISM mech{CKM_RSA_PKCS, nullptr, 0};
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<SignerInterface> signer,
-                       RsaRawPkcs1Signer::New(prv_, &mech));
+                       NewRsaRawPkcs1Signer(prv_, &mech));
   std::vector<uint8_t> sig(signer->signature_length());
   EXPECT_OK(signer->Sign(client_.get(), data, absl::MakeSpan(sig)));
 
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<VerifierInterface> verifier,
-                       RsaRawPkcs1Verifier::New(pub_, &mech));
+                       NewRsaRawPkcs1Verifier(pub_, &mech));
   EXPECT_OK(verifier->Verify(client_.get(), data, sig));
 }
 
@@ -194,7 +194,7 @@ TEST_F(RsaRawPkcs1Test, VerifyDataLengthInvalid) {
 
   CK_MECHANISM mech{CKM_RSA_PKCS, nullptr, 0};
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<VerifierInterface> verifier,
-                       RsaRawPkcs1Verifier::New(pub_, &mech));
+                       NewRsaRawPkcs1Verifier(pub_, &mech));
 
   EXPECT_THAT(verifier->Verify(client_.get(), data, absl::MakeSpan(sig)),
               AllOf(StatusIs(absl::StatusCode::kInvalidArgument),
@@ -206,7 +206,7 @@ TEST_F(RsaRawPkcs1Test, VerifySignatureLengthInvalid) {
 
   CK_MECHANISM mech{CKM_RSA_PKCS, nullptr, 0};
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<VerifierInterface> verifier,
-                       RsaRawPkcs1Verifier::New(pub_, &mech));
+                       NewRsaRawPkcs1Verifier(pub_, &mech));
 
   EXPECT_THAT(verifier->Verify(client_.get(), data, absl::MakeSpan(sig)),
               AllOf(StatusIs(absl::StatusCode::kInvalidArgument),
@@ -218,11 +218,30 @@ TEST_F(RsaRawPkcs1Test, VerifyBadSignature) {
 
   CK_MECHANISM mech{CKM_RSA_PKCS, nullptr, 0};
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<VerifierInterface> verifier,
-                       RsaRawPkcs1Verifier::New(pub_, &mech));
+                       NewRsaRawPkcs1Verifier(pub_, &mech));
 
   EXPECT_THAT(verifier->Verify(client_.get(), data, sig),
               AllOf(StatusIs(absl::StatusCode::kInvalidArgument),
                     StatusRvIs(CKR_SIGNATURE_INVALID)));
+}
+
+TEST_F(RsaRawPkcs1Test, SignVerifyMultiPartSuccess) {
+  std::vector<uint8_t> data_part1 = {0xDE, 0xAD};
+  std::vector<uint8_t> data_part2 = {0xBE, 0xEF};
+
+  CK_MECHANISM mech{CKM_SHA256_RSA_PKCS, nullptr, 0};
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<SignerInterface> signer,
+                       NewRsaRawPkcs1Signer(prv_, &mech));
+  std::vector<uint8_t> sig(signer->signature_length());
+  EXPECT_OK(signer->SignUpdate(client_.get(), data_part1));
+  EXPECT_OK(signer->SignUpdate(client_.get(), data_part2));
+  EXPECT_OK(signer->SignFinal(client_.get(), absl::MakeSpan(sig)));
+
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<VerifierInterface> verifier,
+                       NewRsaRawPkcs1Verifier(pub_, &mech));
+  EXPECT_OK(verifier->VerifyUpdate(client_.get(), data_part1));
+  EXPECT_OK(verifier->VerifyUpdate(client_.get(), data_part2));
+  EXPECT_OK(verifier->VerifyFinal(client_.get(), absl::MakeSpan(sig)));
 }
 
 }  // namespace
