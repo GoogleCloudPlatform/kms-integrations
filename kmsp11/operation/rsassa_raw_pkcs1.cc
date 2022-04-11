@@ -40,10 +40,6 @@ class RsaRawPkcs1Signer : public SignerInterface {
 
   absl::Status Sign(KmsClient* client, absl::Span<const uint8_t> data,
                     absl::Span<uint8_t> signature) override;
-  absl::Status SignUpdate(KmsClient* client,
-                          absl::Span<const uint8_t> data) override;
-  absl::Status SignFinal(KmsClient* client,
-                         absl::Span<uint8_t> signature) override;
 
   virtual ~RsaRawPkcs1Signer() {}
 
@@ -132,24 +128,6 @@ absl::Status RsaRawPkcs1Signer::Sign(KmsClient* client,
   return absl::OkStatus();
 }
 
-absl::Status RsaRawPkcs1Signer::SignUpdate(KmsClient* client,
-                                           absl::Span<const uint8_t> data) {
-  return NewInvalidArgumentError(
-      absl::StrFormat(
-          "provided mechanism %d does not support multi-part signing",
-          object_->algorithm().algorithm),
-      CKR_ARGUMENTS_BAD, SOURCE_LOCATION);
-}
-
-absl::Status RsaRawPkcs1Signer::SignFinal(KmsClient* client,
-                                          absl::Span<uint8_t> signature) {
-  return NewInvalidArgumentError(
-      absl::StrFormat(
-          "provided mechanism %d does not support multi-part signing",
-          object_->algorithm().algorithm),
-      CKR_ARGUMENTS_BAD, SOURCE_LOCATION);
-}
-
 class RsaRawPkcs1Verifier : public VerifierInterface {
  public:
   static absl::StatusOr<std::unique_ptr<VerifierInterface>> New(
@@ -159,10 +137,6 @@ class RsaRawPkcs1Verifier : public VerifierInterface {
 
   absl::Status Verify(KmsClient* client, absl::Span<const uint8_t> data,
                       absl::Span<const uint8_t> signature) override;
-  absl::Status VerifyUpdate(KmsClient* client,
-                            absl::Span<const uint8_t> data) override;
-  absl::Status VerifyFinal(KmsClient* client,
-                           absl::Span<const uint8_t> signature) override;
 
   virtual ~RsaRawPkcs1Verifier() {}
 
@@ -215,20 +189,6 @@ absl::Status RsaRawPkcs1Verifier::Verify(KmsClient* client,
                                          absl::Span<const uint8_t> data,
                                          absl::Span<const uint8_t> signature) {
   return RsaVerifyRawPkcs1(key_.get(), data, signature);
-}
-
-absl::Status RsaRawPkcs1Verifier::VerifyUpdate(KmsClient* client,
-                                               absl::Span<const uint8_t> data) {
-  return FailedPreconditionError(
-      "provided mechanism CKM_RSA_PKCS does not support multi-part verify",
-      CKR_FUNCTION_FAILED, SOURCE_LOCATION);
-}
-
-absl::Status RsaRawPkcs1Verifier::VerifyFinal(
-    KmsClient* client, absl::Span<const uint8_t> signature) {
-  return FailedPreconditionError(
-      "provided mechanism CKM_RSA_PKCS does not support multi-part verify",
-      CKR_FUNCTION_FAILED, SOURCE_LOCATION);
 }
 
 }  // namespace kmsp11

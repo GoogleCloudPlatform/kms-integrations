@@ -67,24 +67,6 @@ absl::Status KmsPrehashedSigner::Sign(KmsClient* client,
   return absl::OkStatus();
 }
 
-absl::Status KmsPrehashedSigner::SignUpdate(KmsClient* client,
-                                            absl::Span<const uint8_t> data) {
-  return FailedPreconditionError(
-      absl::StrFormat(
-          "provided mechanism %d does not support multi-part signing",
-          object_->algorithm().algorithm),
-      CKR_FUNCTION_FAILED, SOURCE_LOCATION);
-}
-
-absl::Status KmsPrehashedSigner::SignFinal(KmsClient* client,
-                                           absl::Span<uint8_t> signature) {
-  return FailedPreconditionError(
-      absl::StrFormat(
-          "provided mechanism %d does not support multi-part signing",
-          object_->algorithm().algorithm),
-      CKR_FUNCTION_FAILED, SOURCE_LOCATION);
-}
-
 absl::Status KmsPrehashedSigner::CopySignature(std::string_view src,
                                             absl::Span<uint8_t> dest) {
   if (src.size() != signature_length()) {

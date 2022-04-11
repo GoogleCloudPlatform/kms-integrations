@@ -124,10 +124,6 @@ class RsaPssVerifier : public VerifierInterface {
 
   absl::Status Verify(KmsClient* client, absl::Span<const uint8_t> digest,
                       absl::Span<const uint8_t> signature) override;
-  absl::Status VerifyUpdate(KmsClient* client,
-                            absl::Span<const uint8_t> data) override;
-  absl::Status VerifyFinal(KmsClient* client,
-                           absl::Span<const uint8_t> signature) override;
 
   virtual ~RsaPssVerifier() {}
 
@@ -181,24 +177,6 @@ absl::Status RsaPssVerifier::Verify(KmsClient* client,
   ASSIGN_OR_RETURN(const EVP_MD* md,
                    DigestForMechanism(*object_->algorithm().digest_mechanism));
   return RsaVerifyPss(key_.get(), md, digest, signature);
-}
-
-absl::Status RsaPssVerifier::VerifyUpdate(KmsClient* client,
-                                          absl::Span<const uint8_t> data) {
-  return FailedPreconditionError(
-      absl::StrFormat(
-          "provided mechanism %d does not support multi-part verify",
-          object_->algorithm().algorithm),
-      CKR_FUNCTION_FAILED, SOURCE_LOCATION);
-}
-
-absl::Status RsaPssVerifier::VerifyFinal(KmsClient* client,
-                                         absl::Span<const uint8_t> signature) {
-  return FailedPreconditionError(
-      absl::StrFormat(
-          "provided mechanism %d does not support multi-part verify",
-          object_->algorithm().algorithm),
-      CKR_FUNCTION_FAILED, SOURCE_LOCATION);
 }
 
 }  // namespace kmsp11

@@ -19,6 +19,7 @@
 
 #include "absl/status/statusor.h"
 #include "kmsp11/object.h"
+#include "kmsp11/util/errors.h"
 #include "kmsp11/util/kms_client.h"
 
 namespace kmsp11 {
@@ -47,9 +48,21 @@ class SignerInterface {
   virtual absl::Status Sign(KmsClient* client, absl::Span<const uint8_t> data,
                             absl::Span<uint8_t> signature) = 0;
   virtual absl::Status SignUpdate(KmsClient* client,
-                                  absl::Span<const uint8_t> data) = 0;
+                                  absl::Span<const uint8_t> data) {
+    return FailedPreconditionError(
+        absl::StrFormat(
+            "provided mechanism %#x does not support multi-part signing",
+            object()->algorithm().algorithm),
+        CKR_FUNCTION_FAILED, SOURCE_LOCATION);
+  }
   virtual absl::Status SignFinal(KmsClient* client,
-                                 absl::Span<uint8_t> signature) = 0;
+                                 absl::Span<uint8_t> signature) {
+    return FailedPreconditionError(
+        absl::StrFormat(
+            "provided mechanism %#x does not support multi-part signing",
+            object()->algorithm().algorithm),
+        CKR_FUNCTION_FAILED, SOURCE_LOCATION);
+  };
 
   virtual ~SignerInterface() {}
 };
@@ -61,9 +74,21 @@ class VerifierInterface {
   virtual absl::Status Verify(KmsClient* client, absl::Span<const uint8_t> data,
                               absl::Span<const uint8_t> signature) = 0;
   virtual absl::Status VerifyUpdate(KmsClient* client,
-                                    absl::Span<const uint8_t> data) = 0;
+                                    absl::Span<const uint8_t> data) {
+    return FailedPreconditionError(
+        absl::StrFormat(
+            "provided mechanism %#x does not support multi-part verify",
+            object()->algorithm().algorithm),
+        CKR_FUNCTION_FAILED, SOURCE_LOCATION);
+  };
   virtual absl::Status VerifyFinal(KmsClient* client,
-                                   absl::Span<const uint8_t> signature) = 0;
+                                   absl::Span<const uint8_t> signature) {
+    return FailedPreconditionError(
+        absl::StrFormat(
+            "provided mechanism %#x does not support multi-part verify",
+            object()->algorithm().algorithm),
+        CKR_FUNCTION_FAILED, SOURCE_LOCATION);
+  };
 
   virtual ~VerifierInterface() {}
 };

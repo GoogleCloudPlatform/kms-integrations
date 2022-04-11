@@ -8,6 +8,7 @@ cc_library(
     deps = [
         "//kmsp11:cryptoki_headers",
         "//kmsp11:object",
+        "//kmsp11/util:errors",
         "//kmsp11/util:kms_client",
         "@com_google_absl//absl/types:span",
     ],
