@@ -26,26 +26,6 @@ namespace {
 
 using ::testing::AllOf;
 
-class MockVerifier : public VerifierInterface {
- public:
-  Object* object() override { return nullptr; };
-
-  absl::Status Verify(KmsClient* client, absl::Span<const uint8_t> digest,
-                      absl::Span<const uint8_t> signature) override {
-    return absl::OkStatus();
-  };
-  absl::Status VerifyUpdate(KmsClient* client,
-                            absl::Span<const uint8_t> data) override {
-    return absl::OkStatus();
-  };
-  absl::Status VerifyFinal(KmsClient* client,
-                           absl::Span<const uint8_t> signature) override {
-    return absl::OkStatus();
-  };
-
-  virtual ~MockVerifier() {}
-};
-
 class KmsDigestingVerifierTest : public testing::Test {
  protected:
   void SetUp(google::cloud::kms::v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm
@@ -91,11 +71,8 @@ TEST_F(KmsDigestingVerifierTest, VerifyFinalWithoutUpdateFails) {
   std::vector<uint8_t> data = {0xDE, 0xAD, 0xBE, 0xEF};
 
   CK_MECHANISM mech{CKM_ECDSA_SHA256, nullptr, 0};
-  ASSERT_OK_AND_ASSIGN(
-      std::unique_ptr<VerifierInterface> verifier,
-      KmsDigestingVerifier::New(
-          nullptr, std::unique_ptr<VerifierInterface>(new MockVerifier()),
-          &mech));
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<VerifierInterface> verifier,
+                       KmsDigestingVerifier::New(nullptr, nullptr, &mech));
   std::vector<uint8_t> sig(98);
   EXPECT_THAT(verifier->VerifyFinal(client_.get(), absl::MakeSpan(sig)),
               AllOf(StatusIs(absl::StatusCode::kFailedPrecondition),
@@ -106,11 +83,8 @@ TEST_F(KmsDigestingVerifierTest, VerifySinglePartAfterUpdateFails) {
   std::vector<uint8_t> data = {0xDE, 0xAD, 0xBE, 0xEF};
 
   CK_MECHANISM mech{CKM_ECDSA_SHA256, nullptr, 0};
-  ASSERT_OK_AND_ASSIGN(
-      std::unique_ptr<VerifierInterface> verifier,
-      KmsDigestingVerifier::New(
-          nullptr, std::unique_ptr<VerifierInterface>(new MockVerifier()),
-          &mech));
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<VerifierInterface> verifier,
+                       KmsDigestingVerifier::New(nullptr, nullptr, &mech));
   std::vector<uint8_t> sig(98);
   EXPECT_OK(verifier->VerifyUpdate(client_.get(), data));
   EXPECT_THAT(verifier->Verify(client_.get(), data, absl::MakeSpan(sig)),

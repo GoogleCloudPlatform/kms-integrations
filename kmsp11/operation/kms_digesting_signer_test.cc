@@ -25,25 +25,6 @@ namespace {
 
 using ::testing::AllOf;
 
-class MockSigner : public SignerInterface {
- public:
-  size_t signature_length() override { return 0; };
-  Object* object() override { return nullptr; };
-
-  absl::Status Sign(KmsClient* client, absl::Span<const uint8_t> data,
-                    absl::Span<uint8_t> signature) {
-    return absl::OkStatus();
-  };
-  absl::Status SignUpdate(KmsClient* client, absl::Span<const uint8_t> data) {
-    return absl::OkStatus();
-  };
-  absl::Status SignFinal(KmsClient* client, absl::Span<uint8_t> signature) {
-    return absl::OkStatus();
-  };
-
-  virtual ~MockSigner() {}
-};
-
 class KmsDigestingSignerTest : public testing::Test {
  protected:
   void SetUp(google::cloud::kms::v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm
@@ -89,10 +70,8 @@ TEST_F(KmsDigestingSignerTest, SignFinalWithoutUpdateFails) {
   std::vector<uint8_t> data = {0xDE, 0xAD, 0xBE, 0xEF};
 
   CK_MECHANISM mech{CKM_ECDSA_SHA256, nullptr, 0};
-  ASSERT_OK_AND_ASSIGN(
-      std::unique_ptr<SignerInterface> signer,
-      KmsDigestingSigner::New(
-          nullptr, std::unique_ptr<SignerInterface>(new MockSigner()), &mech));
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<SignerInterface> signer,
+                       KmsDigestingSigner::New(nullptr, nullptr, &mech));
   std::vector<uint8_t> sig(1337);
   EXPECT_THAT(signer->SignFinal(client_.get(), absl::MakeSpan(sig)),
               AllOf(StatusIs(absl::StatusCode::kFailedPrecondition),
@@ -103,10 +82,8 @@ TEST_F(KmsDigestingSignerTest, SignSinglePartAfterUpdateFails) {
   std::vector<uint8_t> data = {0xDE, 0xAD, 0xBE, 0xEF};
 
   CK_MECHANISM mech{CKM_ECDSA_SHA256, nullptr, 0};
-  ASSERT_OK_AND_ASSIGN(
-      std::unique_ptr<SignerInterface> signer,
-      KmsDigestingSigner::New(
-          nullptr, std::unique_ptr<SignerInterface>(new MockSigner()), &mech));
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<SignerInterface> signer,
+                       KmsDigestingSigner::New(nullptr, nullptr, &mech));
   std::vector<uint8_t> sig(1337);
   EXPECT_OK(signer->SignUpdate(client_.get(), data));
   EXPECT_THAT(signer->Sign(client_.get(), data, absl::MakeSpan(sig)),
