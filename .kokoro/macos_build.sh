@@ -47,6 +47,7 @@ export USE_BAZEL_VERSION=4.2.1
 # Configure user.bazelrc with remote build caching options
 cp .kokoro/remote_cache.bazelrc user.bazelrc
 echo "build --remote_default_exec_properties=cache-silo-key=macos" >> user.bazelrc
+echo "test --test_env=GOOGLE_APPLICATION_CREDENTIALS" >> user.bazelrc
 
 # Ensure that bazel is shut down, and build outputs and test logs
 # are uploaded even on failure.
@@ -61,6 +62,10 @@ _finish() {
     cp "${PROJECT_ROOT}/bazel-bin/kmsp11/main/libkmsp11.so" \
       "${RESULTS_DIR}/libkmsp11.dylib"
   fi
+  if [ -e "${PROJECT_ROOT}/bazel-bin/kmsp11/test/e2e/e2e_test" ]; then
+    cp "${PROJECT_ROOT}/bazel-bin/kmsp11/test/e2e/e2e_test" \
+      "${RESULTS_DIR}/e2e_test"
+  fi
 
   cp "${PROJECT_ROOT}/LICENSE" "${RESULTS_DIR}"
   cp "${PROJECT_ROOT}/NOTICE" "${RESULTS_DIR}"
@@ -72,7 +77,7 @@ trap _finish EXIT
 
 export BAZEL_ARGS="-c opt --keep_going ${BAZEL_EXTRA_ARGS}"
 
-bazelisk test ${BAZEL_ARGS} ... :release_tests
+bazelisk test ${BAZEL_ARGS} ... :ci_only_tests
 
 bazelisk run ${BAZEL_ARGS} //kmsp11/tools/buildsigner -- \
   -signing_key=${BUILD_SIGNING_KEY} \

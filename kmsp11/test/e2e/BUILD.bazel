@@ -1,0 +1,64 @@
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
+
+cc_library(
+    name = "e2e_test_lib",
+    testonly = 1,
+    srcs = ["e2e_test.cc"],
+    linkstatic = 1,
+    target_compatible_with = select({
+        "@platforms//os:freebsd": [],
+        "@platforms//os:linux": [],
+        "@platforms//os:macos": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        "//kmsp11:cryptoki_headers",
+        "//kmsp11:openssl",
+        "//kmsp11/test:resource_helpers",
+        "//kmsp11/util:platform",
+        "@com_github_google_glog//:glog",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/flags:parse",
+        "@com_google_googletest//:gtest",
+    ],
+    alwayslink = 1,
+)
+
+cc_test(
+    name = "e2e_test",
+    args = [
+        "--library_path=$(location //kmsp11/main:libkmsp11.so)",
+        "--kms_endpoint=staging-cloudkms.sandbox.googleapis.com:443",
+        "--location_name=projects/oss-tools-test/locations/us-central1",
+        "--user_project=oss-tools-test",
+    ],
+    data = [
+        "//kmsp11/main:libkmsp11.so",
+        "@com_github_grpc_grpc//:etc/roots.pem",
+    ],
+    env = {
+        "GRPC_DEFAULT_SSL_ROOTS_FILE_PATH": "$(location @com_github_grpc_grpc//:etc/roots.pem)",
+    },
+    linkopts = select({
+        "//:linux": [
+            # Disallow undefined symbols in object files.
+            "-z defs",
+            # Link with libdl.
+            "-ldl",
+            # Link statically with the C++ stdlib (usually LLVM/libc++ despite these names).
+            "-static-libstdc++",
+            "-static-libgcc",
+        ],
+        "//:freebsd": [
+            # Disallow undefined symbols in object files.
+            "-z defs",
+            # On FreeBSD, libdl is part of libc, so no explicit link needed.
+        ],
+        "//conditions:default": [],
+    }),
+    linkstatic = 1,
+    # This test should always be run when building releases, and is included
+    # in the `//:ci_only_tests` target so that it runs in CI builds.
+    tags = ["manual"],
+    deps = [":e2e_test_lib"],
+)

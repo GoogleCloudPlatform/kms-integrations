@@ -45,7 +45,7 @@ bazel version
 
 set BAZEL_ARGS=-c opt --keep_going %BAZEL_EXTRA_ARGS%
 
-bazel test %BAZEL_ARGS% ... :release_tests
+bazel test %BAZEL_ARGS% ... :ci_only_tests
 set RV=%ERRORLEVEL%
 
 bazel run %BAZEL_ARGS% //kmsp11/tools/buildsigner -- ^
@@ -57,6 +57,9 @@ set SIGN_RV=%ERRORLEVEL%
 if exist "%PROJECT_ROOT%\bazel-bin\kmsp11\main\libkmsp11.so" copy ^
     "%PROJECT_ROOT%\bazel-bin\kmsp11\main\libkmsp11.so" ^
     "%RESULTS_DIR%\kmsp11.dll"
+if exist "%PROJECT_ROOT%\bazel-bin\kmsp11\test\e2e\e2e_test.exe" copy ^
+    "%PROJECT_ROOT%\bazel-bin\kmsp11\test\e2e\e2e_test.exe" ^
+    "%RESULTS_DIR%\e2e_test.exe"
 
 copy "%PROJECT_ROOT%\LICENSE" "%RESULTS_DIR%\LICENSE"
 copy "%PROJECT_ROOT%\NOTICE" "%RESULTS_DIR%\LICENSE"

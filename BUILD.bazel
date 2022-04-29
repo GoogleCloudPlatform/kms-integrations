@@ -40,9 +40,12 @@ config_setting(
 )
 
 # A target to encompass tests that are tagged 'manual'
-# but should be run for release builds.
+# but should be run in CI environments.
 test_suite(
-    name = "release_tests",
+    name = "ci_only_tests",
     tags = ["manual"],
-    tests = ["//kmsp11/main:binary_test"],
+    tests = [
+        "//kmsp11/main:binary_test",
+        "//kmsp11/test/e2e:e2e_test",
+    ],
 )

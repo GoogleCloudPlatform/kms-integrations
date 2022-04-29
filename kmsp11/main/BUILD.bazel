@@ -126,7 +126,7 @@ cc_binary(
             "-Wl,--version-script,$(location :linux_exports.lds)",
             # Disallow undefined symbols in object files.
             "-z defs",
-            # Link statically with libstdc++ and libgcc
+            # Link statically with the C++ stdlib (usually LLVM/libc++ despite these names).
             "-static-libstdc++",
             "-static-libgcc",
         ],
@@ -173,7 +173,7 @@ go_test(
         # - It will fail on devs' workstations if devs have a modern glibc.
         # - It will fail in asan/tsan builds.
         # This test should always be run when building releases, and is included
-        # in the `//:release_tests` target.
+        # in the `//:ci_only_tests` target so that it runs in CI builds.
         "manual",
     ],
     deps = [

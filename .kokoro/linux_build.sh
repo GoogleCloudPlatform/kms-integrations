@@ -53,6 +53,10 @@ _upload_artifacts() {
     cp "${PROJECT_ROOT}/bazel-bin/kmsp11/main/libkmsp11.so" \
       "${RESULTS_DIR}/libkmsp11.so"
   fi
+  if [ -e "${PROJECT_ROOT}/bazel-bin/kmsp11/test/e2e/e2e_test" ]; then
+    cp "${PROJECT_ROOT}/bazel-bin/kmsp11/test/e2e/e2e_test" \
+      "${RESULTS_DIR}/e2e_test"
+  fi
 
   cp "${PROJECT_ROOT}/LICENSE" "${RESULTS_DIR}"
   cp "${PROJECT_ROOT}/NOTICE" "${RESULTS_DIR}"
@@ -68,7 +72,7 @@ export BAZEL_LINKLIBS=-nostdlib++:-L${LLVM_ROOT}/lib:-l%:libc++.a:-l%:libc++abi.
 
 export BAZEL_ARGS="-c opt --keep_going ${BAZEL_EXTRA_ARGS}"
 
-bazel test ${BAZEL_ARGS} ... :release_tests
+bazel test ${BAZEL_ARGS} ... :ci_only_tests
 
 bazel run ${BAZEL_ARGS} //kmsp11/tools/buildsigner -- \
   -signing_key=${BUILD_SIGNING_KEY} \
