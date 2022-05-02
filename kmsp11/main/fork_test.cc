@@ -23,7 +23,7 @@
 #include "kmsp11/main/bridge.h"
 #include "kmsp11/test/resource_helpers.h"
 #include "kmsp11/test/test_status_macros.h"
-#include "kmsp11/util/platform.h"
+#include "kmsp11/test/test_platform.h"
 
 namespace kmsp11 {
 namespace {

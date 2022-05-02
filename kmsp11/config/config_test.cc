@@ -20,8 +20,8 @@
 #include "gmock/gmock.h"
 #include "kmsp11/test/matchers.h"
 #include "kmsp11/test/proto_parser.h"
+#include "kmsp11/test/test_platform.h"
 #include "kmsp11/test/test_status_macros.h"
-#include "kmsp11/util/platform.h"
 
 namespace kmsp11 {
 namespace {
@@ -43,9 +43,10 @@ tokens:
 )";
 
   ASSERT_OK_AND_ASSIGN(LibraryConfig config, LoadConfigFromFile(config_path_));
-  EXPECT_THAT(
-      config, EqualsProto<LibraryConfig>(ParseTestProto(R"(
-        tokens { key_ring: "projects/foo/locations/global/keyRings/bar" })")));
+  EXPECT_THAT(config, EqualsProto<LibraryConfig>(ParseTestProto(R"pb(
+                tokens {
+                  key_ring: "projects/foo/locations/global/keyRings/bar"
+                })pb")));
 }
 
 TEST_F(ConfigFileTest, MultipleTokens) {
@@ -57,11 +58,16 @@ tokens:
 )";
 
   ASSERT_OK_AND_ASSIGN(LibraryConfig config, LoadConfigFromFile(config_path_));
-  EXPECT_THAT(
-      config, EqualsProto<LibraryConfig>(ParseTestProto(R"(
-        tokens { key_ring: "projects/foo/locations/global/keyRings/bar" }
-        tokens { key_ring: "projects/foo/locations/global/keyRings/baz" }
-        tokens { key_ring: "projects/foo/locations/global/keyRings/qux" })")));
+  EXPECT_THAT(config, EqualsProto<LibraryConfig>(ParseTestProto(R"pb(
+                tokens {
+                  key_ring: "projects/foo/locations/global/keyRings/bar"
+                }
+                tokens {
+                  key_ring: "projects/foo/locations/global/keyRings/baz"
+                }
+                tokens {
+                  key_ring: "projects/foo/locations/global/keyRings/qux"
+                })pb")));
 }
 
 TEST_F(ConfigFileTest, TokenWithLabel) {
@@ -72,11 +78,11 @@ tokens:
 )";
 
   ASSERT_OK_AND_ASSIGN(LibraryConfig config, LoadConfigFromFile(config_path_));
-  EXPECT_THAT(config, EqualsProto<LibraryConfig>(ParseTestProto(R"(
+  EXPECT_THAT(config, EqualsProto<LibraryConfig>(ParseTestProto(R"pb(
                 tokens {
                   key_ring: "projects/foo/locations/global/keyRings/bar"
                   label: "bar"
-                })")));
+                })pb")));
 }
 
 TEST_F(ConfigFileTest, InvalidArgumentOnMalformedConfig) {
@@ -110,9 +116,10 @@ tokens:
   absl::Cleanup c = [] { ClearEnvVariable(kConfigEnvVariable); };
 
   ASSERT_OK_AND_ASSIGN(LibraryConfig config, LoadConfigFromEnvironment());
-  EXPECT_THAT(
-      config, EqualsProto<LibraryConfig>(ParseTestProto(R"(
-        tokens { key_ring: "projects/foo/locations/global/keyRings/bar" })")));
+  EXPECT_THAT(config, EqualsProto<LibraryConfig>(ParseTestProto(R"pb(
+                tokens {
+                  key_ring: "projects/foo/locations/global/keyRings/bar"
+                })pb")));
 }
 
 TEST_F(ConfigFileTest, LoadConfigFromEnvironmentMissing) {

@@ -3,6 +3,7 @@ load("@rules_java//java:defs.bzl", "java_library", "java_test")
 
 java_library(
     name = "Environment",
+    testonly = 1,
     srcs = ["Environment.java"],
     data = [":libenv.so"],
     deps = [
@@ -13,6 +14,7 @@ java_library(
 
 java_library(
     name = "JcaTestFixture",
+    testonly = 1,
     srcs = ["JcaTestFixture.java"],
     data = [
         "//kmsp11/main:libkmsp11.so",
@@ -29,10 +31,11 @@ java_library(
 
 cc_binary(
     name = "libenv.so",
+    testonly = 1,
     srcs = ["env.cc"],
     linkshared = 1,
     deps = [
-        "//kmsp11/util:platform",
+        "//kmsp11/test:test_platform",
         "@bazel_tools//tools/jdk:jni",
     ],
 )

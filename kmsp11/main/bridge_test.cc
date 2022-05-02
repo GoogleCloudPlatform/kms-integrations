@@ -24,9 +24,9 @@
 #include "kmsp11/openssl.h"
 #include "kmsp11/test/matchers.h"
 #include "kmsp11/test/resource_helpers.h"
+#include "kmsp11/test/test_platform.h"
 #include "kmsp11/test/test_status_macros.h"
 #include "kmsp11/util/crypto_utils.h"
-#include "kmsp11/util/platform.h"
 
 namespace kmsp11 {
 namespace {

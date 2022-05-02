@@ -11,6 +11,7 @@ cc_library(
         ":proto_parser",
         ":resource_helpers",
         ":runfiles",
+        ":test_platform",
         ":test_status_macros",
     ],
 )
@@ -107,6 +108,20 @@ proto_library(
     name = "test_message_proto",
     testonly = 1,
     srcs = ["test_message.proto"],
+)
+
+cc_library(
+    name = "test_platform",
+    testonly = 1,
+    srcs = select({
+        "//:windows": ["test_platform_win.cc"],
+        "//conditions:default": ["test_platform_posix.cc"],
+    }),
+    hdrs = ["test_platform.h"],
+    deps = [
+        "//kmsp11/util:errors",
+        "@com_google_absl//absl/status",
+    ],
 )
 
 cc_library(

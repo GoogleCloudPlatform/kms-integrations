@@ -16,9 +16,9 @@
 #include "kmsp11/kmsp11.h"
 #include "kmsp11/openssl.h"
 #include "kmsp11/test/resource_helpers.h"
+#include "kmsp11/test/test_platform.h"
 #include "kmsp11/test/test_status_macros.h"
 #include "kmsp11/util/kms_v1.h"
-#include "kmsp11/util/platform.h"
 
 ABSL_FLAG(std::string, library_path, "",
           "Required. The path to the PKCS #11 library binary to be loaded. For "

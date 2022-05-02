@@ -14,7 +14,7 @@
 
 #include <jni.h>
 
-#include "kmsp11/util/platform.h"
+#include "kmsp11/test/test_platform.h"
 
 extern "C" {
 
