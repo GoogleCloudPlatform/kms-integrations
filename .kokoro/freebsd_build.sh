@@ -35,9 +35,15 @@ cd "${PROJECT_ROOT}"
 export RESULTS_DIR="${KOKORO_ARTIFACTS_DIR}/results"
 mkdir "${RESULTS_DIR}"
 
-sudo pkg update -f
-sudo pkg install -y cmake ninja
-sudo pkg install -y ${KOKORO_GFILE_DIR}/bazel-4.2.1-freebsd11-amd64.txz
+# Install package dependencies. Stored in GCS since FreeBSD11 repos
+# have been turned down.
+tar zxvf ${KOKORO_GFILE_DIR}/freebsd11-amd64-packages.tar.gz -C ${KOKORO_ARTIFACTS_DIR}
+pushd ${KOKORO_ARTIFACTS_DIR}/freebsd11-amd64-packages
+sudo pkg add openjdk8-8.275.01.1.txz  # Required by bazel-4.2.1
+sudo pkg add bazel-4.2.1.txz
+sudo pkg add cmake-3.19.2.txz
+sudo pkg add ninja-1.10.2,2.txz
+popd
 
 # Make Bazel use a JDK that isn't a million years old, which fixes weird
 # gRPC connection issues with remote build cache. :-(
