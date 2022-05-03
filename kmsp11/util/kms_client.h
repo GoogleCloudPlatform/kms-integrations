@@ -57,6 +57,12 @@ class KmsClient {
   absl::StatusOr<kms_v1::AsymmetricSignResponse> AsymmetricSign(
       const kms_v1::AsymmetricSignRequest& request) const;
 
+  absl::StatusOr<kms_v1::MacSignResponse> MacSign(
+      const kms_v1::MacSignRequest& request) const;
+
+  absl::StatusOr<kms_v1::MacVerifyResponse> MacVerify(
+      const kms_v1::MacVerifyRequest& request) const;
+
   absl::StatusOr<kms_v1::CryptoKey> CreateCryptoKey(
       const kms_v1::CreateCryptoKeyRequest& request) const;
 

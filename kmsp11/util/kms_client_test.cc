@@ -282,6 +282,65 @@ TEST(KmsClientTest, AsymmetricSignFailureInvalidName) {
               StatusIs(absl::StatusCode::kInvalidArgument));
 }
 
+TEST(KmsClientTest, MacSignVerifySuccess) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake,
+                       fakekms::Server::New());
+  std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
+
+  kms_v1::KeyRing kr;
+  kr = CreateKeyRingOrDie(client->kms_stub(), kTestLocation, RandomId(), kr);
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::MAC);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion::HMAC_SHA256);
+  ck = CreateCryptoKeyOrDie(client->kms_stub(), kr.name(), "ck", ck, true);
+
+  kms_v1::CryptoKeyVersion ckv;
+  ckv = CreateCryptoKeyVersionOrDie(client->kms_stub(), ck.name(), ckv);
+  ckv = WaitForEnablement(client->kms_stub(), ckv);
+
+  std::string data = "Here is some data to authenticate";
+
+  kms_v1::MacSignRequest sign_req;
+  sign_req.set_name(ckv.name());
+  sign_req.set_data(data);
+
+  ASSERT_OK_AND_ASSIGN(kms_v1::MacSignResponse sign_resp,
+                       client->MacSign(sign_req));
+
+  kms_v1::MacVerifyRequest verify_req;
+  verify_req.set_name(ckv.name());
+  verify_req.set_data(data);
+  verify_req.set_mac(sign_resp.mac());
+
+  ASSERT_OK_AND_ASSIGN(kms_v1::MacVerifyResponse verify_resp,
+                       client->MacVerify(verify_req));
+  EXPECT_TRUE(verify_resp.success());
+}
+
+TEST(KmsClientTest, MacSignFailureInvalidName) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake,
+                       fakekms::Server::New());
+  std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
+
+  kms_v1::MacSignRequest req;
+  req.set_name("foo");
+  EXPECT_THAT(client->MacSign(req),
+              StatusIs(absl::StatusCode::kInvalidArgument));
+}
+
+TEST(KmsClientTest, MacVerifyFailureInvalidName) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake,
+                       fakekms::Server::New());
+  std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
+
+  kms_v1::MacVerifyRequest req;
+  req.set_name("foo");
+  EXPECT_THAT(client->MacVerify(req),
+              StatusIs(absl::StatusCode::kInvalidArgument));
+}
+
 TEST(KmsClientTest, CreateCryptoKeyCreatesCryptoKey) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake,
                        fakekms::Server::New());

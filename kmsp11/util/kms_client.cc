@@ -103,6 +103,36 @@ absl::StatusOr<kms_v1::AsymmetricSignResponse> KmsClient::AsymmetricSign(
   return response;
 }
 
+absl::StatusOr<kms_v1::MacSignResponse> KmsClient::MacSign(
+    const kms_v1::MacSignRequest& request) const {
+  grpc::ClientContext ctx;
+  AddContextSettings(&ctx, "name", request.name());
+
+  kms_v1::MacSignResponse response;
+  absl::Status rpc_result =
+      ToStatus(kms_stub_->MacSign(&ctx, request, &response));
+  if (!rpc_result.ok()) {
+    SetErrorRv(rpc_result, CKR_DEVICE_ERROR);
+    return rpc_result;
+  }
+  return response;
+}
+
+absl::StatusOr<kms_v1::MacVerifyResponse> KmsClient::MacVerify(
+    const kms_v1::MacVerifyRequest& request) const {
+  grpc::ClientContext ctx;
+  AddContextSettings(&ctx, "name", request.name());
+
+  kms_v1::MacVerifyResponse response;
+  absl::Status rpc_result =
+      ToStatus(kms_stub_->MacVerify(&ctx, request, &response));
+  if (!rpc_result.ok()) {
+    SetErrorRv(rpc_result, CKR_DEVICE_ERROR);
+    return rpc_result;
+  }
+  return response;
+}
+
 absl::StatusOr<kms_v1::CryptoKey> KmsClient::CreateCryptoKey(
     const kms_v1::CreateCryptoKeyRequest& request) const {
   grpc::ClientContext ctx;

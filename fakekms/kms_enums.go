@@ -155,6 +155,34 @@ var algorithms = map[kmspb.CryptoKeyVersion_CryptoKeyVersionAlgorithm]algDef{
 		KeyFactory: rsaKeyFactory(4096),
 		Opts:       crypto.Hash(0),
 	},
+
+	// MAC
+
+	kmspb.CryptoKeyVersion_HMAC_SHA1: {
+		Purpose:    kmspb.CryptoKey_MAC,
+		KeyFactory: symmetricKeyFactory(160),
+		Opts:       crypto.SHA1,
+	},
+	kmspb.CryptoKeyVersion_HMAC_SHA224: {
+		Purpose:    kmspb.CryptoKey_MAC,
+		KeyFactory: symmetricKeyFactory(224),
+		Opts:       crypto.SHA1,
+	},
+	kmspb.CryptoKeyVersion_HMAC_SHA256: {
+		Purpose:    kmspb.CryptoKey_MAC,
+		KeyFactory: symmetricKeyFactory(256),
+		Opts:       crypto.SHA256,
+	},
+	kmspb.CryptoKeyVersion_HMAC_SHA384: {
+		Purpose:    kmspb.CryptoKey_MAC,
+		KeyFactory: symmetricKeyFactory(384),
+		Opts:       crypto.SHA384,
+	},
+	kmspb.CryptoKeyVersion_HMAC_SHA512: {
+		Purpose:    kmspb.CryptoKey_MAC,
+		KeyFactory: symmetricKeyFactory(512),
+		Opts:       crypto.SHA512,
+	},
 }
 
 // nameForValue retrieves the mapped name corresponding to value, or a string representation

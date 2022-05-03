@@ -41,7 +41,7 @@ func newLockInterceptor(mux *sync.RWMutex) grpc.UnaryServerInterceptor {
 		switch method {
 		case "AsymmetricDecrypt", "AsymmetricSign", "GenerateRandomBytes", "GetCryptoKey",
 			"GetCryptoKeyVersion", "GetKeyRing", "GetPublicKey", "ListCryptoKeys",
-			"ListCryptoKeyVersions", "ListKeyRings":
+			"ListCryptoKeyVersions", "ListKeyRings", "MacSign", "MacVerify":
 			locker = mux.RLocker()
 		case "CreateCryptoKey", "CreateCryptoKeyVersion", "CreateKeyRing", "DestroyCryptoKeyVersion",
 			"UpdateCryptoKey", "UpdateCryptoKeyVersion":
