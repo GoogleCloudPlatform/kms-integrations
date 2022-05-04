@@ -51,6 +51,19 @@ TEST(GetAlgorithmDetailsTest, AlgorithmRsaOaep) {
   EXPECT_EQ(details.digest_mechanism, CKM_SHA256);
 }
 
+TEST(GetAlgorithmDetailsTest, AlgorithmHmac) {
+  ASSERT_OK_AND_ASSIGN(AlgorithmDetails details,
+                       GetDetails(kms_v1::CryptoKeyVersion::HMAC_SHA256));
+
+  EXPECT_EQ(details.algorithm, kms_v1::CryptoKeyVersion::HMAC_SHA256);
+  EXPECT_EQ(details.purpose, kms_v1::CryptoKey::MAC);
+  EXPECT_THAT(details.allowed_mechanisms, ElementsAre(CKM_SHA256_HMAC));
+  EXPECT_EQ(details.key_type, CKK_SHA256_HMAC);
+  EXPECT_EQ(details.key_bit_length, 256);
+  EXPECT_EQ(details.key_gen_mechanism, CKM_GENERIC_SECRET_KEY_GEN);
+  EXPECT_EQ(details.digest_mechanism, std::nullopt);
+}
+
 TEST(GetAlgorithmDetailsTest, AlgorithmNotFound) {
   absl::StatusOr<AlgorithmDetails> details =
       GetDetails(kms_v1::CryptoKeyVersion::EXTERNAL_SYMMETRIC_ENCRYPTION);

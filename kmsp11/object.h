@@ -38,6 +38,8 @@ class Object {
  public:
   static absl::StatusOr<KeyPair> NewKeyPair(const kms_v1::CryptoKeyVersion& ckv,
                                             BSSL_CONST EVP_PKEY* public_key);
+  static absl::StatusOr<Object> NewSecretKey(
+      const kms_v1::CryptoKeyVersion& ckv);
 
   static absl::StatusOr<Object> NewCertificate(
       const kms_v1::CryptoKeyVersion& ckv, X509* certificate);

@@ -165,4 +165,16 @@ absl::StatusOr<KeyPair> NewMockKeyPair(
   return Object::NewKeyPair(ckv, pub.get());
 }
 
+absl::StatusOr<Object> NewMockSecretKey(
+    kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm) {
+  kms_v1::CryptoKeyVersion ckv;
+  ckv.set_name(
+      "projects/foo/locations/bar/keyRings/baz/cryptoKeys/qux/"
+      "cryptoKeyVersions/1");
+  ckv.set_algorithm(algorithm);
+  ckv.set_state(kms_v1::CryptoKeyVersion::ENABLED);
+
+  return Object::NewSecretKey(ckv);
+}
+
 }  // namespace kmsp11

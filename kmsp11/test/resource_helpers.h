@@ -87,6 +87,11 @@ absl::StatusOr<KeyPair> NewMockKeyPair(
         algorithm,
     std::string_view public_key_runfile);
 
+// Returns a mock Object with the provided algorithm.
+absl::StatusOr<Object> NewMockSecretKey(
+    google::cloud::kms::v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm
+        algorithm);
+
 }  // namespace kmsp11
 
 #endif  // KMSP11_TEST_RESOURCE_HELPERS_H_

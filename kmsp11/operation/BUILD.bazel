@@ -81,6 +81,34 @@ cc_library(
 )
 
 cc_library(
+    name = "hmac",
+    srcs = ["hmac.cc"],
+    hdrs = ["hmac.h"],
+    deps = [
+        ":crypter_interfaces",
+        ":preconditions",
+        "//kmsp11:cryptoki_headers",
+        "//kmsp11/util:crypto_utils",
+        "//kmsp11/util:kms_client",
+        "//kmsp11/util:status_macros",
+        "//kmsp11/util:string_utils",
+        "@com_google_absl//absl/status:statusor",
+    ],
+)
+
+cc_test(
+    name = "hmac_test",
+    size = "small",
+    srcs = ["hmac_test.cc"],
+    deps = [
+        ":hmac",
+        "//fakekms/cpp:fakekms",
+        "//kmsp11/test",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
     name = "kms_digesting_signer",
     srcs = ["kms_digesting_signer.cc"],
     hdrs = ["kms_digesting_signer.h"],

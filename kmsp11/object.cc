@@ -164,6 +164,33 @@ absl::Status AddRsaPrivateKeyAttributes(AttributeMap* attrs,
   return absl::OkStatus();
 }
 
+absl::Status AddSecretKeyAttributes(AttributeMap* attrs,
+                                    const kms_v1::CryptoKeyVersion& ckv) {
+  ASSIGN_OR_RETURN(AlgorithmDetails algorithm, GetDetails(ckv.algorithm()));
+
+  // Override CKA_DESTROYABLE (from 4.4 Storage Objects)
+  attrs->PutBool(CKA_DESTROYABLE, true);
+
+  // 4.10 Secret key objects
+  attrs->Put(CKA_SUBJECT, "");
+  attrs->PutBool(CKA_SENSITIVE, true);
+  attrs->PutBool(CKA_ENCRYPT, false);
+  attrs->PutBool(CKA_DECRYPT, false);
+  attrs->PutBool(CKA_SIGN, algorithm.purpose == kms_v1::CryptoKey::MAC);
+  attrs->PutBool(CKA_VERIFY, algorithm.purpose == kms_v1::CryptoKey::MAC);
+  attrs->PutBool(CKA_WRAP, false);
+  attrs->PutBool(CKA_UNWRAP, false);
+  attrs->PutBool(CKA_EXTRACTABLE, false);
+  attrs->PutBool(CKA_ALWAYS_SENSITIVE, ckv.import_job().empty());
+  attrs->PutBool(CKA_NEVER_EXTRACTABLE, ckv.import_job().empty());
+  // TODO(b/231473430): Add CKA_CHECK_VALUE attribute from HSM attestation.
+  attrs->PutBool(CKA_WRAP_WITH_TRUSTED, false);
+  attrs->PutBool(CKA_TRUSTED, false);
+  attrs->Put(CKA_WRAP_TEMPLATE, "");
+  attrs->Put(CKA_UNWRAP_TEMPLATE, "");
+  return absl::OkStatus();
+}
+
 absl::Status AddX509CertificateAttributes(AttributeMap* attrs,
                                           const kms_v1::CryptoKeyVersion& ckv,
                                           X509* cert) {
@@ -254,6 +281,18 @@ absl::StatusOr<KeyPair> Object::NewKeyPair(const kms_v1::CryptoKeyVersion& ckv,
   ASSIGN_OR_RETURN(AlgorithmDetails algorithm, GetDetails(ckv.algorithm()));
   return KeyPair{Object(ckv.name(), CKO_PUBLIC_KEY, algorithm, pub_attrs),
                  Object(ckv.name(), CKO_PRIVATE_KEY, algorithm, prv_attrs)};
+}
+
+absl::StatusOr<Object> Object::NewSecretKey(
+    const kms_v1::CryptoKeyVersion& ckv) {
+  AttributeMap attrs;
+  attrs.PutULong(CKA_CLASS, CKO_SECRET_KEY);
+  RETURN_IF_ERROR(AddStorageAttributes(&attrs, ckv));
+  RETURN_IF_ERROR(AddKeyAttributes(&attrs, ckv));
+  RETURN_IF_ERROR(AddSecretKeyAttributes(&attrs, ckv));
+
+  ASSIGN_OR_RETURN(AlgorithmDetails algorithm, GetDetails(ckv.algorithm()));
+  return Object(ckv.name(), CKO_PRIVATE_KEY, algorithm, attrs);
 }
 
 absl::StatusOr<Object> Object::NewCertificate(

@@ -201,6 +201,52 @@ static const auto* const kAlgorithmDetails = new absl::btree_set<
         CKM_RSA_PKCS_KEY_PAIR_GEN,  // key_gen_mechanism
         std::nullopt,               // digest_mechanism
     },
+    // HMAC_*
+    {
+        kms_v1::CryptoKeyVersion::HMAC_SHA1,  // algorithm
+        kms_v1::CryptoKey::MAC,               // purpose
+        {CKM_SHA_1_HMAC},                     // allowed_mechanisms
+        CKK_SHA_1_HMAC,                       // key_type
+        160,                                  // key_size
+        CKM_GENERIC_SECRET_KEY_GEN,           // key_gen_mechanism
+        std::nullopt,                         // digest_mechanism
+    },
+    {
+        kms_v1::CryptoKeyVersion::HMAC_SHA224,  // algorithm
+        kms_v1::CryptoKey::MAC,                 // purpose
+        {CKM_SHA224_HMAC},                      // allowed_mechanisms
+        CKK_SHA224_HMAC,                        // key_type
+        224,                                    // key_size
+        CKM_GENERIC_SECRET_KEY_GEN,             // key_gen_mechanism
+        std::nullopt,                           // digest_mechanism
+    },
+    {
+        kms_v1::CryptoKeyVersion::HMAC_SHA256,  // algorithm
+        kms_v1::CryptoKey::MAC,                 // purpose
+        {CKM_SHA256_HMAC},                      // allowed_mechanisms
+        CKK_SHA256_HMAC,                        // key_type
+        256,                                    // key_size
+        CKM_GENERIC_SECRET_KEY_GEN,             // key_gen_mechanism
+        std::nullopt,                           // digest_mechanism
+    },
+    {
+        kms_v1::CryptoKeyVersion::HMAC_SHA384,  // algorithm
+        kms_v1::CryptoKey::MAC,                 // purpose
+        {CKM_SHA384_HMAC},                      // allowed_mechanisms
+        CKK_SHA384_HMAC,                        // key_type
+        384,                                    // key_size
+        CKM_GENERIC_SECRET_KEY_GEN,             // key_gen_mechanism
+        std::nullopt,                           // digest_mechanism
+    },
+    {
+        kms_v1::CryptoKeyVersion::HMAC_SHA512,  // algorithm
+        kms_v1::CryptoKey::MAC,                 // purpose
+        {CKM_SHA512_HMAC},                      // allowed_mechanisms
+        CKK_SHA512_HMAC,                        // key_type
+        512,                                    // key_size
+        CKM_GENERIC_SECRET_KEY_GEN,             // key_gen_mechanism
+        std::nullopt,                           // digest_mechanism
+    },
 };
 
 absl::StatusOr<AlgorithmDetails> GetDetails(
