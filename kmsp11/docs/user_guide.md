@@ -14,13 +14,15 @@
     5.  [RSA-PKCS1 signing and verification](#rsa-pkcs1-signing-and-verification)
     6.  [RSA-PSS signing and verification](#rsa-pss-signing-and-verification)
 6.  [Limitations](#limitations)
-7.  [Release Notes](#release-notes)
 
 ## Getting started
 
 This library provides access to Google Cloud HSM through the industry standard
 PKCS #11 API. Official Google-built releases of this library are covered by the
 [Google Cloud Platform Terms of Service][gcp-service-terms].
+
+If you are upgrading from a previous version of the library, be sure to check
+the [change log](../../CHANGELOG.md) for changes that might affect your usage.
 
 ### Linux system requirements
 
@@ -355,24 +357,6 @@ This means that:
 *   Keys that are created or modified after the library is initialized will be
     stale if `refresh_interval_secs` is unspecified, or else will take up to
     that amount of time to become up-to-date in the library.
-
-## Release Notes
-
-### v1.1
-
-The following changes are included in the v1.1 (March 2022) release:
-
-*   The value for `CKA_EC_POINT` was corrected.
-*   The configuration option `experimental_generate_certs` is now fully
-    supported, and has been renamed to `generate_certs`.
-*   Google now supplies a version of the library where the included BoringSSL
-    has been built in FIPS mode.
-*   The configuration option `experimental_require_fips_mode` is now fully
-    supported, and has been renamed to `require_fips_mode`.
-*   For `CK_RSA_PKCS_OAEP_PARAMS.source`, the value `0` is treated as
-    meaning "no label" for compatibility purposes.
-*   The library must now be built with Bazel v4.2.1.
-*   Several internal dependencies were updated.
 
 [gcp-authn-getting-started]: https://cloud.google.com/docs/authentication/getting-started
 [gcp-authn-prod]: https://cloud.google.com/docs/authentication/production
