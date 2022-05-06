@@ -135,7 +135,7 @@ TEST_F(BridgeLoggingTest, GrpcErrorEventEmittedWithDefaultVerbosity) {
   // Default verbosity is ERROR.
   EXPECT_EQ(gpr_should_log(GPR_LOG_SEVERITY_ERROR), 1);
   std::string message = "This error message should appear in the logs.";
-  gpr_log("foo.cc", 42, GPR_LOG_SEVERITY_ERROR, message.c_str());
+  gpr_log("foo.cc", 42, GPR_LOG_SEVERITY_ERROR, "%s", message.c_str());
   ASSERT_OK(Finalize(nullptr));
 
   std::filesystem::recursive_directory_iterator log_iter(log_directory);
@@ -157,7 +157,7 @@ TEST_F(BridgeLoggingTest, GrpcDebugEventNotEmittedWithDefaultVerbosity) {
   // Default verbosity is ERROR.
   EXPECT_EQ(gpr_should_log(GPR_LOG_SEVERITY_DEBUG), 0);
   std::string message = "This message shouldn't appear in the logs.";
-  gpr_log("foo.cc", 42, GPR_LOG_SEVERITY_DEBUG, message.c_str());
+  gpr_log("foo.cc", 42, GPR_LOG_SEVERITY_DEBUG, "%s", message.c_str());
   ASSERT_OK(Finalize(nullptr));
 
   std::filesystem::recursive_directory_iterator log_iter(log_directory);
@@ -185,7 +185,7 @@ TEST_F(BridgeLoggingTest, GrpcDebugEventEmittedWhenVerbosityIsDebug) {
   ASSERT_OK(Initialize(&init_args_));
   EXPECT_EQ(gpr_should_log(GPR_LOG_SEVERITY_DEBUG), 1);
   std::string message = "This message should appear in the logs.";
-  gpr_log("foo.cc", 42, GPR_LOG_SEVERITY_DEBUG, message.c_str());
+  gpr_log("foo.cc", 42, GPR_LOG_SEVERITY_DEBUG, "%s", message.c_str());
   ASSERT_OK(Finalize(nullptr));
 
   std::filesystem::recursive_directory_iterator log_iter(log_directory);

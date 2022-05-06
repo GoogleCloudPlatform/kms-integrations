@@ -224,9 +224,9 @@ TEST_F(LogDirectoryTest, GrpcErrorsAreLoggedToGlogDestination) {
     absl::Cleanup c = ShutdownLogging;
 
     grpc_init();
-    gpr_log(GPR_ERROR, error_message.c_str());
-    gpr_log(GPR_INFO, info_message.c_str());
-    gpr_log(GPR_DEBUG, debug_message.c_str());
+    gpr_log(GPR_ERROR, "%s", error_message.c_str());
+    gpr_log(GPR_INFO, "%s", info_message.c_str());
+    gpr_log(GPR_DEBUG, "%s", debug_message.c_str());
   }
 
   std::vector<std::filesystem::directory_entry> files = LogDirectoryEntries();

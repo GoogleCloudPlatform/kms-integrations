@@ -27,8 +27,7 @@ using ::testing::AllOf;
 
 class KmsDigestingSignerTest : public testing::Test {
  protected:
-  void SetUp(google::cloud::kms::v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm
-                 algorithm) {
+  void SetUp() override {
     ASSERT_OK_AND_ASSIGN(fake_server_, fakekms::Server::New());
     client_ = std::make_unique<KmsClient>(fake_server_->listen_addr(),
                                           grpc::InsecureChannelCredentials(),
@@ -41,7 +40,8 @@ class KmsDigestingSignerTest : public testing::Test {
 
     kms_v1::CryptoKey ck;
     ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
-    ck.mutable_version_template()->set_algorithm(algorithm);
+    ck.mutable_version_template()->set_algorithm(
+        kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
     ck = CreateCryptoKeyOrDie(fake_client.get(), kr.name(), "ck", ck, true);
 
     kms_v1::CryptoKeyVersion ckv;
