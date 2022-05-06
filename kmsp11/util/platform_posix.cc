@@ -48,11 +48,6 @@ absl::Status EnsureWriteProtected(const char* filename) {
   return absl::OkStatus();
 }
 
-int64_t GetProcessId() {
-  static_assert(sizeof(pid_t) <= sizeof(int64_t), "pid must fit in an int64");
-  return getpid();
-}
-
 std::string_view GetTargetPlatform() {
 #if defined(__amd64__)
   return "amd64";

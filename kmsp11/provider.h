@@ -27,7 +27,6 @@
 #include "kmsp11/token.h"
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/handle_map.h"
-#include "kmsp11/util/platform.h"
 
 namespace kmsp11 {
 
@@ -38,9 +37,6 @@ namespace kmsp11 {
 class Provider {
  public:
   static absl::StatusOr<std::unique_ptr<Provider>> New(LibraryConfig config);
-
-  // Returns the PID of the process that created this Provider.
-  int64_t creation_process_id() { return creation_process_id_; }
 
   const LibraryConfig& library_config() const { return library_config_; }
   const CK_INFO& info() const { return info_; }
@@ -75,8 +71,7 @@ class Provider {
         info_(info),
         tokens_(std::move(tokens)),
         sessions_(CKR_SESSION_HANDLE_INVALID),
-        kms_client_(std::move(kms_client)),
-        creation_process_id_(GetProcessId()) {
+        kms_client_(std::move(kms_client)) {
     if (refresh_interval > absl::ZeroDuration()) {
       refresher_.emplace(this, refresh_interval);
     }
@@ -87,7 +82,6 @@ class Provider {
   const std::vector<std::unique_ptr<Token>> tokens_;
   HandleMap<Session> sessions_;
   std::unique_ptr<KmsClient> kms_client_;
-  int64_t creation_process_id_;
   std::optional<Refresher> refresher_;
 };
 

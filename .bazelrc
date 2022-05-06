@@ -14,8 +14,6 @@ build:windows --cxxopt=/std:c++17 --linkopt=/std:c++17
 build:freebsd --linkopt=-lm
 # Position-independent code
 build:freebsd --copt=-fPIC
-# Build gRPC with fork support.
-build:freebsd --copt=-DGRPC_POSIX_FORK_ALLOW_PTHREAD_ATFORK
 # Java Version
 # The Bazel remote_jdk11 target doesn't exist for FreeBSD, so we rely on a
 # locally installed JDK.
@@ -28,8 +26,6 @@ build:freebsd --java_toolchain=@bazel_tools//tools/jdk:toolchain_vanilla
 # Linux-specific options
 # Position-independent code
 build:linux --copt=-fPIC
-# Build gRPC with fork support.
-build:linux --copt=-DGRPC_POSIX_FORK_ALLOW_PTHREAD_ATFORK
 # Java Version
 build:linux --host_javabase=@bazel_tools//tools/jdk:remote_jdk11
 build:linux --javabase=@bazel_tools//tools/jdk:remote_jdk11
@@ -43,8 +39,6 @@ build:macos --copt=-mmacosx-version-min=10.15
 build:macos --copt=-DGRPC_BAZEL_BUILD
 # Workaround for build issue: https://github.com/bazelbuild/bazel/issues/4341#issuecomment-758361769
 build:macos --features=-supports_dynamic_linker
-# Build gRPC with fork support.
-build:macos --copt=-DGRPC_POSIX_FORK_ALLOW_PTHREAD_ATFORK
 # Java Version
 build:macos --host_javabase=@bazel_tools//tools/jdk:remote_jdk11
 build:macos --javabase=@bazel_tools//tools/jdk:remote_jdk11

@@ -15,10 +15,10 @@
 #include "absl/status/status.h"
 #include "absl/types/optional.h"
 #include "glog/logging.h"
-#include "grpc/fork.h"
 #include "kmsp11/config/config.h"
 #include "kmsp11/cryptoki.h"
 #include "kmsp11/kmsp11.h"
+#include "kmsp11/main/fork_support.h"
 #include "kmsp11/main/function_list.h"
 #include "kmsp11/mechanism.h"
 #include "kmsp11/provider.h"
@@ -53,13 +53,6 @@ absl::StatusOr<std::shared_ptr<Session>> GetSession(
   return provider->GetSession(session_handle);
 }
 
-absl::Status ShutdownInternal() {
-  RETURN_IF_ERROR(ReleaseGlobalProvider());
-  grpc_shutdown_blocking();
-  ShutdownLogging();
-  return absl::OkStatus();
-}
-
 }  // namespace
 
 // Initialize the library.
@@ -79,21 +72,15 @@ absl::Status Initialize(CK_VOID_PTR pInitArgs) {
     }
   }
 
+  // Registering fork handlers is a one-time operation.
+  static const absl::Status kForkHandlersRegistered = RegisterForkHandlers();
+  RETURN_IF_ERROR(kForkHandlersRegistered);
+
   Provider* existing_provider = GetGlobalProvider();
   if (existing_provider) {
-    if (existing_provider->creation_process_id() == GetProcessId()) {
-      return FailedPreconditionError("the library is already initialized",
-                                     CKR_CRYPTOKI_ALREADY_INITIALIZED,
-                                     SOURCE_LOCATION);
-    }
-
-    // The PID has changed, which means this is Cryptoki re-Initialization in a
-    // post-fork child, which is expected behavior:
-    // http://docs.oasis-open.org/pkcs11/pkcs11-ug/v2.40/cn02/pkcs11-ug-v2.40-cn02.html#_Toc406759987
-    //
-    // For now, we support this by releasing all of our existing state, and
-    // starting over from scratch. This could be optimized.
-    RETURN_IF_ERROR(ShutdownInternal());
+    return FailedPreconditionError("the library is already initialized",
+                                   CKR_CRYPTOKI_ALREADY_INITIALIZED,
+                                   SOURCE_LOCATION);
   }
 
   LibraryConfig config;
@@ -114,16 +101,11 @@ absl::Status Initialize(CK_VOID_PTR pInitArgs) {
     CHECK(self_test_result.ok()) << "FIPS tests failed: " << self_test_result;
   }
 
-  // grpc_init() emits log messages when GRPC_VERBOSITY is debug, and
   // Provider::New emits info log messages (for example, noting that a CKV is
   // being skipped due to state DISABLED), so logging should be initialized
-  // before either of these is invoked.
+  // before it is invoked.
   RETURN_IF_ERROR(
       InitializeLogging(config.log_directory(), config.log_filename_suffix()));
-
-  // Initialize gRPC state.
-  grpc_init();
-  grpc_fork_handlers_auto_register();
 
   absl::StatusOr<std::unique_ptr<Provider>> new_provider =
       Provider::New(config);
@@ -139,7 +121,8 @@ absl::Status Initialize(CK_VOID_PTR pInitArgs) {
 // http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc383864872
 absl::Status Finalize(CK_VOID_PTR pReserved) {
   RETURN_IF_ERROR(GetProvider());
-  RETURN_IF_ERROR(ShutdownInternal());
+  RETURN_IF_ERROR(ReleaseGlobalProvider());
+  ShutdownLogging();
   return absl::OkStatus();
 }
 

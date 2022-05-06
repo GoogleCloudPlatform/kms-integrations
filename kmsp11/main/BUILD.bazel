@@ -19,6 +19,7 @@ cc_library(
     ],
     linkstatic = 1,
     deps = [
+        ":fork_support",
         "//kmsp11:cryptoki_headers",
         "//kmsp11:mechanism",
         "//kmsp11:provider",
@@ -75,6 +76,25 @@ cc_test(
         "//kmsp11/test",
         "@com_google_absl//absl/cleanup",
         "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "fork_support",
+    srcs = select({
+        "//:windows": ["fork_support_win.cc"],
+        "//conditions:default": ["fork_support_posix.cc"],
+    }),
+    hdrs = ["fork_support.h"],
+    copts = select({
+        "//:linux": ["-lpthread"],
+        "//conditions:default": [],
+    }),
+    deps = [
+        "//kmsp11/util:global_provider",
+        "//kmsp11/util:logging",
+        "@com_google_absl//absl/status",
+        "@com_github_grpc_grpc//:grpc++",
     ],
 )
 

@@ -29,10 +29,6 @@ namespace kmsp11 {
 // TODO(bdhess): move to C++17 filesystem module for Beta
 absl::Status EnsureWriteProtected(const char* filename);
 
-// Get an int64 representation of the current process's PID. Used to determine
-// if a process has been forked.
-int64_t GetProcessId();
-
 // Returns "x86" or "amd64" indicating the target platform for this binary.
 std::string_view GetTargetPlatform();
 

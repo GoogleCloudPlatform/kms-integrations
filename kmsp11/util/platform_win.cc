@@ -14,7 +14,6 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
-#include <process.h>
 
 #include "absl/cleanup/cleanup.h"
 #include "absl/status/statusor.h"
@@ -108,11 +107,6 @@ absl::StatusOr<SystemVersionInfo> GetSystemVersionInfo() {
 
 absl::Status EnsureWriteProtected(const char* filename) {
   return absl::OkStatus();
-}
-
-int64_t GetProcessId() {
-  static_assert(sizeof(int) <= sizeof(int64_t), "pid must fit in an int64");
-  return _getpid();
 }
 
 std::string_view GetTargetPlatform() {

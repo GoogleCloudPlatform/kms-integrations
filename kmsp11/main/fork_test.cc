@@ -22,8 +22,8 @@
 #include "kmsp11/kmsp11.h"
 #include "kmsp11/main/bridge.h"
 #include "kmsp11/test/resource_helpers.h"
-#include "kmsp11/test/test_status_macros.h"
 #include "kmsp11/test/test_platform.h"
+#include "kmsp11/test/test_status_macros.h"
 
 namespace kmsp11 {
 namespace {
@@ -32,6 +32,12 @@ namespace {
 // we should try to get them to support it for us if feasible. Until then, this
 // test ensures we don't introduce a regression that breaks forking.
 TEST(ForkTest, ProviderToleratesForkAfterInitWithEnvVariableSet) {
+  // This magic env variable is needed for gRPC to include fork support.
+  // It is important to set this before any gRPC objects are made.
+  std::string grpc_fork_env_var = "GRPC_ENABLE_FORK_SUPPORT";
+  SetEnvVariable(grpc_fork_env_var, "1");
+  absl::Cleanup c1 = [&] { ClearEnvVariable(grpc_fork_env_var); };
+
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_kms,
                        fakekms::Server::New());
   auto client = fake_kms->NewClient();
@@ -48,17 +54,11 @@ kms_endpoint: "%s"
 use_insecure_grpc_channel_credentials: true
 )",
                          kr.name(), fake_kms->listen_addr());
-  absl::Cleanup c1 = [&] { std::remove(config_file.c_str()); };
+  absl::Cleanup c2 = [&] { std::remove(config_file.c_str()); };
 
   CK_C_INITIALIZE_ARGS init_args = {0};
   init_args.flags = CKF_OS_LOCKING_OK;
   init_args.pReserved = const_cast<char*>(config_file.c_str());
-
-  // This magic env variable is needed for gRPC to include fork support.
-  std::string grpc_fork_env_var = "GRPC_ENABLE_FORK_SUPPORT";
-  SetEnvVariable(grpc_fork_env_var, "1");
-  absl::Cleanup c2 = [&] { ClearEnvVariable(grpc_fork_env_var); };
-
   ASSERT_OK(Initialize(&init_args));
   absl::Cleanup c3 = [] { ASSERT_OK(Finalize(nullptr)); };
 
