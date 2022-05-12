@@ -26,6 +26,7 @@ namespace kmsp11 {
 namespace {
 
 using ::testing::AllOf;
+using ::testing::Contains;
 using ::testing::Eq;
 using ::testing::Field;
 using ::testing::Le;
@@ -102,6 +103,76 @@ TEST_F(ProviderTest, ConfiguredTokens) {
   ASSERT_OK_AND_ASSIGN(const Token* token1, provider_->TokenAt(1));
   EXPECT_THAT(StrFromBytes(token1->token_info().label),
               MatchesStdRegex("bar[ ]+"));
+}
+
+TEST_F(ProviderTest, SupportedMechanisms) {
+  EXPECT_THAT(provider_->Mechanisms(),
+              // Check a subset of the permitted mechanisms, to avoid having
+              // this test be a change detector.
+              AllOf(Contains(CKM_RSA_PKCS_KEY_PAIR_GEN),
+                    Contains(CKM_RSA_PKCS_PSS), Contains(CKM_ECDSA)));
+}
+
+TEST_F(ProviderTest, DecryptFlag) {
+  ASSERT_OK_AND_ASSIGN(CK_MECHANISM_INFO info,
+                       provider_->MechanismInfo(CKM_RSA_PKCS_OAEP));
+  EXPECT_EQ(info.flags & CKF_DECRYPT, CKF_DECRYPT);
+}
+
+TEST_F(ProviderTest, EncryptFlag) {
+  ASSERT_OK_AND_ASSIGN(CK_MECHANISM_INFO info,
+                       provider_->MechanismInfo(CKM_RSA_PKCS_OAEP));
+  EXPECT_EQ(info.flags & CKF_ENCRYPT, CKF_ENCRYPT);
+}
+
+TEST_F(ProviderTest, SignFlag) {
+  ASSERT_OK_AND_ASSIGN(CK_MECHANISM_INFO info,
+                       provider_->MechanismInfo(CKM_RSA_PKCS_PSS));
+  EXPECT_EQ(info.flags & CKF_SIGN, CKF_SIGN);
+}
+
+TEST_F(ProviderTest, VerifyFlag) {
+  ASSERT_OK_AND_ASSIGN(CK_MECHANISM_INFO info,
+                       provider_->MechanismInfo(CKM_RSA_PKCS));
+  EXPECT_EQ(info.flags & CKF_VERIFY, CKF_VERIFY);
+}
+
+TEST_F(ProviderTest, RsaMin2048) {
+  ASSERT_OK_AND_ASSIGN(CK_MECHANISM_INFO info,
+                       provider_->MechanismInfo(CKM_RSA_PKCS_OAEP));
+  EXPECT_EQ(info.ulMinKeySize, 2048);
+}
+
+TEST_F(ProviderTest, RsaMax4096) {
+  ASSERT_OK_AND_ASSIGN(CK_MECHANISM_INFO info,
+                       provider_->MechanismInfo(CKM_RSA_PKCS));
+  EXPECT_EQ(info.ulMaxKeySize, 4096);
+}
+
+TEST_F(ProviderTest, EcMax384) {
+  ASSERT_OK_AND_ASSIGN(CK_MECHANISM_INFO info,
+                       provider_->MechanismInfo(CKM_ECDSA));
+  EXPECT_EQ(info.ulMaxKeySize, 384);
+}
+
+TEST_F(ProviderTest, EcFlags) {
+  ASSERT_OK_AND_ASSIGN(CK_MECHANISM_INFO info,
+                       provider_->MechanismInfo(CKM_ECDSA));
+  EXPECT_EQ(info.flags & CKF_EC_F_P, CKF_EC_F_P);
+  EXPECT_EQ(info.flags & CKF_EC_NAMEDCURVE, CKF_EC_NAMEDCURVE);
+  EXPECT_EQ(info.flags & CKF_EC_UNCOMPRESS, CKF_EC_UNCOMPRESS);
+}
+
+TEST_F(ProviderTest, UnsupportedMechanism) {
+  EXPECT_THAT(provider_->MechanismInfo(CKM_AES_GCM),
+              AllOf(StatusIs(absl::StatusCode::kNotFound),
+                    StatusRvIs(CKR_MECHANISM_INVALID)));
+}
+
+TEST_F(ProviderTest, MacMechanismExperimentDisabled) {
+  EXPECT_THAT(provider_->MechanismInfo(CKM_SHA_1_HMAC),
+              AllOf(StatusIs(absl::StatusCode::kNotFound),
+                    StatusRvIs(CKR_MECHANISM_INVALID)));
 }
 
 }  // namespace

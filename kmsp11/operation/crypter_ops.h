@@ -34,7 +34,8 @@ absl::StatusOr<EncryptOp> NewEncryptOp(std::shared_ptr<Object> key,
 using SignOp = std::unique_ptr<SignerInterface>;
 
 absl::StatusOr<SignOp> NewSignOp(std::shared_ptr<Object> key,
-                                 const CK_MECHANISM* mechanism);
+                                 const CK_MECHANISM* mechanism,
+                                 bool allow_mac_keys = false);
 
 using VerifyOp = std::unique_ptr<VerifierInterface>;
 

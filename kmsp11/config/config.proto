@@ -55,7 +55,7 @@ message LibraryConfig {
   uint32 refresh_interval_secs = 7;
 
   // Optional. If true, enables an experiment that allows multiple versions of a
-  // CryptoKey to be created. Default is false
+  // CryptoKey to be created. Default is false.
   bool experimental_create_multiple_versions = 9;
 
   // Optional. If true, enables an initialization time check that requires that
@@ -65,6 +65,10 @@ message LibraryConfig {
   // Optional. Cloud KMS feature flags to emit with all RPC requests. Used for
   // internal testing only.
   string experimental_rpc_feature_flags = 12;
+
+  // Optional. If true, enables an experiment that allows usage of MAC keys.
+  // Default is false.
+  bool experimental_allow_mac_keys = 13;
 }
 
 message TokenConfig {

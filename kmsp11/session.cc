@@ -297,14 +297,14 @@ absl::StatusOr<absl::Span<const uint8_t>> Session::Encrypt(
 }
 
 absl::Status Session::SignInit(std::shared_ptr<Object> key,
-                               CK_MECHANISM* mechanism) {
+                               CK_MECHANISM* mechanism, bool allow_mac_keys) {
   absl::MutexLock l(&op_mutex_);
 
   if (op_.has_value()) {
     return OperationActiveError(SOURCE_LOCATION);
   }
 
-  ASSIGN_OR_RETURN(op_, NewSignOp(key, mechanism));
+  ASSIGN_OR_RETURN(op_, NewSignOp(key, mechanism, allow_mac_keys));
   return absl::OkStatus();
 }
 

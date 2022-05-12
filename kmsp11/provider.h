@@ -23,6 +23,7 @@
 #include "absl/synchronization/notification.h"
 #include "kmsp11/config/config.pb.h"
 #include "kmsp11/cryptoki.h"
+#include "kmsp11/mechanism.h"
 #include "kmsp11/session.h"
 #include "kmsp11/token.h"
 #include "kmsp11/util/errors.h"
@@ -52,6 +53,11 @@ class Provider {
   absl::Status CloseSession(CK_SESSION_HANDLE session_handle);
   absl::Status CloseAllSessions(CK_SLOT_ID slot_id);
 
+  // Returns a sorted list of the mechanism types supported in this library.
+  absl::Span<const CK_MECHANISM_TYPE> Mechanisms();
+  // Returns details about the provided mechanism type.
+  absl::StatusOr<CK_MECHANISM_INFO> MechanismInfo(CK_MECHANISM_TYPE type);
+
  private:
   class Refresher {
    public:
@@ -75,6 +81,21 @@ class Provider {
     if (refresh_interval > absl::ZeroDuration()) {
       refresher_.emplace(this, refresh_interval);
     }
+    auto all_mechanisms = AllMechanisms();
+    auto all_mac_mechanisms = AllMacMechanisms();
+    size_t types_size = library_config_.experimental_allow_mac_keys()
+                            ? all_mechanisms.size()
+                            : all_mechanisms.size() - all_mac_mechanisms.size();
+    std::vector<CK_MECHANISM_TYPE> types(types_size);
+    for (const auto& [mechanism_type, mechanism] : all_mechanisms) {
+      if (all_mac_mechanisms.contains(mechanism_type) &&
+          !library_config_.experimental_allow_mac_keys()) {
+        continue;
+      }
+      types.push_back(mechanism_type);
+    }
+    std::sort(types.begin(), types.end());
+    mechanism_types_ = types;
   }
 
   const LibraryConfig library_config_;
@@ -83,6 +104,7 @@ class Provider {
   HandleMap<Session> sessions_;
   std::unique_ptr<KmsClient> kms_client_;
   std::optional<Refresher> refresher_;
+  std::vector<CK_MECHANISM_TYPE> mechanism_types_;
 };
 
 }  // namespace kmsp11

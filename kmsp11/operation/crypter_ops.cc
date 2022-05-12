@@ -15,6 +15,7 @@
 #include "kmsp11/operation/crypter_ops.h"
 
 #include "kmsp11/operation/ecdsa.h"
+#include "kmsp11/operation/hmac.h"
 #include "kmsp11/operation/rsaes_oaep.h"
 #include "kmsp11/operation/rsassa_pkcs1.h"
 #include "kmsp11/operation/rsassa_pss.h"
@@ -46,7 +47,8 @@ absl::StatusOr<EncryptOp> NewEncryptOp(std::shared_ptr<Object> key,
 }
 
 absl::StatusOr<SignOp> NewSignOp(std::shared_ptr<Object> key,
-                                 const CK_MECHANISM* mechanism) {
+                                 const CK_MECHANISM* mechanism,
+                                 bool allow_mac_keys) {
   switch (mechanism->mechanism) {
     case CKM_ECDSA:
     case CKM_ECDSA_SHA256:
@@ -63,6 +65,15 @@ absl::StatusOr<SignOp> NewSignOp(std::shared_ptr<Object> key,
     case CKM_SHA256_RSA_PKCS_PSS:
     case CKM_SHA512_RSA_PKCS_PSS:
       return NewRsaPssSigner(key, mechanism);
+    case CKM_SHA_1_HMAC:
+    case CKM_SHA224_HMAC:
+    case CKM_SHA256_HMAC:
+    case CKM_SHA384_HMAC:
+    case CKM_SHA512_HMAC:
+      if (allow_mac_keys) {
+        return NewHmacSigner(key, mechanism);
+      }
+      // fallthrough
     default:
       return InvalidMechanismError(mechanism->mechanism, "sign",
                                    SOURCE_LOCATION);

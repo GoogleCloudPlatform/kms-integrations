@@ -16,6 +16,7 @@
 
 #include "glog/logging.h"
 #include "kmsp11/cert_authority.h"
+#include "kmsp11/mechanism.h"
 #include "kmsp11/util/kms_client.h"
 #include "kmsp11/util/status_macros.h"
 #include "kmsp11/util/string_utils.h"
@@ -133,6 +134,23 @@ Provider::Refresher::Refresher(Provider* provider, absl::Duration interval)
 Provider::Refresher::~Refresher() {
   shutdown_.Notify();
   thread_.join();
+}
+
+absl::Span<const CK_MECHANISM_TYPE> Provider::Mechanisms() {
+  return mechanism_types_;
+}
+
+absl::StatusOr<CK_MECHANISM_INFO> Provider::MechanismInfo(
+    CK_MECHANISM_TYPE type) {
+  const auto& entry = AllMechanisms().find(type);
+  if (entry == AllMechanisms().end() ||
+      (AllMacMechanisms().contains(type) &&
+       !library_config_.experimental_allow_mac_keys())) {
+    return NewError(absl::StatusCode::kNotFound,
+                    absl::StrFormat("mechanism %#x not found", type),
+                    CKR_MECHANISM_INVALID, SOURCE_LOCATION);
+  }
+  return entry->second;
 }
 
 }  // namespace kmsp11

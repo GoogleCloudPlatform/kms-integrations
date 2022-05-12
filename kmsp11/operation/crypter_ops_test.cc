@@ -105,8 +105,22 @@ TEST(SignOpTest, ValidDigestingMechanismSuccess) {
 }
 
 TEST(SignOpTest, InvalidMechanismFailure) {
-  CK_MECHANISM mech = {CKM_SHA_1_HMAC};
+  CK_MECHANISM mech = {CKM_SHA512_256_HMAC};
   EXPECT_THAT(NewSignOp(nullptr, &mech), StatusRvIs(CKR_MECHANISM_INVALID));
+}
+
+TEST(SignOpTest, MacKeysExperimentDisabled) {
+  CK_MECHANISM mech = {CKM_SHA256_HMAC};
+  EXPECT_THAT(NewSignOp(nullptr, &mech, false),
+              StatusRvIs(CKR_MECHANISM_INVALID));
+}
+
+TEST(SignOpTest, MacKeysExperimentEnabled) {
+  CK_MECHANISM mech = {CKM_SHA256_HMAC};
+  ASSERT_OK_AND_ASSIGN(Object k,
+                       NewMockSecretKey(kms_v1::CryptoKeyVersion::HMAC_SHA256));
+  std::shared_ptr<Object> key = std::make_shared<Object>(k);
+  EXPECT_OK(NewSignOp(key, &mech, true));
 }
 
 TEST(VerifyOpTest, ValidMechanismSuccess) {
@@ -130,7 +144,7 @@ TEST(VerifyOpTest, ValidDigestingMechanismSuccess) {
 }
 
 TEST(VerifyOpTest, InvalidMechanismFailure) {
-  CK_MECHANISM mech = {CKM_SHA_1_HMAC};
+  CK_MECHANISM mech = {CKM_SHA512_256_HMAC};
   EXPECT_THAT(NewVerifyOp(nullptr, &mech), StatusRvIs(CKR_MECHANISM_INVALID));
 }
 

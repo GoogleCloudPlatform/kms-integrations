@@ -21,6 +21,7 @@ cc_library(
     deps = [
         ":crypter_interfaces",
         ":ecdsa",
+        ":hmac",
         ":rsaes_oaep",
         ":rsassa_pkcs1",
         ":rsassa_pss",

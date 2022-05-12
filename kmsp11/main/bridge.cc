@@ -20,7 +20,6 @@
 #include "kmsp11/kmsp11.h"
 #include "kmsp11/main/fork_support.h"
 #include "kmsp11/main/function_list.h"
-#include "kmsp11/mechanism.h"
 #include "kmsp11/provider.h"
 #include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/errors.h"
@@ -285,12 +284,13 @@ absl::Status Logout(CK_SESSION_HANDLE hSession) {
 absl::Status GetMechanismList(CK_SLOT_ID slotID,
                               CK_MECHANISM_TYPE_PTR pMechanismList,
                               CK_ULONG_PTR pulCount) {
+  ASSIGN_OR_RETURN(Provider * provider, GetProvider());
   RETURN_IF_ERROR(GetToken(slotID).status());  // ensure slotID is valid
   if (!pulCount) {
     return NullArgumentError("pulCount", SOURCE_LOCATION);
   }
 
-  absl::Span<const CK_MECHANISM_TYPE> types = Mechanisms();
+  absl::Span<const CK_MECHANISM_TYPE> types = provider->Mechanisms();
 
   if (!pMechanismList) {
     *pulCount = types.size();
@@ -317,11 +317,12 @@ absl::Status GetMechanismList(CK_SLOT_ID slotID,
 // http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc235002332
 absl::Status GetMechanismInfo(CK_SLOT_ID slotID, CK_MECHANISM_TYPE type,
                               CK_MECHANISM_INFO_PTR pInfo) {
+  ASSIGN_OR_RETURN(Provider * provider, GetProvider());
   RETURN_IF_ERROR(GetToken(slotID).status());  // ensure slotID is valid
   if (!pInfo) {
     return NullArgumentError("pInfo", SOURCE_LOCATION);
   }
-  ASSIGN_OR_RETURN(*pInfo, MechanismInfo(type));
+  ASSIGN_OR_RETURN(*pInfo, provider->MechanismInfo(type));
   return absl::OkStatus();
 }
 
@@ -535,13 +536,16 @@ absl::Status Encrypt(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pData,
 // http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc235002372
 absl::Status SignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechanism,
                       CK_OBJECT_HANDLE hKey) {
+  ASSIGN_OR_RETURN(Provider * provider, GetProvider());
   ASSIGN_OR_RETURN(std::shared_ptr<Session> session, GetSession(hSession));
   ASSIGN_OR_RETURN(std::shared_ptr<Object> key, session->token()->GetKey(hKey));
 
   if (!pMechanism) {
     return NullArgumentError("pMechanism", SOURCE_LOCATION);
   }
-  return session->SignInit(key, pMechanism);
+  return session->SignInit(
+      key, pMechanism,
+      provider->library_config().experimental_allow_mac_keys());
 }
 
 // Complete a single-part sign operation.

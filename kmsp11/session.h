@@ -57,7 +57,8 @@ class Session {
   absl::StatusOr<absl::Span<const uint8_t>> Encrypt(
       absl::Span<const uint8_t> plaintext);
 
-  absl::Status SignInit(std::shared_ptr<Object> key, CK_MECHANISM* mechanism);
+  absl::Status SignInit(std::shared_ptr<Object> key, CK_MECHANISM* mechanism,
+                        bool allow_mac_keys = false);
   absl::Status Sign(absl::Span<const uint8_t> digest,
                     absl::Span<uint8_t> signature);
   absl::Status SignUpdate(absl::Span<const uint8_t> data);
