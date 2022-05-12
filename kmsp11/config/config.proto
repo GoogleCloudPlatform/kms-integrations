@@ -61,6 +61,10 @@ message LibraryConfig {
   // Optional. If true, enables an initialization time check that requires that
   // BoringSSL has been built in FIPS mode. Default is false.
   bool require_fips_mode = 10;
+
+  // Optional. Cloud KMS feature flags to emit with all RPC requests. Used for
+  // internal testing only.
+  string experimental_rpc_feature_flags = 12;
 }
 
 message TokenConfig {

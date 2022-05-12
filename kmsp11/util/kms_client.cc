@@ -56,13 +56,19 @@ void KmsClient::AddContextSettings(grpc::ClientContext* ctx,
   if (!user_project_override_.empty()) {
     ctx->AddMetadata("x-goog-user-project", user_project_override_);
   }
+  if (!rpc_feature_flags_.empty()) {
+    ctx->AddMetadata("x-cloud-kms-features", rpc_feature_flags_);
+  }
 }
 
 KmsClient::KmsClient(std::string_view endpoint_address,
                      const std::shared_ptr<grpc::ChannelCredentials>& creds,
                      absl::Duration rpc_timeout,
-                     std::string_view user_project_override)
-    : rpc_timeout_(rpc_timeout), user_project_override_(user_project_override) {
+                     std::string_view user_project_override,
+                     std::string_view rpc_feature_flags)
+    : rpc_timeout_(rpc_timeout),
+      rpc_feature_flags_(rpc_feature_flags),
+      user_project_override_(user_project_override) {
   grpc::ChannelArguments args;
   args.SetUserAgentPrefix(ComputeUserAgentPrefix());
   args.SetServiceConfigJSON(std::string(kDefaultKmsServiceConfig));

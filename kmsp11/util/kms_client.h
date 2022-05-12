@@ -46,7 +46,7 @@ class KmsClient {
  public:
   KmsClient(std::string_view endpoint_address,
             const std::shared_ptr<grpc::ChannelCredentials>& creds,
-            absl::Duration rpc_timeout,
+            absl::Duration rpc_timeout, std::string_view rpc_feature_flags = "",
             std::string_view user_project_override = "");
 
   kms_v1::KeyManagementService::Stub* kms_stub() { return kms_stub_.get(); }
@@ -108,6 +108,7 @@ class KmsClient {
 
   std::unique_ptr<kms_v1::KeyManagementService::Stub> kms_stub_;
   const absl::Duration rpc_timeout_;
+  const std::string rpc_feature_flags_;
   const std::string user_project_override_;
 };
 

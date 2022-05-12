@@ -34,6 +34,9 @@ ABSL_FLAG(std::string, key_ring_id_prefix, "kr",
 ABSL_FLAG(std::string, user_project, "",
           "Optional. The user project to use for per-request billing and "
           "global quotas (user project override). Empty means no override.");
+ABSL_FLAG(std::string, rpc_feature_flags, "",
+          "Optional. Cloud KMS feature flags to include with RPC requests. "
+          "Empty means no feature flags.");
 
 namespace kmsp11 {
 namespace {
@@ -49,6 +52,7 @@ class EndToEndTest : public testing::Test {
         location_name_(absl::GetFlag(FLAGS_location_name)),
         key_ring_id_(RandomId(absl::GetFlag(FLAGS_key_ring_id_prefix))),
         user_project_(absl::GetFlag(FLAGS_user_project)),
+        rpc_feature_flags_(absl::GetFlag(FLAGS_rpc_feature_flags)),
         config_filename_(std::tmpnam(nullptr)) {}
 
   void SetUp() override;
@@ -65,6 +69,7 @@ class EndToEndTest : public testing::Test {
   const std::string location_name_;
   const std::string key_ring_id_;
   const std::string user_project_;
+  const std::string rpc_feature_flags_;
   const std::string config_filename_;
 };
 
@@ -80,6 +85,11 @@ tokens:
   - key_ring: "%s"
 )",
       kms_endpoint_, user_project_, key_ring.name());
+  if (!rpc_feature_flags_.empty()) {
+    std::ofstream(config_filename_) << "experimental_rpc_feature_flags: \""
+                                    << rpc_feature_flags_ << "\"" << std::endl;
+  }
+
   SetEnvVariable("KMS_PKCS11_CONFIG", config_filename_);
 
   // Dynamically load the PKCS#11 shared library.
