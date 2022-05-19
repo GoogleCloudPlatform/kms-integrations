@@ -30,11 +30,11 @@ using ::testing::IsEmpty;
 using ::testing::Property;
 using ::testing::UnorderedElementsAre;
 
-absl::StatusOr<AsymmetricKey> NewAsymmetricRsaKey() {
+absl::StatusOr<Key> NewAsymmetricRsaKey() {
   ASSIGN_OR_RETURN(std::string rsa_public_der,
                    LoadTestRunfile("rsa_2048_public.der"));
 
-  AsymmetricKey k;
+  Key k;
   k.mutable_crypto_key_version()->set_name(
       "projects/foo/locations/bar/keyRings/baz/cryptoKeys/qux/"
       "cryptoKeyVersions/1");
@@ -46,13 +46,13 @@ absl::StatusOr<AsymmetricKey> NewAsymmetricRsaKey() {
   return k;
 }
 
-absl::StatusOr<AsymmetricKey> NewAsymmetricEcKeyAndCert() {
+absl::StatusOr<Key> NewAsymmetricEcKeyAndCert() {
   ASSIGN_OR_RETURN(std::string ec_public_der,
                    LoadTestRunfile("ec_p256_public.der"));
   ASSIGN_OR_RETURN(std::string ec_x509_der,
                    LoadTestRunfile("ec_p256_cert.der"));
 
-  AsymmetricKey k;
+  Key k;
   k.mutable_crypto_key_version()->set_name(
       "projects/foo/locations/bar/keyRings/baz/cryptoKeys/luz/"
       "cryptoKeyVersions/1");
@@ -66,6 +66,17 @@ absl::StatusOr<AsymmetricKey> NewAsymmetricEcKeyAndCert() {
   return k;
 }
 
+absl::StatusOr<Key> NewSymmetricHmacKey() {
+  Key k;
+  k.mutable_crypto_key_version()->set_name(
+      "projects/foo/locations/bar/keyRings/baz/cryptoKeys/qux/"
+      "cryptoKeyVersions/1");
+  k.mutable_crypto_key_version()->set_algorithm(
+      kms_v1::CryptoKeyVersion::HMAC_SHA256);
+  k.set_secret_key_handle(1006);
+  return k;
+}
+
 TEST(ObjectStoreTest, NewStoreSuccessEmpty) {
   ObjectStoreState s;
   EXPECT_OK(ObjectStore::New(s));
@@ -73,28 +84,41 @@ TEST(ObjectStoreTest, NewStoreSuccessEmpty) {
 
 TEST(ObjectStoreTest, NewStoreSuccessWithRsaKey) {
   ObjectStoreState s;
-  ASSERT_OK_AND_ASSIGN(*s.add_asymmetric_keys(), NewAsymmetricRsaKey());
+  ASSERT_OK_AND_ASSIGN(*s.add_keys(), NewAsymmetricRsaKey());
   EXPECT_OK(ObjectStore::New(s));
 }
 
 TEST(ObjectStoreTest, NewStoreSuccessWithEcKeyAndCertificate) {
   ObjectStoreState s;
-  ASSERT_OK_AND_ASSIGN(*s.add_asymmetric_keys(), NewAsymmetricEcKeyAndCert());
+  ASSERT_OK_AND_ASSIGN(*s.add_keys(), NewAsymmetricEcKeyAndCert());
+  EXPECT_OK(ObjectStore::New(s));
+}
+
+TEST(ObjectStoreTest, NewStoreSuccessWithHmacKey) {
+  ObjectStoreState s;
+  ASSERT_OK_AND_ASSIGN(*s.add_keys(), NewSymmetricHmacKey());
   EXPECT_OK(ObjectStore::New(s));
 }
 
 TEST(ObjectStoreTest, NewStoreSuccessWithRsaAndEcKeys) {
   ObjectStoreState s;
-  ASSERT_OK_AND_ASSIGN(*s.add_asymmetric_keys(), NewAsymmetricRsaKey());
-  ASSERT_OK_AND_ASSIGN(*s.add_asymmetric_keys(), NewAsymmetricEcKeyAndCert());
+  ASSERT_OK_AND_ASSIGN(*s.add_keys(), NewAsymmetricRsaKey());
+  ASSERT_OK_AND_ASSIGN(*s.add_keys(), NewAsymmetricEcKeyAndCert());
+  EXPECT_OK(ObjectStore::New(s));
+}
+
+TEST(ObjectStoreTest, NewStoreSuccessWithRsaAndHmacKeys) {
+  ObjectStoreState s;
+  ASSERT_OK_AND_ASSIGN(*s.add_keys(), NewAsymmetricRsaKey());
+  ASSERT_OK_AND_ASSIGN(*s.add_keys(), NewSymmetricHmacKey());
   EXPECT_OK(ObjectStore::New(s));
 }
 
 TEST(ObjectStoreTest, NewStoreFailsMissingCryptoKeyVersionName) {
   ObjectStoreState s;
-  ASSERT_OK_AND_ASSIGN(*s.add_asymmetric_keys(), NewAsymmetricRsaKey());
+  ASSERT_OK_AND_ASSIGN(*s.add_keys(), NewAsymmetricRsaKey());
 
-  s.mutable_asymmetric_keys(0)->mutable_crypto_key_version()->clear_name();
+  s.mutable_keys(0)->mutable_crypto_key_version()->clear_name();
 
   EXPECT_THAT(ObjectStore::New(s),
               StatusIs(absl::StatusCode::kInvalidArgument,
@@ -103,9 +127,9 @@ TEST(ObjectStoreTest, NewStoreFailsMissingCryptoKeyVersionName) {
 
 TEST(ObjectStoreTest, NewStoreFailsInvalidCryptoKeyVersionName) {
   ObjectStoreState s;
-  ASSERT_OK_AND_ASSIGN(*s.add_asymmetric_keys(), NewAsymmetricRsaKey());
+  ASSERT_OK_AND_ASSIGN(*s.add_keys(), NewAsymmetricRsaKey());
 
-  s.mutable_asymmetric_keys(0)->mutable_crypto_key_version()->set_name("foo");
+  s.mutable_keys(0)->mutable_crypto_key_version()->set_name("foo");
 
   EXPECT_THAT(ObjectStore::New(s),
               StatusIs(absl::StatusCode::kInvalidArgument,
@@ -114,9 +138,9 @@ TEST(ObjectStoreTest, NewStoreFailsInvalidCryptoKeyVersionName) {
 
 TEST(ObjectStoreTest, NewStoreFailsMissingCryptoKeyVersionAlgorithm) {
   ObjectStoreState s;
-  ASSERT_OK_AND_ASSIGN(*s.add_asymmetric_keys(), NewAsymmetricRsaKey());
+  ASSERT_OK_AND_ASSIGN(*s.add_keys(), NewAsymmetricRsaKey());
 
-  s.mutable_asymmetric_keys(0)->mutable_crypto_key_version()->clear_algorithm();
+  s.mutable_keys(0)->mutable_crypto_key_version()->clear_algorithm();
 
   EXPECT_THAT(ObjectStore::New(s), StatusIs(absl::StatusCode::kInvalidArgument,
                                             HasSubstr("algorithm not found")));
@@ -124,9 +148,9 @@ TEST(ObjectStoreTest, NewStoreFailsMissingCryptoKeyVersionAlgorithm) {
 
 TEST(ObjectStoreTest, NewStoreFailsInvalidCryptoKeyVersionAlgorithm) {
   ObjectStoreState s;
-  ASSERT_OK_AND_ASSIGN(*s.add_asymmetric_keys(), NewAsymmetricRsaKey());
+  ASSERT_OK_AND_ASSIGN(*s.add_keys(), NewAsymmetricRsaKey());
 
-  s.mutable_asymmetric_keys(0)->mutable_crypto_key_version()->set_algorithm(
+  s.mutable_keys(0)->mutable_crypto_key_version()->set_algorithm(
       kms_v1::CryptoKeyVersion::EXTERNAL_SYMMETRIC_ENCRYPTION);
 
   EXPECT_THAT(ObjectStore::New(s), StatusIs(absl::StatusCode::kInvalidArgument,
@@ -135,9 +159,9 @@ TEST(ObjectStoreTest, NewStoreFailsInvalidCryptoKeyVersionAlgorithm) {
 
 TEST(ObjectStoreTest, NewStoreFailsMissingPublicKey) {
   ObjectStoreState s;
-  ASSERT_OK_AND_ASSIGN(*s.add_asymmetric_keys(), NewAsymmetricRsaKey());
+  ASSERT_OK_AND_ASSIGN(*s.add_keys(), NewAsymmetricRsaKey());
 
-  s.mutable_asymmetric_keys(0)->clear_public_key_der();
+  s.mutable_keys(0)->clear_public_key_der();
 
   EXPECT_THAT(ObjectStore::New(s), StatusIs(absl::StatusCode::kInvalidArgument,
                                             HasSubstr("error parsing DER")));
@@ -145,9 +169,9 @@ TEST(ObjectStoreTest, NewStoreFailsMissingPublicKey) {
 
 TEST(ObjectStoreTest, NewStoreFailsInvalidPublicKey) {
   ObjectStoreState s;
-  ASSERT_OK_AND_ASSIGN(*s.add_asymmetric_keys(), NewAsymmetricRsaKey());
+  ASSERT_OK_AND_ASSIGN(*s.add_keys(), NewAsymmetricRsaKey());
 
-  s.mutable_asymmetric_keys(0)->set_public_key_der("foo");
+  s.mutable_keys(0)->set_public_key_der("foo");
 
   EXPECT_THAT(ObjectStore::New(s), StatusIs(absl::StatusCode::kInvalidArgument,
                                             HasSubstr("error parsing DER")));
@@ -155,9 +179,9 @@ TEST(ObjectStoreTest, NewStoreFailsInvalidPublicKey) {
 
 TEST(ObjectStoreTest, NewStoreFailsMissingPublicKeyHandle) {
   ObjectStoreState s;
-  ASSERT_OK_AND_ASSIGN(*s.add_asymmetric_keys(), NewAsymmetricRsaKey());
+  ASSERT_OK_AND_ASSIGN(*s.add_keys(), NewAsymmetricRsaKey());
 
-  s.mutable_asymmetric_keys(0)->clear_public_key_handle();
+  s.mutable_keys(0)->clear_public_key_handle();
 
   EXPECT_THAT(ObjectStore::New(s),
               StatusIs(absl::StatusCode::kInvalidArgument,
@@ -166,29 +190,44 @@ TEST(ObjectStoreTest, NewStoreFailsMissingPublicKeyHandle) {
 
 TEST(ObjectStoreTest, NewStoreFailsMissingPrivateKeyHandle) {
   ObjectStoreState s;
-  ASSERT_OK_AND_ASSIGN(*s.add_asymmetric_keys(), NewAsymmetricRsaKey());
+  ASSERT_OK_AND_ASSIGN(*s.add_keys(), NewAsymmetricRsaKey());
 
-  s.mutable_asymmetric_keys(0)->clear_private_key_handle();
+  s.mutable_keys(0)->clear_private_key_handle();
 
-  EXPECT_THAT(ObjectStore::New(s),
-              StatusIs(absl::StatusCode::kInvalidArgument,
-                       HasSubstr("private_key_handle is unset")));
+  EXPECT_THAT(
+      ObjectStore::New(s),
+      StatusIs(absl::StatusCode::kInvalidArgument,
+               HasSubstr(
+                   "both secret_key_handle and private_key_handle are unset")));
+}
+
+TEST(ObjectStoreTest, NewStoreFailsMissingSecretKeyHandle) {
+  ObjectStoreState s;
+  ASSERT_OK_AND_ASSIGN(*s.add_keys(), NewSymmetricHmacKey());
+
+  s.mutable_keys(0)->clear_secret_key_handle();
+
+  EXPECT_THAT(
+      ObjectStore::New(s),
+      StatusIs(absl::StatusCode::kInvalidArgument,
+               HasSubstr(
+                   "both secret_key_handle and private_key_handle are unset")));
 }
 
 TEST(ObjectStoreTest, NewStoreSuccessMissingCertificate) {
   ObjectStoreState s;
-  ASSERT_OK_AND_ASSIGN(*s.add_asymmetric_keys(), NewAsymmetricEcKeyAndCert());
+  ASSERT_OK_AND_ASSIGN(*s.add_keys(), NewAsymmetricEcKeyAndCert());
 
-  s.mutable_asymmetric_keys(0)->clear_certificate();
+  s.mutable_keys(0)->clear_certificate();
 
   EXPECT_OK(ObjectStore::New(s));
 }
 
 TEST(ObjectStoreTest, NewStoreFailsCertificateMissingDer) {
   ObjectStoreState s;
-  ASSERT_OK_AND_ASSIGN(*s.add_asymmetric_keys(), NewAsymmetricEcKeyAndCert());
+  ASSERT_OK_AND_ASSIGN(*s.add_keys(), NewAsymmetricEcKeyAndCert());
 
-  s.mutable_asymmetric_keys(0)->mutable_certificate()->clear_x509_der();
+  s.mutable_keys(0)->mutable_certificate()->clear_x509_der();
 
   EXPECT_THAT(ObjectStore::New(s), StatusIs(absl::StatusCode::kInvalidArgument,
                                             HasSubstr("error parsing DER")));
@@ -196,9 +235,9 @@ TEST(ObjectStoreTest, NewStoreFailsCertificateMissingDer) {
 
 TEST(ObjectStoreTest, NewStoreFailsCertificateInvalidDer) {
   ObjectStoreState s;
-  ASSERT_OK_AND_ASSIGN(*s.add_asymmetric_keys(), NewAsymmetricEcKeyAndCert());
+  ASSERT_OK_AND_ASSIGN(*s.add_keys(), NewAsymmetricEcKeyAndCert());
 
-  s.mutable_asymmetric_keys(0)->mutable_certificate()->set_x509_der("foo");
+  s.mutable_keys(0)->mutable_certificate()->set_x509_der("foo");
 
   EXPECT_THAT(ObjectStore::New(s), StatusIs(absl::StatusCode::kInvalidArgument,
                                             HasSubstr("error parsing DER")));
@@ -206,9 +245,9 @@ TEST(ObjectStoreTest, NewStoreFailsCertificateInvalidDer) {
 
 TEST(ObjectStoreTest, NewStoreFailsCertificateMissingHandle) {
   ObjectStoreState s;
-  ASSERT_OK_AND_ASSIGN(*s.add_asymmetric_keys(), NewAsymmetricEcKeyAndCert());
+  ASSERT_OK_AND_ASSIGN(*s.add_keys(), NewAsymmetricEcKeyAndCert());
 
-  s.mutable_asymmetric_keys(0)->mutable_certificate()->clear_handle();
+  s.mutable_keys(0)->mutable_certificate()->clear_handle();
 
   EXPECT_THAT(ObjectStore::New(s),
               StatusIs(absl::StatusCode::kInvalidArgument,
@@ -218,11 +257,11 @@ TEST(ObjectStoreTest, NewStoreFailsCertificateMissingHandle) {
 TEST(ObjectStoreTest, NewStoreFailsHandleCollision) {
   ObjectStoreState s;
 
-  AsymmetricKey* ec_key = s.add_asymmetric_keys();
+  Key* ec_key = s.add_keys();
   ASSERT_OK_AND_ASSIGN(*ec_key, NewAsymmetricEcKeyAndCert());
   ec_key->mutable_certificate()->set_handle(1);
 
-  AsymmetricKey* rsa_key = s.add_asymmetric_keys();
+  Key* rsa_key = s.add_keys();
   ASSERT_OK_AND_ASSIGN(*rsa_key, NewAsymmetricRsaKey());
   rsa_key->set_public_key_handle(1);
 
@@ -234,7 +273,7 @@ TEST(ObjectStoreTest, NewStoreFailsHandleCollision) {
 TEST(ObjectStoreTest, GetObjectSuccessPublicKey) {
   ObjectStoreState s;
 
-  AsymmetricKey* key = s.add_asymmetric_keys();
+  Key* key = s.add_keys();
   ASSERT_OK_AND_ASSIGN(*key, NewAsymmetricRsaKey());
   key->set_public_key_handle(1);
 
@@ -251,7 +290,7 @@ TEST(ObjectStoreTest, GetObjectSuccessPublicKey) {
 TEST(ObjectStoreTest, GetObjectSuccessPrivateKey) {
   ObjectStoreState s;
 
-  AsymmetricKey* key = s.add_asymmetric_keys();
+  Key* key = s.add_keys();
   ASSERT_OK_AND_ASSIGN(*key, NewAsymmetricRsaKey());
   key->set_private_key_handle(1);
 
@@ -265,10 +304,27 @@ TEST(ObjectStoreTest, GetObjectSuccessPrivateKey) {
           Property("object_class", &Object::object_class, CKO_PRIVATE_KEY)))));
 }
 
+TEST(ObjectStoreTest, GetObjectSuccessSecretKey) {
+  ObjectStoreState s;
+
+  Key* key = s.add_keys();
+  ASSERT_OK_AND_ASSIGN(*key, NewSymmetricHmacKey());
+  key->set_secret_key_handle(1);
+
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectStore> store, ObjectStore::New(s));
+
+  EXPECT_THAT(
+      store->GetObject(1),
+      IsOkAndHolds(Pointee(AllOf(
+          Property("kms_key_name", &Object::kms_key_name,
+                   key->crypto_key_version().name()),
+          Property("object_class", &Object::object_class, CKO_SECRET_KEY)))));
+}
+
 TEST(ObjectStoreTest, GetObjectSuccessCertificate) {
   ObjectStoreState s;
 
-  AsymmetricKey* key = s.add_asymmetric_keys();
+  Key* key = s.add_keys();
   ASSERT_OK_AND_ASSIGN(*key, NewAsymmetricEcKeyAndCert());
   key->mutable_certificate()->set_handle(1);
 
@@ -293,7 +349,7 @@ TEST(ObjectStoreTest, GetObjectFailsInvalidHandle) {
 TEST(ObjectStoreTest, GetObjectFailsUnusedHandle) {
   ObjectStoreState s;
 
-  AsymmetricKey* key = s.add_asymmetric_keys();
+  Key* key = s.add_keys();
   ASSERT_OK_AND_ASSIGN(*key, NewAsymmetricEcKeyAndCert());
   ASSERT_NE(key->public_key_handle(), 1);
   ASSERT_NE(key->private_key_handle(), 1);
@@ -306,7 +362,7 @@ TEST(ObjectStoreTest, GetObjectFailsUnusedHandle) {
 TEST(ObjectStoreTest, GetKeySuccessPublicKey) {
   ObjectStoreState s;
 
-  AsymmetricKey* key = s.add_asymmetric_keys();
+  Key* key = s.add_keys();
   ASSERT_OK_AND_ASSIGN(*key, NewAsymmetricRsaKey());
   key->set_public_key_handle(1);
 
@@ -323,7 +379,7 @@ TEST(ObjectStoreTest, GetKeySuccessPublicKey) {
 TEST(ObjectStoreTest, GetKeySuccessPrivateKey) {
   ObjectStoreState s;
 
-  AsymmetricKey* key = s.add_asymmetric_keys();
+  Key* key = s.add_keys();
   ASSERT_OK_AND_ASSIGN(*key, NewAsymmetricRsaKey());
   key->set_private_key_handle(1);
 
@@ -337,10 +393,27 @@ TEST(ObjectStoreTest, GetKeySuccessPrivateKey) {
           Property("object_class", &Object::object_class, CKO_PRIVATE_KEY)))));
 }
 
+TEST(ObjectStoreTest, GetKeySuccessSecretKey) {
+  ObjectStoreState s;
+
+  Key* key = s.add_keys();
+  ASSERT_OK_AND_ASSIGN(*key, NewSymmetricHmacKey());
+  key->set_secret_key_handle(1);
+
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectStore> store, ObjectStore::New(s));
+
+  EXPECT_THAT(
+      store->GetKey(1),
+      IsOkAndHolds(Pointee(AllOf(
+          Property("kms_key_name", &Object::kms_key_name,
+                   key->crypto_key_version().name()),
+          Property("object_class", &Object::object_class, CKO_SECRET_KEY)))));
+}
+
 TEST(ObjectStoreTest, GetKeyFailsCertificate) {
   ObjectStoreState s;
 
-  AsymmetricKey* key = s.add_asymmetric_keys();
+  Key* key = s.add_keys();
   ASSERT_OK_AND_ASSIGN(*key, NewAsymmetricEcKeyAndCert());
   key->mutable_certificate()->set_handle(1);
 
@@ -361,7 +434,7 @@ TEST(ObjectStoreTest, GetKeyFailsInvalidHandle) {
 TEST(ObjectStoreTest, GetKeyFailsUnusedHandle) {
   ObjectStoreState s;
 
-  AsymmetricKey* key = s.add_asymmetric_keys();
+  Key* key = s.add_keys();
   ASSERT_OK_AND_ASSIGN(*key, NewAsymmetricEcKeyAndCert());
   ASSERT_NE(key->public_key_handle(), 1);
   ASSERT_NE(key->private_key_handle(), 1);
@@ -374,11 +447,11 @@ TEST(ObjectStoreTest, GetKeyFailsUnusedHandle) {
 TEST(ObjectStoreTest, FindPublicKeysSuccess) {
   ObjectStoreState s;
 
-  AsymmetricKey* ec_key = s.add_asymmetric_keys();
+  Key* ec_key = s.add_keys();
   ASSERT_OK_AND_ASSIGN(*ec_key, NewAsymmetricEcKeyAndCert());
   ec_key->set_public_key_handle(1);
 
-  AsymmetricKey* rsa_key = s.add_asymmetric_keys();
+  Key* rsa_key = s.add_keys();
   ASSERT_OK_AND_ASSIGN(*rsa_key, NewAsymmetricRsaKey());
   rsa_key->set_public_key_handle(2);
 
@@ -393,7 +466,7 @@ TEST(ObjectStoreTest, FindPublicKeysSuccess) {
 TEST(ObjectStoreTest, FindWithoutMatchesReturnsEmptyVector) {
   ObjectStoreState s;
 
-  AsymmetricKey* ec_key = s.add_asymmetric_keys();
+  Key* ec_key = s.add_keys();
   ASSERT_OK_AND_ASSIGN(*ec_key, NewAsymmetricEcKeyAndCert());
 
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectStore> store, ObjectStore::New(s));
@@ -407,7 +480,7 @@ TEST(ObjectStoreTest, FindWithoutMatchesReturnsEmptyVector) {
 TEST(ObjectStoreTest, FindSortsByNameThenClass) {
   ObjectStoreState s;
 
-  AsymmetricKey* ec_key_1 = s.add_asymmetric_keys();
+  Key* ec_key_1 = s.add_keys();
   ASSERT_OK_AND_ASSIGN(*ec_key_1, NewAsymmetricEcKeyAndCert());
   ec_key_1->mutable_crypto_key_version()->set_name(
       "projects/a/locations/b/keyRings/c/cryptoKeys/e/cryptoKeyVersions/1");
@@ -415,7 +488,7 @@ TEST(ObjectStoreTest, FindSortsByNameThenClass) {
   ec_key_1->set_private_key_handle(2);
   ec_key_1->set_public_key_handle(3);
 
-  AsymmetricKey* ec_key_2 = s.add_asymmetric_keys();
+  Key* ec_key_2 = s.add_keys();
   ASSERT_OK_AND_ASSIGN(*ec_key_2, NewAsymmetricEcKeyAndCert());
   ec_key_2->mutable_crypto_key_version()->set_name(
       "projects/a/locations/b/keyRings/c/cryptoKeys/d/cryptoKeyVersions/1");
@@ -438,11 +511,14 @@ TEST(ObjectStoreTest, FindSortsByNameThenClass) {
 TEST(ObjectStoreTest, FindSingleReturnsSingleMatch) {
   ObjectStoreState s;
 
-  AsymmetricKey* ec_key = s.add_asymmetric_keys();
+  Key* ec_key = s.add_keys();
   ASSERT_OK_AND_ASSIGN(*ec_key, NewAsymmetricEcKeyAndCert());
 
-  AsymmetricKey* rsa_key = s.add_asymmetric_keys();
+  Key* rsa_key = s.add_keys();
   ASSERT_OK_AND_ASSIGN(*rsa_key, NewAsymmetricRsaKey());
+
+  Key* hmac_key = s.add_keys();
+  ASSERT_OK_AND_ASSIGN(*hmac_key, NewSymmetricHmacKey());
 
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectStore> store, ObjectStore::New(s));
 
@@ -456,7 +532,7 @@ TEST(ObjectStoreTest, FindSingleReturnsSingleMatch) {
 TEST(ObjectStoreTest, FindSingleWithoutMatchReturnsNotFound) {
   ObjectStoreState s;
 
-  AsymmetricKey* ec_key = s.add_asymmetric_keys();
+  Key* ec_key = s.add_keys();
   ASSERT_OK_AND_ASSIGN(*ec_key, NewAsymmetricEcKeyAndCert());
 
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectStore> store, ObjectStore::New(s));
@@ -470,7 +546,7 @@ TEST(ObjectStoreTest, FindSingleWithoutMatchReturnsNotFound) {
 TEST(ObjectStoreTest, FindSingleWithMultipleMatchesReturnsFailedPrecondition) {
   ObjectStoreState s;
 
-  AsymmetricKey* ec_key = s.add_asymmetric_keys();
+  Key* ec_key = s.add_keys();
   ASSERT_OK_AND_ASSIGN(*ec_key, NewAsymmetricEcKeyAndCert());
 
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectStore> store, ObjectStore::New(s));

@@ -19,25 +19,28 @@ package kmsp11;
 import "google/cloud/kms/v1/resources.proto";
 
 message ObjectStoreState {
-  // Asymmetric keys that should be exposed through the PKCS #11 library.
-  repeated AsymmetricKey asymmetric_keys = 1;
+  // Keys that should be exposed through the PKCS #11 library.
+  repeated Key keys = 1;
 }
 
-message AsymmetricKey {
+message Key {
   // Required. The CryptoKeyVersion proto definition.
   google.cloud.kms.v1.CryptoKeyVersion crypto_key_version = 1;
 
-  // Required. The DER-encoded public key in SubjectPublicKeyInfo format.
+  // Optional. The DER-encoded public key in SubjectPublicKeyInfo format.
   bytes public_key_der = 2;
 
-  // Required. The handle to use for the PKCS #11 CKO_PUBLIC_KEY object.
+  // The handle to use for a PKCS #11 CKO_PUBLIC_KEY object.
   uint64 public_key_handle = 3;
 
-  // Required. The handle to use for the PKCS #11 CKO_PRIVATE_KEY object.
+  // The handle to use for a PKCS #11 CKO_PRIVATE_KEY object.
   uint64 private_key_handle = 4;
 
   // Optional. An X.509 certificate associated with this key.
   Certificate certificate = 5;
+
+  // The handle to use for a PKCS #11 CKO_SECRET_KEY object.
+  uint64 secret_key_handle = 6;
 }
 
 message Certificate {

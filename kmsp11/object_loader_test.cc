@@ -80,10 +80,9 @@ TEST_F(BuildStateTest, OutputContainsVersionProto) {
 
   ASSERT_OK_AND_ASSIGN(ObjectStoreState state, loader_->BuildState(*client_));
 
-  EXPECT_THAT(state.asymmetric_keys(),
-              ElementsAre(Property("crypto_key_version",
-                                   &AsymmetricKey::crypto_key_version,
-                                   EqualsProto(ckv))));
+  EXPECT_THAT(state.keys(), ElementsAre(Property("crypto_key_version",
+                                                 &Key::crypto_key_version,
+                                                 EqualsProto(ckv))));
 }
 
 TEST_F(BuildStateTest, OutputContainsGeneratedHandles) {
@@ -94,10 +93,10 @@ TEST_F(BuildStateTest, OutputContainsGeneratedHandles) {
                               kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
 
   ASSERT_OK_AND_ASSIGN(ObjectStoreState state, loader_->BuildState(*client_));
-  ASSERT_EQ(state.asymmetric_keys_size(), 1);
+  ASSERT_EQ(state.keys_size(), 1);
 
-  EXPECT_GT(state.asymmetric_keys(0).private_key_handle(), 0);
-  EXPECT_GT(state.asymmetric_keys(0).public_key_handle(), 0);
+  EXPECT_GT(state.keys(0).private_key_handle(), 0);
+  EXPECT_GT(state.keys(0).public_key_handle(), 0);
 }
 
 TEST_F(BuildStateTest, OutputContainsPublicKey) {
@@ -108,9 +107,9 @@ TEST_F(BuildStateTest, OutputContainsPublicKey) {
                               kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
 
   ASSERT_OK_AND_ASSIGN(ObjectStoreState state, loader_->BuildState(*client_));
-  ASSERT_EQ(state.asymmetric_keys_size(), 1);
+  ASSERT_EQ(state.keys_size(), 1);
 
-  EXPECT_OK(ParseX509PublicKeyDer(state.asymmetric_keys(0).public_key_der()));
+  EXPECT_OK(ParseX509PublicKeyDer(state.keys(0).public_key_der()));
 }
 
 TEST_F(BuildStateTest, OutputContainsCertificateWhenCertsAreEnabled) {
@@ -121,12 +120,11 @@ TEST_F(BuildStateTest, OutputContainsCertificateWhenCertsAreEnabled) {
                               kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
 
   ASSERT_OK_AND_ASSIGN(ObjectStoreState state, loader_->BuildState(*client_));
-  ASSERT_EQ(state.asymmetric_keys_size(), 1);
+  ASSERT_EQ(state.keys_size(), 1);
 
-  EXPECT_TRUE(state.asymmetric_keys(0).has_certificate());
-  EXPECT_GT(state.asymmetric_keys(0).certificate().handle(), 0);
-  EXPECT_OK(ParseX509CertificateDer(
-      state.asymmetric_keys(0).certificate().x509_der()));
+  EXPECT_TRUE(state.keys(0).has_certificate());
+  EXPECT_GT(state.keys(0).certificate().handle(), 0);
+  EXPECT_OK(ParseX509CertificateDer(state.keys(0).certificate().x509_der()));
 }
 
 TEST_F(BuildStateTest, OutputContainsNoCertificateWhenCertsAreDisabled) {
@@ -137,9 +135,9 @@ TEST_F(BuildStateTest, OutputContainsNoCertificateWhenCertsAreDisabled) {
                               kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
 
   ASSERT_OK_AND_ASSIGN(ObjectStoreState state, loader_->BuildState(*client_));
-  ASSERT_EQ(state.asymmetric_keys_size(), 1);
+  ASSERT_EQ(state.keys_size(), 1);
 
-  EXPECT_FALSE(state.asymmetric_keys(0).has_certificate());
+  EXPECT_FALSE(state.keys(0).has_certificate());
 }
 
 TEST_F(BuildStateTest, UnmodifiedStateIsUnchangedAfterRefresh) {
@@ -161,7 +159,7 @@ TEST_F(BuildStateTest, PreviouslyRetrievedStateIsUnchangedAfterElementIsAdded) {
                               kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
   ASSERT_OK_AND_ASSIGN(ObjectStoreState original_state,
                        loader_->BuildState(*client_));
-  ASSERT_EQ(original_state.asymmetric_keys_size(), 1);
+  ASSERT_EQ(original_state.keys_size(), 1);
 
   kms_v1::CryptoKeyVersion ckv2 = AddKeyAndInitialVersion(
       "ck2", kms_v1::CryptoKey::ASYMMETRIC_DECRYPT,
@@ -170,12 +168,12 @@ TEST_F(BuildStateTest, PreviouslyRetrievedStateIsUnchangedAfterElementIsAdded) {
                        loader_->BuildState(*client_));
 
   EXPECT_THAT(
-      updated_state.asymmetric_keys(),
+      updated_state.keys(),
       ElementsAre(
           // The first element matches the previously retrieved result exactly.
-          EqualsProto(original_state.asymmetric_keys(0)),
+          EqualsProto(original_state.keys(0)),
           // The second element refers to the newly added key.
-          Property("crypto_key_version", &AsymmetricKey::crypto_key_version,
+          Property("crypto_key_version", &Key::crypto_key_version,
                    EqualsProto(ckv2))));
 }
 

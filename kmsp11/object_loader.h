@@ -48,17 +48,18 @@ class ObjectLoader {
 
   class Cache {
    public:
-    AsymmetricKey* Get(std::string_view ckv_name);
-    AsymmetricKey* Store(const kms_v1::CryptoKeyVersion& ckv,
-                         std::string_view public_key_der,
-                         std::string_view certificate_der);
+    Key* Get(std::string_view ckv_name);
+    Key* Store(const kms_v1::CryptoKeyVersion& ckv,
+               std::string_view public_key_der,
+               std::string_view certificate_der);
+    Key* StoreSecretKey(const kms_v1::CryptoKeyVersion& ckv);
     void EvictUnused(const ObjectStoreState& state);
 
    private:
     CK_OBJECT_HANDLE NewHandle();
 
     absl::flat_hash_set<CK_OBJECT_HANDLE> allocated_handles_;
-    absl::flat_hash_map<std::string, std::unique_ptr<AsymmetricKey>> keys_;
+    absl::flat_hash_map<std::string, std::unique_ptr<Key>> keys_;
   };
 
   absl::Mutex cache_mutex_;

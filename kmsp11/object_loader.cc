@@ -26,6 +26,7 @@ bool IsLoadable(const kms_v1::CryptoKey& key) {
   switch (key.purpose()) {
     case kms_v1::CryptoKey::ASYMMETRIC_DECRYPT:
     case kms_v1::CryptoKey::ASYMMETRIC_SIGN:
+    case kms_v1::CryptoKey::MAC:
       break;
     default:
       LOG(INFO) << "key " << key.name()
@@ -64,7 +65,7 @@ bool IsLoadable(const kms_v1::CryptoKeyVersion& ckv) {
 
 }  // namespace
 
-AsymmetricKey* ObjectLoader::Cache::Get(std::string_view ckv_name) {
+Key* ObjectLoader::Cache::Get(std::string_view ckv_name) {
   auto it = keys_.find(ckv_name);
   if (it == keys_.end()) {
     return nullptr;
@@ -73,11 +74,11 @@ AsymmetricKey* ObjectLoader::Cache::Get(std::string_view ckv_name) {
   return it->second.get();
 }
 
-AsymmetricKey* ObjectLoader::Cache::Store(const kms_v1::CryptoKeyVersion& ckv,
-                                          std::string_view public_key_der,
-                                          std::string_view certificate_der) {
-  keys_[ckv.name()] = std::make_unique<AsymmetricKey>();
-  AsymmetricKey* key = keys_[ckv.name()].get();
+Key* ObjectLoader::Cache::Store(const kms_v1::CryptoKeyVersion& ckv,
+                                std::string_view public_key_der,
+                                std::string_view certificate_der) {
+  keys_[ckv.name()] = std::make_unique<Key>();
+  Key* key = keys_[ckv.name()].get();
 
   *key->mutable_crypto_key_version() = ckv;
   key->set_public_key_handle(NewHandle());
@@ -92,9 +93,19 @@ AsymmetricKey* ObjectLoader::Cache::Store(const kms_v1::CryptoKeyVersion& ckv,
   return key;
 }
 
+Key* ObjectLoader::Cache::StoreSecretKey(const kms_v1::CryptoKeyVersion& ckv) {
+  keys_[ckv.name()] = std::make_unique<Key>();
+  Key* key = keys_[ckv.name()].get();
+
+  *key->mutable_crypto_key_version() = ckv;
+  key->set_secret_key_handle(NewHandle());
+
+  return key;
+}
+
 void ObjectLoader::Cache::EvictUnused(const ObjectStoreState& state) {
   absl::flat_hash_set<std::string> items_to_retain;
-  for (const AsymmetricKey& key : state.asymmetric_keys()) {
+  for (const Key& key : state.keys()) {
     items_to_retain.insert(key.crypto_key_version().name());
   }
 
@@ -105,10 +116,17 @@ void ObjectLoader::Cache::EvictUnused(const ObjectStoreState& state) {
       continue;
     }
 
-    allocated_handles_.erase(it->second->public_key_handle());
-    allocated_handles_.erase(it->second->private_key_handle());
+    if (it->second->public_key_handle() != CK_INVALID_HANDLE) {
+      allocated_handles_.erase(it->second->public_key_handle());
+    }
+    if (it->second->private_key_handle() != CK_INVALID_HANDLE) {
+      allocated_handles_.erase(it->second->private_key_handle());
+    }
     if (it->second->has_certificate()) {
       allocated_handles_.erase(it->second->certificate().handle());
+    }
+    if (it->second->secret_key_handle() != CK_INVALID_HANDLE) {
+      allocated_handles_.erase(it->second->secret_key_handle());
     }
     keys_.erase(it++);
   }
@@ -162,31 +180,34 @@ absl::StatusOr<ObjectStoreState> ObjectLoader::BuildState(
         continue;
       }
 
-      AsymmetricKey* key = cache_.Get(ckv.name());
-      if (key) {
-        *result.add_asymmetric_keys() = *key;
+      Key* cached_key = cache_.Get(ckv.name());
+      if (cached_key) {
+        *result.add_keys() = *cached_key;
         continue;
       }
 
-      kms_v1::GetPublicKeyRequest pub_req;
-      pub_req.set_name(ckv.name());
+      if (key.purpose() == kms_v1::CryptoKey::MAC) {
+        *result.add_keys() = *cache_.StoreSecretKey(ckv);
+      } else {
+        kms_v1::GetPublicKeyRequest pub_req;
+        pub_req.set_name(ckv.name());
 
-      ASSIGN_OR_RETURN(kms_v1::PublicKey pub_resp,
-                       client.GetPublicKey(pub_req));
-      ASSIGN_OR_RETURN(bssl::UniquePtr<EVP_PKEY> pub,
-                       ParseX509PublicKeyPem(pub_resp.pem()));
-      ASSIGN_OR_RETURN(std::string public_key_der,
-                       MarshalX509PublicKeyDer(pub.get()));
+        ASSIGN_OR_RETURN(kms_v1::PublicKey pub_resp,
+                         client.GetPublicKey(pub_req));
+        ASSIGN_OR_RETURN(bssl::UniquePtr<EVP_PKEY> pub,
+                         ParseX509PublicKeyPem(pub_resp.pem()));
+        ASSIGN_OR_RETURN(std::string public_key_der,
+                         MarshalX509PublicKeyDer(pub.get()));
 
-      std::string cert_der;
-      if (cert_authority_) {
-        ASSIGN_OR_RETURN(bssl::UniquePtr<X509> cert,
-                         cert_authority_->GenerateCert(ckv, pub.get()));
-        ASSIGN_OR_RETURN(cert_der, MarshalX509CertificateDer(cert.get()));
+        std::string cert_der;
+        if (cert_authority_) {
+          ASSIGN_OR_RETURN(bssl::UniquePtr<X509> cert,
+                           cert_authority_->GenerateCert(ckv, pub.get()));
+          ASSIGN_OR_RETURN(cert_der, MarshalX509CertificateDer(cert.get()));
+        }
+
+        *result.add_keys() = *cache_.Store(ckv, public_key_der, cert_der);
       }
-
-      *result.add_asymmetric_keys() =
-          *cache_.Store(ckv, public_key_der, cert_der);
     }
   }
   cache_.EvictUnused(result);
