@@ -166,7 +166,7 @@ var algorithms = map[kmspb.CryptoKeyVersion_CryptoKeyVersionAlgorithm]algDef{
 	kmspb.CryptoKeyVersion_HMAC_SHA224: {
 		Purpose:    kmspb.CryptoKey_MAC,
 		KeyFactory: symmetricKeyFactory(224),
-		Opts:       crypto.SHA1,
+		Opts:       crypto.SHA224,
 	},
 	kmspb.CryptoKeyVersion_HMAC_SHA256: {
 		Purpose:    kmspb.CryptoKey_MAC,

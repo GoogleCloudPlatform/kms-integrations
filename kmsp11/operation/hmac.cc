@@ -36,6 +36,8 @@ absl::StatusOr<CK_KEY_TYPE> KeyTypeForMechanism(const CK_MECHANISM* mechanism) {
       return CKK_SHA224_HMAC;
     case CKM_SHA256_HMAC:
       return CKK_SHA256_HMAC;
+    case CKM_SHA384_HMAC:
+      return CKK_SHA384_HMAC;
     case CKM_SHA512_HMAC:
       return CKK_SHA512_HMAC;
     default:
@@ -179,6 +181,8 @@ absl::StatusOr<std::unique_ptr<SignerInterface>> NewHmacSigner(
       return HmacSigner::New(key, mechanism, 28);
     case CKM_SHA256_HMAC:
       return HmacSigner::New(key, mechanism, 32);
+    case CKM_SHA384_HMAC:
+      return HmacSigner::New(key, mechanism, 48);
     case CKM_SHA512_HMAC:
       return HmacSigner::New(key, mechanism, 64);
     default:

@@ -57,6 +57,7 @@ java_test(
         ":JcaTestFixture",
         "@maven//:com_google_api_grpc_proto_google_cloud_kms_v1",
         "@maven//:com_google_cloud_google_cloud_kms",
+        "@maven//:com_google_protobuf_protobuf_java",
         "@maven//:junit_junit",
     ],
 )
