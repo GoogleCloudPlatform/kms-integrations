@@ -83,13 +83,23 @@ class HmacTest : public testing::Test {
 };
 
 TEST_F(HmacTest, SignSuccess) {
-  std::vector<uint8_t> data = {0xDE, 0xAD, 0xBE, 0xEF};
+  std::string data = "Here is some data.";
+  std::vector<uint8_t> data_bytes(data.begin(), data.end());
 
   CK_MECHANISM mech{CKM_SHA256_HMAC, nullptr, 0};
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<SignerInterface> signer,
                        NewHmacSigner(prv_, &mech));
   std::vector<uint8_t> sig(signer->signature_length());
-  EXPECT_OK(signer->Sign(client_.get(), data, absl::MakeSpan(sig)));
+  EXPECT_OK(signer->Sign(client_.get(), data_bytes, absl::MakeSpan(sig)));
+
+  kms_v1::MacSignRequest req;
+  req.set_name(kms_key_name_);
+  req.set_data(data);
+  ASSERT_OK_AND_ASSIGN(kms_v1::MacSignResponse resp,
+                   client_->MacSign(req));
+
+  std::vector<uint8_t> resp_bytes(resp.mac().begin(), resp.mac().end());
+  EXPECT_EQ(resp_bytes, sig);
 }
 
 TEST_F(HmacTest, SignDataLengthInvalid) {
@@ -115,6 +125,57 @@ TEST_F(HmacTest, SignSignatureLengthInvalid) {
               AllOf(StatusIs(absl::StatusCode::kInternal),
                     StatusRvIs(CKR_GENERAL_ERROR)));
 }
+
+TEST_F(HmacTest, SignMultiPartSuccess) {
+  std::string data = "Here is some data.";
+  std::string data_part1 = "Here is ";
+  std::string data_part2 = "some data.";
+  std::vector<uint8_t> data_part1_bytes(data_part1.begin(), data_part1.end());
+  std::vector<uint8_t> data_part2_bytes(data_part2.begin(), data_part2.end());
+
+  CK_MECHANISM mech{CKM_SHA256_HMAC, nullptr, 0};
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<SignerInterface> signer,
+                       NewHmacSigner(prv_, &mech));
+  std::vector<uint8_t> sig(signer->signature_length());
+  EXPECT_OK(signer->SignUpdate(client_.get(), data_part1_bytes));
+  EXPECT_OK(signer->SignUpdate(client_.get(), data_part2_bytes));
+  EXPECT_OK(signer->SignFinal(client_.get(), absl::MakeSpan(sig)));
+
+  kms_v1::MacSignRequest req;
+  req.set_name(kms_key_name_);
+  req.set_data(data);
+  ASSERT_OK_AND_ASSIGN(kms_v1::MacSignResponse resp,
+                   client_->MacSign(req));
+
+  std::vector<uint8_t> resp_bytes(resp.mac().begin(), resp.mac().end());
+  EXPECT_EQ(resp_bytes, sig);
+}
+
+TEST_F(HmacTest, SignFinalWithoutUpdateFails) {
+  CK_MECHANISM mech{CKM_SHA256_HMAC, nullptr, 0};
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<SignerInterface> signer,
+                       NewHmacSigner(prv_, &mech));
+  std::vector<uint8_t> sig(signer->signature_length());
+
+  EXPECT_THAT(signer->SignFinal(client_.get(), absl::MakeSpan(sig)),
+              AllOf(StatusIs(absl::StatusCode::kFailedPrecondition),
+                    StatusRvIs(CKR_FUNCTION_FAILED)));
+}
+
+TEST_F(HmacTest, SignSinglePartAfterUpdateFails) {
+  std::vector<uint8_t> data = {0xDE, 0xAD, 0xBE, 0xEF};
+
+  CK_MECHANISM mech{CKM_SHA256_HMAC, nullptr, 0};
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<SignerInterface> signer,
+                       NewHmacSigner(prv_, &mech));
+  std::vector<uint8_t> sig(signer->signature_length());
+  EXPECT_OK(signer->SignUpdate(client_.get(), data));
+
+  EXPECT_THAT(signer->Sign(client_.get(), data, absl::MakeSpan(sig)),
+              AllOf(StatusIs(absl::StatusCode::kFailedPrecondition),
+                    StatusRvIs(CKR_FUNCTION_FAILED)));
+}
+
 
 }  // namespace
 }  // namespace kmsp11

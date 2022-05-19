@@ -168,6 +168,14 @@ absl::Status AddSecretKeyAttributes(AttributeMap* attrs,
                                     const kms_v1::CryptoKeyVersion& ckv) {
   ASSIGN_OR_RETURN(AlgorithmDetails algorithm, GetDetails(ckv.algorithm()));
 
+  // CKA_VALUE and CKA_VALUE_LEN are tied to the mechanisms in the spec, but
+  // in practice they are the same for all secret keys.
+  // eg.
+  // http://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/errata01/os/pkcs11-curr-v2.40-errata01-os-complete.html#_Toc228894691
+  attrs->PutSensitive(CKA_VALUE);
+  // CKA_VALUE_LEN = key size in bytes.
+  attrs->PutULong(CKA_VALUE_LEN, algorithm.key_bit_length / 8);
+
   // Override CKA_DESTROYABLE (from 4.4 Storage Objects)
   attrs->PutBool(CKA_DESTROYABLE, true);
 
@@ -292,7 +300,7 @@ absl::StatusOr<Object> Object::NewSecretKey(
   RETURN_IF_ERROR(AddSecretKeyAttributes(&attrs, ckv));
 
   ASSIGN_OR_RETURN(AlgorithmDetails algorithm, GetDetails(ckv.algorithm()));
-  return Object(ckv.name(), CKO_PRIVATE_KEY, algorithm, attrs);
+  return Object(ckv.name(), CKO_SECRET_KEY, algorithm, attrs);
 }
 
 absl::StatusOr<Object> Object::NewCertificate(

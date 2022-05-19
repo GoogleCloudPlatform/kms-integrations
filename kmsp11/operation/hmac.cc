@@ -58,6 +58,10 @@ class HmacSigner : public SignerInterface {
 
   absl::Status Sign(KmsClient* client, absl::Span<const uint8_t> data,
                     absl::Span<uint8_t> signature) override;
+  absl::Status SignUpdate(KmsClient* client,
+                          absl::Span<const uint8_t> data) override;
+  absl::Status SignFinal(KmsClient* client,
+                         absl::Span<uint8_t> signature) override;
 
   virtual ~HmacSigner() {}
 
@@ -67,13 +71,14 @@ class HmacSigner : public SignerInterface {
 
   const size_t signature_length_;
   std::shared_ptr<Object> object_;
+  std::optional<std::vector<uint8_t>> buffer_;
 };
 
 absl::StatusOr<std::unique_ptr<SignerInterface>> HmacSigner::New(
     std::shared_ptr<Object> key, const CK_MECHANISM* mechanism,
     size_t signature_length) {
   ASSIGN_OR_RETURN(CK_KEY_TYPE key_type, KeyTypeForMechanism(mechanism));
-  RETURN_IF_ERROR(CheckKeyPreconditions(key_type, CKO_PRIVATE_KEY,
+  RETURN_IF_ERROR(CheckKeyPreconditions(key_type, CKO_SECRET_KEY,
                                         mechanism->mechanism, key.get()));
   RETURN_IF_ERROR(EnsureNoParameters(mechanism));
 
@@ -83,6 +88,12 @@ absl::StatusOr<std::unique_ptr<SignerInterface>> HmacSigner::New(
 
 absl::Status HmacSigner::Sign(KmsClient* client, absl::Span<const uint8_t> data,
                               absl::Span<uint8_t> signature) {
+  if (buffer_) {
+    return FailedPreconditionError(
+        "Sign cannot be used to terminate a multi-part signing operation",
+        CKR_FUNCTION_FAILED, SOURCE_LOCATION);
+  }
+
   if (data.size() > kMaxMacDataBytes) {
     return NewInvalidArgumentError(
         absl::StrFormat("data length (%d bytes) exceeds maximum allowed %d",
@@ -102,6 +113,55 @@ absl::Status HmacSigner::Sign(KmsClient* client, absl::Span<const uint8_t> data,
   req.set_name(std::string(object_->kms_key_name()));
   req.set_data(
       std::string(reinterpret_cast<const char*>(data.data()), data.size()));
+
+  ASSIGN_OR_RETURN(kms_v1::MacSignResponse resp, client->MacSign(req));
+  std::copy(resp.mac().begin(), resp.mac().end(), signature.begin());
+  return absl::OkStatus();
+}
+
+absl::Status HmacSigner::SignUpdate(KmsClient* client,
+                                            absl::Span<const uint8_t> data) {
+  if (!buffer_) {
+    buffer_.emplace(data.begin(), data.end());
+    return absl::OkStatus();
+  }
+
+  if (data.size() + buffer_->size() > kMaxMacDataBytes) {
+    return NewInvalidArgumentError(
+        absl::StrFormat(
+            "data length (%d bytes) exceeds maximum allowed (%d bytes)",
+            data.size() + buffer_->size(), kMaxMacDataBytes),
+        CKR_DATA_LEN_RANGE, SOURCE_LOCATION);
+  }
+
+  size_t old_size = buffer_->size();
+  buffer_->resize(old_size + data.size());
+  std::copy_n(data.begin(), data.size(), buffer_->begin() + old_size);
+
+  return absl::OkStatus();
+}
+
+absl::Status HmacSigner::SignFinal(KmsClient* client,
+                                   absl::Span<uint8_t> signature) {
+  if (!buffer_) {
+    return FailedPreconditionError(
+        "SignUpdate needs to be called prior to terminating a multi-part "
+        "signing operation",
+        CKR_FUNCTION_FAILED, SOURCE_LOCATION);
+  }
+
+  if (signature.size() != signature_length()) {
+    return NewInternalError(
+        absl::StrFormat(
+            "provided signature buffer has incorrect size (got %d, want %d)",
+            signature.size(), signature_length()),
+        SOURCE_LOCATION);
+  }
+
+  kms_v1::MacSignRequest req;
+  req.set_name(std::string(object_->kms_key_name()));
+  req.set_data(std::string(reinterpret_cast<const char*>(buffer_->data()),
+                           buffer_->size()));
 
   ASSIGN_OR_RETURN(kms_v1::MacSignResponse resp, client->MacSign(req));
   std::copy(resp.mac().begin(), resp.mac().end(), signature.begin());
