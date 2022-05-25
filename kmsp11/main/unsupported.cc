@@ -173,13 +173,6 @@ absl::Status DecryptVerifyUpdate(CK_SESSION_HANDLE hSession,
   return UnsupportedError(SOURCE_LOCATION);
 }
 
-absl::Status GenerateKey(CK_SESSION_HANDLE hSession,
-                         CK_MECHANISM_PTR pMechanism,
-                         CK_ATTRIBUTE_PTR pTemplate, CK_ULONG ulCount,
-                         CK_OBJECT_HANDLE_PTR phKey) {
-  return UnsupportedError(SOURCE_LOCATION);
-}
-
 absl::Status WrapKey(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechanism,
                      CK_OBJECT_HANDLE hWrappingKey, CK_OBJECT_HANDLE hKey,
                      CK_BYTE_PTR pWrappedKey, CK_ULONG_PTR pulWrappedKeyLen) {

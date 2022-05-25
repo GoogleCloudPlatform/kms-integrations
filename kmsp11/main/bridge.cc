@@ -725,6 +725,40 @@ absl::Status VerifyFinal(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pSignature,
   return result;
 }
 
+// Generate a new secret key.
+// http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/os/pkcs11-base-v2.40-os.html#_Toc323024156
+absl::Status GenerateKey(CK_SESSION_HANDLE hSession,
+                         CK_MECHANISM_PTR pMechanism,
+                         CK_ATTRIBUTE_PTR pTemplate, CK_ULONG ulCount,
+                         CK_OBJECT_HANDLE_PTR phKey) {
+  ASSIGN_OR_RETURN(Provider * provider, GetProvider());
+  ASSIGN_OR_RETURN(std::shared_ptr<Session> session, GetSession(hSession));
+
+  if (!pMechanism) {
+    return NullArgumentError("pMechanism", SOURCE_LOCATION);
+  }
+  if (!phKey) {
+    return NullArgumentError("phKey", SOURCE_LOCATION);
+  }
+
+  absl::Span<const CK_ATTRIBUTE> attributes;
+  if (ulCount > 0) {
+    if (!pTemplate) {
+      return NullArgumentError("pTemplate", SOURCE_LOCATION);
+    }
+    attributes = absl::MakeConstSpan(pTemplate, ulCount);
+  }
+
+  ASSIGN_OR_RETURN(
+      CK_OBJECT_HANDLE handle,
+      session->GenerateKey(
+          *pMechanism, attributes,
+          provider->library_config().experimental_create_multiple_versions()));
+
+  *phKey = handle;
+  return absl::OkStatus();
+}
+
 // Generate a new asymmetric key pair.
 // http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/os/pkcs11-base-v2.40-os.html#_Toc323024157
 absl::Status GenerateKeyPair(

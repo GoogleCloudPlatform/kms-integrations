@@ -68,6 +68,17 @@ extern "C" {
 // RSASSA-PKCS1-v1_5 signing without encoding, with a 4096 bit key.
 #define KMS_ALGORITHM_RSA_SIGN_RAW_PKCS1_4096 30UL
 
+// HMAC-SHA256 signing with a 256 bit key.
+#define KMS_ALGORITHM_HMAC_SHA256 32UL
+// HMAC-SHA1 signing with a 160 bit key.
+#define KMS_ALGORITHM_HMAC_SHA1 33UL
+// HMAC-SHA384 signing with a 384 bit key.
+#define KMS_ALGORITHM_HMAC_SHA384 34UL
+// HMAC-SHA512 signing with a 512 bit key.
+#define KMS_ALGORITHM_HMAC_SHA512 35UL
+// HMAC-SHA224 signing with a 224 bit key.
+#define KMS_ALGORITHM_HMAC_SHA224 36UL
+
 #ifdef __cplusplus
 }
 #endif

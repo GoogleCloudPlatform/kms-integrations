@@ -78,6 +78,11 @@ class Session {
       absl::Span<const CK_ATTRIBUTE> private_key_attrs,
       bool experimental_create_multiple_versions = false);
 
+  absl::StatusOr<CK_OBJECT_HANDLE> GenerateKey(
+      const CK_MECHANISM& mechanism,
+      absl::Span<const CK_ATTRIBUTE> secret_key_attrs,
+      bool experimental_create_multiple_versions = false);
+
   absl::Status DestroyObject(std::shared_ptr<Object> object);
 
   absl::Status GenerateRandom(absl::Span<uint8_t> buffer);

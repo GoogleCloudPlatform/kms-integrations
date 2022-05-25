@@ -73,13 +73,12 @@ absl::StatusOr<KeyGenerationParams> ExtractKeyGenerationParams(
   }
 
   if (!label.has_value()) {
-    return NewInvalidArgumentError(
-        "CKA_LABEL must be specified for the private key",
-        CKR_TEMPLATE_INCOMPLETE, SOURCE_LOCATION);
+    return NewInvalidArgumentError("CKA_LABEL must be specified for the key",
+                                   CKR_TEMPLATE_INCOMPLETE, SOURCE_LOCATION);
   }
   if (!algorithm.has_value()) {
     return NewInvalidArgumentError(
-        "CKA_KMS_ALGORITHM must be specified for the private key",
+        "CKA_KMS_ALGORITHM must be specified for the key",
         CKR_TEMPLATE_INCOMPLETE, SOURCE_LOCATION);
   }
 
@@ -95,10 +94,10 @@ absl::StatusOr<KeyGenerationParams> ExtractKeyGenerationParams(
 
 absl::StatusOr<kms_v1::CryptoKeyVersion> CreateNewVersionOfExistingKey(
     const KmsClient& client, const kms_v1::CryptoKey& crypto_key,
-    const KeyGenerationParams& prv_gen_params) {
-  if (crypto_key.purpose() != prv_gen_params.algorithm.purpose ||
+    const KeyGenerationParams& gen_params) {
+  if (crypto_key.purpose() != gen_params.algorithm.purpose ||
       crypto_key.version_template().algorithm() !=
-          prv_gen_params.algorithm.algorithm ||
+          gen_params.algorithm.algorithm ||
       crypto_key.version_template().protection_level() != kms_v1::HSM) {
     return NewError(
         absl::StatusCode::kInvalidArgument,
@@ -108,9 +107,9 @@ absl::StatusOr<kms_v1::CryptoKeyVersion> CreateNewVersionOfExistingKey(
                         "current algorithm=%d, requested algorithm=%d; "
                         "current protection_level=%d, "
                         "requested protection_level=%d",
-                        crypto_key.purpose(), prv_gen_params.algorithm.purpose,
+                        crypto_key.purpose(), gen_params.algorithm.purpose,
                         crypto_key.version_template().algorithm(),
-                        prv_gen_params.algorithm.algorithm,
+                        gen_params.algorithm.algorithm,
                         crypto_key.version_template().protection_level(),
                         kms_v1::HSM),
         CKR_ARGUMENTS_BAD, SOURCE_LOCATION);
@@ -122,18 +121,17 @@ absl::StatusOr<kms_v1::CryptoKeyVersion> CreateNewVersionOfExistingKey(
 
 absl::StatusOr<CryptoKeyAndVersion> CreateKeyAndVersion(
     const KmsClient& client, std::string_view key_ring_name,
-    const KeyGenerationParams& prv_gen_params,
+    const KeyGenerationParams& gen_params,
     bool experimental_create_multiple_versions) {
   if (experimental_create_multiple_versions) {
     kms_v1::GetCryptoKeyRequest req;
-    req.set_name(
-        absl::StrCat(key_ring_name, "/cryptoKeys/", prv_gen_params.label));
+    req.set_name(absl::StrCat(key_ring_name, "/cryptoKeys/", gen_params.label));
     absl::StatusOr<kms_v1::CryptoKey> ck = client.GetCryptoKey(req);
     switch (ck.status().code()) {
       case absl::StatusCode::kOk: {
         ASSIGN_OR_RETURN(
             kms_v1::CryptoKeyVersion ckv,
-            CreateNewVersionOfExistingKey(client, *ck, prv_gen_params));
+            CreateNewVersionOfExistingKey(client, *ck, gen_params));
         return CryptoKeyAndVersion{*ck, ckv};
       }
       case absl::StatusCode::kNotFound:
@@ -146,10 +144,10 @@ absl::StatusOr<CryptoKeyAndVersion> CreateKeyAndVersion(
 
   kms_v1::CreateCryptoKeyRequest req;
   req.set_parent(std::string(key_ring_name));
-  req.set_crypto_key_id(prv_gen_params.label);
-  req.mutable_crypto_key()->set_purpose(prv_gen_params.algorithm.purpose);
+  req.set_crypto_key_id(gen_params.label);
+  req.mutable_crypto_key()->set_purpose(gen_params.algorithm.purpose);
   req.mutable_crypto_key()->mutable_version_template()->set_algorithm(
-      prv_gen_params.algorithm.algorithm);
+      gen_params.algorithm.algorithm);
   req.mutable_crypto_key()->mutable_version_template()->set_protection_level(
       kms_v1::HSM);
 
@@ -166,11 +164,11 @@ absl::StatusOr<CryptoKeyAndVersion> CreateKeyAndVersion(
       // purposes of the experiment.
       return key_and_version.status();
     }
-    return NewError(absl::StatusCode::kAlreadyExists,
-                    absl::StrFormat("key with label %s already exists: %s",
-                                    prv_gen_params.label,
-                                    key_and_version.status().message()),
-                    CKR_ARGUMENTS_BAD, SOURCE_LOCATION);
+    return NewError(
+        absl::StatusCode::kAlreadyExists,
+        absl::StrFormat("key with label %s already exists: %s",
+                        gen_params.label, key_and_version.status().message()),
+        CKR_ARGUMENTS_BAD, SOURCE_LOCATION);
   }
   return key_and_version;
 }
@@ -448,6 +446,46 @@ absl::StatusOr<AsymmetricHandleSet> Session::GenerateKeyPair(
                             o.object_class() == CKO_PRIVATE_KEY;
                    }));
   return result;
+}
+
+absl::StatusOr<CK_OBJECT_HANDLE> Session::GenerateKey(
+    const CK_MECHANISM& mechanism,
+    absl::Span<const CK_ATTRIBUTE> secret_key_attrs,
+    bool experimental_create_multiple_versions) {
+  if (session_type_ == SessionType::kReadOnly) {
+    return SessionReadOnlyError(SOURCE_LOCATION);
+  }
+
+  switch (mechanism.mechanism) {
+    case CKM_GENERIC_SECRET_KEY_GEN:
+      break;
+    default:
+      return InvalidMechanismError(mechanism.mechanism, "GenerateKey",
+                                   SOURCE_LOCATION);
+  }
+  if (mechanism.pParameter || mechanism.ulParameterLen > 0) {
+    return InvalidMechanismParamError(
+        "key generation mechanisms do not take parameters", SOURCE_LOCATION);
+  }
+
+  ASSIGN_OR_RETURN(KeyGenerationParams gen_params,
+                   ExtractKeyGenerationParams(secret_key_attrs));
+
+  if (gen_params.algorithm.key_gen_mechanism != mechanism.mechanism) {
+    return NewInvalidArgumentError("algorithm mismatches keygen mechanism",
+                                   CKR_TEMPLATE_INCONSISTENT, SOURCE_LOCATION);
+  }
+
+  ASSIGN_OR_RETURN(
+      CryptoKeyAndVersion key_and_version,
+      CreateKeyAndVersion(*kms_client_, token_->key_ring_name(), gen_params,
+                          experimental_create_multiple_versions));
+  RETURN_IF_ERROR(token_->RefreshState(*kms_client_));
+
+  return token_->FindSingleObject([&](const Object& o) -> bool {
+    return o.kms_key_name() == key_and_version.crypto_key_version.name() &&
+           o.object_class() == CKO_SECRET_KEY;
+  });
 }
 
 absl::Status Session::DestroyObject(std::shared_ptr<Object> key) {
