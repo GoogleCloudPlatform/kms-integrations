@@ -36,7 +36,7 @@ import (
 var (
 	minBinarySizeMB = flag.Int64("min_binary_size_mb", 4,
 		"the minimum size of the libkmsp11.so binary, in megabytes")
-	maxBinarySizeMB = flag.Int64("max_binary_size_mb", 12,
+	maxBinarySizeMB = flag.Int64("max_binary_size_mb", 16,
 		"the maximum size of the libkmsp11.so binary, in megabytes")
 	expectOpenSSL = flag.Bool("expect_openssl", false,
 		"whether or not OpenSSL is an expected dependency")

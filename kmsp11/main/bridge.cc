@@ -656,13 +656,16 @@ absl::Status SignFinal(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pSignature,
 // http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc235002379
 absl::Status VerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechanism,
                         CK_OBJECT_HANDLE hKey) {
+  ASSIGN_OR_RETURN(Provider * provider, GetProvider());
   ASSIGN_OR_RETURN(std::shared_ptr<Session> session, GetSession(hSession));
   ASSIGN_OR_RETURN(std::shared_ptr<Object> key, session->token()->GetKey(hKey));
 
   if (!pMechanism) {
     return NullArgumentError("pMechanism", SOURCE_LOCATION);
   }
-  return session->VerifyInit(key, pMechanism);
+  return session->VerifyInit(
+      key, pMechanism,
+      provider->library_config().experimental_allow_mac_keys());
 }
 
 // Complete a single-part verify operation.

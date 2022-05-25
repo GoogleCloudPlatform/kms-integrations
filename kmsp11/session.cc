@@ -350,14 +350,14 @@ absl::StatusOr<size_t> Session::SignatureLength() {
 }
 
 absl::Status Session::VerifyInit(std::shared_ptr<Object> key,
-                                 CK_MECHANISM* mechanism) {
+                                 CK_MECHANISM* mechanism, bool allow_mac_keys) {
   absl::MutexLock l(&op_mutex_);
 
   if (op_.has_value()) {
     return OperationActiveError(SOURCE_LOCATION);
   }
 
-  ASSIGN_OR_RETURN(op_, NewVerifyOp(key, mechanism));
+  ASSIGN_OR_RETURN(op_, NewVerifyOp(key, mechanism, allow_mac_keys));
   return absl::OkStatus();
 }
 

@@ -148,5 +148,19 @@ TEST(VerifyOpTest, InvalidMechanismFailure) {
   EXPECT_THAT(NewVerifyOp(nullptr, &mech), StatusRvIs(CKR_MECHANISM_INVALID));
 }
 
+TEST(VerifyOpTest, MacKeysExperimentDisabled) {
+  CK_MECHANISM mech = {CKM_SHA256_HMAC};
+  EXPECT_THAT(NewVerifyOp(nullptr, &mech, false),
+              StatusRvIs(CKR_MECHANISM_INVALID));
+}
+
+TEST(VerifyOpTest, MacKeysExperimentEnabled) {
+  CK_MECHANISM mech = {CKM_SHA256_HMAC};
+  ASSERT_OK_AND_ASSIGN(Object k,
+                       NewMockSecretKey(kms_v1::CryptoKeyVersion::HMAC_SHA256));
+  std::shared_ptr<Object> key = std::make_shared<Object>(k);
+  EXPECT_OK(NewVerifyOp(key, &mech, true));
+}
+
 }  // namespace
 }  // namespace kmsp11

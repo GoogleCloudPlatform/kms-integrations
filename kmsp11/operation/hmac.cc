@@ -170,6 +170,141 @@ absl::Status HmacSigner::SignFinal(KmsClient* client,
   return absl::OkStatus();
 }
 
+// A VerifierInterface implementation that verifies HMAC signatures using Cloud
+// KMS.
+class HmacVerifier : public VerifierInterface {
+ public:
+  static absl::StatusOr<std::unique_ptr<VerifierInterface>> New(
+      std::shared_ptr<Object> key, const CK_MECHANISM* mechanism,
+      size_t signature_length);
+
+  size_t signature_length() { return signature_length_; };
+  Object* object() override { return object_.get(); };
+
+  absl::Status Verify(KmsClient* client, absl::Span<const uint8_t> data,
+                      absl::Span<const uint8_t> signature) override;
+  absl::Status VerifyUpdate(KmsClient* client,
+                            absl::Span<const uint8_t> data) override;
+  absl::Status VerifyFinal(KmsClient* client,
+                           absl::Span<const uint8_t> signature) override;
+
+  virtual ~HmacVerifier() {}
+
+ private:
+  HmacVerifier(std::shared_ptr<Object> object, size_t signature_length)
+      : object_(object), signature_length_(signature_length) {}
+
+  std::shared_ptr<Object> object_;
+  const size_t signature_length_;
+  std::optional<std::vector<uint8_t>> buffer_;
+};
+
+absl::StatusOr<std::unique_ptr<VerifierInterface>> HmacVerifier::New(
+    std::shared_ptr<Object> key, const CK_MECHANISM* mechanism,
+    size_t signature_length) {
+  ASSIGN_OR_RETURN(CK_KEY_TYPE key_type, KeyTypeForMechanism(mechanism));
+  RETURN_IF_ERROR(CheckKeyPreconditions(key_type, CKO_SECRET_KEY,
+                                        mechanism->mechanism, key.get()));
+  RETURN_IF_ERROR(EnsureNoParameters(mechanism));
+
+  return std::unique_ptr<VerifierInterface>(
+      new HmacVerifier(key, signature_length));
+}
+
+absl::Status HmacVerifier::Verify(KmsClient* client,
+                                  absl::Span<const uint8_t> data,
+                                  absl::Span<const uint8_t> signature) {
+  if (buffer_) {
+    return FailedPreconditionError(
+        "Verify cannot be used to terminate a multi-part verification "
+        "operation",
+        CKR_FUNCTION_FAILED, SOURCE_LOCATION);
+  }
+
+  if (data.size() > kMaxMacDataBytes) {
+    return NewInvalidArgumentError(
+        absl::StrFormat("data length (%d bytes) exceeds maximum allowed %d",
+                        data.size(), kMaxMacDataBytes),
+        CKR_DATA_LEN_RANGE, SOURCE_LOCATION);
+  }
+
+  if (signature.size() != signature_length()) {
+    return NewInternalError(
+        absl::StrFormat(
+            "provided signature has incorrect size (got %d, want %d)",
+            signature.size(), signature_length()),
+        SOURCE_LOCATION);
+  }
+
+  kms_v1::MacVerifyRequest req;
+  req.set_name(std::string(object_->kms_key_name()));
+  req.set_data(
+      std::string(reinterpret_cast<const char*>(data.data()), data.size()));
+  req.set_mac(std::string(reinterpret_cast<const char*>(signature.data()),
+                          signature.size()));
+
+  ASSIGN_OR_RETURN(kms_v1::MacVerifyResponse resp, client->MacVerify(req));
+  if (!resp.success()) {
+    return NewInvalidArgumentError("HMAC verification failed",
+                                   CKR_SIGNATURE_INVALID, SOURCE_LOCATION);
+  }
+  return absl::OkStatus();
+}
+
+absl::Status HmacVerifier::VerifyUpdate(KmsClient* client,
+                                        absl::Span<const uint8_t> data) {
+  if (!buffer_) {
+    buffer_.emplace(data.begin(), data.end());
+    return absl::OkStatus();
+  }
+
+  if (data.size() + buffer_->size() > kMaxMacDataBytes) {
+    return NewInvalidArgumentError(
+        absl::StrFormat(
+            "data length (%d bytes) exceeds maximum allowed (%d bytes)",
+            data.size() + buffer_->size(), kMaxMacDataBytes),
+        CKR_DATA_LEN_RANGE, SOURCE_LOCATION);
+  }
+
+  size_t old_size = buffer_->size();
+  buffer_->resize(old_size + data.size());
+  std::copy_n(data.begin(), data.size(), buffer_->begin() + old_size);
+
+  return absl::OkStatus();
+}
+
+absl::Status HmacVerifier::VerifyFinal(KmsClient* client,
+                                       absl::Span<const uint8_t> signature) {
+  if (!buffer_) {
+    return FailedPreconditionError(
+        "VerifyUpdate needs to be called prior to terminating a multi-part "
+        "verification operation",
+        CKR_FUNCTION_FAILED, SOURCE_LOCATION);
+  }
+
+  if (signature.size() != signature_length()) {
+    return NewInternalError(
+        absl::StrFormat(
+            "provided signature has incorrect size (got %d, want %d)",
+            signature.size(), signature_length()),
+        SOURCE_LOCATION);
+  }
+
+  kms_v1::MacVerifyRequest req;
+  req.set_name(std::string(object_->kms_key_name()));
+  req.set_data(std::string(reinterpret_cast<const char*>(buffer_->data()),
+                           buffer_->size()));
+  req.set_mac(std::string(reinterpret_cast<const char*>(signature.data()),
+                          signature.size()));
+
+  ASSIGN_OR_RETURN(kms_v1::MacVerifyResponse resp, client->MacVerify(req));
+  if (!resp.success()) {
+    return NewInvalidArgumentError("HMAC verification failed",
+                                   CKR_SIGNATURE_INVALID, SOURCE_LOCATION);
+  }
+  return absl::OkStatus();
+}
+
 }  // namespace
 
 absl::StatusOr<std::unique_ptr<SignerInterface>> NewHmacSigner(
@@ -188,6 +323,27 @@ absl::StatusOr<std::unique_ptr<SignerInterface>> NewHmacSigner(
     default:
       return NewInternalError(
           absl::StrFormat("Mechanism %#x not supported for HMAC signing",
+                          mechanism->mechanism),
+          SOURCE_LOCATION);
+  }
+}
+
+absl::StatusOr<std::unique_ptr<VerifierInterface>> NewHmacVerifier(
+    std::shared_ptr<Object> key, const CK_MECHANISM* mechanism) {
+  switch (mechanism->mechanism) {
+    case CKM_SHA_1_HMAC:
+      return HmacVerifier::New(key, mechanism, 20);
+    case CKM_SHA224_HMAC:
+      return HmacVerifier::New(key, mechanism, 28);
+    case CKM_SHA256_HMAC:
+      return HmacVerifier::New(key, mechanism, 32);
+    case CKM_SHA384_HMAC:
+      return HmacVerifier::New(key, mechanism, 48);
+    case CKM_SHA512_HMAC:
+      return HmacVerifier::New(key, mechanism, 64);
+    default:
+      return NewInternalError(
+          absl::StrFormat("Mechanism %#x not supported for HMAC verification",
                           mechanism->mechanism),
           SOURCE_LOCATION);
   }

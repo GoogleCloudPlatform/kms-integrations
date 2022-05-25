@@ -40,7 +40,8 @@ absl::StatusOr<SignOp> NewSignOp(std::shared_ptr<Object> key,
 using VerifyOp = std::unique_ptr<VerifierInterface>;
 
 absl::StatusOr<VerifyOp> NewVerifyOp(std::shared_ptr<Object> key,
-                                     const CK_MECHANISM* mechanism);
+                                     const CK_MECHANISM* mechanism,
+                                     bool allow_mac_keys = false);
 
 }  // namespace kmsp11
 

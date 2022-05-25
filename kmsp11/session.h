@@ -65,7 +65,8 @@ class Session {
   absl::Status SignFinal(absl::Span<uint8_t> signature);
   absl::StatusOr<size_t> SignatureLength();
 
-  absl::Status VerifyInit(std::shared_ptr<Object> key, CK_MECHANISM* mechanism);
+  absl::Status VerifyInit(std::shared_ptr<Object> key, CK_MECHANISM* mechanism,
+                          bool allow_mac_keys = false);
   absl::Status Verify(absl::Span<const uint8_t> digest,
                       absl::Span<const uint8_t> signature);
   absl::Status VerifyUpdate(absl::Span<const uint8_t> data);

@@ -176,6 +176,91 @@ TEST_F(HmacTest, SignSinglePartAfterUpdateFails) {
                     StatusRvIs(CKR_FUNCTION_FAILED)));
 }
 
+TEST_F(HmacTest, SignVerifySuccess) {
+  std::string data = "Here is some data.";
+  std::vector<uint8_t> data_bytes(data.begin(), data.end());
+
+  CK_MECHANISM mech{CKM_SHA256_HMAC, nullptr, 0};
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<SignerInterface> signer,
+                       NewHmacSigner(prv_, &mech));
+  std::vector<uint8_t> sig(signer->signature_length());
+  EXPECT_OK(signer->Sign(client_.get(), data_bytes, absl::MakeSpan(sig)));
+
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<VerifierInterface> verifier,
+                       NewHmacVerifier(prv_, &mech));
+  EXPECT_OK(verifier->Verify(client_.get(), data_bytes, absl::MakeSpan(sig)));
+}
+
+TEST_F(HmacTest, VerifyDataLengthInvalid) {
+  uint8_t data[65537], sig[32];
+
+  CK_MECHANISM mech{CKM_SHA256_HMAC, nullptr, 0};
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<VerifierInterface> verifier,
+                       NewHmacVerifier(prv_, &mech));
+
+  EXPECT_THAT(verifier->Verify(client_.get(), data, absl::MakeSpan(sig)),
+              AllOf(StatusIs(absl::StatusCode::kInvalidArgument),
+                    StatusRvIs(CKR_DATA_LEN_RANGE)));
+}
+
+TEST_F(HmacTest, VerifySignatureLengthInvalid) {
+  uint8_t data[65536], sig[33];
+
+  CK_MECHANISM mech{CKM_SHA256_HMAC, nullptr, 0};
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<VerifierInterface> verifier,
+                       NewHmacVerifier(prv_, &mech));
+
+  EXPECT_THAT(verifier->Verify(client_.get(), data, absl::MakeSpan(sig)),
+              AllOf(StatusIs(absl::StatusCode::kInternal),
+                    StatusRvIs(CKR_GENERAL_ERROR)));
+}
+
+TEST_F(HmacTest, SignVerifyMultiPartSuccess) {
+  std::string data = "Here is some data.";
+  std::string data_part1 = "Here is ";
+  std::string data_part2 = "some data.";
+  std::vector<uint8_t> data_part1_bytes(data_part1.begin(), data_part1.end());
+  std::vector<uint8_t> data_part2_bytes(data_part2.begin(), data_part2.end());
+
+  CK_MECHANISM mech{CKM_SHA256_HMAC, nullptr, 0};
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<SignerInterface> signer,
+                       NewHmacSigner(prv_, &mech));
+  std::vector<uint8_t> sig(signer->signature_length());
+  EXPECT_OK(signer->SignUpdate(client_.get(), data_part1_bytes));
+  EXPECT_OK(signer->SignUpdate(client_.get(), data_part2_bytes));
+  EXPECT_OK(signer->SignFinal(client_.get(), absl::MakeSpan(sig)));
+
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<VerifierInterface> verifier,
+                       NewHmacVerifier(prv_, &mech));
+  EXPECT_OK(verifier->VerifyUpdate(client_.get(), data_part1_bytes));
+  EXPECT_OK(verifier->VerifyUpdate(client_.get(), data_part2_bytes));
+  EXPECT_OK(verifier->VerifyFinal(client_.get(), absl::MakeSpan(sig)));
+}
+
+TEST_F(HmacTest, VerifyFinalWithoutUpdateFails) {
+  CK_MECHANISM mech{CKM_SHA256_HMAC, nullptr, 0};
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<VerifierInterface> verifier,
+                       NewHmacVerifier(prv_, &mech));
+  std::vector<uint8_t> sig(32);
+
+  EXPECT_THAT(verifier->VerifyFinal(client_.get(), absl::MakeSpan(sig)),
+              AllOf(StatusIs(absl::StatusCode::kFailedPrecondition),
+                    StatusRvIs(CKR_FUNCTION_FAILED)));
+}
+
+TEST_F(HmacTest, VerifySinglePartAfterUpdateFails) {
+  std::vector<uint8_t> data = {0xDE, 0xAD, 0xBE, 0xEF};
+
+  CK_MECHANISM mech{CKM_SHA256_HMAC, nullptr, 0};
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<VerifierInterface> verifier,
+                       NewHmacVerifier(prv_, &mech));
+  std::vector<uint8_t> sig(32);
+  EXPECT_OK(verifier->VerifyUpdate(client_.get(), data));
+
+  EXPECT_THAT(verifier->Verify(client_.get(), data, absl::MakeSpan(sig)),
+              AllOf(StatusIs(absl::StatusCode::kFailedPrecondition),
+                    StatusRvIs(CKR_FUNCTION_FAILED)));
+}
 
 }  // namespace
 }  // namespace kmsp11

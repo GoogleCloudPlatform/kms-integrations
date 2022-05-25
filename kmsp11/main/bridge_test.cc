@@ -2142,6 +2142,12 @@ TEST_F(AsymmetricSignTest, SignFinalInvalidMechanism) {
                     StatusRvIs(CKR_FUNCTION_FAILED)));
 }
 
+TEST_F(AsymmetricSignTest, SignInitMacKeysExperimentDisabled) {
+  CK_MECHANISM mech{CKM_SHA256_HMAC, nullptr, 0};
+  EXPECT_THAT(SignInit(session_, &mech, private_key_),
+              StatusRvIs(CKR_MECHANISM_INVALID));
+}
+
 TEST_F(AsymmetricSignTest, VerifyFailsNullSignatureSize) {
   CK_MECHANISM mech{CKM_ECDSA, nullptr, 0};
   EXPECT_OK(SignInit(session_, &mech, private_key_));
@@ -2317,6 +2323,12 @@ TEST_F(AsymmetricSignTest, VerifyFinalInvalidMechanism) {
               AllOf(StatusIs(absl::StatusCode::kFailedPrecondition,
                              HasSubstr("does not support multi-part verify")),
                     StatusRvIs(CKR_FUNCTION_FAILED)));
+}
+
+TEST_F(AsymmetricSignTest, VerifyInitMacKeysExperimentDisabled) {
+  CK_MECHANISM mech{CKM_SHA256_HMAC, nullptr, 0};
+  EXPECT_THAT(VerifyInit(session_, &mech, private_key_),
+              StatusRvIs(CKR_MECHANISM_INVALID));
 }
 
 }  // namespace
