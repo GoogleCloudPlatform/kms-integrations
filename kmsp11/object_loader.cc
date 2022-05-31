@@ -29,7 +29,7 @@ bool IsLoadable(const kms_v1::CryptoKey& key) {
     case kms_v1::CryptoKey::MAC:
       break;
     default:
-      LOG(INFO) << "key " << key.name()
+      LOG(INFO) << "INFO: key " << key.name()
                 << " is not loadable due to unsupported purpose "
                 << key.purpose();
       return false;
@@ -37,7 +37,7 @@ bool IsLoadable(const kms_v1::CryptoKey& key) {
 
   if (key.version_template().protection_level() !=
       kms_v1::ProtectionLevel::HSM) {
-    LOG(INFO) << "key " << key.name()
+    LOG(INFO) << "INFO: key " << key.name()
               << " is not loadable due to unsupported protection level "
               << key.version_template().protection_level();
     return false;
@@ -48,13 +48,13 @@ bool IsLoadable(const kms_v1::CryptoKey& key) {
 
 bool IsLoadable(const kms_v1::CryptoKeyVersion& ckv) {
   if (ckv.state() != kms_v1::CryptoKeyVersion::ENABLED) {
-    LOG(INFO) << "version " << ckv.name()
+    LOG(INFO) << "INFO: version " << ckv.name()
               << " is not loadable due to unsupported state " << ckv.state();
     return false;
   }
 
   if (!GetDetails(ckv.algorithm()).ok()) {
-    LOG(INFO) << "version " << ckv.name()
+    LOG(INFO) << "INFO: version " << ckv.name()
               << " is not loadable due to unsupported algorithm "
               << ckv.algorithm();
     return false;
