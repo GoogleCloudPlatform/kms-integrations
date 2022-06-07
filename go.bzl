@@ -391,12 +391,17 @@ def go_repositories():
         version = "v1.1.0",
     )
     go_repository(
-        name = "com_google_cloud_go_kms",
+        name = "com_google_cloud_go_kms",  # v1.4.0 / 2022-02-23
         importpath = "cloud.google.com/go/kms",
-        sum = "h1:1yc4rLqCkVDS9Zvc7m+3mJ47kw0Uo5Q5+sMjcmUVUeM=",
-        version = "v1.1.0",
+        sum = "h1:iElbfoE61VeLhnZcGOltqL8HIly8Nhbe5t6JlH9GXjo=",
+        version = "v1.4.0",
+        # Patch interoperable encryption RPCs into KMS client.
+        patch_args = [
+            "-E",
+            "-p2",
+        ],
+        patches = ["//:third_party/go_kms.patch"],
     )
-
     go_repository(
         name = "com_google_cloud_go_pubsub",
         importpath = "cloud.google.com/go/pubsub",

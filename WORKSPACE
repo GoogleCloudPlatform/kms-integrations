@@ -13,17 +13,17 @@ http_archive(
 )
 
 http_archive(
-    name = "io_bazel_rules_go",  # v0.30.0 / 2022-01-24
-     # Patch unreleased HMAC algorithms into rules_go's copy of googleapis.
+    name = "io_bazel_rules_go",  # v0.33.0 / 2022-06-06
+     # Patch HMAC and interoperable encryption into rules_go's copy of googleapis.
     patch_args = [
         "-E",
         "-p1",
     ],
     patches = ["//:third_party/rules_go.patch"],
-    sha256 = "d6b2513456fe2229811da7eb67a444be7785f5323c6708b38d851d2b51e54d83",
+    sha256 = "685052b498b6ddfe562ca7a97736741d87916fe536623afb7da2824c0211c369",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.30.0/rules_go-v0.30.0.zip",
-        "https://github.com/bazelbuild/rules_go/releases/download/v0.30.0/rules_go-v0.30.0.zip",
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.33.0/rules_go-v0.33.0.zip",
+        "https://github.com/bazelbuild/rules_go/releases/download/v0.33.0/rules_go-v0.33.0.zip",
     ],
 )
 
@@ -89,20 +89,20 @@ http_archive(
 
 # In general it's best to keep this sync'd with the version used in rules_go,
 # above. Otherwise, we're working with two versions of the same repo.
-# https://github.com/bazelbuild/rules_go/blob/v0.30.0/go/private/repositories.bzl#L259
+# https://github.com/bazelbuild/rules_go/blob/v0.33.0/go/private/repositories.bzl#L244
 http_archive(
-    name = "com_google_googleapis",  # 2022-01-24
-    # Patch unreleased HMAC algorithms into googleapis.
+    name = "com_google_googleapis",  # 2022-06-05
+    # Patch HMAC and interoperable encryption into googleapis.
     patch_args = [
         "-E",
         "-p1",
     ],
     patches = ["//:third_party/googleapis.patch"],
-    sha256 = "ad0a426b3cf0a8464c495627286c1cefdebefdabb96cc256aaeac9f501665cdd",
-    strip_prefix = "googleapis-d12b615374583712e7832c914d1fbef8c507f10f",
+    sha256 = "9181bb36a1df4f397375ec5aa480db797b882073518801e3a20b0e46418f2f90",
+    strip_prefix = "googleapis-530ca55953b470ab3b37dc9de37fcfa59410b741",
     urls = [
-        "https://mirror.bazel.build/github.com/googleapis/googleapis/archive/d12b615374583712e7832c914d1fbef8c507f10f.zip",
-        "https://github.com/googleapis/googleapis/archive/d12b615374583712e7832c914d1fbef8c507f10f.zip",
+        "https://mirror.bazel.build/github.com/googleapis/googleapis/archive/530ca55953b470ab3b37dc9de37fcfa59410b741.zip",
+        "https://github.com/googleapis/googleapis/archive/530ca55953b470ab3b37dc9de37fcfa59410b741.zip",
     ],
 )
 

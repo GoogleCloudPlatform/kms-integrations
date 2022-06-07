@@ -1,0 +1,148 @@
+diff --git a/kms/apiv1/gapic_metadata.json b/kms/apiv1/gapic_metadata.json
+index 4cec9d4be..e83c5f0e4 100644
+--- a/kms/apiv1/gapic_metadata.json
++++ b/kms/apiv1/gapic_metadata.json
+@@ -169,6 +169,16 @@
+                 "MacVerify"
+               ]
+             },
++	    "RawDecrypt": {
++              "methods": [
++                "RawDecrypt"
++              ]
++            },
++            "RawEncrypt": {
++              "methods": [
++                "RawEncrypt"
++              ]
++            },
+             "RestoreCryptoKeyVersion": {
+               "methods": [
+                 "RestoreCryptoKeyVersion"
+diff --git a/kms/apiv1/key_management_client.go b/kms/apiv1/key_management_client.go
+index bf1ff6bd7..fe6336771 100644
+--- a/kms/apiv1/key_management_client.go
++++ b/kms/apiv1/key_management_client.go
+@@ -61,6 +61,8 @@ type KeyManagementCallOptions struct {
+ 	RestoreCryptoKeyVersion       []gax.CallOption
+ 	Encrypt                       []gax.CallOption
+ 	Decrypt                       []gax.CallOption
++	RawEncrypt                    []gax.CallOption
++        RawDecrypt		      []gax.CallOption
+ 	AsymmetricSign                []gax.CallOption
+ 	AsymmetricDecrypt             []gax.CallOption
+ 	MacSign                       []gax.CallOption
+@@ -315,6 +317,30 @@ func defaultKeyManagementCallOptions() *KeyManagementCallOptions {
+ 				})
+ 			}),
+ 		},
++		RawEncrypt: []gax.CallOption{
++                        gax.WithRetry(func() gax.Retryer {
++                                return gax.OnCodes([]codes.Code{
++                                        codes.Unavailable,
++                                        codes.DeadlineExceeded,
++                                }, gax.Backoff{
++                                        Initial:    100 * time.Millisecond,
++                                        Max:        60000 * time.Millisecond,
++                                        Multiplier: 1.30,
++                                })
++                        }),
++                },
++                RawDecrypt: []gax.CallOption{
++                        gax.WithRetry(func() gax.Retryer {
++                                return gax.OnCodes([]codes.Code{
++                                        codes.Unavailable,
++                                        codes.DeadlineExceeded,
++                                }, gax.Backoff{
++                                        Initial:    100 * time.Millisecond,
++                                        Max:        60000 * time.Millisecond,
++                                        Multiplier: 1.30,
++                                })
++                        }),
++                },
+ 		AsymmetricSign: []gax.CallOption{
+ 			gax.WithRetry(func() gax.Retryer {
+ 				return gax.OnCodes([]codes.Code{
+@@ -407,6 +433,8 @@ type internalKeyManagementClient interface {
+ 	RestoreCryptoKeyVersion(context.Context, *kmspb.RestoreCryptoKeyVersionRequest, ...gax.CallOption) (*kmspb.CryptoKeyVersion, error)
+ 	Encrypt(context.Context, *kmspb.EncryptRequest, ...gax.CallOption) (*kmspb.EncryptResponse, error)
+ 	Decrypt(context.Context, *kmspb.DecryptRequest, ...gax.CallOption) (*kmspb.DecryptResponse, error)
++	RawEncrypt(context.Context, *kmspb.RawEncryptRequest, ...gax.CallOption) (*kmspb.RawEncryptResponse, error)
++        RawDecrypt(context.Context, *kmspb.RawDecryptRequest, ...gax.CallOption) (*kmspb.RawDecryptResponse, error)
+ 	AsymmetricSign(context.Context, *kmspb.AsymmetricSignRequest, ...gax.CallOption) (*kmspb.AsymmetricSignResponse, error)
+ 	AsymmetricDecrypt(context.Context, *kmspb.AsymmetricDecryptRequest, ...gax.CallOption) (*kmspb.AsymmetricDecryptResponse, error)
+ 	MacSign(context.Context, *kmspb.MacSignRequest, ...gax.CallOption) (*kmspb.MacSignResponse, error)
+@@ -650,6 +678,22 @@ func (c *KeyManagementClient) Decrypt(ctx context.Context, req *kmspb.DecryptReq
+ 	return c.internalClient.Decrypt(ctx, req, opts...)
+ }
+ 
++// RawEncrypt encrypts data, so that it can only be recovered by a call to
++// RawDecrypt. The
++// CryptoKey.purpose must be
++// RAW_ENCRYPT_DECRYPT.
++func (c *KeyManagementClient) RawEncrypt(ctx context.Context, req *kmspb.RawEncryptRequest, opts ...gax.CallOption) (*kmspb.RawEncryptResponse, error) {
++        return c.internalClient.RawEncrypt(ctx, req, opts...)
++}
++
++// RawDecrypt decrypts data that was protected by
++// RawEncrypt. The
++// CryptoKey.purpose must be
++// RAW_ENCRYPT_DECRYPT.
++func (c *KeyManagementClient) RawDecrypt(ctx context.Context, req *kmspb.RawDecryptRequest, opts ...gax.CallOption) (*kmspb.RawDecryptResponse, error) {
++        return c.internalClient.RawDecrypt(ctx, req, opts...)
++}
++
+ // AsymmetricSign signs data using a CryptoKeyVersion
+ // with CryptoKey.purpose
+ // ASYMMETRIC_SIGN, producing a signature that can be verified with the public
+@@ -1366,6 +1410,50 @@ func (c *keyManagementGRPCClient) Decrypt(ctx context.Context, req *kmspb.Decryp
+ 	return resp, nil
+ }
+ 
++func (c *keyManagementGRPCClient) RawEncrypt(ctx context.Context, req *kmspb.RawEncryptRequest, opts ...gax.CallOption) (*kmspb.RawEncryptResponse, error) {
++        if _, ok := ctx.Deadline(); !ok && !c.disableDeadlines {
++                cctx, cancel := context.WithTimeout(ctx, 60000*time.Millisecond)
++                defer cancel()
++                ctx = cctx
++        }
++        md := metadata.Pairs("x-goog-request-params", fmt.Sprintf("%s=%v", "name", url.QueryEscape(req.GetName())))
++
++        ctx = insertMetadata(ctx, c.xGoogMetadata, md)
++        opts = append((*c.CallOptions).RawEncrypt[0:len((*c.CallOptions).RawEncrypt):len((*c.CallOptions).RawEncrypt)], opts...)
++        var resp *kmspb.RawEncryptResponse
++        err := gax.Invoke(ctx, func(ctx context.Context, settings gax.CallSettings) error {
++                var err error
++                resp, err = c.keyManagementClient.RawEncrypt(ctx, req, settings.GRPC...)
++                return err
++        }, opts...)
++        if err != nil {
++                return nil, err
++        }
++        return resp, nil
++}
++
++func (c *keyManagementGRPCClient) RawDecrypt(ctx context.Context, req *kmspb.RawDecryptRequest, opts ...gax.CallOption) (*kmspb.RawDecryptResponse, error) {
++        if _, ok := ctx.Deadline(); !ok && !c.disableDeadlines {
++                cctx, cancel := context.WithTimeout(ctx, 60000*time.Millisecond)
++                defer cancel()
++                ctx = cctx
++        }
++        md := metadata.Pairs("x-goog-request-params", fmt.Sprintf("%s=%v", "name", url.QueryEscape(req.GetName())))
++
++        ctx = insertMetadata(ctx, c.xGoogMetadata, md)
++        opts = append((*c.CallOptions).RawDecrypt[0:len((*c.CallOptions).RawDecrypt):len((*c.CallOptions).RawDecrypt)], opts...)
++        var resp *kmspb.RawDecryptResponse
++        err := gax.Invoke(ctx, func(ctx context.Context, settings gax.CallSettings) error {
++                var err error
++                resp, err = c.keyManagementClient.RawDecrypt(ctx, req, settings.GRPC...)
++                return err
++        }, opts...)
++        if err != nil {
++                return nil, err
++        }
++        return resp, nil
++}
++
+ func (c *keyManagementGRPCClient) AsymmetricSign(ctx context.Context, req *kmspb.AsymmetricSignRequest, opts ...gax.CallOption) (*kmspb.AsymmetricSignResponse, error) {
+ 	if _, ok := ctx.Deadline(); !ok && !c.disableDeadlines {
+ 		cctx, cancel := context.WithTimeout(ctx, 60000*time.Millisecond)
