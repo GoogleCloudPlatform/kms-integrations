@@ -47,6 +47,12 @@ var algorithms = map[kmspb.CryptoKeyVersion_CryptoKeyVersionAlgorithm]algDef{
 		KeyFactory: symmetricKeyFactory(256),
 	},
 
+	// RAW_ENCRYPT_DECRYPT
+	kmspb.CryptoKeyVersion_AES_256_GCM: {
+		Purpose:    kmspb.CryptoKey_RAW_ENCRYPT_DECRYPT,
+		KeyFactory: symmetricKeyFactory(256),
+	},
+
 	// ASYMMETRIC_DECRYPT
 	kmspb.CryptoKeyVersion_RSA_DECRYPT_OAEP_2048_SHA256: {
 		Purpose:    kmspb.CryptoKey_ASYMMETRIC_DECRYPT,

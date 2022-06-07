@@ -139,6 +139,36 @@ absl::StatusOr<kms_v1::MacVerifyResponse> KmsClient::MacVerify(
   return response;
 }
 
+absl::StatusOr<kms_v1::RawDecryptResponse> KmsClient::RawDecrypt(
+    const kms_v1::RawDecryptRequest& request) const {
+  grpc::ClientContext ctx;
+  AddContextSettings(&ctx, "name", request.name());
+
+  kms_v1::RawDecryptResponse response;
+  absl::Status rpc_result =
+      ToStatus(kms_stub_->RawDecrypt(&ctx, request, &response));
+  if (!rpc_result.ok()) {
+    SetErrorRv(rpc_result, CKR_DEVICE_ERROR);
+    return rpc_result;
+  }
+  return response;
+}
+
+absl::StatusOr<kms_v1::RawEncryptResponse> KmsClient::RawEncrypt(
+    const kms_v1::RawEncryptRequest& request) const {
+  grpc::ClientContext ctx;
+  AddContextSettings(&ctx, "name", request.name());
+
+  kms_v1::RawEncryptResponse response;
+  absl::Status rpc_result =
+      ToStatus(kms_stub_->RawEncrypt(&ctx, request, &response));
+  if (!rpc_result.ok()) {
+    SetErrorRv(rpc_result, CKR_DEVICE_ERROR);
+    return rpc_result;
+  }
+  return response;
+}
+
 absl::StatusOr<kms_v1::CryptoKey> KmsClient::CreateCryptoKey(
     const kms_v1::CreateCryptoKeyRequest& request) const {
   grpc::ClientContext ctx;

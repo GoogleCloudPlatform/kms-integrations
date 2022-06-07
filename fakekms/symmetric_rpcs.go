@@ -17,10 +17,156 @@ package fakekms
 import (
 	"context"
 	"crypto"
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/hmac"
+	"crypto/rand"
+	"io"
 
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 )
+
+// maxPlaintextSize is the maximum plaintext size accepted by Cloud KMS.
+const maxPlaintextSize = 64 * 1024
+
+// maxCiphertextSize is the maximum ciphertext size accepted by Cloud KMS.
+const maxCiphertextSize = 10 * maxPlaintextSize
+
+// RawEncrypt fakes a Cloud KMS API function.
+func (f *fakeKMS) RawEncrypt(ctx context.Context, req *kmspb.RawEncryptRequest) (*kmspb.RawEncryptResponse, error) {
+	if err := allowlist("name", "plaintext", "additional_authenticated_data").check(req); err != nil {
+		return nil, err
+	}
+
+	name, err := parseCryptoKeyVersionName(req.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	ckv, err := f.cryptoKeyVersion(name)
+	if err != nil {
+		return nil, err
+	}
+
+	if ckv.pb.State != kmspb.CryptoKeyVersion_ENABLED {
+		return nil, errFailedPrecondition("key version %s is not enabled", name)
+	}
+
+	def, _ := algorithmDef(ckv.pb.Algorithm)
+	if def.Purpose != kmspb.CryptoKey_RAW_ENCRYPT_DECRYPT {
+		return nil, errFailedPrecondition("keys with algorithm %s may not be used for raw encryption",
+			nameForValue(kmspb.CryptoKeyVersion_CryptoKeyVersionAlgorithm_name, int32(ckv.pb.Algorithm)))
+	}
+
+	if req.Plaintext == nil {
+		return nil, errInvalidArgument("plaintext is empty")
+	}
+	var plaintext []byte = req.Plaintext
+
+	if len(plaintext) > maxPlaintextSize {
+		return nil, errInvalidArgument("len(plaintext)=%d, want len(plaintext)<=%d", len(plaintext), maxPlaintextSize)
+	}
+
+	var key []byte
+	var ok bool
+	if key, ok = ckv.keyMaterial.([]byte); !ok {
+		return nil, err
+	}
+
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, errInternal("AES cipher creation failed: %v", err)
+	}
+
+	nonce := make([]byte, 12)
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+		return nil, err
+	}
+
+	aesgcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, errInternal("GCM cipher creation failed: %v", err)
+	}
+
+	ciphertext := aesgcm.Seal(nil, nonce, plaintext, req.AdditionalAuthenticatedData)
+
+	return &kmspb.RawEncryptResponse{
+		Name:                       req.Name,
+		Ciphertext:                 ciphertext,
+		CiphertextCrc32C:           crc32c(ciphertext),
+		InitializationVector:       nonce,
+		InitializationVectorCrc32C: crc32c(nonce),
+		TagLength:                  16,
+		ProtectionLevel:            ckv.pb.ProtectionLevel,
+	}, nil
+}
+
+// RawDecrypt fakes a Cloud KMS API function.
+func (f *fakeKMS) RawDecrypt(ctx context.Context, req *kmspb.RawDecryptRequest) (*kmspb.RawDecryptResponse, error) {
+	if err := allowlist("name", "ciphertext", "additional_authenticated_data", "initialization_vector").check(req); err != nil {
+		return nil, err
+	}
+
+	name, err := parseCryptoKeyVersionName(req.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	ckv, err := f.cryptoKeyVersion(name)
+	if err != nil {
+		return nil, err
+	}
+
+	if ckv.pb.State != kmspb.CryptoKeyVersion_ENABLED {
+		return nil, errFailedPrecondition("key version %s is not enabled", name)
+	}
+
+	def, _ := algorithmDef(ckv.pb.Algorithm)
+	if def.Purpose != kmspb.CryptoKey_RAW_ENCRYPT_DECRYPT {
+		return nil, errFailedPrecondition("keys with algorithm %s may not be used for raw decryption",
+			nameForValue(kmspb.CryptoKeyVersion_CryptoKeyVersionAlgorithm_name, int32(ckv.pb.Algorithm)))
+	}
+
+	if req.Ciphertext == nil {
+		return nil, errInvalidArgument("ciphertext is empty")
+	}
+	var ciphertext []byte = req.Ciphertext
+
+	if len(ciphertext) > maxCiphertextSize {
+		return nil, errInvalidArgument("len(ciphertext)=%d, want len(ciphertext)<=%d", len(ciphertext), maxCiphertextSize)
+	}
+
+	if len(req.InitializationVector) != 12 {
+		return nil, errInvalidArgument("len(initialization_vector)=%d, want 12", len(req.InitializationVector))
+	}
+
+	var key []byte
+	var ok bool
+	if key, ok = ckv.keyMaterial.([]byte); !ok {
+		return nil, err
+	}
+
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, errInternal("AES cipher creation failed: %v", err)
+	}
+
+	aesgcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, errInternal("GCM cipher creation failed: %v", err)
+	}
+
+	plaintext, err := aesgcm.Open(nil, req.InitializationVector, ciphertext, req.AdditionalAuthenticatedData)
+	if err != nil {
+		return nil, errInternal("decryption failed: %v", err)
+	}
+
+	return &kmspb.RawDecryptResponse{
+		Plaintext:       plaintext,
+		PlaintextCrc32C: crc32c(plaintext),
+		ProtectionLevel: ckv.pb.ProtectionLevel,
+	}, nil
+}
 
 // MacSign fakes a Cloud KMS API function.
 func (f *fakeKMS) MacSign(ctx context.Context, req *kmspb.MacSignRequest) (*kmspb.MacSignResponse, error) {
