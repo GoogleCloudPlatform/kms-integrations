@@ -22,6 +22,7 @@ cc_test(
     srcs = ["algorithm_details_test.cc"],
     deps = [
         ":algorithm_details",
+        ":cryptoki_headers",
         "//kmsp11/test",
         "@com_google_googletest//:gtest_main",
     ],

@@ -182,8 +182,10 @@ absl::Status AddSecretKeyAttributes(AttributeMap* attrs,
   // 4.10 Secret key objects
   attrs->Put(CKA_SUBJECT, "");
   attrs->PutBool(CKA_SENSITIVE, true);
-  attrs->PutBool(CKA_ENCRYPT, false);
-  attrs->PutBool(CKA_DECRYPT, false);
+  attrs->PutBool(CKA_ENCRYPT,
+                 algorithm.purpose == kms_v1::CryptoKey::RAW_ENCRYPT_DECRYPT);
+  attrs->PutBool(CKA_DECRYPT,
+                 algorithm.purpose == kms_v1::CryptoKey::RAW_ENCRYPT_DECRYPT);
   attrs->PutBool(CKA_SIGN, algorithm.purpose == kms_v1::CryptoKey::MAC);
   attrs->PutBool(CKA_VERIFY, algorithm.purpose == kms_v1::CryptoKey::MAC);
   attrs->PutBool(CKA_WRAP, false);

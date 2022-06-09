@@ -3,6 +3,35 @@ load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 package(default_visibility = ["//kmsp11:__subpackages__"])
 
 cc_library(
+    name = "aes_gcm",
+    srcs = ["aes_gcm.cc"],
+    hdrs = ["aes_gcm.h"],
+    deps = [
+        ":crypter_interfaces",
+        ":preconditions",
+        "//kmsp11:cryptoki_headers",
+        "//kmsp11/util:crypto_utils",
+        "//kmsp11/util:kms_client",
+        "//kmsp11/util:status_macros",
+        "//kmsp11/util:string_utils",
+        "@com_google_absl//absl/status:statusor",
+    ],
+)
+
+cc_test(
+    name = "aes_gcm_test",
+    size = "small",
+    srcs = ["aes_gcm_test.cc"],
+    deps = [
+        ":aes_gcm",
+        "//fakekms/cpp:fakekms",
+        "//kmsp11:cryptoki_headers",
+        "//kmsp11/test",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
     name = "crypter_interfaces",
     hdrs = ["crypter_interfaces.h"],
     deps = [

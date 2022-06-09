@@ -15,6 +15,7 @@
 #include "kmsp11/algorithm_details.h"
 
 #include "absl/container/btree_set.h"
+#include "kmsp11/kmsp11.h"
 #include "kmsp11/util/errors.h"
 
 namespace kmsp11 {
@@ -246,6 +247,16 @@ static const auto* const kAlgorithmDetails = new absl::btree_set<
         512,                                    // key_bit_length
         CKM_GENERIC_SECRET_KEY_GEN,             // key_gen_mechanism
         std::nullopt,                           // digest_mechanism
+    },
+    // AES_*
+    {
+        kms_v1::CryptoKeyVersion::AES_256_GCM,   // algorithm
+        kms_v1::CryptoKey::RAW_ENCRYPT_DECRYPT,  // purpose
+        {CKM_CLOUDKMS_AES_GCM},                  // allowed_mechanisms
+        CKK_AES,                                 // key_type
+        256,                                     // key_bit_length
+        CKM_AES_KEY_GEN,                         // key_gen_mechanism
+        std::nullopt,                            // digest_mechanism
     },
 };
 

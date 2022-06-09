@@ -1,0 +1,179 @@
+// Copyright 2022 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include "kmsp11/operation/aes_gcm.h"
+
+#include "fakekms/cpp/fakekms.h"
+#include "gmock/gmock.h"
+#include "kmsp11/kmsp11.h"
+#include "kmsp11/object.h"
+#include "kmsp11/test/matchers.h"
+#include "kmsp11/test/resource_helpers.h"
+#include "kmsp11/test/runfiles.h"
+#include "kmsp11/test/test_status_macros.h"
+#include "kmsp11/util/crypto_utils.h"
+#include "kmsp11/util/kms_client.h"
+
+namespace kmsp11 {
+namespace {
+
+CK_GCM_PARAMS NewGcmParams(std::vector<uint8_t>* iv) {
+  return CK_GCM_PARAMS{
+      iv->data(),  // pIv
+      12,          // ulIvLen
+      96,          // ulIvBits
+      nullptr,     // pAAD
+      0,           // ulAADLen
+      128,         // ulTagBits
+  };
+}
+
+CK_MECHANISM NewAesGcmMechanism(CK_GCM_PARAMS* params) {
+  return CK_MECHANISM{
+      CKM_CLOUDKMS_AES_GCM,  // mechanism
+      params,                // pParameter
+      sizeof(*params),       // ulParameterLen
+  };
+}
+
+TEST(NewAesGcmEncrypterTest, FailureWrongKeyType) {
+  ASSERT_OK_AND_ASSIGN(Object prv,
+                       NewMockSecretKey(kms_v1::CryptoKeyVersion::HMAC_SHA1));
+  std::shared_ptr<Object> key = std::make_shared<Object>(prv);
+
+  std::vector<uint8_t> iv(12);
+  CK_GCM_PARAMS params = NewGcmParams(&iv);
+  CK_MECHANISM mechanism = NewAesGcmMechanism(&params);
+
+  EXPECT_THAT(NewAesGcmEncrypter(key, &mechanism),
+              StatusRvIs(CKR_KEY_TYPE_INCONSISTENT));
+}
+
+TEST(NewAesGcmEncrypterTest, FailureNoParameters) {
+  ASSERT_OK_AND_ASSIGN(Object prv,
+                       NewMockSecretKey(kms_v1::CryptoKeyVersion::AES_256_GCM));
+  std::shared_ptr<Object> key = std::make_shared<Object>(prv);
+
+  CK_MECHANISM mechanism = {
+      CKM_CLOUDKMS_AES_GCM,  // mechanism
+      nullptr,               // pParameter
+      0,                     // ulParameterLen
+  };
+
+  EXPECT_THAT(NewAesGcmEncrypter(key, &mechanism),
+              StatusRvIs(CKR_MECHANISM_PARAM_INVALID));
+}
+
+TEST(NewAesGcmEncrypterTest, FailureIvSupplied) {
+  ASSERT_OK_AND_ASSIGN(Object prv,
+                       NewMockSecretKey(kms_v1::CryptoKeyVersion::AES_256_GCM));
+  std::shared_ptr<Object> key = std::make_shared<Object>(prv);
+
+  std::vector<uint8_t> iv(10);
+  CK_GCM_PARAMS params = NewGcmParams(&iv);
+  params.ulIvLen = 10;
+  CK_MECHANISM mechanism = NewAesGcmMechanism(&params);
+
+  EXPECT_THAT(NewAesGcmEncrypter(key, &mechanism),
+              StatusRvIs(CKR_MECHANISM_PARAM_INVALID));
+}
+
+class AesGcmTest : public testing::Test {
+ protected:
+  void SetUp() override {
+    ASSERT_OK_AND_ASSIGN(fake_server_, fakekms::Server::New());
+    client_ = std::make_unique<KmsClient>(fake_server_->listen_addr(),
+                                          grpc::InsecureChannelCredentials(),
+                                          absl::Seconds(1));
+
+    auto fake_client = fake_server_->NewClient();
+
+    kms_v1::KeyRing kr;
+    kr = CreateKeyRingOrDie(fake_client.get(), kTestLocation, RandomId(), kr);
+
+    kms_v1::CryptoKey ck;
+    ck.set_purpose(kms_v1::CryptoKey::RAW_ENCRYPT_DECRYPT);
+    ck.mutable_version_template()->set_algorithm(
+        kms_v1::CryptoKeyVersion::AES_256_GCM);
+    ck = CreateCryptoKeyOrDie(fake_client.get(), kr.name(), "ck", ck, true);
+
+    kms_v1::CryptoKeyVersion ckv;
+    ckv = CreateCryptoKeyVersionOrDie(fake_client.get(), ck.name(), ckv);
+    ckv = WaitForEnablement(fake_client.get(), ckv);
+
+    kms_key_name_ = ckv.name();
+
+    ASSERT_OK_AND_ASSIGN(Object key, Object::NewSecretKey(ckv));
+    auto prv = std::make_shared<Object>(key);
+
+    iv_ = std::vector<uint8_t>(12);
+    CK_GCM_PARAMS params = NewGcmParams(&iv_);
+    CK_MECHANISM mechanism = NewAesGcmMechanism(&params);
+
+    ASSERT_OK_AND_ASSIGN(encrypter_, NewAesGcmEncrypter(prv, &mechanism));
+  }
+
+  std::unique_ptr<fakekms::Server> fake_server_;
+  std::unique_ptr<KmsClient> client_;
+  std::string kms_key_name_;
+  std::vector<uint8_t> iv_;
+  std::unique_ptr<EncrypterInterface> encrypter_;
+};
+
+TEST_F(AesGcmTest, EncryptSuccess) {
+  std::string plaintext = "Here is some data.";
+  std::vector<uint8_t> plaintext_bytes(plaintext.begin(), plaintext.end());
+  std::vector<uint8_t> empty_iv(iv_.begin(), iv_.end());
+
+  ASSERT_OK_AND_ASSIGN(absl::Span<const uint8_t> ciphertext,
+                       encrypter_->Encrypt(client_.get(), plaintext_bytes));
+  EXPECT_NE(plaintext_bytes, ciphertext);
+
+  kms_v1::RawEncryptRequest req;
+  req.set_name(kms_key_name_);
+  req.set_plaintext(plaintext);
+  ASSERT_OK_AND_ASSIGN(kms_v1::RawEncryptResponse resp,
+                       client_->RawEncrypt(req));
+
+  std::vector<uint8_t> resp_bytes(resp.ciphertext().begin(),
+                                  resp.ciphertext().end());
+  EXPECT_NE(resp_bytes, ciphertext);
+  EXPECT_NE(iv_, empty_iv);
+  EXPECT_EQ(resp_bytes.size(), ciphertext.size());
+}
+
+TEST_F(AesGcmTest, EncryptFailureBadPlaintextSize) {
+  uint8_t plaintext[65537];
+  EXPECT_THAT(encrypter_->Encrypt(client_.get(), plaintext),
+              StatusRvIs(CKR_DATA_LEN_RANGE));
+}
+
+TEST_F(AesGcmTest, EncryptFailureKeyDisabled) {
+  kms_v1::CryptoKeyVersion ckv;
+  ckv.set_name(kms_key_name_);
+  ckv.set_state(kms_v1::CryptoKeyVersion::DISABLED);
+
+  google::protobuf::FieldMask update_mask;
+  update_mask.add_paths("state");
+
+  UpdateCryptoKeyVersionOrDie(fake_server_->NewClient().get(), ckv,
+                              update_mask);
+
+  uint8_t plaintext[256];
+  EXPECT_THAT(encrypter_->Encrypt(client_.get(), plaintext),
+              StatusRvIs(CKR_DEVICE_ERROR));
+}
+
+}  // namespace
+}  // namespace kmsp11

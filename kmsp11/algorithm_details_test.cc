@@ -14,6 +14,7 @@
 
 #include "kmsp11/algorithm_details.h"
 
+#include "kmsp11/kmsp11.h"
 #include "kmsp11/test/test_status_macros.h"
 
 namespace kmsp11 {
@@ -61,6 +62,19 @@ TEST(GetAlgorithmDetailsTest, AlgorithmHmac) {
   EXPECT_EQ(details.key_type, CKK_SHA256_HMAC);
   EXPECT_EQ(details.key_bit_length, 256);
   EXPECT_EQ(details.key_gen_mechanism, CKM_GENERIC_SECRET_KEY_GEN);
+  EXPECT_EQ(details.digest_mechanism, std::nullopt);
+}
+
+TEST(GetAlgorithmDetailsTest, AlgorithmAesGcm) {
+  ASSERT_OK_AND_ASSIGN(AlgorithmDetails details,
+                       GetDetails(kms_v1::CryptoKeyVersion::AES_256_GCM));
+
+  EXPECT_EQ(details.algorithm, kms_v1::CryptoKeyVersion::AES_256_GCM);
+  EXPECT_EQ(details.purpose, kms_v1::CryptoKey::RAW_ENCRYPT_DECRYPT);
+  EXPECT_THAT(details.allowed_mechanisms, ElementsAre(CKM_CLOUDKMS_AES_GCM));
+  EXPECT_EQ(details.key_type, CKK_AES);
+  EXPECT_EQ(details.key_bit_length, 256);
+  EXPECT_EQ(details.key_gen_mechanism, CKM_AES_KEY_GEN);
   EXPECT_EQ(details.digest_mechanism, std::nullopt);
 }
 

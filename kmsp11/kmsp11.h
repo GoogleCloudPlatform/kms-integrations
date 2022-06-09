@@ -79,6 +79,23 @@ extern "C" {
 // HMAC-SHA224 signing with a 224 bit key.
 #define KMS_ALGORITHM_HMAC_SHA224 36UL
 
+// AES+GCM (Galois Counter Mode) with a 256 bit key.
+#define KMS_ALGORITHM_AES_256_GCM 19UL
+
+// A marker for a PKCS #11 mechanism defined by Google.
+// (Note that 0x80000000UL is CKM_VENDOR_DEFINED).
+#define CKM_GOOGLE_DEFINED (0x80000000UL | 0x1E100UL)
+
+// CKM_AES_GCM-based custom mechanism, with the following restrictions:
+// - users cannot specify custom initialization vector (IV) data
+// - users must use an IV that Cloud KMS generates
+// - the IV (12 bytes) provided by Cloud KMS is written into the memory
+//   pointed to by the pIV field of the CK_GCM_PARAMS struct provided by the
+//   user.
+//   NOTE: this is done at C_Encrypt time, so the memory pointed to by the pIV
+//   field should not be freed between C_EncryptInit and C_Encrypt..
+#define CKM_CLOUDKMS_AES_GCM (CKM_GOOGLE_DEFINED | 0x01UL)
+
 #ifdef __cplusplus
 }
 #endif
