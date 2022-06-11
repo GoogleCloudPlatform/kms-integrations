@@ -83,13 +83,22 @@ class Provider {
     }
     auto all_mechanisms = AllMechanisms();
     auto all_mac_mechanisms = AllMacMechanisms();
-    size_t types_size = library_config_.experimental_allow_mac_keys()
-                            ? all_mechanisms.size()
-                            : all_mechanisms.size() - all_mac_mechanisms.size();
+    auto all_raw_encryption_mechanisms = AllRawEncryptionMechanisms();
+    size_t types_size = all_mechanisms.size();
+    if (!library_config_.experimental_allow_mac_keys()) {
+      types_size -= all_mac_mechanisms.size();
+    }
+    if (!library_config_.experimental_allow_raw_encryption_keys()) {
+      types_size -= all_raw_encryption_mechanisms.size();
+    }
     std::vector<CK_MECHANISM_TYPE> types(types_size);
     for (const auto& [mechanism_type, mechanism] : all_mechanisms) {
       if (all_mac_mechanisms.contains(mechanism_type) &&
           !library_config_.experimental_allow_mac_keys()) {
+        continue;
+      }
+      if (all_raw_encryption_mechanisms.contains(mechanism_type) &&
+          !library_config_.experimental_allow_raw_encryption_keys()) {
         continue;
       }
       types.push_back(mechanism_type);

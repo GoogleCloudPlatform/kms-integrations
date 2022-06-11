@@ -137,46 +137,74 @@ AllMechanisms() {
                   CKF_SIGN | CKF_VERIFY  // flags
               },
           },
+          // min/max key size should be in bits, per
+          // https://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/cs01/pkcs11-curr-v2.40-cs01.html#_Toc228894692
+          {
+              CKM_GENERIC_SECRET_KEY_GEN,
+              {
+                  160,                   // ulMinKeySize
+                  256,                   // ulMaxKeySize
+                  CKF_HW | CKF_GENERATE  // flags
+              },
+          },
           // min/max key size should be in bytes, per
           // https://docs.oasis-open.org/pkcs11/pkcs11-curr/v3.0/os/pkcs11-curr-v3.0-os.html#_Toc30061300.
           {
               CKM_SHA_1_HMAC,
               {
-                  160,                   // ulMinKeySize
-                  160,                   // ulMaxKeySize
+                  20,                    // ulMinKeySize
+                  20,                    // ulMaxKeySize
                   CKF_SIGN | CKF_VERIFY  // flags
               },
           },
           {
               CKM_SHA224_HMAC,
               {
-                  224,                   // ulMinKeySize
-                  224,                   // ulMaxKeySize
+                  28,                    // ulMinKeySize
+                  28,                    // ulMaxKeySize
                   CKF_SIGN | CKF_VERIFY  // flags
               },
           },
           {
               CKM_SHA256_HMAC,
               {
-                  256,                   // ulMinKeySize
-                  256,                   // ulMaxKeySize
+                  32,                    // ulMinKeySize
+                  32,                    // ulMaxKeySize
                   CKF_SIGN | CKF_VERIFY  // flags
               },
           },
           {
               CKM_SHA384_HMAC,
               {
-                  384,                   // ulMinKeySize
-                  384,                   // ulMaxKeySize
+                  48,                    // ulMinKeySize
+                  48,                    // ulMaxKeySize
                   CKF_SIGN | CKF_VERIFY  // flags
               },
           },
           {
               CKM_SHA512_HMAC,
               {
-                  512,                   // ulMinKeySize
-                  512,                   // ulMaxKeySize
+                  48,                    // ulMinKeySize
+                  48,                    // ulMaxKeySize
                   CKF_SIGN | CKF_VERIFY  // flags
+              },
+          },
+          // min/max key size should be in bytes, per
+          // https://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/cs01/pkcs11-curr-v2.40-cs01.html#_Toc228894697
+          {
+              CKM_AES_KEY_GEN,
+              {
+                  32,                        // ulMinKeySize
+                  32,                        // ulMaxKeySize
+                  CKF_DECRYPT | CKF_ENCRYPT  // flags
+              },
+          },
+          {
+              CKM_AES_GCM,
+              {
+                  32,                        // ulMinKeySize
+                  32,                        // ulMaxKeySize
+                  CKF_DECRYPT | CKF_ENCRYPT  // flags
               },
           },
       };
@@ -192,6 +220,14 @@ const absl::flat_hash_set<CK_MECHANISM_TYPE>& AllMacMechanisms() {
       CKM_SHA384_HMAC, CKM_SHA512_HMAC,
   };
   return kMacMechanisms;
+}
+
+const absl::flat_hash_set<CK_MECHANISM_TYPE>& AllRawEncryptionMechanisms() {
+  // These mechanisms are only supported if the
+  // experimental_allow_raw_encryption_keys config flag is set.
+  static const absl::flat_hash_set<CK_MECHANISM_TYPE> kRawEncryptionMechanisms =
+      {CKM_AES_GCM};
+  return kRawEncryptionMechanisms;
 }
 
 }  // namespace kmsp11

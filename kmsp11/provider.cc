@@ -145,7 +145,9 @@ absl::StatusOr<CK_MECHANISM_INFO> Provider::MechanismInfo(
   const auto& entry = AllMechanisms().find(type);
   if (entry == AllMechanisms().end() ||
       (AllMacMechanisms().contains(type) &&
-       !library_config_.experimental_allow_mac_keys())) {
+       !library_config_.experimental_allow_mac_keys()) ||
+      (AllRawEncryptionMechanisms().contains(type) &&
+       !library_config_.experimental_allow_raw_encryption_keys())) {
     return NewError(absl::StatusCode::kNotFound,
                     absl::StrFormat("mechanism %#x not found", type),
                     CKR_MECHANISM_INVALID, SOURCE_LOCATION);

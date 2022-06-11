@@ -563,6 +563,22 @@ TEST_F(BridgeTest, GetMechanismListMacKeysExperimentEnabled) {
                             CKM_ECDSA, CKM_SHA_1_HMAC}));
 }
 
+TEST_F(BridgeTest, GetMechanismListRawEncryptionKeysExperimentEnabled) {
+  std::ofstream(config_file_, std::ofstream::out | std::ofstream::app)
+      << "experimental_allow_raw_encryption_keys: true" << std::endl;
+  EXPECT_OK(Initialize(&init_args_));
+  absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
+
+  CK_ULONG count;
+  EXPECT_OK(GetMechanismList(0, nullptr, &count));
+
+  std::vector<CK_MECHANISM_TYPE> types(count);
+  EXPECT_OK(GetMechanismList(0, types.data(), &count));
+  EXPECT_EQ(types.size(), count);
+  EXPECT_THAT(types, IsSupersetOf({CKM_RSA_PKCS, CKM_RSA_PKCS_PSS,
+                                   CKM_RSA_PKCS_OAEP, CKM_ECDSA, CKM_AES_GCM}));
+}
+
 TEST_F(BridgeTest, GetMechanismListFailsNotInitialized) {
   CK_ULONG count;
   EXPECT_THAT(GetMechanismList(0, nullptr, &count),
@@ -617,9 +633,32 @@ TEST_F(BridgeTest, GetMechanismInfoMacKeysExperimentEnabled) {
   CK_MECHANISM_INFO info;
   EXPECT_OK(GetMechanismInfo(0, CKM_SHA256_HMAC, &info));
 
-  EXPECT_EQ(info.ulMinKeySize, 256);
-  EXPECT_EQ(info.ulMaxKeySize, 256);
+  EXPECT_EQ(info.ulMinKeySize, 32);
+  EXPECT_EQ(info.ulMaxKeySize, 32);
   EXPECT_EQ(info.flags, CKF_SIGN | CKF_VERIFY);
+}
+
+TEST_F(BridgeTest, GetMechanismInfoRawEncryptionKeysExperimentDisabled) {
+  EXPECT_OK(Initialize(&init_args_));
+  absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
+
+  CK_MECHANISM_INFO info;
+  EXPECT_THAT(GetMechanismInfo(0, CKM_AES_GCM, &info),
+              StatusRvIs(CKR_MECHANISM_INVALID));
+}
+
+TEST_F(BridgeTest, GetMechanismInfoRawEncryptionKeysExperimentEnabled) {
+  std::ofstream(config_file_, std::ofstream::out | std::ofstream::app)
+      << "experimental_allow_raw_encryption_keys: true" << std::endl;
+  EXPECT_OK(Initialize(&init_args_));
+  absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
+
+  CK_MECHANISM_INFO info;
+  EXPECT_OK(GetMechanismInfo(0, CKM_AES_GCM, &info));
+
+  EXPECT_EQ(info.ulMinKeySize, 32);
+  EXPECT_EQ(info.ulMaxKeySize, 32);
+  EXPECT_EQ(info.flags, CKF_DECRYPT | CKF_ENCRYPT);
 }
 
 TEST_F(BridgeTest, GetMechanismInfoFailsNotInitialized) {

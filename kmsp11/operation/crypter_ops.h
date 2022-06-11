@@ -29,7 +29,8 @@ absl::StatusOr<DecryptOp> NewDecryptOp(std::shared_ptr<Object> key,
 using EncryptOp = std::unique_ptr<EncrypterInterface>;
 
 absl::StatusOr<EncryptOp> NewEncryptOp(std::shared_ptr<Object> key,
-                                       const CK_MECHANISM* mechanism);
+                                       const CK_MECHANISM* mechanism,
+                                       bool allow_raw_encryption_keys = false);
 
 using SignOp = std::unique_ptr<SignerInterface>;
 

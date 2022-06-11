@@ -16,6 +16,7 @@
 
 #include "gmock/gmock.h"
 #include "kmsp11/cryptoki.h"
+#include "kmsp11/kmsp11.h"
 #include "kmsp11/object.h"
 #include "kmsp11/test/matchers.h"
 #include "kmsp11/test/resource_helpers.h"
@@ -82,6 +83,35 @@ TEST(EncryptOpTest, ValidMechanismSuccess) {
 TEST(EncryptOpTest, InvalidMechanismFailure) {
   CK_MECHANISM mech = {CKM_AES_ECB};
   EXPECT_THAT(NewEncryptOp(nullptr, &mech), StatusRvIs(CKR_MECHANISM_INVALID));
+}
+
+TEST(EncryptOpTest, RawEncryptionKeysExperimentDisabled) {
+  CK_MECHANISM mech = {CKM_CLOUDKMS_AES_GCM};
+  EXPECT_THAT(NewEncryptOp(nullptr, &mech, false),
+              StatusRvIs(CKR_MECHANISM_INVALID));
+}
+
+TEST(EncryptOpTest, RawEncryptionKeysExperimentEnabled) {
+  ASSERT_OK_AND_ASSIGN(Object k,
+                       NewMockSecretKey(kms_v1::CryptoKeyVersion::AES_256_GCM));
+  std::shared_ptr<Object> key = std::make_shared<Object>(k);
+
+  std::vector<uint8_t> iv(12);
+  CK_GCM_PARAMS params{
+      iv.data(),  // pIv
+      12,         // ulIvLen
+      96,         // ulIvBits
+      nullptr,    // pAAD
+      0,          // ulAADLen
+      128,        // ulTagBits
+  };
+
+  CK_MECHANISM mech{
+      CKM_CLOUDKMS_AES_GCM,  // mechanism
+      &params,               // pParameter
+      sizeof(params),        // ulParameterLen
+  };
+  EXPECT_OK(NewEncryptOp(key, &mech, true));
 }
 
 TEST(SignOpTest, ValidMechanismSuccess) {

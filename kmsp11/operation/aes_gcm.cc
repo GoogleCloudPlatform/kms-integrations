@@ -194,14 +194,6 @@ absl::StatusOr<std::unique_ptr<EncrypterInterface>> NewAesGcmEncrypter(
   switch (mechanism->mechanism) {
     case CKM_CLOUDKMS_AES_GCM:
       return AesGcmEncrypter::New(key, mechanism);
-    case CKM_AES_GCM:
-      return NewInternalError(
-          absl::StrFormat(
-              "Mechanism %#x not supported for AES-GCM encryption, the"
-              "Cloud KMS PKCS #11 library defines a custom mechanism"
-              "(CKM_CLOUDKMS_AES_GCM) that you can use instead",
-              mechanism->mechanism),
-          SOURCE_LOCATION);
     default:
       return NewInternalError(
           absl::StrFormat("Mechanism %#x not supported for AES encryption",

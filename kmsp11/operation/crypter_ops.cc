@@ -14,6 +14,8 @@
 
 #include "kmsp11/operation/crypter_ops.h"
 
+#include "kmsp11/kmsp11.h"
+#include "kmsp11/operation/aes_gcm.h"
 #include "kmsp11/operation/ecdsa.h"
 #include "kmsp11/operation/hmac.h"
 #include "kmsp11/operation/rsaes_oaep.h"
@@ -36,10 +38,24 @@ absl::StatusOr<DecryptOp> NewDecryptOp(std::shared_ptr<Object> key,
 }
 
 absl::StatusOr<EncryptOp> NewEncryptOp(std::shared_ptr<Object> key,
-                                       const CK_MECHANISM* mechanism) {
+                                       const CK_MECHANISM* mechanism,
+                                       bool allow_raw_encryption_keys) {
   switch (mechanism->mechanism) {
     case CKM_RSA_PKCS_OAEP:
       return RsaOaepEncrypter::New(key, mechanism);
+    case CKM_AES_GCM:
+      return NewInvalidArgumentError(
+          absl::StrFormat(
+              "Mechanism %#x not supported for AES-GCM encryption, the"
+              "Cloud KMS PKCS #11 library defines a custom mechanism"
+              "(CKM_CLOUDKMS_AES_GCM) that you can use instead",
+              mechanism->mechanism),
+          CKR_MECHANISM_INVALID, SOURCE_LOCATION);
+    case CKM_CLOUDKMS_AES_GCM:
+      if (allow_raw_encryption_keys) {
+        return NewAesGcmEncrypter(key, mechanism);
+      }
+      // fallthrough
     default:
       return InvalidMechanismError(mechanism->mechanism, "encrypt",
                                    SOURCE_LOCATION);

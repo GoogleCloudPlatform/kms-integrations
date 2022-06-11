@@ -24,10 +24,17 @@
 
 namespace kmsp11 {
 
+// Returns the mechanism types supported in this library and their corresponding
+// mechanism info.
 const absl::flat_hash_map<CK_MECHANISM_TYPE, const CK_MECHANISM_INFO>&
 AllMechanisms();
 
+// Returns all mechanisms corresponding to KMS algorithms for MAC keys.
 const absl::flat_hash_set<CK_MECHANISM_TYPE>& AllMacMechanisms();
+
+// Returns all mechanisms corresponding to KMS algorithms for
+// RAW_ENCRYPT_DECRYPT keys.
+const absl::flat_hash_set<CK_MECHANISM_TYPE>& AllRawEncryptionMechanisms();
 
 }  // namespace kmsp11
 
