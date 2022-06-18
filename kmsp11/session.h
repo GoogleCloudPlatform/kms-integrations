@@ -47,8 +47,8 @@ class Session {
       size_t max_count);
   absl::Status FindObjectsFinal();
 
-  absl::Status DecryptInit(std::shared_ptr<Object> key,
-                           CK_MECHANISM* mechanism);
+  absl::Status DecryptInit(std::shared_ptr<Object> key, CK_MECHANISM* mechanism,
+                           bool allow_raw_encryption_keys = false);
   absl::StatusOr<absl::Span<const uint8_t>> Decrypt(
       absl::Span<const uint8_t> ciphertext);
 

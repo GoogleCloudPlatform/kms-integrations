@@ -27,10 +27,24 @@
 namespace kmsp11 {
 
 absl::StatusOr<DecryptOp> NewDecryptOp(std::shared_ptr<Object> key,
-                                       const CK_MECHANISM* mechanism) {
+                                       const CK_MECHANISM* mechanism,
+                                       bool allow_raw_encryption_keys) {
   switch (mechanism->mechanism) {
     case CKM_RSA_PKCS_OAEP:
       return RsaOaepDecrypter::New(key, mechanism);
+    case CKM_AES_GCM:
+      return NewInvalidArgumentError(
+          absl::StrFormat(
+              "Mechanism %#x not supported for AES-GCM decryption, the"
+              "Cloud KMS PKCS #11 library defines a custom mechanism"
+              "(CKM_CLOUDKMS_AES_GCM) that you can use instead",
+              mechanism->mechanism),
+          CKR_MECHANISM_INVALID, SOURCE_LOCATION);
+    case CKM_CLOUDKMS_AES_GCM:
+      if (allow_raw_encryption_keys) {
+        return NewAesGcmDecrypter(key, mechanism);
+      }
+      // fallthrough
     default:
       return InvalidMechanismError(mechanism->mechanism, "decrypt",
                                    SOURCE_LOCATION);

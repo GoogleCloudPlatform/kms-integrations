@@ -24,7 +24,8 @@ namespace kmsp11 {
 using DecryptOp = std::unique_ptr<DecrypterInterface>;
 
 absl::StatusOr<DecryptOp> NewDecryptOp(std::shared_ptr<Object> key,
-                                       const CK_MECHANISM* mechanism);
+                                       const CK_MECHANISM* mechanism,
+                                       bool allow_raw_encryption_keys = false);
 
 using EncryptOp = std::unique_ptr<EncrypterInterface>;
 

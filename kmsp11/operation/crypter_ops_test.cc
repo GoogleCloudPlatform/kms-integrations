@@ -56,6 +56,35 @@ TEST(DecryptOpTest, InvalidMechanismFailure) {
   EXPECT_THAT(NewDecryptOp(nullptr, &mech), StatusRvIs(CKR_MECHANISM_INVALID));
 }
 
+TEST(DecryptOpTest, RawDecryptionKeysExperimentDisabled) {
+  CK_MECHANISM mech = {CKM_CLOUDKMS_AES_GCM};
+  EXPECT_THAT(NewDecryptOp(nullptr, &mech, false),
+              StatusRvIs(CKR_MECHANISM_INVALID));
+}
+
+TEST(DecryptOpTest, RawDecryptionKeysExperimentEnabled) {
+  ASSERT_OK_AND_ASSIGN(Object k,
+                       NewMockSecretKey(kms_v1::CryptoKeyVersion::AES_256_GCM));
+  std::shared_ptr<Object> key = std::make_shared<Object>(k);
+
+  std::vector<uint8_t> iv(12);
+  CK_GCM_PARAMS params{
+      iv.data(),  // pIv
+      12,         // ulIvLen
+      96,         // ulIvBits
+      nullptr,    // pAAD
+      0,          // ulAADLen
+      128,        // ulTagBits
+  };
+
+  CK_MECHANISM mech{
+      CKM_CLOUDKMS_AES_GCM,  // mechanism
+      &params,               // pParameter
+      sizeof(params),        // ulParameterLen
+  };
+  EXPECT_OK(NewDecryptOp(key, &mech, true));
+}
+
 TEST(EncryptOpTest, ValidMechanismSuccess) {
   ASSERT_OK_AND_ASSIGN(
       KeyPair kp,

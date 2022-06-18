@@ -30,6 +30,10 @@ namespace kmsp11 {
 absl::StatusOr<std::unique_ptr<EncrypterInterface>> NewAesGcmEncrypter(
     std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
 
+// Returns an AesGcmDecrypter.
+absl::StatusOr<std::unique_ptr<DecrypterInterface>> NewAesGcmDecrypter(
+    std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
+
 }  // namespace kmsp11
 
 #endif  // KMSP11_OPERATION_AES_GCM_H_

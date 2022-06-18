@@ -249,14 +249,16 @@ absl::Status Session::FindObjectsFinal() {
 }
 
 absl::Status Session::DecryptInit(std::shared_ptr<Object> key,
-                                  CK_MECHANISM* mechanism) {
+                                  CK_MECHANISM* mechanism,
+                                  bool allow_raw_encryption_keys) {
   absl::MutexLock l(&op_mutex_);
 
   if (op_.has_value()) {
     return OperationActiveError(SOURCE_LOCATION);
   }
 
-  ASSIGN_OR_RETURN(op_, NewDecryptOp(key, mechanism));
+  ASSIGN_OR_RETURN(op_,
+                   NewDecryptOp(key, mechanism, allow_raw_encryption_keys));
   return absl::OkStatus();
 }
 
