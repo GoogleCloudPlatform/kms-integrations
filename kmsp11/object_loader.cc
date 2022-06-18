@@ -27,6 +27,7 @@ bool IsLoadable(const kms_v1::CryptoKey& key) {
     case kms_v1::CryptoKey::ASYMMETRIC_DECRYPT:
     case kms_v1::CryptoKey::ASYMMETRIC_SIGN:
     case kms_v1::CryptoKey::MAC:
+    case kms_v1::CryptoKey::RAW_ENCRYPT_DECRYPT:
       break;
     default:
       LOG(INFO) << "INFO: key " << key.name()
@@ -186,7 +187,8 @@ absl::StatusOr<ObjectStoreState> ObjectLoader::BuildState(
         continue;
       }
 
-      if (key.purpose() == kms_v1::CryptoKey::MAC) {
+      if (key.purpose() == kms_v1::CryptoKey::MAC ||
+          key.purpose() == kms_v1::CryptoKey::RAW_ENCRYPT_DECRYPT) {
         *result.add_keys() = *cache_.StoreSecretKey(ckv);
       } else {
         kms_v1::GetPublicKeyRequest pub_req;

@@ -77,6 +77,17 @@ absl::StatusOr<Key> NewSymmetricHmacKey() {
   return k;
 }
 
+absl::StatusOr<Key> NewSymmetricRawEncryptionKey() {
+  Key k;
+  k.mutable_crypto_key_version()->set_name(
+      "projects/foo/locations/bar/keyRings/baz/cryptoKeys/qux/"
+      "cryptoKeyVersions/1");
+  k.mutable_crypto_key_version()->set_algorithm(
+      kms_v1::CryptoKeyVersion::AES_256_GCM);
+  k.set_secret_key_handle(1007);
+  return k;
+}
+
 TEST(ObjectStoreTest, NewStoreSuccessEmpty) {
   ObjectStoreState s;
   EXPECT_OK(ObjectStore::New(s));
@@ -100,10 +111,23 @@ TEST(ObjectStoreTest, NewStoreSuccessWithHmacKey) {
   EXPECT_OK(ObjectStore::New(s));
 }
 
+TEST(ObjectStoreTest, NewStoreSuccessWithRawEncryptionKey) {
+  ObjectStoreState s;
+  ASSERT_OK_AND_ASSIGN(*s.add_keys(), NewSymmetricRawEncryptionKey());
+  EXPECT_OK(ObjectStore::New(s));
+}
+
 TEST(ObjectStoreTest, NewStoreSuccessWithRsaAndEcKeys) {
   ObjectStoreState s;
   ASSERT_OK_AND_ASSIGN(*s.add_keys(), NewAsymmetricRsaKey());
   ASSERT_OK_AND_ASSIGN(*s.add_keys(), NewAsymmetricEcKeyAndCert());
+  EXPECT_OK(ObjectStore::New(s));
+}
+
+TEST(ObjectStoreTest, NewStoreSuccessWithHmacAndRawEncryptionKeys) {
+  ObjectStoreState s;
+  ASSERT_OK_AND_ASSIGN(*s.add_keys(), NewSymmetricHmacKey());
+  ASSERT_OK_AND_ASSIGN(*s.add_keys(), NewSymmetricRawEncryptionKey());
   EXPECT_OK(ObjectStore::New(s));
 }
 
@@ -519,6 +543,9 @@ TEST(ObjectStoreTest, FindSingleReturnsSingleMatch) {
 
   Key* hmac_key = s.add_keys();
   ASSERT_OK_AND_ASSIGN(*hmac_key, NewSymmetricHmacKey());
+
+  Key* raw_encryption_key = s.add_keys();
+  ASSERT_OK_AND_ASSIGN(*raw_encryption_key, NewSymmetricRawEncryptionKey());
 
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectStore> store, ObjectStore::New(s));
 
