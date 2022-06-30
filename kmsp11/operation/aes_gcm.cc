@@ -26,82 +26,57 @@
 namespace kmsp11 {
 namespace {
 
-// The PKCS#11 v2.40 Errata 01 specification defines CK_GCM_PARAMS in chapter
-// 2.12.3 without a ulIvBits member, but the PKCS#11 v2.40 Errata 01 headers
-// define CK_GCM_PARAMS with ulIvBits. We support both, for compatibility. See
-// https://github.com/Pkcs11Interop/Pkcs11Interop/issues/126#issuecomment-496687863
-// for a more detailed explanation.
-typedef struct CK_GCM_PARAMS_errata {
-  CK_BYTE_PTR pIv;
-  CK_ULONG ulIvLen;
-  CK_BYTE_PTR pAAD;
-  CK_ULONG ulAADLen;
-  CK_ULONG ulTagBits;
-} CK_GCM_PARAMS_errata;
-
 constexpr size_t kMaxPlaintextBytes = 64 * 1024;
 constexpr size_t kMaxCiphertextBytes = 10 * kMaxPlaintextBytes;
 
-absl::Status ValidateAesGcmParameters(Object* key, void* parameters,
-                                      CK_ULONG parameters_size) {
-  if (parameters_size != sizeof(CK_GCM_PARAMS) &&
-      parameters_size != sizeof(CK_GCM_PARAMS_errata)) {
+absl::StatusOr<CK_GCM_PARAMS> ExtractGcmParameters(void* parameters,
+                                                   CK_ULONG parameters_size) {
+  CK_GCM_PARAMS params;
+  switch (parameters_size) {
+    case sizeof(CK_GCM_PARAMS):
+      params = *reinterpret_cast<CK_GCM_PARAMS*>(parameters);
+      break;
+
+    case sizeof(CK_GCM_PARAMS_errata): {
+      CK_GCM_PARAMS_errata* params_errata =
+          reinterpret_cast<CK_GCM_PARAMS_errata*>(parameters);
+
+      params.pIv = params_errata->pIv;
+      params.ulIvLen = params_errata->ulIvLen;
+      params.ulIvBits = params_errata->ulIvLen * 8;
+      params.pAAD = params_errata->pAAD;
+      params.ulAADLen = params_errata->ulAADLen;
+      params.ulTagBits = params_errata->ulTagBits;
+      break;
+    }
+    default:
+      return InvalidMechanismParamError(
+          "mechanism parameters must be of type CK_GCM_PARAMS",
+          SOURCE_LOCATION);
+  }
+
+  if (!params.pIv) {
     return InvalidMechanismParamError(
-        "mechanism parameters must be of type CK_GCM_PARAMS", SOURCE_LOCATION);
+        "missing pIv param, which should point to a zero-initialized 12-byte "
+        "buffer",
+        SOURCE_LOCATION);
+  }
+  if (params.ulIvLen != 12 || params.ulIvBits != 96) {
+    return InvalidMechanismParamError(
+        "the only supported IV length is the default 12 bytes",
+        SOURCE_LOCATION);
+  }
+  if (params.ulAADLen != 0 && !params.pAAD) {
+    return InvalidMechanismParamError(
+        "AAD length specified but the AAD pointer is invalid", SOURCE_LOCATION);
+  }
+  if (params.ulTagBits != 128) {
+    return InvalidMechanismParamError(
+        "the only supported tag length is the default 128 bits",
+        SOURCE_LOCATION);
   }
 
-  if (parameters_size == sizeof(CK_GCM_PARAMS)) {
-    CK_GCM_PARAMS* params = reinterpret_cast<CK_GCM_PARAMS*>(parameters);
-
-    if (!params->pIv) {
-      return InvalidMechanismParamError(
-          "missing pIv param, which should point to a zero-initialized 12-byte "
-          "buffer",
-          SOURCE_LOCATION);
-    }
-    if (params->ulIvLen != 12 || params->ulIvBits != 96) {
-      return InvalidMechanismParamError(
-          "the only supported IV length is the default 12 bytes",
-          SOURCE_LOCATION);
-    }
-    if (params->ulAADLen != 0 && !params->pAAD) {
-      return InvalidMechanismParamError(
-          "AAD length specified but the AAD pointer is invalid",
-          SOURCE_LOCATION);
-    }
-    if (params->ulTagBits != 128) {
-      return InvalidMechanismParamError(
-          "the only supported tag length is the default 128 bits",
-          SOURCE_LOCATION);
-    }
-  } else {
-    CK_GCM_PARAMS_errata* params =
-        reinterpret_cast<CK_GCM_PARAMS_errata*>(parameters);
-
-    if (!params->pIv) {
-      return InvalidMechanismParamError(
-          "missing pIv param, which should point to a zero-initialized 12-byte "
-          "buffer",
-          SOURCE_LOCATION);
-    }
-    if (params->ulIvLen != 12) {
-      return InvalidMechanismParamError(
-          "the only supported IV length is the default 12 bytes",
-          SOURCE_LOCATION);
-    }
-    if (params->ulAADLen != 0 && !params->pAAD) {
-      return InvalidMechanismParamError(
-          "AAD length specified but the AAD pointer is invalid",
-          SOURCE_LOCATION);
-    }
-    if (params->ulTagBits != 128) {
-      return InvalidMechanismParamError(
-          "the only supported tag length is the default 128 bits",
-          SOURCE_LOCATION);
-    }
-  }
-
-  return absl::OkStatus();
+  return params;
 }
 
 // An implementation of EncrypterInterface that encrypts AES-GCM ciphertexts
@@ -135,39 +110,21 @@ absl::StatusOr<std::unique_ptr<EncrypterInterface>> AesGcmEncrypter::New(
     std::shared_ptr<Object> key, const CK_MECHANISM* mechanism) {
   RETURN_IF_ERROR(CheckKeyPreconditions(CKK_AES, CKO_SECRET_KEY,
                                         CKM_CLOUDKMS_AES_GCM, key.get()));
-  RETURN_IF_ERROR(ValidateAesGcmParameters(key.get(), mechanism->pParameter,
-                                           mechanism->ulParameterLen));
 
-  if (mechanism->ulParameterLen == sizeof(CK_GCM_PARAMS)) {
-    CK_GCM_PARAMS* params =
-        reinterpret_cast<CK_GCM_PARAMS*>(mechanism->pParameter);
-
-    // For encryption only, pIv should be zero-initialized.
-    if (params->pIv[0] != '\0' ||
-        memcmp(params->pIv, params->pIv + 1, 11) != 0) {
-      return InvalidMechanismParamError(
-          "the pIv param should point to a zero-initialized 12-byte buffer",
-          SOURCE_LOCATION);
-    }
-
-    return std::unique_ptr<EncrypterInterface>(new AesGcmEncrypter(
-        key, absl::MakeConstSpan(params->pAAD, params->ulAADLen),
-        absl::MakeSpan(params->pIv, params->ulIvLen)));
-  }
-
-  CK_GCM_PARAMS_errata* params =
-      reinterpret_cast<CK_GCM_PARAMS_errata*>(mechanism->pParameter);
+  ASSIGN_OR_RETURN(
+      CK_GCM_PARAMS params,
+      ExtractGcmParameters(mechanism->pParameter, mechanism->ulParameterLen));
 
   // For encryption only, pIv should be zero-initialized.
-  if (params->pIv[0] != '\0' || memcmp(params->pIv, params->pIv + 1, 11) != 0) {
+  if (params.pIv[0] != '\0' || memcmp(params.pIv, params.pIv + 1, 11) != 0) {
     return InvalidMechanismParamError(
         "the pIv param should point to a zero-initialized 12-byte buffer",
         SOURCE_LOCATION);
   }
 
   return std::unique_ptr<EncrypterInterface>(new AesGcmEncrypter(
-      key, absl::MakeConstSpan(params->pAAD, params->ulAADLen),
-      absl::MakeSpan(params->pIv, params->ulIvLen)));
+      key, absl::MakeConstSpan(params.pAAD, params.ulAADLen),
+      absl::MakeSpan(params.pIv, params.ulIvLen)));
 }
 
 absl::StatusOr<absl::Span<const uint8_t>> AesGcmEncrypter::Encrypt(
@@ -231,24 +188,14 @@ absl::StatusOr<std::unique_ptr<DecrypterInterface>> AesGcmDecrypter::New(
     std::shared_ptr<Object> key, const CK_MECHANISM* mechanism) {
   RETURN_IF_ERROR(CheckKeyPreconditions(CKK_AES, CKO_SECRET_KEY,
                                         CKM_CLOUDKMS_AES_GCM, key.get()));
-  RETURN_IF_ERROR(ValidateAesGcmParameters(key.get(), mechanism->pParameter,
-                                           mechanism->ulParameterLen));
 
-  if (mechanism->ulParameterLen == sizeof(CK_GCM_PARAMS)) {
-    CK_GCM_PARAMS* params =
-        reinterpret_cast<CK_GCM_PARAMS*>(mechanism->pParameter);
-
-    return std::unique_ptr<DecrypterInterface>(new AesGcmDecrypter(
-        key, absl::MakeConstSpan(params->pAAD, params->ulAADLen),
-        absl::MakeConstSpan(params->pIv, params->ulIvLen)));
-  }
-
-  CK_GCM_PARAMS_errata* params =
-      reinterpret_cast<CK_GCM_PARAMS_errata*>(mechanism->pParameter);
+  ASSIGN_OR_RETURN(
+      CK_GCM_PARAMS params,
+      ExtractGcmParameters(mechanism->pParameter, mechanism->ulParameterLen));
 
   return std::unique_ptr<DecrypterInterface>(new AesGcmDecrypter(
-      key, absl::MakeConstSpan(params->pAAD, params->ulAADLen),
-      absl::MakeConstSpan(params->pIv, params->ulIvLen)));
+      key, absl::MakeConstSpan(params.pAAD, params.ulAADLen),
+      absl::MakeConstSpan(params.pIv, params.ulIvLen)));
 }
 
 absl::StatusOr<absl::Span<const uint8_t>> AesGcmDecrypter::Decrypt(

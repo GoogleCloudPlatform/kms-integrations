@@ -41,6 +41,19 @@
 
 #include "pkcs11.h"
 
+// The PKCS#11 v2.40 Errata 01 specification defines CK_GCM_PARAMS in chapter
+// 2.12.3 without a ulIvBits member, but the PKCS#11 v2.40 Errata 01 headers
+// define CK_GCM_PARAMS with ulIvBits. We support both, for compatibility. See
+// https://github.com/Pkcs11Interop/Pkcs11Interop/issues/126#issuecomment-496687863
+// for a more detailed explanation.
+typedef struct CK_GCM_PARAMS_errata {
+  CK_BYTE_PTR pIv;
+  CK_ULONG ulIvLen;
+  CK_BYTE_PTR pAAD;
+  CK_ULONG ulAADLen;
+  CK_ULONG ulTagBits;
+} CK_GCM_PARAMS_errata;
+
 #ifdef _WIN32
 #pragma pack(pop, cryptoki)
 #endif
