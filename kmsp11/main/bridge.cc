@@ -478,6 +478,69 @@ absl::Status Decrypt(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pEncryptedData,
   return absl::OkStatus();
 }
 
+// Continue a multi-part encrypt operation.
+// http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc385057935
+absl::Status DecryptUpdate(CK_SESSION_HANDLE hSession,
+                           CK_BYTE_PTR pEncryptedPart,
+                           CK_ULONG ulEncryptedPartLen, CK_BYTE_PTR pPart,
+                           CK_ULONG_PTR pulPartLen) {
+  ASSIGN_OR_RETURN(std::shared_ptr<Session> session, GetSession(hSession));
+  if (!pEncryptedPart) {
+    session->ReleaseOperation();
+    return NullArgumentError("pEncryptedPart", SOURCE_LOCATION);
+  }
+  if (!pulPartLen) {
+    session->ReleaseOperation();
+    return NullArgumentError("pulPartLen", SOURCE_LOCATION);
+  }
+
+  absl::Status result = session->DecryptUpdate(
+      absl::MakeConstSpan(pEncryptedPart, ulEncryptedPartLen));
+
+  if (!result.ok()) {
+    session->ReleaseOperation();
+  }
+  return result;
+}
+
+// Complete a multi-part encrypt operation.
+// http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc323024136
+absl::Status DecryptFinal(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pLastPart,
+                          CK_ULONG_PTR pulLastPartLen) {
+  ASSIGN_OR_RETURN(std::shared_ptr<Session> session, GetSession(hSession));
+  if (!pulLastPartLen) {
+    session->ReleaseOperation();
+    return NullArgumentError("pulLastPartLen", SOURCE_LOCATION);
+  }
+
+  absl::StatusOr<absl::Span<const uint8_t>> plaintext = session->DecryptFinal();
+  if (!plaintext.ok()) {
+    session->ReleaseOperation();
+    return plaintext.status();
+  }
+
+  if (!pLastPart) {
+    *pulLastPartLen = plaintext->size();
+    return absl::OkStatus();
+  }
+
+  if (*pulLastPartLen < plaintext->size()) {
+    absl::Status result = OutOfRangeError(
+        absl::StrFormat(
+            "plaintext of length %d cannot fit in buffer of length %d",
+            plaintext->size(), *pulLastPartLen),
+        SOURCE_LOCATION);
+    *pulLastPartLen = plaintext->size();
+    return result;
+  }
+
+  std::copy(plaintext->begin(), plaintext->end(), pLastPart);
+  *pulLastPartLen = plaintext->size();
+
+  session->ReleaseOperation();
+  return absl::OkStatus();
+}
+
 // Begin an encrypt operation.
 // http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc235002356
 absl::Status EncryptInit(CK_SESSION_HANDLE hSession,
@@ -533,6 +596,70 @@ absl::Status Encrypt(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pData,
 
   std::copy(ciphertext->begin(), ciphertext->end(), pEncryptedData);
   *pulEncryptedDataLen = ciphertext->size();
+
+  session->ReleaseOperation();
+  return absl::OkStatus();
+}
+
+// Continue a multi-part encrypt operation.
+// http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc323024131
+absl::Status EncryptUpdate(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pPart,
+                           CK_ULONG ulPartLen, CK_BYTE_PTR pEncryptedPart,
+                           CK_ULONG_PTR pulEncryptedPartLen) {
+  ASSIGN_OR_RETURN(std::shared_ptr<Session> session, GetSession(hSession));
+  if (!pPart) {
+    session->ReleaseOperation();
+    return NullArgumentError("pPart", SOURCE_LOCATION);
+  }
+  if (!pulEncryptedPartLen) {
+    session->ReleaseOperation();
+    return NullArgumentError("pulEncryptedPartLen", SOURCE_LOCATION);
+  }
+
+  absl::Status result =
+      session->EncryptUpdate(absl::MakeConstSpan(pPart, ulPartLen));
+
+  if (!result.ok()) {
+    session->ReleaseOperation();
+  }
+  return result;
+}
+
+// Complete a multi-part encrypt operation.
+// http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc323024132
+absl::Status EncryptFinal(CK_SESSION_HANDLE hSession,
+                          CK_BYTE_PTR pLastEncryptedPart,
+                          CK_ULONG_PTR pulLastEncryptedPartLen) {
+  ASSIGN_OR_RETURN(std::shared_ptr<Session> session, GetSession(hSession));
+  if (!pulLastEncryptedPartLen) {
+    session->ReleaseOperation();
+    return NullArgumentError("pulLastEncryptedPartLen", SOURCE_LOCATION);
+  }
+
+  absl::StatusOr<absl::Span<const uint8_t>> ciphertext =
+      session->EncryptFinal();
+  if (!ciphertext.ok()) {
+    session->ReleaseOperation();
+    return ciphertext.status();
+  }
+
+  if (!pLastEncryptedPart) {
+    *pulLastEncryptedPartLen = ciphertext->size();
+    return absl::OkStatus();
+  }
+
+  if (*pulLastEncryptedPartLen < ciphertext->size()) {
+    absl::Status result = OutOfRangeError(
+        absl::StrFormat(
+            "ciphertext of length %d cannot fit in buffer of length %d",
+            ciphertext->size(), *pulLastEncryptedPartLen),
+        SOURCE_LOCATION);
+    *pulLastEncryptedPartLen = ciphertext->size();
+    return result;
+  }
+
+  std::copy(ciphertext->begin(), ciphertext->end(), pLastEncryptedPart);
+  *pulLastEncryptedPartLen = ciphertext->size();
 
   session->ReleaseOperation();
   return absl::OkStatus();

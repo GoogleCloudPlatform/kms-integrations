@@ -298,6 +298,32 @@ TEST_F(AesGcmTest, EncryptDecryptSuccess) {
   EXPECT_EQ(recovered_plaintext, plaintext_bytes);
 }
 
+TEST_F(AesGcmTest, EncryptDecryptMultiPartSuccess) {
+  std::string plaintext = "Here is some data.";
+  std::string plaintext_part1 = "Here is ";
+  std::string plaintext_part2 = "some data.";
+  std::vector<uint8_t> plaintext_bytes(plaintext.begin(), plaintext.end());
+  std::vector<uint8_t> plaintext_bytes_part1(plaintext_part1.begin(),
+                                             plaintext_part1.end());
+  std::vector<uint8_t> plaintext_bytes_part2(plaintext_part2.begin(),
+                                             plaintext_part2.end());
+  std::vector<uint8_t> aad_bytes(aad_.begin(), aad_.end());
+
+  ASSERT_OK(encrypter_->EncryptUpdate(client_.get(), plaintext_bytes_part1));
+  ASSERT_OK(encrypter_->EncryptUpdate(client_.get(), plaintext_bytes_part2));
+  ASSERT_OK_AND_ASSIGN(absl::Span<const uint8_t> ciphertext,
+                       encrypter_->EncryptFinal(client_.get()));
+
+  CK_GCM_PARAMS params = NewGcmParams(&iv_, &aad_bytes);
+  CK_MECHANISM mechanism = NewAesGcmMechanism(&params);
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<DecrypterInterface> decrypter,
+                       NewAesGcmDecrypter(prv_, &mechanism));
+  ASSERT_OK_AND_ASSIGN(absl::Span<const uint8_t> recovered_plaintext,
+                       decrypter->Decrypt(client_.get(), ciphertext));
+
+  EXPECT_EQ(recovered_plaintext, plaintext_bytes);
+}
+
 TEST_F(AesGcmTest, EncryptFakeKmsDecryptLibrarySuccess) {
   std::string plaintext = "Here is some data.";
   std::vector<uint8_t> plaintext_bytes(plaintext.begin(), plaintext.end());

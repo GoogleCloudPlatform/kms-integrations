@@ -29,6 +29,20 @@ class EncrypterInterface {
   virtual absl::StatusOr<absl::Span<const uint8_t>> Encrypt(
       KmsClient* client, absl::Span<const uint8_t> plaintext) = 0;
 
+  virtual absl::Status EncryptUpdate(KmsClient* client,
+                                     absl::Span<const uint8_t> plaintext_part) {
+    return FailedPreconditionError(
+        "provided mechanism does not support multi-part encryption",
+        CKR_FUNCTION_FAILED, SOURCE_LOCATION);
+  }
+
+  virtual absl::StatusOr<absl::Span<const uint8_t>> EncryptFinal(
+      KmsClient* client) {
+    return FailedPreconditionError(
+        "provided mechanism does not support multi-part encryption",
+        CKR_FUNCTION_FAILED, SOURCE_LOCATION);
+  }
+
   virtual ~EncrypterInterface() {}
 };
 
@@ -36,6 +50,20 @@ class DecrypterInterface {
  public:
   virtual absl::StatusOr<absl::Span<const uint8_t>> Decrypt(
       KmsClient* client, absl::Span<const uint8_t> ciphertext) = 0;
+
+  virtual absl::Status DecryptUpdate(KmsClient* client,
+                                     absl::Span<const uint8_t> ciphertext) {
+    return FailedPreconditionError(
+        "provided mechanism does not support multi-part decryption",
+        CKR_FUNCTION_FAILED, SOURCE_LOCATION);
+  }
+
+  virtual absl::StatusOr<absl::Span<const uint8_t>> DecryptFinal(
+      KmsClient* client) {
+    return FailedPreconditionError(
+        "provided mechanism does not support multi-part decryption",
+        CKR_FUNCTION_FAILED, SOURCE_LOCATION);
+  }
 
   virtual ~DecrypterInterface() {}
 };

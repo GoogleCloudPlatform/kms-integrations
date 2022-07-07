@@ -273,6 +273,26 @@ absl::StatusOr<absl::Span<const uint8_t>> Session::Decrypt(
   return std::get<DecryptOp>(*op_)->Decrypt(kms_client_, ciphertext);
 }
 
+absl::Status Session::DecryptUpdate(absl::Span<const uint8_t> ciphertext) {
+  absl::MutexLock l(&op_mutex_);
+
+  if (!op_.has_value() || !std::holds_alternative<DecryptOp>(*op_)) {
+    return OperationNotInitializedError("decrypt", SOURCE_LOCATION);
+  }
+
+  return std::get<DecryptOp>(*op_)->DecryptUpdate(kms_client_, ciphertext);
+}
+
+absl::StatusOr<absl::Span<const uint8_t>> Session::DecryptFinal() {
+  absl::MutexLock l(&op_mutex_);
+
+  if (!op_.has_value() || !std::holds_alternative<DecryptOp>(*op_)) {
+    return OperationNotInitializedError("decrypt", SOURCE_LOCATION);
+  }
+
+  return std::get<DecryptOp>(*op_)->DecryptFinal(kms_client_);
+}
+
 absl::Status Session::EncryptInit(std::shared_ptr<Object> key,
                                   CK_MECHANISM* mechanism,
                                   bool allow_raw_encryption_keys) {
@@ -296,6 +316,25 @@ absl::StatusOr<absl::Span<const uint8_t>> Session::Encrypt(
   }
 
   return std::get<EncryptOp>(*op_)->Encrypt(kms_client_, plaintext);
+}
+
+absl::Status Session::EncryptUpdate(absl::Span<const uint8_t> plaintext) {
+  absl::MutexLock l(&op_mutex_);
+
+  if (!op_.has_value() || !std::holds_alternative<EncryptOp>(*op_)) {
+    return OperationNotInitializedError("encrypt", SOURCE_LOCATION);
+  }
+
+  return std::get<EncryptOp>(*op_)->EncryptUpdate(kms_client_, plaintext);
+}
+absl::StatusOr<absl::Span<const uint8_t>> Session::EncryptFinal() {
+  absl::MutexLock l(&op_mutex_);
+
+  if (!op_.has_value() || !std::holds_alternative<EncryptOp>(*op_)) {
+    return OperationNotInitializedError("encrypt", SOURCE_LOCATION);
+  }
+
+  return std::get<EncryptOp>(*op_)->EncryptFinal(kms_client_);
 }
 
 absl::Status Session::SignInit(std::shared_ptr<Object> key,

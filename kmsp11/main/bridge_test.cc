@@ -2468,6 +2468,68 @@ TEST_F(SymmetricCryptTest, EncryptDecryptSuccess) {
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
+TEST_F(SymmetricCryptTest, EncryptDecryptMultiPartSuccess) {
+  std::vector<uint8_t> iv(12);
+  std::vector<uint8_t> aad = {0xDE, 0xAD, 0xBE, 0xEF};
+  CK_GCM_PARAMS params = {
+      iv.data(),                                   // pIv
+      12,                                          // ulIvLen
+      96,                                          // ulIvBits
+      aad.data(),                                  // pAAD
+      static_cast<unsigned long int>(aad.size()),  // ulAADLen
+      128,                                         // ulTagBits
+  };
+  CK_MECHANISM mech = {
+      CKM_CLOUDKMS_AES_GCM,  // mechanism
+      &params,               // pParameter
+      sizeof(params),        // ulParameterLen
+  };
+
+  EXPECT_OK(EncryptInit(session_, &mech, secret_key_));
+
+  std::vector<uint8_t> part1(64);
+  std::vector<uint8_t> part2(64);
+  RAND_bytes(part1.data(), part1.size());
+  RAND_bytes(part2.data(), part2.size());
+  std::vector<uint8_t> plaintext(part1);
+  plaintext.insert(plaintext.end(), part2.begin(), part2.end());
+
+  CK_ULONG ciphertext_size = 144;
+  std::vector<uint8_t> ciphertext(ciphertext_size);
+  EXPECT_OK(EncryptUpdate(session_, part1.data(), part1.size(),
+                          ciphertext.data(), &ciphertext_size));
+  EXPECT_OK(EncryptUpdate(session_, part2.data(), part2.size(),
+                          ciphertext.data(), &ciphertext_size));
+  EXPECT_OK(EncryptFinal(session_, ciphertext.data(), &ciphertext_size));
+
+  EXPECT_EQ(ciphertext.size(), ciphertext_size);
+
+  // Operation should be terminated after success
+  EXPECT_THAT(
+      Encrypt(session_, part1.data(), part1.size(), nullptr, &ciphertext_size),
+      StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
+
+  EXPECT_OK(DecryptInit(session_, &mech, secret_key_));
+
+  CK_ULONG plaintext_size = 128;
+  std::vector<uint8_t> recovered_plaintext(plaintext_size);
+  EXPECT_OK(DecryptUpdate(session_, ciphertext.data(), 16,
+                          recovered_plaintext.data(), &plaintext_size));
+  EXPECT_OK(DecryptUpdate(session_, ciphertext.data() + 16,
+                          ciphertext.size() - 16, recovered_plaintext.data(),
+                          &plaintext_size));
+  EXPECT_OK(
+      DecryptFinal(session_, recovered_plaintext.data(), &plaintext_size));
+
+  EXPECT_EQ(recovered_plaintext, plaintext);
+  EXPECT_EQ(plaintext_size, plaintext.size());
+
+  // Operation should be terminated after success
+  EXPECT_THAT(Decrypt(session_, ciphertext.data(), ciphertext.size(), nullptr,
+                      &plaintext_size),
+              StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
+}
+
 TEST_F(SymmetricCryptTest, DecryptBufferTooSmall) {
   std::vector<uint8_t> plaintext(128);
   RAND_bytes(plaintext.data(), plaintext.size());
@@ -2677,6 +2739,44 @@ TEST_F(SymmetricCryptTest, EncryptSuccess) {
   EXPECT_THAT(Encrypt(session_, plaintext.data(), plaintext.size(), nullptr,
                       &ciphertext_size),
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
+}
+
+TEST_F(SymmetricCryptTest, EncryptMultiPartSuccess) {
+  std::vector<uint8_t> iv(12);
+  std::vector<uint8_t> aad = {0xDE, 0xAD, 0xBE, 0xEF};
+  CK_GCM_PARAMS params = {
+      iv.data(),                                   // pIv
+      12,                                          // ulIvLen
+      96,                                          // ulIvBits
+      aad.data(),                                  // pAAD
+      static_cast<unsigned long int>(aad.size()),  // ulAADLen
+      128,                                         // ulTagBits
+  };
+  CK_MECHANISM mech = {
+      CKM_CLOUDKMS_AES_GCM,  // mechanism
+      &params,               // pParameter
+      sizeof(params),        // ulParameterLen
+  };
+
+  EXPECT_OK(EncryptInit(session_, &mech, secret_key_));
+
+  std::vector<uint8_t> part1(64);
+  std::vector<uint8_t> part2(64);
+  RAND_bytes(part1.data(), part1.size());
+  RAND_bytes(part2.data(), part2.size());
+
+  CK_ULONG ciphertext_size = 144;
+  std::vector<uint8_t> ciphertext(ciphertext_size);
+  EXPECT_OK(EncryptUpdate(session_, part1.data(), part1.size(),
+                          ciphertext.data(), &ciphertext_size));
+  EXPECT_OK(EncryptUpdate(session_, part2.data(), part2.size(),
+                          ciphertext.data(), &ciphertext_size));
+  EXPECT_OK(EncryptFinal(session_, ciphertext.data(), &ciphertext_size));
+
+  // Operation should be terminated after success
+  EXPECT_THAT(
+      Encrypt(session_, part1.data(), part1.size(), nullptr, &ciphertext_size),
+      StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
 TEST_F(SymmetricCryptTest, EncryptBufferTooSmall) {

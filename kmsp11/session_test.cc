@@ -381,6 +381,71 @@ TEST_F(SessionTest, DecryptNotInitialized) {
   EXPECT_THAT(s.Decrypt(ciphertext), StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
+TEST_F(SessionTest, DecryptUpdateNotInitialized) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
+
+  uint8_t data[32];
+  EXPECT_THAT(s.DecryptUpdate(data), StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
+}
+
+TEST_F(SessionTest, DecryptFinalNotInitialized) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
+
+  EXPECT_THAT(s.DecryptFinal(), StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
+}
+
+TEST_F(SessionTest, DecryptFinalWithoutUpdateFails) {
+  auto kms_client = fake_server_->NewClient();
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::RAW_ENCRYPT_DECRYPT);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion::AES_256_GCM);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM);
+  ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), "ck", ck, true);
+
+  kms_v1::CryptoKeyVersion ckv;
+  ckv = CreateCryptoKeyVersionOrDie(kms_client.get(), ck.name(), ckv);
+  ckv = WaitForEnablement(kms_client.get(), ckv);
+
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
+
+  std::vector<CK_OBJECT_HANDLE> handles =
+      s.token()->FindObjects([&](const Object& o) -> bool {
+        return o.kms_key_name() == ckv.name() &&
+               o.object_class() == CKO_SECRET_KEY;
+      });
+  EXPECT_EQ(handles.size(), 1);
+  ASSERT_OK_AND_ASSIGN(std::shared_ptr<Object> key,
+                       s.token()->GetObject(handles[0]));
+
+  std::vector<uint8_t> iv(12);
+  std::vector<uint8_t> aad = {0xDE, 0xAD, 0xBE, 0xEF};
+  CK_GCM_PARAMS params = {
+      iv.data(),                                   // pIv
+      12,                                          // ulIvLen
+      96,                                          // ulIvBits
+      aad.data(),                                  // pAAD
+      static_cast<unsigned long int>(aad.size()),  // ulAADLen
+      128,                                         // ulTagBits
+  };
+  CK_MECHANISM mech = {
+      CKM_CLOUDKMS_AES_GCM,  // mechanism
+      &params,               // pParameter
+      sizeof(params),        // ulParameterLen
+  };
+
+  EXPECT_OK(s.DecryptInit(key, &mech, true));
+  EXPECT_THAT(s.DecryptFinal(), StatusRvIs(CKR_FUNCTION_FAILED));
+}
+
 TEST_F(SessionTest, Encrypt) {
   auto kms_client = fake_server_->NewClient();
 
@@ -462,6 +527,71 @@ TEST_F(SessionTest, EncryptNotInitialized) {
 
   uint8_t plaintext[256];
   EXPECT_THAT(s.Encrypt(plaintext), StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
+}
+
+TEST_F(SessionTest, EncryptUpdateNotInitialized) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
+
+  uint8_t data[32];
+  EXPECT_THAT(s.EncryptUpdate(data), StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
+}
+
+TEST_F(SessionTest, EncryptFinalNotInitialized) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
+
+  EXPECT_THAT(s.EncryptFinal(), StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
+}
+
+TEST_F(SessionTest, EncryptFinalWithoutUpdateFails) {
+  auto kms_client = fake_server_->NewClient();
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::RAW_ENCRYPT_DECRYPT);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion::AES_256_GCM);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM);
+  ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), "ck", ck, true);
+
+  kms_v1::CryptoKeyVersion ckv;
+  ckv = CreateCryptoKeyVersionOrDie(kms_client.get(), ck.name(), ckv);
+  ckv = WaitForEnablement(kms_client.get(), ckv);
+
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
+
+  std::vector<CK_OBJECT_HANDLE> handles =
+      s.token()->FindObjects([&](const Object& o) -> bool {
+        return o.kms_key_name() == ckv.name() &&
+               o.object_class() == CKO_SECRET_KEY;
+      });
+  EXPECT_EQ(handles.size(), 1);
+  ASSERT_OK_AND_ASSIGN(std::shared_ptr<Object> key,
+                       s.token()->GetObject(handles[0]));
+
+  std::vector<uint8_t> iv(12);
+  std::vector<uint8_t> aad = {0xDE, 0xAD, 0xBE, 0xEF};
+  CK_GCM_PARAMS params = {
+      iv.data(),                                   // pIv
+      12,                                          // ulIvLen
+      96,                                          // ulIvBits
+      aad.data(),                                  // pAAD
+      static_cast<unsigned long int>(aad.size()),  // ulAADLen
+      128,                                         // ulTagBits
+  };
+  CK_MECHANISM mech = {
+      CKM_CLOUDKMS_AES_GCM,  // mechanism
+      &params,               // pParameter
+      sizeof(params),        // ulParameterLen
+  };
+
+  EXPECT_OK(s.EncryptInit(key, &mech, true));
+  EXPECT_THAT(s.EncryptFinal(), StatusRvIs(CKR_FUNCTION_FAILED));
 }
 
 TEST_F(SessionTest, Sign) {

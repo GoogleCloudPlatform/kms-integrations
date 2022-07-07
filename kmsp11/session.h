@@ -51,11 +51,15 @@ class Session {
                            bool allow_raw_encryption_keys = false);
   absl::StatusOr<absl::Span<const uint8_t>> Decrypt(
       absl::Span<const uint8_t> ciphertext);
+  absl::Status DecryptUpdate(absl::Span<const uint8_t> ciphertext);
+  absl::StatusOr<absl::Span<const uint8_t>> DecryptFinal();
 
   absl::Status EncryptInit(std::shared_ptr<Object> key, CK_MECHANISM* mechanism,
                            bool allow_raw_encryption_keys = false);
   absl::StatusOr<absl::Span<const uint8_t>> Encrypt(
       absl::Span<const uint8_t> plaintext);
+  absl::Status EncryptUpdate(absl::Span<const uint8_t> plaintext);
+  absl::StatusOr<absl::Span<const uint8_t>> EncryptFinal();
 
   absl::Status SignInit(std::shared_ptr<Object> key, CK_MECHANISM* mechanism,
                         bool allow_mac_keys = false);

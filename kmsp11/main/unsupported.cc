@@ -74,30 +74,6 @@ absl::Status SetAttributeValue(CK_SESSION_HANDLE hSession,
   return UnsupportedError(SOURCE_LOCATION);
 }
 
-absl::Status EncryptUpdate(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pPart,
-                           CK_ULONG ulPartLen, CK_BYTE_PTR pEncryptedPart,
-                           CK_ULONG_PTR pulEncryptedPartLen) {
-  return UnsupportedError(SOURCE_LOCATION);
-}
-
-absl::Status EncryptFinal(CK_SESSION_HANDLE hSession,
-                          CK_BYTE_PTR pLastEncryptedPart,
-                          CK_ULONG_PTR pulLastEncryptedPartLen) {
-  return UnsupportedError(SOURCE_LOCATION);
-}
-
-absl::Status DecryptUpdate(CK_SESSION_HANDLE hSession,
-                           CK_BYTE_PTR pEncryptedPart,
-                           CK_ULONG ulEncryptedPartLen, CK_BYTE_PTR pPart,
-                           CK_ULONG_PTR pulPartLen) {
-  return UnsupportedError(SOURCE_LOCATION);
-}
-
-absl::Status DecryptFinal(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pLastPart,
-                          CK_ULONG_PTR pulLastPartLen) {
-  return UnsupportedError(SOURCE_LOCATION);
-}
-
 absl::Status DigestInit(CK_SESSION_HANDLE hSession,
                         CK_MECHANISM_PTR pMechanism) {
   return UnsupportedError(SOURCE_LOCATION);
