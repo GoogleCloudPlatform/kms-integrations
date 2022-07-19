@@ -31,29 +31,12 @@ constexpr size_t kMaxCiphertextBytes = 10 * kMaxPlaintextBytes;
 
 absl::StatusOr<CK_GCM_PARAMS> ExtractGcmParameters(void* parameters,
                                                    CK_ULONG parameters_size) {
-  CK_GCM_PARAMS params;
-  switch (parameters_size) {
-    case sizeof(CK_GCM_PARAMS):
-      params = *reinterpret_cast<CK_GCM_PARAMS*>(parameters);
-      break;
-
-    case sizeof(CK_GCM_PARAMS_errata): {
-      CK_GCM_PARAMS_errata* params_errata =
-          reinterpret_cast<CK_GCM_PARAMS_errata*>(parameters);
-
-      params.pIv = params_errata->pIv;
-      params.ulIvLen = params_errata->ulIvLen;
-      params.ulIvBits = params_errata->ulIvLen * 8;
-      params.pAAD = params_errata->pAAD;
-      params.ulAADLen = params_errata->ulAADLen;
-      params.ulTagBits = params_errata->ulTagBits;
-      break;
-    }
-    default:
-      return InvalidMechanismParamError(
-          "mechanism parameters must be of type CK_GCM_PARAMS",
-          SOURCE_LOCATION);
+  if (parameters_size != sizeof(CK_GCM_PARAMS)) {
+    return InvalidMechanismParamError(
+        "mechanism parameters must be of type CK_GCM_PARAMS", SOURCE_LOCATION);
   }
+
+  CK_GCM_PARAMS params = *reinterpret_cast<CK_GCM_PARAMS*>(parameters);
 
   if (!params.pIv) {
     return InvalidMechanismParamError(

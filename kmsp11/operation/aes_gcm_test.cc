@@ -61,29 +61,6 @@ TEST(NewAesGcmEncrypterTest, Success) {
   EXPECT_OK(NewAesGcmEncrypter(key, &mechanism));
 }
 
-TEST(NewAesGcmEncrypterTest, SuccessErrataParams) {
-  ASSERT_OK_AND_ASSIGN(Object prv,
-                       NewMockSecretKey(kms_v1::CryptoKeyVersion::AES_256_GCM));
-  std::shared_ptr<Object> key = std::make_shared<Object>(prv);
-
-  std::vector<uint8_t> iv(12);
-  std::vector<uint8_t> aad = {0xDE, 0xAD, 0xBE, 0xEF};
-  CK_GCM_PARAMS_errata params = {
-      iv.data(),                                   // pIv
-      12,                                          // ulIvLen
-      aad.data(),                                  // pAAD
-      static_cast<unsigned long int>(aad.size()),  // ulAADLen
-      128,                                         // ulTagBits
-  };
-  CK_MECHANISM mechanism = {
-      CKM_CLOUDKMS_AES_GCM,  // mechanism
-      &params,               // pParameter
-      sizeof(params),        // ulParameterLen
-  };
-
-  EXPECT_OK(NewAesGcmEncrypter(key, &mechanism));
-}
-
 TEST(NewAesGcmEncrypterTest, FailureWrongKeyType) {
   ASSERT_OK_AND_ASSIGN(Object prv,
                        NewMockSecretKey(kms_v1::CryptoKeyVersion::HMAC_SHA1));
