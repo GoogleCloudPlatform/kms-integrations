@@ -15,6 +15,7 @@
 #include "kmsp11/mechanism.h"
 
 #include "absl/container/flat_hash_map.h"
+#include "kmsp11/kmsp11.h"
 
 namespace kmsp11 {
 namespace {
@@ -200,7 +201,7 @@ AllMechanisms() {
               },
           },
           {
-              CKM_AES_GCM,
+              CKM_CLOUDKMS_AES_GCM,
               {
                   32,                        // ulMinKeySize
                   32,                        // ulMaxKeySize
@@ -226,7 +227,7 @@ const absl::flat_hash_set<CK_MECHANISM_TYPE>& AllRawEncryptionMechanisms() {
   // These mechanisms are only supported if the
   // experimental_allow_raw_encryption_keys config flag is set.
   static const absl::flat_hash_set<CK_MECHANISM_TYPE> kRawEncryptionMechanisms =
-      {CKM_AES_GCM};
+      {CKM_CLOUDKMS_AES_GCM};
   return kRawEncryptionMechanisms;
 }
 

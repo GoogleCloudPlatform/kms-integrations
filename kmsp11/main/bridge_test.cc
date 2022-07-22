@@ -574,8 +574,9 @@ TEST_F(BridgeTest, GetMechanismListRawEncryptionKeysExperimentEnabled) {
   std::vector<CK_MECHANISM_TYPE> types(count);
   EXPECT_OK(GetMechanismList(0, types.data(), &count));
   EXPECT_EQ(types.size(), count);
-  EXPECT_THAT(types, IsSupersetOf({CKM_RSA_PKCS, CKM_RSA_PKCS_PSS,
-                                   CKM_RSA_PKCS_OAEP, CKM_ECDSA, CKM_AES_GCM}));
+  EXPECT_THAT(types,
+              IsSupersetOf({CKM_RSA_PKCS, CKM_RSA_PKCS_PSS, CKM_RSA_PKCS_OAEP,
+                            CKM_ECDSA, CKM_CLOUDKMS_AES_GCM}));
 }
 
 TEST_F(BridgeTest, GetMechanismListFailsNotInitialized) {
@@ -653,7 +654,7 @@ TEST_F(BridgeTest, GetMechanismInfoRawEncryptionKeysExperimentEnabled) {
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_MECHANISM_INFO info;
-  EXPECT_OK(GetMechanismInfo(0, CKM_AES_GCM, &info));
+  EXPECT_OK(GetMechanismInfo(0, CKM_CLOUDKMS_AES_GCM, &info));
 
   EXPECT_EQ(info.ulMinKeySize, 32);
   EXPECT_EQ(info.ulMaxKeySize, 32);
