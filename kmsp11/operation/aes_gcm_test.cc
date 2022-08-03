@@ -331,7 +331,7 @@ TEST_F(AesGcmTest, EncryptFakeKmsDecryptLibrarySuccess) {
 }
 
 TEST_F(AesGcmTest, DecryptFailureBadCiphertextSize) {
-  uint8_t ciphertext[655361];
+  uint8_t ciphertext[65536 + 16 + 1];
   EXPECT_THAT(decrypter_->Decrypt(client_.get(), ciphertext),
               StatusRvIs(CKR_DATA_LEN_RANGE));
 }

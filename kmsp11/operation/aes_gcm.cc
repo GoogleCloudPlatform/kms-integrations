@@ -27,7 +27,7 @@ namespace kmsp11 {
 namespace {
 
 constexpr size_t kMaxPlaintextBytes = 64 * 1024;
-constexpr size_t kMaxCiphertextBytes = 10 * kMaxPlaintextBytes;
+constexpr size_t kMaxCiphertextBytes = kMaxPlaintextBytes + 16;
 
 absl::StatusOr<CK_GCM_PARAMS> ExtractGcmParameters(void* parameters,
                                                    CK_ULONG parameters_size) {
