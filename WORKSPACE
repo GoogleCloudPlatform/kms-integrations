@@ -39,6 +39,14 @@ http_archive(
 )
 
 http_archive(
+    name = "com_github_google_crc32c",  # 2021-10-05
+    sha256 = "ac07840513072b7fcebda6e821068aa04889018f24e10e46181068fb214d7e56",
+    strip_prefix = "crc32c-1.1.2",
+    url = "https://github.com/google/crc32c/archive/1.1.2.tar.gz",
+    build_file = "//kmsp11/bazel:crc32c.BUILD",
+)
+
+http_archive(
     name = "com_github_google_glog",  # 2020-02-16
     sha256 = "6fc352c434018b11ad312cd3b56be3597b4c6b88480f7bd4e18b3a3b2cf961aa",
     strip_prefix = "glog-3ba8976592274bc1f907c402ce22558011d6fc5e",
