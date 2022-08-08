@@ -26,8 +26,18 @@ uint32_t ComputeCRC32C(const uint8_t* data, size_t length) {
   return crc32c::Crc32c(data, length);
 }
 
+uint32_t ComputeCRC32C(std::string_view data) {
+  return ComputeCRC32C(reinterpret_cast<const uint8_t*>(data.data()),
+                       data.size());
+}
+
 bool CRC32CMatches(const uint8_t* data, size_t length, uint32_t crc32c) {
   return crc32c == ComputeCRC32C(data, length);
+}
+
+bool CRC32CMatches(std::string_view data, uint32_t crc32c) {
+  return CRC32CMatches(reinterpret_cast<const uint8_t*>(data.data()),
+                       data.size(), crc32c);
 }
 
 }  // namespace kmsp11

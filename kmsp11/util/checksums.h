@@ -27,8 +27,12 @@ namespace kmsp11 {
 // protection. Only for detection of hardware errors.
 uint32_t ComputeCRC32C(const uint8_t* data, size_t length);
 
+uint32_t ComputeCRC32C(std::string_view data);
+
 // Computes CRC32C of data and compares to given crc32c.
 bool CRC32CMatches(const uint8_t* data, size_t length, uint32_t crc32c);
+
+bool CRC32CMatches(std::string_view data, uint32_t crc32c);
 
 }  // namespace kmsp11
 

@@ -21,6 +21,8 @@
 #include "grpcpp/security/credentials.h"
 #include "kmsp11/openssl.h"
 #include "kmsp11/util/backoff.h"
+#include "kmsp11/util/checksums.h"
+#include "kmsp11/util/errors.h"
 #include "kmsp11/util/kms_client_service_config.h"
 #include "kmsp11/util/platform.h"
 #include "kmsp11/util/status_macros.h"
@@ -140,9 +142,16 @@ absl::StatusOr<kms_v1::MacVerifyResponse> KmsClient::MacVerify(
 }
 
 absl::StatusOr<kms_v1::RawDecryptResponse> KmsClient::RawDecrypt(
-    const kms_v1::RawDecryptRequest& request) const {
+    kms_v1::RawDecryptRequest& request) const {
   grpc::ClientContext ctx;
   AddContextSettings(&ctx, "name", request.name());
+
+  request.mutable_ciphertext_crc32c()->set_value(
+      ComputeCRC32C(request.ciphertext()));
+  request.mutable_initialization_vector_crc32c()->set_value(
+      ComputeCRC32C(request.initialization_vector()));
+  request.mutable_additional_authenticated_data_crc32c()->set_value(
+      ComputeCRC32C(request.additional_authenticated_data()));
 
   kms_v1::RawDecryptResponse response;
   absl::Status rpc_result =
@@ -151,13 +160,26 @@ absl::StatusOr<kms_v1::RawDecryptResponse> KmsClient::RawDecrypt(
     SetErrorRv(rpc_result, CKR_DEVICE_ERROR);
     return rpc_result;
   }
+
+  if (!CRC32CMatches(response.plaintext(),
+                     response.plaintext_crc32c().value())) {
+    return NewInternalError(
+        "The response crc32c did not match the expected checksum value",
+        SOURCE_LOCATION);
+  }
+
   return response;
 }
 
 absl::StatusOr<kms_v1::RawEncryptResponse> KmsClient::RawEncrypt(
-    const kms_v1::RawEncryptRequest& request) const {
+    kms_v1::RawEncryptRequest& request) const {
   grpc::ClientContext ctx;
   AddContextSettings(&ctx, "name", request.name());
+
+  request.mutable_plaintext_crc32c()->set_value(
+      ComputeCRC32C(request.plaintext()));
+  request.mutable_additional_authenticated_data_crc32c()->set_value(
+      ComputeCRC32C(request.additional_authenticated_data()));
 
   kms_v1::RawEncryptResponse response;
   absl::Status rpc_result =
@@ -166,6 +188,21 @@ absl::StatusOr<kms_v1::RawEncryptResponse> KmsClient::RawEncrypt(
     SetErrorRv(rpc_result, CKR_DEVICE_ERROR);
     return rpc_result;
   }
+
+  if (!CRC32CMatches(response.ciphertext(),
+                     response.ciphertext_crc32c().value())) {
+    return NewInternalError(
+        "The response crc32c did not match the expected checksum value",
+        SOURCE_LOCATION);
+  }
+
+  if (!response.verified_plaintext_crc32c() ||
+      !response.verified_additional_authenticated_data_crc32c()) {
+    return NewInternalError(
+        "The server did not verify the checksum values provided in the request",
+        SOURCE_LOCATION);
+  }
+
   return response;
 }
 

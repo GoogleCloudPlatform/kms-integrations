@@ -181,6 +181,8 @@ cc_library(
     hdrs = ["kms_client.h"],
     deps = [
         ":backoff",
+        ":checksums",
+        ":errors",
         ":kms_v1",
         ":pagination_range",
         ":platform",

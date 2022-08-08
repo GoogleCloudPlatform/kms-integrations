@@ -34,7 +34,7 @@ const maxCiphertextSize = 10 * maxPlaintextSize
 
 // RawEncrypt fakes a Cloud KMS API function.
 func (f *fakeKMS) RawEncrypt(ctx context.Context, req *kmspb.RawEncryptRequest) (*kmspb.RawEncryptResponse, error) {
-	if err := allowlist("name", "plaintext", "additional_authenticated_data").check(req); err != nil {
+	if err := allowlist("name", "plaintext", "plaintext_crc32c", "additional_authenticated_data", "additional_authenticated_data_crc32c").check(req); err != nil {
 		return nil, err
 	}
 
@@ -67,6 +67,16 @@ func (f *fakeKMS) RawEncrypt(ctx context.Context, req *kmspb.RawEncryptRequest) 
 		return nil, errInvalidArgument("len(plaintext)=%d, want len(plaintext)<=%d", len(plaintext), maxPlaintextSize)
 	}
 
+	plaintextChecksum := crc32c(plaintext)
+	if req.PlaintextCrc32C != nil && plaintextChecksum.Value != req.PlaintextCrc32C.Value {
+		return nil, errInvalidArgument("invalid plaintext checksum")
+	}
+
+	aadChecksum := crc32c(req.AdditionalAuthenticatedData)
+	if req.AdditionalAuthenticatedData != nil && req.AdditionalAuthenticatedDataCrc32C != nil && aadChecksum.Value != req.AdditionalAuthenticatedDataCrc32C.Value {
+		return nil, errInvalidArgument("invalid aad checksum")
+	}
+
 	var key []byte
 	var ok bool
 	if key, ok = ckv.keyMaterial.([]byte); !ok {
@@ -97,13 +107,15 @@ func (f *fakeKMS) RawEncrypt(ctx context.Context, req *kmspb.RawEncryptRequest) 
 		InitializationVector:       nonce,
 		InitializationVectorCrc32C: crc32c(nonce),
 		TagLength:                  16,
-		ProtectionLevel:            ckv.pb.ProtectionLevel,
+		VerifiedPlaintextCrc32C:    req.PlaintextCrc32C != nil,
+		VerifiedAdditionalAuthenticatedDataCrc32C: req.AdditionalAuthenticatedDataCrc32C != nil,
+		ProtectionLevel: ckv.pb.ProtectionLevel,
 	}, nil
 }
 
 // RawDecrypt fakes a Cloud KMS API function.
 func (f *fakeKMS) RawDecrypt(ctx context.Context, req *kmspb.RawDecryptRequest) (*kmspb.RawDecryptResponse, error) {
-	if err := allowlist("name", "ciphertext", "additional_authenticated_data", "initialization_vector").check(req); err != nil {
+	if err := allowlist("name", "ciphertext", "ciphertext_crc32c", "additional_authenticated_data", "additional_authenticated_data_crc32c", "initialization_vector", "initialization_vector_crc32c").check(req); err != nil {
 		return nil, err
 	}
 
@@ -136,8 +148,23 @@ func (f *fakeKMS) RawDecrypt(ctx context.Context, req *kmspb.RawDecryptRequest) 
 		return nil, errInvalidArgument("len(ciphertext)=%d, want len(ciphertext)<=%d", len(ciphertext), maxCiphertextSize)
 	}
 
+	ciphertextChecksum := crc32c(ciphertext)
+	if req.CiphertextCrc32C != nil && ciphertextChecksum.Value != req.CiphertextCrc32C.Value {
+		return nil, errInvalidArgument("invalid ciphertext checksum")
+	}
+
 	if len(req.InitializationVector) != 12 {
 		return nil, errInvalidArgument("len(initialization_vector)=%d, want 12", len(req.InitializationVector))
+	}
+
+	ivChecksum := crc32c(req.InitializationVector)
+	if req.InitializationVector != nil && req.InitializationVectorCrc32C != nil && ivChecksum.Value != req.InitializationVectorCrc32C.Value {
+		return nil, errInvalidArgument("invalid iv checksum")
+	}
+
+	aadChecksum := crc32c(req.AdditionalAuthenticatedData)
+	if req.AdditionalAuthenticatedData != nil && req.AdditionalAuthenticatedDataCrc32C != nil && aadChecksum.Value != req.AdditionalAuthenticatedDataCrc32C.Value {
+		return nil, errInvalidArgument("invalid aad checksum")
 	}
 
 	var key []byte

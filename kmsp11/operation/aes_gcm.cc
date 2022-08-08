@@ -18,6 +18,7 @@
 #include "kmsp11/kmsp11.h"
 #include "kmsp11/object.h"
 #include "kmsp11/operation/preconditions.h"
+#include "kmsp11/util/checksums.h"
 #include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/status_macros.h"
@@ -81,15 +82,13 @@ class AesGcmEncrypter : public EncrypterInterface {
  private:
   AesGcmEncrypter(std::shared_ptr<Object> object, absl::Span<const uint8_t> aad,
                   absl::Span<uint8_t> iv)
-      : object_(object), iv_(iv) {
-    if (!aad.empty() && aad.data()) {
-      aad_.emplace(aad.begin(), aad.end());
-    }
-  }
+      : object_(object),
+        iv_(iv),
+        aad_(reinterpret_cast<const char*>(aad.data()), aad.size()) {}
 
   std::shared_ptr<Object> object_;
-  std::optional<std::vector<uint8_t>> aad_;
   absl::Span<uint8_t> iv_;
+  std::string aad_;
   std::optional<std::vector<uint8_t>> plaintext_;
   std::vector<uint8_t> ciphertext_;
 };
@@ -135,10 +134,7 @@ absl::StatusOr<absl::Span<const uint8_t>> AesGcmEncrypter::Encrypt(
   req.set_name(std::string(object_->kms_key_name()));
   req.set_plaintext(std::string(reinterpret_cast<const char*>(plaintext.data()),
                                 plaintext.size()));
-  if (aad_ && !aad_->empty()) {
-    req.set_additional_authenticated_data(
-        std::string(reinterpret_cast<const char*>(aad_->data()), aad_->size()));
-  }
+  req.set_additional_authenticated_data(aad_);
 
   ASSIGN_OR_RETURN(kms_v1::RawEncryptResponse resp, client->RawEncrypt(req));
 
@@ -186,10 +182,7 @@ absl::StatusOr<absl::Span<const uint8_t>> AesGcmEncrypter::EncryptFinal(
   req.set_name(std::string(object_->kms_key_name()));
   req.set_plaintext(std::string(
       reinterpret_cast<const char*>(plaintext_->data()), plaintext_->size()));
-  if (aad_ && !aad_->empty()) {
-    req.set_additional_authenticated_data(
-        std::string(reinterpret_cast<const char*>(aad_->data()), aad_->size()));
-  }
+  req.set_additional_authenticated_data(aad_);
 
   ASSIGN_OR_RETURN(kms_v1::RawEncryptResponse resp, client->RawEncrypt(req));
 
@@ -220,17 +213,15 @@ class AesGcmDecrypter : public DecrypterInterface {
   virtual ~AesGcmDecrypter() {}
 
  private:
-  AesGcmDecrypter(std::shared_ptr<Object> object, absl::Span<const uint8_t> aad,
-                  absl::Span<const uint8_t> iv)
-      : object_(object), iv_(iv.begin(), iv.end()) {
-    if (!aad.empty()) {
-      aad_.emplace(aad.begin(), aad.end());
-    }
-  }
+  AesGcmDecrypter(std::shared_ptr<Object> object, absl::Span<const uint8_t> iv,
+                  absl::Span<const uint8_t> aad)
+      : object_(object),
+        iv_(iv.begin(), iv.end()),
+        aad_(reinterpret_cast<const char*>(aad.data()), aad.size()) {}
 
   std::shared_ptr<Object> object_;
-  std::optional<std::vector<uint8_t>> aad_;
   std::vector<uint8_t> iv_;
+  std::string aad_;
   std::optional<std::vector<uint8_t>> ciphertext_;
   std::vector<uint8_t> plaintext_;
 };
@@ -244,9 +235,9 @@ absl::StatusOr<std::unique_ptr<DecrypterInterface>> AesGcmDecrypter::New(
       CK_GCM_PARAMS params,
       ExtractGcmParameters(mechanism->pParameter, mechanism->ulParameterLen));
 
-  return std::unique_ptr<DecrypterInterface>(new AesGcmDecrypter(
-      key, absl::MakeConstSpan(params.pAAD, params.ulAADLen),
-      absl::MakeConstSpan(params.pIv, params.ulIvLen)));
+  return std::unique_ptr<DecrypterInterface>(
+      new AesGcmDecrypter(key, absl::MakeConstSpan(params.pIv, params.ulIvLen),
+                          absl::MakeConstSpan(params.pAAD, params.ulAADLen)));
 }
 
 absl::StatusOr<absl::Span<const uint8_t>> AesGcmDecrypter::Decrypt(
@@ -265,10 +256,7 @@ absl::StatusOr<absl::Span<const uint8_t>> AesGcmDecrypter::Decrypt(
       reinterpret_cast<const char*>(ciphertext.data()), ciphertext.size()));
   req.set_initialization_vector(
       std::string(reinterpret_cast<const char*>(iv_.data()), iv_.size()));
-  if (aad_ && !aad_->empty()) {
-    req.set_additional_authenticated_data(
-        std::string(reinterpret_cast<const char*>(aad_->data()), aad_->size()));
-  }
+  req.set_additional_authenticated_data(aad_);
 
   ASSIGN_OR_RETURN(kms_v1::RawDecryptResponse resp, client->RawDecrypt(req));
 
@@ -320,10 +308,7 @@ absl::StatusOr<absl::Span<const uint8_t>> AesGcmDecrypter::DecryptFinal(
       reinterpret_cast<const char*>(ciphertext_->data()), ciphertext_->size()));
   req.set_initialization_vector(reinterpret_cast<const char*>(iv_.data()),
                                 iv_.size());
-  if (aad_ && !aad_->empty()) {
-    req.set_additional_authenticated_data(
-        std::string(reinterpret_cast<const char*>(aad_->data()), aad_->size()));
-  }
+  req.set_additional_authenticated_data(aad_);
 
   ASSIGN_OR_RETURN(kms_v1::RawDecryptResponse resp, client->RawDecrypt(req));
 

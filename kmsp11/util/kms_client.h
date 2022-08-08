@@ -64,10 +64,10 @@ class KmsClient {
       const kms_v1::MacVerifyRequest& request) const;
 
   absl::StatusOr<kms_v1::RawDecryptResponse> RawDecrypt(
-      const kms_v1::RawDecryptRequest& request) const;
+      kms_v1::RawDecryptRequest& request) const;
 
   absl::StatusOr<kms_v1::RawEncryptResponse> RawEncrypt(
-      const kms_v1::RawEncryptRequest& request) const;
+      kms_v1::RawEncryptRequest& request) const;
 
   absl::StatusOr<kms_v1::CryptoKey> CreateCryptoKey(
       const kms_v1::CreateCryptoKeyRequest& request) const;
