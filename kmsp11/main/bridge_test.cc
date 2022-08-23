@@ -27,6 +27,7 @@
 #include "kmsp11/test/test_platform.h"
 #include "kmsp11/test/test_status_macros.h"
 #include "kmsp11/util/crypto_utils.h"
+
 namespace kmsp11 {
 namespace {
 
@@ -114,8 +115,21 @@ TEST_F(BridgeTest, InitializeFailsWithoutConfig) {
               StatusIs(absl::StatusCode::kFailedPrecondition));
 }
 
+TEST_F(BridgeTest, InitializeSucceedsWithEmptyArgs) {
+  SetEnvVariable(kConfigEnvVariable, config_file_);
+  absl::Cleanup c = [] { ClearEnvVariable(kConfigEnvVariable); };
+  CK_C_INITIALIZE_ARGS init_args = {0};
+
+  EXPECT_OK(Initialize(&init_args));
+  // Finalize so that other tests see an uninitialized state
+  EXPECT_OK(Finalize(nullptr));
+}
+
 TEST_F(BridgeTest, InitializeFailsWithArgsNoOsLocking) {
   CK_C_INITIALIZE_ARGS init_args = {0};
+  int temp = 7337;
+  init_args.flags = 0;
+  init_args.LockMutex = (CK_LOCKMUTEX)&temp;
 
   EXPECT_THAT(Initialize(&init_args), StatusRvIs(CKR_CANT_LOCK));
 }

@@ -59,10 +59,19 @@ absl::StatusOr<std::shared_ptr<Session>> GetSession(
 absl::Status Initialize(CK_VOID_PTR pInitArgs) {
   auto* init_args = static_cast<CK_C_INITIALIZE_ARGS*>(pInitArgs);
   if (init_args) {
-    if ((init_args->flags & CKF_OS_LOCKING_OK) != CKF_OS_LOCKING_OK) {
+#ifdef _WIN32
+#pragma push_macro("CreateMutex")
+#undef CreateMutex
+#endif
+    if ((init_args->flags & CKF_OS_LOCKING_OK) != CKF_OS_LOCKING_OK &&
+        (init_args->CreateMutex || init_args->DestroyMutex ||
+         init_args->LockMutex || init_args->UnlockMutex)) {
       return NewInvalidArgumentError("library requires os locking",
                                      CKR_CANT_LOCK, SOURCE_LOCATION);
     }
+#ifdef _WIN32
+#pragma pop_macro("CreateMutex")
+#endif
     if ((init_args->flags & CKF_LIBRARY_CANT_CREATE_OS_THREADS) ==
         CKF_LIBRARY_CANT_CREATE_OS_THREADS) {
       return NewInvalidArgumentError("library requires thread creation",
