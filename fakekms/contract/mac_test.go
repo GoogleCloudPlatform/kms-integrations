@@ -32,9 +32,79 @@ var ignoreMacAndMacCRC = protocmp.IgnoreFields(new(kmspb.MacSignResponse),
 	protoreflect.Name("mac"), protoreflect.Name("mac_crc32c"))
 
 var ignoreSuccessAndVerifiedSuccessIntegrity = protocmp.IgnoreFields(new(kmspb.MacVerifyResponse),
-        protoreflect.Name("success"), protoreflect.Name("verified_success_integrity"))
+	protoreflect.Name("success"), protoreflect.Name("verified_success_integrity"))
 
 func TestMacSignVerify(t *testing.T) {
+	ctx := context.Background()
+	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
+	ck := client.CreateTestCK(ctx, t, &kmspb.CreateCryptoKeyRequest{
+		Parent: kr.Name,
+		CryptoKey: &kmspb.CryptoKey{
+			Purpose: kmspb.CryptoKey_MAC,
+			VersionTemplate: &kmspb.CryptoKeyVersionTemplate{
+				ProtectionLevel: kmspb.ProtectionLevel_HSM,
+				Algorithm:       kmspb.CryptoKeyVersion_HMAC_SHA256,
+			},
+		},
+		SkipInitialVersionCreation: true,
+	})
+	ckv := client.CreateTestCKVAndWait(ctx, t, &kmspb.CreateCryptoKeyVersionRequest{
+		Parent: ck.Name,
+	})
+
+	data := []byte("Here is some data to authenticate")
+
+	got, err := client.MacSign(ctx, &kmspb.MacSignRequest{
+		Name:       ckv.Name,
+		Data:       data,
+		DataCrc32C: crc32c(data),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	verifyCRC32C(t, got.Mac, got.MacCrc32C)
+
+	want := &kmspb.MacSignResponse{
+		Name:               ckv.Name,
+		VerifiedDataCrc32C: true,
+		ProtectionLevel:    kmspb.ProtectionLevel_HSM,
+	}
+
+	opts := append(ProtoDiffOpts(), ignoreMacAndMacCRC)
+	if diff := cmp.Diff(want, got, opts...); diff != "" {
+		t.Errorf("proto mismatch (-want +got): %s", diff)
+	}
+
+	resp, err := client.MacVerify(ctx, &kmspb.MacVerifyRequest{
+		Name:       ckv.Name,
+		Data:       data,
+		DataCrc32C: crc32c(data),
+		Mac:        got.Mac,
+		MacCrc32C:  crc32c(got.Mac),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wantVerify := &kmspb.MacVerifyResponse{
+		Name:               ckv.Name,
+		VerifiedDataCrc32C: true,
+		VerifiedMacCrc32C:  true,
+		ProtectionLevel:    kmspb.ProtectionLevel_HSM,
+	}
+
+	optsVerify := append(ProtoDiffOpts(), ignoreSuccessAndVerifiedSuccessIntegrity)
+	if diff := cmp.Diff(wantVerify, resp, optsVerify...); diff != "" {
+		t.Errorf("proto mismatch (-want +got): %s", diff)
+	}
+
+	if resp.Success != resp.VerifiedSuccessIntegrity || !resp.Success {
+		t.Errorf("MAC verification failed")
+	}
+}
+
+func TestMacSignVerifyWithoutChecksums(t *testing.T) {
 	ctx := context.Background()
 	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
 	ck := client.CreateTestCK(ctx, t, &kmspb.CreateCryptoKeyRequest{
@@ -62,9 +132,12 @@ func TestMacSignVerify(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	verifyCRC32C(t, got.Mac, got.MacCrc32C)
+
 	want := &kmspb.MacSignResponse{
-		Name:            ckv.Name,
-		ProtectionLevel: kmspb.ProtectionLevel_HSM,
+		Name:               ckv.Name,
+		VerifiedDataCrc32C: false,
+		ProtectionLevel:    kmspb.ProtectionLevel_HSM,
 	}
 
 	opts := append(ProtoDiffOpts(), ignoreMacAndMacCRC)
@@ -82,14 +155,16 @@ func TestMacSignVerify(t *testing.T) {
 	}
 
 	wantVerify := &kmspb.MacVerifyResponse{
-                Name:            ckv.Name,
-                ProtectionLevel: kmspb.ProtectionLevel_HSM,
-        }
+		Name:               ckv.Name,
+		VerifiedDataCrc32C: false,
+		VerifiedMacCrc32C:  false,
+		ProtectionLevel:    kmspb.ProtectionLevel_HSM,
+	}
 
 	optsVerify := append(ProtoDiffOpts(), ignoreSuccessAndVerifiedSuccessIntegrity)
-        if diff := cmp.Diff(wantVerify, resp, optsVerify...); diff != "" {
-                t.Errorf("proto mismatch (-want +got): %s", diff)
-        }
+	if diff := cmp.Diff(wantVerify, resp, optsVerify...); diff != "" {
+		t.Errorf("proto mismatch (-want +got): %s", diff)
+	}
 
 	if resp.Success != resp.VerifiedSuccessIntegrity || !resp.Success {
 		t.Errorf("MAC verification failed")
@@ -233,5 +308,91 @@ func TestMacVerifyKeyDisabled(t *testing.T) {
 	})
 	if status.Code(err) != codes.FailedPrecondition {
 		t.Errorf("err=%v, want code=%s", err, codes.FailedPrecondition)
+	}
+}
+
+func TestMacSignInvalidDataChecksum(t *testing.T) {
+	ctx := context.Background()
+	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
+	ck := client.CreateTestCK(ctx, t, &kmspb.CreateCryptoKeyRequest{
+		Parent: kr.Name,
+		CryptoKey: &kmspb.CryptoKey{
+			Purpose: kmspb.CryptoKey_MAC,
+			VersionTemplate: &kmspb.CryptoKeyVersionTemplate{
+				ProtectionLevel: kmspb.ProtectionLevel_HSM,
+				Algorithm:       kmspb.CryptoKeyVersion_HMAC_SHA256,
+			},
+		},
+		SkipInitialVersionCreation: true,
+	})
+	ckv := client.CreateTestCKVAndWait(ctx, t, &kmspb.CreateCryptoKeyVersionRequest{
+		Parent: ck.Name,
+	})
+
+	_, err := client.MacSign(ctx, &kmspb.MacSignRequest{
+		Name:       ckv.Name,
+		Data:       []byte("data"),
+		DataCrc32C: crc32c([]byte("cosmicray")),
+	})
+	if status.Code(err) != codes.InvalidArgument {
+		t.Errorf("err=%v, want code=%s", err, codes.InvalidArgument)
+	}
+}
+
+func TestMacVerifyInvalidDataChecksum(t *testing.T) {
+	ctx := context.Background()
+	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
+	ck := client.CreateTestCK(ctx, t, &kmspb.CreateCryptoKeyRequest{
+		Parent: kr.Name,
+		CryptoKey: &kmspb.CryptoKey{
+			Purpose: kmspb.CryptoKey_MAC,
+			VersionTemplate: &kmspb.CryptoKeyVersionTemplate{
+				ProtectionLevel: kmspb.ProtectionLevel_HSM,
+				Algorithm:       kmspb.CryptoKeyVersion_HMAC_SHA256,
+			},
+		},
+		SkipInitialVersionCreation: true,
+	})
+	ckv := client.CreateTestCKVAndWait(ctx, t, &kmspb.CreateCryptoKeyVersionRequest{
+		Parent: ck.Name,
+	})
+
+	_, err := client.MacVerify(ctx, &kmspb.MacVerifyRequest{
+		Name:       ckv.Name,
+		Data:       []byte("data"),
+		DataCrc32C: crc32c([]byte("cosmicray")),
+		Mac:        []byte("mac"),
+	})
+	if status.Code(err) != codes.InvalidArgument {
+		t.Errorf("err=%v, want code=%s", err, codes.InvalidArgument)
+	}
+}
+
+func TestMacVerifyInvalidMacChecksum(t *testing.T) {
+	ctx := context.Background()
+	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
+	ck := client.CreateTestCK(ctx, t, &kmspb.CreateCryptoKeyRequest{
+		Parent: kr.Name,
+		CryptoKey: &kmspb.CryptoKey{
+			Purpose: kmspb.CryptoKey_MAC,
+			VersionTemplate: &kmspb.CryptoKeyVersionTemplate{
+				ProtectionLevel: kmspb.ProtectionLevel_HSM,
+				Algorithm:       kmspb.CryptoKeyVersion_HMAC_SHA256,
+			},
+		},
+		SkipInitialVersionCreation: true,
+	})
+	ckv := client.CreateTestCKVAndWait(ctx, t, &kmspb.CreateCryptoKeyVersionRequest{
+		Parent: ck.Name,
+	})
+
+	_, err := client.MacVerify(ctx, &kmspb.MacVerifyRequest{
+		Name:      ckv.Name,
+		Data:      []byte("data"),
+		Mac:       []byte("mac"),
+		MacCrc32C: crc32c([]byte("cosmicray")),
+	})
+	if status.Code(err) != codes.InvalidArgument {
+		t.Errorf("err=%v, want code=%s", err, codes.InvalidArgument)
 	}
 }

@@ -112,9 +112,11 @@ absl::StatusOr<kms_v1::AsymmetricSignResponse> KmsClient::AsymmetricSign(
 }
 
 absl::StatusOr<kms_v1::MacSignResponse> KmsClient::MacSign(
-    const kms_v1::MacSignRequest& request) const {
+    kms_v1::MacSignRequest& request) const {
   grpc::ClientContext ctx;
   AddContextSettings(&ctx, "name", request.name());
+
+  request.mutable_data_crc32c()->set_value(ComputeCRC32C(request.data()));
 
   kms_v1::MacSignResponse response;
   absl::Status rpc_result =
@@ -123,13 +125,29 @@ absl::StatusOr<kms_v1::MacSignResponse> KmsClient::MacSign(
     SetErrorRv(rpc_result, CKR_DEVICE_ERROR);
     return rpc_result;
   }
+
+  if (!CRC32CMatches(response.mac(), response.mac_crc32c().value())) {
+    return NewInternalError(
+        "The response crc32c did not match the expected checksum value",
+        SOURCE_LOCATION);
+  }
+
+  if (!response.verified_data_crc32c()) {
+    return NewInternalError(
+        "The server did not verify the checksum values provided in the request",
+        SOURCE_LOCATION);
+  }
+
   return response;
 }
 
 absl::StatusOr<kms_v1::MacVerifyResponse> KmsClient::MacVerify(
-    const kms_v1::MacVerifyRequest& request) const {
+    kms_v1::MacVerifyRequest& request) const {
   grpc::ClientContext ctx;
   AddContextSettings(&ctx, "name", request.name());
+
+  request.mutable_data_crc32c()->set_value(ComputeCRC32C(request.data()));
+  request.mutable_mac_crc32c()->set_value(ComputeCRC32C(request.mac()));
 
   kms_v1::MacVerifyResponse response;
   absl::Status rpc_result =
@@ -138,6 +156,19 @@ absl::StatusOr<kms_v1::MacVerifyResponse> KmsClient::MacVerify(
     SetErrorRv(rpc_result, CKR_DEVICE_ERROR);
     return rpc_result;
   }
+
+  if (response.success() != response.verified_success_integrity()) {
+    return NewInternalError(
+        "The response crc32c did not match the expected checksum value",
+        SOURCE_LOCATION);
+  }
+
+  if (!response.verified_data_crc32c() || !response.verified_mac_crc32c()) {
+    return NewInternalError(
+        "The server did not verify the checksum values provided in the request",
+        SOURCE_LOCATION);
+  }
+
   return response;
 }
 

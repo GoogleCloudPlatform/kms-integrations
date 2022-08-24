@@ -197,7 +197,7 @@ func (f *fakeKMS) RawDecrypt(ctx context.Context, req *kmspb.RawDecryptRequest) 
 
 // MacSign fakes a Cloud KMS API function.
 func (f *fakeKMS) MacSign(ctx context.Context, req *kmspb.MacSignRequest) (*kmspb.MacSignResponse, error) {
-	if err := allowlist("name", "data").check(req); err != nil {
+	if err := allowlist("name", "data", "data_crc32c").check(req); err != nil {
 		return nil, err
 	}
 
@@ -232,6 +232,11 @@ func (f *fakeKMS) MacSign(ctx context.Context, req *kmspb.MacSignRequest) (*kmsp
 		return nil, errInvalidArgument("len(data)=%d, want len(data)<=%d", len(data), 64*1024)
 	}
 
+	dataChecksum := crc32c(data)
+	if req.DataCrc32C != nil && dataChecksum.Value != req.DataCrc32C.Value {
+		return nil, errInvalidArgument("invalid data checksum")
+	}
+
 	var key []byte
 	var ok bool
 	if key, ok = ckv.keyMaterial.([]byte); !ok {
@@ -246,16 +251,17 @@ func (f *fakeKMS) MacSign(ctx context.Context, req *kmspb.MacSignRequest) (*kmsp
 	macTag := mac.Sum(nil)
 
 	return &kmspb.MacSignResponse{
-		Name:            req.Name,
-		Mac:             macTag,
-		MacCrc32C:       crc32c(macTag),
-		ProtectionLevel: ckv.pb.ProtectionLevel,
+		Name:               req.Name,
+		Mac:                macTag,
+		MacCrc32C:          crc32c(macTag),
+		VerifiedDataCrc32C: req.DataCrc32C != nil,
+		ProtectionLevel:    ckv.pb.ProtectionLevel,
 	}, nil
 }
 
 // MacVerify fakes a Cloud KMS API function.
 func (f *fakeKMS) MacVerify(ctx context.Context, req *kmspb.MacVerifyRequest) (*kmspb.MacVerifyResponse, error) {
-	if err := allowlist("name", "data", "mac").check(req); err != nil {
+	if err := allowlist("name", "data", "data_crc32c", "mac", "mac_crc32c").check(req); err != nil {
 		return nil, err
 	}
 
@@ -288,6 +294,11 @@ func (f *fakeKMS) MacVerify(ctx context.Context, req *kmspb.MacVerifyRequest) (*
 		return nil, errInvalidArgument("len(data)=%d, want len(data)<=%d", len(data), 64*1024)
 	}
 
+	dataChecksum := crc32c(data)
+	if req.DataCrc32C != nil && dataChecksum.Value != req.DataCrc32C.Value {
+		return nil, errInvalidArgument("invalid data checksum")
+	}
+
 	hash := def.Opts.(crypto.Hash)
 
 	if req.Mac == nil {
@@ -296,6 +307,11 @@ func (f *fakeKMS) MacVerify(ctx context.Context, req *kmspb.MacVerifyRequest) (*
 
 	if len(req.Mac) != hash.Size() {
 		return nil, errInvalidArgument("len(mac)=%d, want %d", len(req.Mac), hash.Size())
+	}
+
+	macChecksum := crc32c(req.Mac)
+	if req.MacCrc32C != nil && macChecksum.Value != req.MacCrc32C.Value {
+		return nil, errInvalidArgument("invalid mac checksum")
 	}
 
 	var key []byte
@@ -315,6 +331,8 @@ func (f *fakeKMS) MacVerify(ctx context.Context, req *kmspb.MacVerifyRequest) (*
 		Name:                     req.Name,
 		Success:                  hmac.Equal(req.Mac, macTag),
 		VerifiedSuccessIntegrity: hmac.Equal(req.Mac, macTag),
+		VerifiedDataCrc32C:       req.DataCrc32C != nil,
+		VerifiedMacCrc32C:        req.MacCrc32C != nil,
 		ProtectionLevel:          ckv.pb.ProtectionLevel,
 	}, nil
 }

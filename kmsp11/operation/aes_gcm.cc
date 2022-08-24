@@ -18,7 +18,6 @@
 #include "kmsp11/kmsp11.h"
 #include "kmsp11/object.h"
 #include "kmsp11/operation/preconditions.h"
-#include "kmsp11/util/checksums.h"
 #include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/status_macros.h"
