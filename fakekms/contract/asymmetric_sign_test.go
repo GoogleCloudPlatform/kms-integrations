@@ -75,14 +75,16 @@ func TestECSign(t *testing.T) {
 				Sha384: digest[:],
 			},
 		},
+		DigestCrc32C: crc32c(digest[:]),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	want := &kmspb.AsymmetricSignResponse{
-		Name:            ckv.Name,
-		ProtectionLevel: kmspb.ProtectionLevel_HSM,
+		Name:                 ckv.Name,
+		VerifiedDigestCrc32C: true,
+		ProtectionLevel:      kmspb.ProtectionLevel_HSM,
 	}
 
 	opts := append(ProtoDiffOpts(), ignoreSignatureAndSignatureCRC)
@@ -130,19 +132,20 @@ func TestECSignData(t *testing.T) {
 	pub := unmarshalPublicKeyPem(t, pubResp.Pem).(*ecdsa.PublicKey)
 
 	data := []byte("Here is some data to authenticate")
-	digest := sha512.Sum384(data)
 
 	got, err := client.AsymmetricSign(ctx, &kmspb.AsymmetricSignRequest{
-		Name: ckv.Name,
-		Data: data,
+		Name:       ckv.Name,
+		Data:       data,
+		DataCrc32C: crc32c(data),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	want := &kmspb.AsymmetricSignResponse{
-		Name:            ckv.Name,
-		ProtectionLevel: kmspb.ProtectionLevel_HSM,
+		Name:               ckv.Name,
+		VerifiedDataCrc32C: true,
+		ProtectionLevel:    kmspb.ProtectionLevel_HSM,
 	}
 
 	opts := append(ProtoDiffOpts(), ignoreSignatureAndSignatureCRC)
@@ -155,6 +158,7 @@ func TestECSignData(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	digest := sha512.Sum384(data)
 	if !ecdsa.Verify(pub, digest[:], sig.R, sig.S) {
 		t.Error("signature verification failed")
 	}
@@ -204,8 +208,9 @@ func TestRSASignPKCS1(t *testing.T) {
 	}
 
 	want := &kmspb.AsymmetricSignResponse{
-		Name:            ckv.Name,
-		ProtectionLevel: kmspb.ProtectionLevel_SOFTWARE,
+		Name:                 ckv.Name,
+		VerifiedDigestCrc32C: false,
+		ProtectionLevel:      kmspb.ProtectionLevel_SOFTWARE,
 	}
 
 	opts := append(ProtoDiffOpts(), ignoreSignatureAndSignatureCRC)
@@ -258,8 +263,9 @@ func TestRSASignRawPKCS1(t *testing.T) {
 	}
 
 	want := &kmspb.AsymmetricSignResponse{
-		Name:            ckv.Name,
-		ProtectionLevel: kmspb.ProtectionLevel_HSM,
+		Name:               ckv.Name,
+		VerifiedDataCrc32C: false,
+		ProtectionLevel:    kmspb.ProtectionLevel_HSM,
 	}
 
 	opts := append(ProtoDiffOpts(), ignoreSignatureAndSignatureCRC)
@@ -545,5 +551,65 @@ func TestAsymmetricSignDisabled(t *testing.T) {
 	})
 	if status.Code(err) != codes.FailedPrecondition {
 		t.Errorf("err=%v, want code=%s", err, codes.FailedPrecondition)
+	}
+}
+
+func TestAsymmetricSignInvalidDigestChecksum(t *testing.T) {
+	ctx := context.Background()
+	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
+	ck := client.CreateTestCK(ctx, t, &kmspb.CreateCryptoKeyRequest{
+		Parent: kr.Name,
+		CryptoKey: &kmspb.CryptoKey{
+			Purpose: kmspb.CryptoKey_ASYMMETRIC_SIGN,
+			VersionTemplate: &kmspb.CryptoKeyVersionTemplate{
+				Algorithm: kmspb.CryptoKeyVersion_EC_SIGN_P256_SHA256,
+			},
+		},
+		SkipInitialVersionCreation: true,
+	})
+	ckv := client.CreateTestCKVAndWait(ctx, t, &kmspb.CreateCryptoKeyVersionRequest{
+		Parent: ck.Name,
+	})
+
+	digest := sha256.Sum256([]byte("here is some data"))
+
+	_, err := client.AsymmetricSign(ctx, &kmspb.AsymmetricSignRequest{
+		Name: ckv.Name,
+		Digest: &kmspb.Digest{
+			Digest: &kmspb.Digest_Sha256{
+				Sha256: digest[:],
+			},
+		},
+		DigestCrc32C: crc32c([]byte("cosmicray")),
+	})
+	if status.Code(err) != codes.InvalidArgument {
+		t.Errorf("err=%v, want code=%s", err, codes.InvalidArgument)
+	}
+}
+
+func TestAsymmetricSignInvalidDataChecksum(t *testing.T) {
+	ctx := context.Background()
+	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
+	ck := client.CreateTestCK(ctx, t, &kmspb.CreateCryptoKeyRequest{
+		Parent: kr.Name,
+		CryptoKey: &kmspb.CryptoKey{
+			Purpose: kmspb.CryptoKey_ASYMMETRIC_SIGN,
+			VersionTemplate: &kmspb.CryptoKeyVersionTemplate{
+				Algorithm: kmspb.CryptoKeyVersion_RSA_SIGN_RAW_PKCS1_2048,
+			},
+		},
+		SkipInitialVersionCreation: true,
+	})
+	ckv := client.CreateTestCKVAndWait(ctx, t, &kmspb.CreateCryptoKeyVersionRequest{
+		Parent: ck.Name,
+	})
+
+	_, err := client.AsymmetricSign(ctx, &kmspb.AsymmetricSignRequest{
+		Name:       ckv.Name,
+		Data:       []byte("here is some data"),
+		DataCrc32C: crc32c([]byte("cosmicray")),
+	})
+	if status.Code(err) != codes.InvalidArgument {
+		t.Errorf("err=%v, want code=%s", err, codes.InvalidArgument)
 	}
 }

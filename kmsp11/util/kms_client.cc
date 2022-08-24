@@ -44,6 +44,25 @@ std::string ComputeUserAgentPrefix() {
                          GetHostPlatformInfo());
 }
 
+absl::StatusOr<std::string> GetDigestString(const kms_v1::Digest& digest) {
+  switch (digest.digest_case()) {
+    case kms_v1::Digest::kSha256:
+      return digest.sha256();
+      break;
+    case kms_v1::Digest::kSha384:
+      return digest.sha384();
+      break;
+    case kms_v1::Digest::kSha512:
+      return digest.sha512();
+    default:
+      return NewInternalError("Could not get digest field of the request",
+                              SOURCE_LOCATION);
+  }
+
+  return NewInternalError("Could not get digest field of the request",
+                          SOURCE_LOCATION);
+}
+
 }  // namespace
 
 void KmsClient::AddContextSettings(grpc::ClientContext* ctx,
@@ -97,9 +116,19 @@ absl::StatusOr<kms_v1::AsymmetricDecryptResponse> KmsClient::AsymmetricDecrypt(
 }
 
 absl::StatusOr<kms_v1::AsymmetricSignResponse> KmsClient::AsymmetricSign(
-    const kms_v1::AsymmetricSignRequest& request) const {
+    kms_v1::AsymmetricSignRequest& request) const {
   grpc::ClientContext ctx;
   AddContextSettings(&ctx, "name", request.name());
+
+  bool use_data = false;
+  if (!request.data().empty()) {
+    use_data = true;
+    request.mutable_data_crc32c()->set_value(ComputeCRC32C(request.data()));
+  } else {
+    ASSIGN_OR_RETURN(std::string digest_string,
+                     GetDigestString(request.digest()));
+    request.mutable_digest_crc32c()->set_value(ComputeCRC32C(digest_string));
+  }
 
   kms_v1::AsymmetricSignResponse response;
   absl::Status rpc_result =
@@ -108,6 +137,25 @@ absl::StatusOr<kms_v1::AsymmetricSignResponse> KmsClient::AsymmetricSign(
     SetErrorRv(rpc_result, CKR_DEVICE_ERROR);
     return rpc_result;
   }
+
+  if (!CRC32CMatches(response.signature(),
+                     response.signature_crc32c().value())) {
+    return NewInternalError(
+        "The response crc32c did not match the expected checksum value",
+        SOURCE_LOCATION);
+  }
+
+  if (use_data && !response.verified_data_crc32c()) {
+    return NewInternalError(
+        "The server did not verify the checksum values provided in the request",
+        SOURCE_LOCATION);
+  }
+  if (!use_data && !response.verified_digest_crc32c()) {
+    return NewInternalError(
+        "The server did not verify the checksum values provided in the request",
+        SOURCE_LOCATION);
+  }
+
   return response;
 }
 

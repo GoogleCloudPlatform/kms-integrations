@@ -278,6 +278,7 @@ TEST(KmsClientTest, AsymmetricSignFailureInvalidName) {
 
   kms_v1::AsymmetricSignRequest req;
   req.set_name("foo");
+  req.set_data("bar");
   EXPECT_THAT(client->AsymmetricSign(req),
               StatusIs(absl::StatusCode::kInvalidArgument));
 }

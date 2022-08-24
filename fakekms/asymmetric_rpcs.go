@@ -117,7 +117,7 @@ func (f *fakeKMS) AsymmetricDecrypt(ctx context.Context, req *kmspb.AsymmetricDe
 
 // AsymmetricSign fakes a Cloud KMS API function.
 func (f *fakeKMS) AsymmetricSign(ctx context.Context, req *kmspb.AsymmetricSignRequest) (*kmspb.AsymmetricSignResponse, error) {
-	if err := allowlist("name", "data", "digest.sha256", "digest.sha384", "digest.sha512").check(req); err != nil {
+	if err := allowlist("name", "data", "data_crc32c", "digest.sha256", "digest.sha384", "digest.sha512", "digest_crc32c").check(req); err != nil {
 		return nil, err
 	}
 
@@ -141,6 +141,10 @@ func (f *fakeKMS) AsymmetricSign(ctx context.Context, req *kmspb.AsymmetricSignR
 			nameForValue(kmspb.CryptoKeyVersion_CryptoKeyVersionAlgorithm_name, int32(ckv.pb.Algorithm)))
 	}
 
+	if req.DataCrc32C != nil && req.DigestCrc32C != nil {
+		return nil, errInvalidArgument("only one of digest_crc32c or data_crc32c must be set")
+	}
+
 	opts := def.Opts.(crypto.SignerOpts)
 
 	var data []byte
@@ -153,10 +157,19 @@ func (f *fakeKMS) AsymmetricSign(ctx context.Context, req *kmspb.AsymmetricSignR
 		if req.Data == nil {
 			return nil, errInvalidArgument("data is empty")
 		}
+		dataChecksum := crc32c(req.Data)
+		if req.DataCrc32C != nil && dataChecksum.Value != req.DataCrc32C.Value {
+			return nil, errInvalidArgument("invalid data checksum")
+		}
 		data = req.Data
 	case req.Data != nil:
 		if req.Digest != nil {
 			return nil, errInvalidArgument("digest should be empty")
+		}
+		// Validate checksum before computing the digest
+		dataChecksum := crc32c(req.Data)
+		if req.DataCrc32C != nil && dataChecksum.Value != req.DataCrc32C.Value {
+			return nil, errInvalidArgument("invalid data checksum")
 		}
 		data = req.Data
 		h := opts.HashFunc().New()
@@ -176,15 +189,22 @@ func (f *fakeKMS) AsymmetricSign(ctx context.Context, req *kmspb.AsymmetricSignR
 		return nil, errInvalidArgument("len(digest)=%d, want %d", len(data), opts.HashFunc().Size())
 	}
 
+	dataChecksum := crc32c(data)
+	if req.DigestCrc32C != nil && dataChecksum.Value != req.DigestCrc32C.Value {
+		return nil, errInvalidArgument("invalid digest checksum")
+	}
+
 	sig, err := ckv.keyMaterial.(crypto.Signer).Sign(rand.Reader, data, opts)
 	if err != nil {
 		return nil, errInternal("signing failed: %v", err)
 	}
 
 	return &kmspb.AsymmetricSignResponse{
-		Name:            req.Name,
-		Signature:       sig,
-		SignatureCrc32C: crc32c(sig),
-		ProtectionLevel: ckv.pb.ProtectionLevel,
+		Name:                 req.Name,
+		Signature:            sig,
+		SignatureCrc32C:      crc32c(sig),
+		VerifiedDataCrc32C:   req.DataCrc32C != nil,
+		VerifiedDigestCrc32C: req.DigestCrc32C != nil,
+		ProtectionLevel:      ckv.pb.ProtectionLevel,
 	}, nil
 }
