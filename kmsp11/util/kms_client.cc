@@ -101,9 +101,12 @@ KmsClient::KmsClient(std::string_view endpoint_address,
 }
 
 absl::StatusOr<kms_v1::AsymmetricDecryptResponse> KmsClient::AsymmetricDecrypt(
-    const kms_v1::AsymmetricDecryptRequest& request) const {
+    kms_v1::AsymmetricDecryptRequest& request) const {
   grpc::ClientContext ctx;
   AddContextSettings(&ctx, "name", request.name());
+
+  request.mutable_ciphertext_crc32c()->set_value(
+      ComputeCRC32C(request.ciphertext()));
 
   kms_v1::AsymmetricDecryptResponse response;
   absl::Status rpc_result =
@@ -112,6 +115,20 @@ absl::StatusOr<kms_v1::AsymmetricDecryptResponse> KmsClient::AsymmetricDecrypt(
     SetErrorRv(rpc_result, CKR_DEVICE_ERROR);
     return rpc_result;
   }
+
+  if (!CRC32CMatches(response.plaintext(),
+                     response.plaintext_crc32c().value())) {
+    return NewInternalError(
+        "The response crc32c did not match the expected checksum value",
+        SOURCE_LOCATION);
+  }
+
+  if (!response.verified_ciphertext_crc32c()) {
+    return NewInternalError(
+        "The server did not verify the checksum values provided in the request",
+        SOURCE_LOCATION);
+  }
+
   return response;
 }
 

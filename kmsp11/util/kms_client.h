@@ -52,7 +52,7 @@ class KmsClient {
   kms_v1::KeyManagementService::Stub* kms_stub() { return kms_stub_.get(); }
 
   absl::StatusOr<kms_v1::AsymmetricDecryptResponse> AsymmetricDecrypt(
-      const kms_v1::AsymmetricDecryptRequest& request) const;
+      kms_v1::AsymmetricDecryptRequest& request) const;
 
   absl::StatusOr<kms_v1::AsymmetricSignResponse> AsymmetricSign(
       kms_v1::AsymmetricSignRequest& request) const;

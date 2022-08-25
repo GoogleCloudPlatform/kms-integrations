@@ -79,7 +79,7 @@ func (f *fakeKMS) GetPublicKey(ctx context.Context, req *kmspb.GetPublicKeyReque
 
 // AsymmetricDecrypt fakes a Cloud KMS API function.
 func (f *fakeKMS) AsymmetricDecrypt(ctx context.Context, req *kmspb.AsymmetricDecryptRequest) (*kmspb.AsymmetricDecryptResponse, error) {
-	if err := allowlist("name", "ciphertext").check(req); err != nil {
+	if err := allowlist("name", "ciphertext", "ciphertext_crc32c").check(req); err != nil {
 		return nil, err
 	}
 
@@ -103,15 +103,29 @@ func (f *fakeKMS) AsymmetricDecrypt(ctx context.Context, req *kmspb.AsymmetricDe
 			nameForValue(kmspb.CryptoKeyVersion_CryptoKeyVersionAlgorithm_name, int32(ckv.pb.Algorithm)))
 	}
 
+	if req.Ciphertext == nil {
+		return nil, errInvalidArgument("ciphertext is empty")
+	}
+
+	if len(req.Ciphertext) > maxCiphertextSize {
+		return nil, errInvalidArgument("len(ciphertext)=%d, want len(ciphertext)<=%d", len(req.Ciphertext), maxCiphertextSize)
+	}
+
+	ciphertextChecksum := crc32c(req.Ciphertext)
+	if req.CiphertextCrc32C != nil && ciphertextChecksum.Value != req.CiphertextCrc32C.Value {
+		return nil, errInvalidArgument("invalid ciphertext checksum")
+	}
+
 	pt, err := ckv.keyMaterial.(crypto.Decrypter).Decrypt(rand.Reader, req.Ciphertext, def.Opts)
 	if err != nil {
 		return nil, errInvalidArgument("decryption failed: %v", err)
 	}
 
 	return &kmspb.AsymmetricDecryptResponse{
-		Plaintext:       pt,
-		PlaintextCrc32C: crc32c(pt),
-		ProtectionLevel: ckv.pb.ProtectionLevel,
+		Plaintext:                pt,
+		PlaintextCrc32C:          crc32c(pt),
+		VerifiedCiphertextCrc32C: req.CiphertextCrc32C != nil,
+		ProtectionLevel:          ckv.pb.ProtectionLevel,
 	}, nil
 }
 
