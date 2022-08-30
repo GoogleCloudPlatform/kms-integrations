@@ -191,6 +191,11 @@ func (f *fakeKMS) RawDecrypt(ctx context.Context, req *kmspb.RawDecryptRequest) 
 	return &kmspb.RawDecryptResponse{
 		Plaintext:       plaintext,
 		PlaintextCrc32C: crc32c(plaintext),
+		// TODO(b/160311385): uncomment once cl/470723699 is submitted and fully
+		// rolled out in staging, since our contract tests CI runs against staging.
+		//VerifiedCiphertextCrc32C: req.CiphertextCrc32C != nil,
+		//VerifiedAdditionalAuthenticatedDataCrc32C: req.AdditionalAuthenticatedDataCrc32C != nil,
+		//VerifiedInitializationVectorCrc32C:        req.InitializationVectorCrc32C != nil,
 		ProtectionLevel: ckv.pb.ProtectionLevel,
 	}, nil
 }

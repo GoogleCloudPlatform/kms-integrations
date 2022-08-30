@@ -104,6 +104,11 @@ func TestRawEncryptDecrypt(t *testing.T) {
 	wantDecrypt := &kmspb.RawDecryptResponse{
 		Plaintext:       plaintext,
 		PlaintextCrc32C: wrapperspb.Int64(int64(crc32.Checksum(plaintext, crc32CTable))),
+		// TODO(b/160311385): uncomment once cl/470723699 is submitted and fully
+		// rolled out in staging, since our contract tests CI runs against staging.
+		//VerifiedCiphertextCrc32C: true,
+		//VerifiedAdditionalAuthenticatedDataCrc32C: true,
+		//VerifiedInitializationVectorCrc32C:        true,
 		ProtectionLevel: kmspb.ProtectionLevel_HSM,
 	}
 
@@ -172,6 +177,11 @@ func TestRawEncryptDecryptWithoutChecksums(t *testing.T) {
 	wantDecrypt := &kmspb.RawDecryptResponse{
 		Plaintext:       plaintext,
 		PlaintextCrc32C: wrapperspb.Int64(int64(crc32.Checksum(plaintext, crc32CTable))),
+		// TODO(b/160311385): uncomment once cl/470723699 is submitted and fully
+		// rolled out in staging, since our contract tests CI runs against staging.
+		//VerifiedCiphertextCrc32C: false,
+		//VerifiedAdditionalAuthenticatedDataCrc32C: false,
+		//VerifiedInitializationVectorCrc32C:        false,
 		ProtectionLevel: kmspb.ProtectionLevel_HSM,
 	}
 

@@ -16,17 +16,24 @@ index 5029f3e03..12ebe8829 100644
      // [CryptoKeys][google.cloud.kms.v1.CryptoKey] with this purpose may be used
      // with [MacSign][google.cloud.kms.v1.KeyManagementService.MacSign].
      MAC = 9;
-@@ -336,6 +343,9 @@ message CryptoKeyVersion {
+@@ -336,6 +343,16 @@ message CryptoKeyVersion {
      // Creates symmetric encryption keys.
      GOOGLE_SYMMETRIC_ENCRYPTION = 1;
  
-+    // AES+GCM (Galois Counter Mode) using 256-bit keys.
++    // AES+GCM (Galois Counter Mode).
++    AES_128_GCM = 41;
 +    AES_256_GCM = 19;
++    // AES-CBC (Cipher Block Chaining Mode)
++    AES_128_CBC = 42;
++    AES_256_CBC = 43;
++    // AES-CTR (Counter Mode)
++    AES_128_CTR = 44;
++    AES_256_CTR = 45;
 +
      // RSASSA-PSS 2048 bit key with a SHA256 digest.
      RSA_SIGN_PSS_2048_SHA256 = 2;
  
-@@ -403,6 +413,15 @@ message CryptoKeyVersion {
+@@ -403,6 +420,15 @@ message CryptoKeyVersion {
      // HMAC-SHA256 signing with a 256 bit key.
      HMAC_SHA256 = 32;
  
@@ -76,7 +83,7 @@ index 565678da3..46ff75a0d 100644
    // Signs data using a [CryptoKeyVersion][google.cloud.kms.v1.CryptoKeyVersion]
    // with [CryptoKey.purpose][google.cloud.kms.v1.CryptoKey.purpose]
    // ASYMMETRIC_SIGN, producing a signature that can be verified with the public
-@@ -1068,6 +1091,163 @@ message DecryptRequest {
+@@ -1068,6 +1091,184 @@ message DecryptRequest {
        [(google.api.field_behavior) = OPTIONAL];
  }
  
@@ -151,6 +158,27 @@ index 565678da3..46ff75a0d 100644
 +  google.protobuf.Int64Value additional_authenticated_data_crc32c = 5 [
 +    (google.api.field_behavior) = OPTIONAL
 +  ];
++
++  // Optional. A customer-supplied initialization vector that will be used for encryption.
++  // If it is not provided for AES-CBC and AES-CTR, one will be generated.
++  // It will be returned in [RawEncryptResponse.initialization_vector][].
++  bytes initialization_vector = 6 [(google.api.field_behavior) = OPTIONAL];
++
++  // Optional. An optional CRC32C checksum of the
++  // [RawEncryptRequest.initialization_vector][]. If specified,
++  // [KeyManagementService][] will verify the integrity of the received
++  // initialization_vector using this checksum.
++  // [KeyManagementService][] will report an error if the checksum verification
++  // fails. If you receive a checksum error, your client should verify that
++  // CRC32C(initialization_vector) is equal to
++  // initialization_vector_crc32c, and if so, perform
++  // a limited number of retries. A persistent mismatch may indicate an issue in
++  // your computation of the CRC32C checksum.
++  // Note: This field is defined as int64 for reasons of compatibility across
++  // different languages. However, it is a non-negative integer, which will
++  // never exceed 2^32-1, and can be safely downconverted to uint32 in languages
++  // that support this type.
++  google.protobuf.Int64Value initialization_vector_crc32c = 7 [(google.api.field_behavior) = OPTIONAL];
 +}
 +
 +// Request message for [KeyManagementService.RawDecrypt][].
@@ -240,7 +268,7 @@ index 565678da3..46ff75a0d 100644
  // Request message for
  // [KeyManagementService.AsymmetricSign][google.cloud.kms.v1.KeyManagementService.AsymmetricSign].
  message AsymmetricSignRequest {
-@@ -1400,6 +1580,99 @@ message DecryptResponse {
+@@ -1400,6 +1601,143 @@ message DecryptResponse {
    ProtectionLevel protection_level = 4;
  }
  
@@ -305,6 +333,17 @@ index 565678da3..46ff75a0d 100644
 +  // retries.
 +  bool verified_additional_authenticated_data_crc32c = 7;
 +
++  // Integrity verification field. A flag indicating whether
++  // [RawEncryptRequest.initialization_vector_crc32c][] was received by
++  // [KeyManagementService][] and used for the integrity verification of
++  // initialization_vector. A false value of this field indicates either that
++  // [RawEncryptRequest.initialization_vector_crc32c][] was left unset
++  // or that it was not delivered to [KeyManagementService][]. If you've set
++  // [RawEncryptRequest.initialization_vector_crc32c][] but this field
++  // is still false, discard the response and perform a limited number of
++  // retries.
++  bool verified_initialization_vector_crc32c = 10;
++
 +  // The resource name of the [CryptoKeyVersion][] used in encryption. Check
 +  // this field to verify that the intended resource was used for encryption.
 +  string name = 8;
@@ -335,6 +374,39 @@ index 565678da3..46ff75a0d 100644
 +
 +  // The [ProtectionLevel][] of the [CryptoKeyVersion][] used in decryption.
 +  ProtectionLevel protection_level = 3;
++
++  // Integrity verification field. A flag indicating whether
++  // [RawDecryptRequest.ciphertext_crc32c][] was received by
++  // [KeyManagementService][] and used for the integrity verification of the
++  // ciphertext. A false value of this field indicates either that
++  // [RawDecryptRequest.ciphertext_crc32c][] was left unset or that it was not
++  // delivered to [KeyManagementService][]. If you've set
++  // [RawDecryptRequest.ciphertext_crc32c][] but this field is still false,
++  // discard the response and perform a limited number of retries.
++  bool verified_ciphertext_crc32c = 4;
++
++  // Integrity verification field. A flag indicating whether
++  // [RawDecryptRequest.additional_authenticated_data_crc32c][] was received by
++  // [KeyManagementService][] and used for the integrity verification of
++  // additional_authenticated_data. A false value of this
++  // field indicates either that //
++  // [RawDecryptRequest.additional_authenticated_data_crc32c][] was left unset
++  // or that it was not delivered to [KeyManagementService][]. If you've set
++  // [RawDecryptRequest.additional_authenticated_data_crc32c][] but this field
++  // is still false, discard the response and perform a limited number of
++  // retries.
++  bool verified_additional_authenticated_data_crc32c = 5;
++
++  // Integrity verification field. A flag indicating whether
++  // [RawDecryptRequest.initialization_vector_crc32c][] was received by
++  // [KeyManagementService][] and used for the integrity verification of
++  // initialization_vector. A false value of this field indicates either that
++  // [RawDecryptRequest.initialization_vector_crc32c][] was left unset
++  // or that it was not delivered to [KeyManagementService][]. If you've set
++  // [RawDecryptRequest.initialization_vector_crc32c][] but this field
++  // is still false, discard the response and perform a limited number of
++  // retries.
++  bool verified_initialization_vector_crc32c = 6;
 +}
 +
  // Response message for
