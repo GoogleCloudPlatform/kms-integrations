@@ -33,9 +33,6 @@ import java.util.UUID;
  * JCA integration tests.
  */
 public class JcaTestFixture implements AutoCloseable {
-
-  private static final String CA_CERTS_ENV_VARIABLE = "GRPC_DEFAULT_SSL_ROOTS_FILE_PATH";
-  private static final String CA_CERTS_PATH = "com_github_grpc_grpc/etc/roots.pem";
   private static final String CONFIG_ENV_VARIABLE = "KMS_PKCS11_CONFIG";
   private static final String SHARED_LIB_PATH = "com_google_kmstools/kmsp11/main/libkmsp11.so";
   private static final String TEST_LOCATION = "projects/kmsp11-test/locations/us-central1";
@@ -68,8 +65,6 @@ public class JcaTestFixture implements AutoCloseable {
       w.write(newLibraryConfig(fakeKms.getServerAddress(), keyRing.getName()));
     }
 
-    String caCertsFullPath = runfiles.rlocation(CA_CERTS_PATH);
-    Environment.set(CA_CERTS_ENV_VARIABLE, caCertsFullPath);
     Environment.set(CONFIG_ENV_VARIABLE, configFile.getAbsolutePath());
   }
 
@@ -92,7 +87,6 @@ public class JcaTestFixture implements AutoCloseable {
   /** Release the resources associated with this test fixture. */
   @Override
   public void close() {
-    Environment.unset(CA_CERTS_ENV_VARIABLE);
     Environment.unset(CONFIG_ENV_VARIABLE);
     client.close();
     fakeKms.close();

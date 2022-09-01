@@ -34,11 +34,7 @@ cc_test(
     ],
     data = [
         "//kmsp11/main:libkmsp11.so",
-        "@com_github_grpc_grpc//:etc/roots.pem",
     ],
-    env = {
-        "GRPC_DEFAULT_SSL_ROOTS_FILE_PATH": "$(location @com_github_grpc_grpc//:etc/roots.pem)",
-    },
     linkopts = select({
         "//:linux": [
             # Disallow undefined symbols in object files.
