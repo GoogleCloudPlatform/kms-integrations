@@ -48,10 +48,30 @@ var algorithms = map[kmspb.CryptoKeyVersion_CryptoKeyVersionAlgorithm]algDef{
 	},
 
 	// RAW_ENCRYPT_DECRYPT
-	kmspb.CryptoKeyVersion_AES_256_GCM: {
+	kmspb.CryptoKeyVersion_AES_128_GCM: {
 		Purpose:    kmspb.CryptoKey_RAW_ENCRYPT_DECRYPT,
-		KeyFactory: symmetricKeyFactory(256),
+		KeyFactory: symmetricKeyFactory(128),
 	},
+	kmspb.CryptoKeyVersion_AES_256_GCM: {
+                Purpose:    kmspb.CryptoKey_RAW_ENCRYPT_DECRYPT,
+                KeyFactory: symmetricKeyFactory(256),
+        },
+	kmspb.CryptoKeyVersion_AES_128_CTR: {
+                Purpose:    kmspb.CryptoKey_RAW_ENCRYPT_DECRYPT,
+                KeyFactory: symmetricKeyFactory(128),
+        },
+	kmspb.CryptoKeyVersion_AES_256_CTR: {
+                Purpose:    kmspb.CryptoKey_RAW_ENCRYPT_DECRYPT,
+                KeyFactory: symmetricKeyFactory(256),
+        },
+	kmspb.CryptoKeyVersion_AES_128_CBC: {
+                Purpose:    kmspb.CryptoKey_RAW_ENCRYPT_DECRYPT,
+                KeyFactory: symmetricKeyFactory(128),
+        },
+	kmspb.CryptoKeyVersion_AES_256_CBC: {
+                Purpose:    kmspb.CryptoKey_RAW_ENCRYPT_DECRYPT,
+                KeyFactory: symmetricKeyFactory(256),
+        },
 
 	// ASYMMETRIC_DECRYPT
 	kmspb.CryptoKeyVersion_RSA_DECRYPT_OAEP_2048_SHA256: {

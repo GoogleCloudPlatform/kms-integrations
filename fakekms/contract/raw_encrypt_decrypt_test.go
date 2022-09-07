@@ -57,15 +57,12 @@ func TestRawEncryptDecrypt(t *testing.T) {
 		Parent: ck.Name,
 	})
 
-	plaintext := []byte("Here is some data to encrypt")
-	aad := []byte("aad")
+	plaintext := []byte("Here is a plaintext to encrypt, 48 bytes long...")
 
 	gotEncrypt, err := client.RawEncrypt(ctx, &kmspb.RawEncryptRequest{
-		Name:                              ckv.Name,
-		Plaintext:                         plaintext,
-		PlaintextCrc32C:                   crc32c(plaintext),
-		AdditionalAuthenticatedData:       aad,
-		AdditionalAuthenticatedDataCrc32C: crc32c(aad),
+		Name:            ckv.Name,
+		Plaintext:       plaintext,
+		PlaintextCrc32C: crc32c(plaintext),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -78,7 +75,6 @@ func TestRawEncryptDecrypt(t *testing.T) {
 		ProtectionLevel:         kmspb.ProtectionLevel_HSM,
 		TagLength:               16,
 		VerifiedPlaintextCrc32C: true,
-		VerifiedAdditionalAuthenticatedDataCrc32C: true,
 	}
 
 	opts := append(ProtoDiffOpts(), ignoreCiphertextAndIVAndTagLength)
@@ -87,13 +83,11 @@ func TestRawEncryptDecrypt(t *testing.T) {
 	}
 
 	gotDecrypt, err := client.RawDecrypt(ctx, &kmspb.RawDecryptRequest{
-		Name:                              ckv.Name,
-		Ciphertext:                        gotEncrypt.Ciphertext,
-		CiphertextCrc32C:                  crc32c(gotEncrypt.Ciphertext),
-		AdditionalAuthenticatedData:       aad,
-		AdditionalAuthenticatedDataCrc32C: crc32c(aad),
-		InitializationVector:              gotEncrypt.InitializationVector,
-		InitializationVectorCrc32C:        crc32c(gotEncrypt.InitializationVector),
+		Name:                       ckv.Name,
+		Ciphertext:                 gotEncrypt.Ciphertext,
+		CiphertextCrc32C:           crc32c(gotEncrypt.Ciphertext),
+		InitializationVector:       gotEncrypt.InitializationVector,
+		InitializationVectorCrc32C: crc32c(gotEncrypt.InitializationVector),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -102,12 +96,11 @@ func TestRawEncryptDecrypt(t *testing.T) {
 	verifyCRC32C(t, gotDecrypt.Plaintext, gotDecrypt.PlaintextCrc32C)
 
 	wantDecrypt := &kmspb.RawDecryptResponse{
-		Plaintext:       plaintext,
-		PlaintextCrc32C: wrapperspb.Int64(int64(crc32.Checksum(plaintext, crc32CTable))),
-		VerifiedCiphertextCrc32C: true,
-		VerifiedAdditionalAuthenticatedDataCrc32C: true,
-		VerifiedInitializationVectorCrc32C:        true,
-		ProtectionLevel: kmspb.ProtectionLevel_HSM,
+		Plaintext:                          plaintext,
+		PlaintextCrc32C:                    wrapperspb.Int64(int64(crc32.Checksum(plaintext, crc32CTable))),
+		VerifiedCiphertextCrc32C:           true,
+		VerifiedInitializationVectorCrc32C: true,
+		ProtectionLevel:                    kmspb.ProtectionLevel_HSM,
 	}
 
 	if diff := cmp.Diff(wantDecrypt, gotDecrypt, ProtoDiffOpts()...); diff != "" {
@@ -153,6 +146,7 @@ func TestRawEncryptDecryptWithoutChecksums(t *testing.T) {
 		TagLength:               16,
 		VerifiedPlaintextCrc32C: false,
 		VerifiedAdditionalAuthenticatedDataCrc32C: false,
+		VerifiedInitializationVectorCrc32C:        false,
 	}
 
 	opts := append(ProtoDiffOpts(), ignoreCiphertextAndIVAndTagLength)
@@ -173,18 +167,161 @@ func TestRawEncryptDecryptWithoutChecksums(t *testing.T) {
 	verifyCRC32C(t, gotDecrypt.Plaintext, gotDecrypt.PlaintextCrc32C)
 
 	wantDecrypt := &kmspb.RawDecryptResponse{
-		Plaintext:       plaintext,
-		PlaintextCrc32C: wrapperspb.Int64(int64(crc32.Checksum(plaintext, crc32CTable))),
+		Plaintext:                plaintext,
+		PlaintextCrc32C:          wrapperspb.Int64(int64(crc32.Checksum(plaintext, crc32CTable))),
 		VerifiedCiphertextCrc32C: false,
 		VerifiedAdditionalAuthenticatedDataCrc32C: false,
 		VerifiedInitializationVectorCrc32C:        false,
-		ProtectionLevel: kmspb.ProtectionLevel_HSM,
+		ProtectionLevel:                           kmspb.ProtectionLevel_HSM,
 	}
 
 	if diff := cmp.Diff(wantDecrypt, gotDecrypt, ProtoDiffOpts()...); diff != "" {
 		t.Errorf("proto mismatch (-want +got): %s", diff)
 	}
 }
+
+/* TODO(b/234842124): Uncomment CBC/CTR tests with IV once HSM support is ready in staging.
+func TestRawEncryptDecryptCbcCtr(t *testing.T) {
+	ctx := context.Background()
+	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
+	ck := client.CreateTestCK(ctx, t, &kmspb.CreateCryptoKeyRequest{
+		Parent: kr.Name,
+		CryptoKey: &kmspb.CryptoKey{
+			Purpose: kmspb.CryptoKey_RAW_ENCRYPT_DECRYPT,
+			VersionTemplate: &kmspb.CryptoKeyVersionTemplate{
+				ProtectionLevel: kmspb.ProtectionLevel_HSM,
+				Algorithm:       kmspb.CryptoKeyVersion_AES_256_CTR,
+			},
+		},
+		SkipInitialVersionCreation: true,
+	})
+	ckv := client.CreateTestCKVAndWait(ctx, t, &kmspb.CreateCryptoKeyVersionRequest{
+		Parent: ck.Name,
+	})
+
+	plaintext := []byte("Here is a plaintext to encrypt, 48 bytes long...")
+	iv := []byte("my_custom_iv_123")
+
+	gotEncrypt, err := client.RawEncrypt(ctx, &kmspb.RawEncryptRequest{
+		Name:            ckv.Name,
+		Plaintext:       plaintext,
+		PlaintextCrc32C: crc32c(plaintext),
+		InitializationVector:       iv,
+		InitializationVectorCrc32C: crc32c(iv),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	verifyCRC32C(t, gotEncrypt.Ciphertext, gotEncrypt.CiphertextCrc32C)
+
+	wantEncrypt := &kmspb.RawEncryptResponse{
+		Name:                    ckv.Name,
+		ProtectionLevel:         kmspb.ProtectionLevel_HSM,
+		TagLength:               16,
+		VerifiedPlaintextCrc32C: true,
+		VerifiedInitializationVectorCrc32C: true,
+	}
+
+	opts := append(ProtoDiffOpts(), ignoreCiphertextAndIVAndTagLength)
+	if diff := cmp.Diff(wantEncrypt, gotEncrypt, opts...); diff != "" {
+		t.Errorf("proto mismatch (-want +got): %s", diff)
+	}
+
+	gotDecrypt, err := client.RawDecrypt(ctx, &kmspb.RawDecryptRequest{
+		Name:                       ckv.Name,
+		Ciphertext:                 gotEncrypt.Ciphertext,
+		CiphertextCrc32C:           crc32c(gotEncrypt.Ciphertext),
+		InitializationVector:       gotEncrypt.InitializationVector,
+		InitializationVectorCrc32C: crc32c(gotEncrypt.InitializationVector),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	verifyCRC32C(t, gotDecrypt.Plaintext, gotDecrypt.PlaintextCrc32C)
+
+        wantDecrypt := &kmspb.RawDecryptResponse{
+                Plaintext:                          plaintext,
+                PlaintextCrc32C:                    wrapperspb.Int64(int64(crc32.Checksum(plaintext, crc32CTable))),
+                VerifiedCiphertextCrc32C:           true,
+                VerifiedInitializationVectorCrc32C: true,
+                ProtectionLevel:                    kmspb.ProtectionLevel_HSM,
+        }
+
+        if diff := cmp.Diff(wantDecrypt, gotDecrypt, ProtoDiffOpts()...); diff != "" {
+                t.Errorf("proto mismatch (-want +got): %s", diff)
+        }
+}
+
+func TestRawEncryptDecryptCbcCtrWithoutChecksums(t *testing.T) {
+	ctx := context.Background()
+	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
+	ck := client.CreateTestCK(ctx, t, &kmspb.CreateCryptoKeyRequest{
+		Parent: kr.Name,
+		CryptoKey: &kmspb.CryptoKey{
+			Purpose: kmspb.CryptoKey_RAW_ENCRYPT_DECRYPT,
+			VersionTemplate: &kmspb.CryptoKeyVersionTemplate{
+				ProtectionLevel: kmspb.ProtectionLevel_HSM,
+				Algorithm:       kmspb.CryptoKeyVersion_AES_128_CBC,
+			},
+		},
+		SkipInitialVersionCreation: true,
+	})
+	ckv := client.CreateTestCKVAndWait(ctx, t, &kmspb.CreateCryptoKeyVersionRequest{
+		Parent: ck.Name,
+	})
+
+	plaintext := []byte("Here is some data to encrypt")
+	iv := []byte("my_custom_iv_123")
+
+	gotEncrypt, err := client.RawEncrypt(ctx, &kmspb.RawEncryptRequest{
+		Name:                        ckv.Name,
+		Plaintext:                   plaintext,
+		InitializationVectorCrc32C: crc32c(iv),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	verifyCRC32C(t, gotEncrypt.Ciphertext, gotEncrypt.CiphertextCrc32C)
+
+	wantEncrypt := &kmspb.RawEncryptResponse{
+		Name:                    ckv.Name,
+		ProtectionLevel:         kmspb.ProtectionLevel_HSM,
+		VerifiedPlaintextCrc32C: false,
+		VerifiedInitializationVectorCrc32C:        false,
+	}
+
+	opts := append(ProtoDiffOpts(), ignoreCiphertextAndIVAndTagLength)
+	if diff := cmp.Diff(wantEncrypt, gotEncrypt, opts...); diff != "" {
+		t.Errorf("proto mismatch (-want +got): %s", diff)
+	}
+
+	gotDecrypt, err := client.RawDecrypt(ctx, &kmspb.RawDecryptRequest{
+		Name:                        ckv.Name,
+		Ciphertext:                  gotEncrypt.Ciphertext,
+		InitializationVector:        gotEncrypt.InitializationVector,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	verifyCRC32C(t, gotDecrypt.Plaintext, gotDecrypt.PlaintextCrc32C)
+
+	wantDecrypt := &kmspb.RawDecryptResponse{
+                Plaintext:                plaintext,
+                PlaintextCrc32C:          wrapperspb.Int64(int64(crc32.Checksum(plaintext, crc32CTable))),
+                VerifiedCiphertextCrc32C: false,
+                VerifiedInitializationVectorCrc32C:        false,
+                ProtectionLevel:                           kmspb.ProtectionLevel_HSM,
+        }
+
+        if diff := cmp.Diff(wantDecrypt, gotDecrypt, ProtoDiffOpts()...); diff != "" {
+                t.Errorf("proto mismatch (-want +got): %s", diff)
+        }
+}
+*/
 
 func TestRawEncryptNotFound(t *testing.T) {
 	ctx := context.Background()
@@ -467,3 +604,117 @@ func TestRawDecryptInvalidIvChecksum(t *testing.T) {
 		t.Errorf("err=%v, want code=%s", err, codes.InvalidArgument)
 	}
 }
+
+func TestRawEncryptAesGcmCustomIvFails(t *testing.T) {
+	ctx := context.Background()
+	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
+	ck := client.CreateTestCK(ctx, t, &kmspb.CreateCryptoKeyRequest{
+		Parent: kr.Name,
+		CryptoKey: &kmspb.CryptoKey{
+			Purpose: kmspb.CryptoKey_RAW_ENCRYPT_DECRYPT,
+			VersionTemplate: &kmspb.CryptoKeyVersionTemplate{
+				Algorithm: kmspb.CryptoKeyVersion_AES_256_GCM,
+			},
+		},
+		SkipInitialVersionCreation: true,
+	})
+	ckv := client.CreateTestCKVAndWait(ctx, t, &kmspb.CreateCryptoKeyVersionRequest{
+		Parent: ck.Name,
+	})
+
+	_, err := client.RawEncrypt(ctx, &kmspb.RawEncryptRequest{
+		Name:                        ckv.Name,
+		Plaintext:                   []byte("testdata"),
+		AdditionalAuthenticatedData: []byte("aad"),
+		InitializationVector:        []byte("my_custom_iv_123"),
+	})
+	if status.Code(err) != codes.InvalidArgument {
+		t.Errorf("err=%v, want code=%s", err, codes.InvalidArgument)
+	}
+}
+
+//TODO(b/234842124): Uncomment CBC/CTR tests once HSM support is ready in staging.
+/*
+func TestRawEncryptAesCbcCtrInvalidIvLength(t *testing.T) {
+	ctx := context.Background()
+	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
+	ck := client.CreateTestCK(ctx, t, &kmspb.CreateCryptoKeyRequest{
+		Parent: kr.Name,
+		CryptoKey: &kmspb.CryptoKey{
+			Purpose: kmspb.CryptoKey_RAW_ENCRYPT_DECRYPT,
+			VersionTemplate: &kmspb.CryptoKeyVersionTemplate{
+				Algorithm: kmspb.CryptoKeyVersion_AES_256_CBC,
+			},
+		},
+		SkipInitialVersionCreation: true,
+	})
+	ckv := client.CreateTestCKVAndWait(ctx, t, &kmspb.CreateCryptoKeyVersionRequest{
+		Parent: ck.Name,
+	})
+
+	_, err := client.RawEncrypt(ctx, &kmspb.RawEncryptRequest{
+		Name:                 ckv.Name,
+		Plaintext:            []byte("testdata"),
+		InitializationVector: []byte("this_is_not_16_bytes"),
+	})
+	if status.Code(err) != codes.InvalidArgument {
+		t.Errorf("err=%v, want code=%s", err, codes.InvalidArgument)
+	}
+}
+
+func TestRawEncryptAesCbcCtrAadSpecifiedFails(t *testing.T) {
+	ctx := context.Background()
+	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
+	ck := client.CreateTestCK(ctx, t, &kmspb.CreateCryptoKeyRequest{
+		Parent: kr.Name,
+		CryptoKey: &kmspb.CryptoKey{
+			Purpose: kmspb.CryptoKey_RAW_ENCRYPT_DECRYPT,
+			VersionTemplate: &kmspb.CryptoKeyVersionTemplate{
+				Algorithm: kmspb.CryptoKeyVersion_AES_128_CBC,
+			},
+		},
+		SkipInitialVersionCreation: true,
+	})
+	ckv := client.CreateTestCKVAndWait(ctx, t, &kmspb.CreateCryptoKeyVersionRequest{
+		Parent: ck.Name,
+	})
+
+	_, err := client.RawEncrypt(ctx, &kmspb.RawEncryptRequest{
+		Name:                        ckv.Name,
+		Plaintext:                   []byte("testdata"),
+		AdditionalAuthenticatedData: []byte("aad"),
+		InitializationVector:        []byte("my_custom_iv_123"),
+	})
+	if status.Code(err) != codes.InvalidArgument {
+		t.Errorf("err=%v, want code=%s", err, codes.InvalidArgument)
+	}
+}
+
+func TestRawDecryptAesCbcCtrAadSpecifiedFails(t *testing.T) {
+	ctx := context.Background()
+	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
+	ck := client.CreateTestCK(ctx, t, &kmspb.CreateCryptoKeyRequest{
+		Parent: kr.Name,
+		CryptoKey: &kmspb.CryptoKey{
+			Purpose: kmspb.CryptoKey_RAW_ENCRYPT_DECRYPT,
+			VersionTemplate: &kmspb.CryptoKeyVersionTemplate{
+				Algorithm: kmspb.CryptoKeyVersion_AES_256_CTR,
+			},
+		},
+		SkipInitialVersionCreation: true,
+	})
+	ckv := client.CreateTestCKVAndWait(ctx, t, &kmspb.CreateCryptoKeyVersionRequest{
+		Parent: ck.Name,
+	})
+
+	_, err := client.RawDecrypt(ctx, &kmspb.RawDecryptRequest{
+		Name:                        ckv.Name,
+		Ciphertext:                  []byte("testdata"),
+		AdditionalAuthenticatedData: []byte("aad"),
+		InitializationVector:        []byte("my_custom_iv_123"),
+	})
+	if status.Code(err) != codes.InvalidArgument {
+		t.Errorf("err=%v, want code=%s", err, codes.InvalidArgument)
+	}
+}
+*/

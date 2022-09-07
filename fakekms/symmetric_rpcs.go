@@ -32,9 +32,12 @@ const maxPlaintextSize = 64 * 1024
 // maxCiphertextSize is the maximum ciphertext size accepted by Cloud KMS.
 const maxCiphertextSize = 10 * maxPlaintextSize
 
+// maxIvSize is the maximum initialization vector size accepted by Cloud KMS.
+const maxIvSize = 16
+
 // RawEncrypt fakes a Cloud KMS API function.
 func (f *fakeKMS) RawEncrypt(ctx context.Context, req *kmspb.RawEncryptRequest) (*kmspb.RawEncryptResponse, error) {
-	if err := allowlist("name", "plaintext", "plaintext_crc32c", "additional_authenticated_data", "additional_authenticated_data_crc32c").check(req); err != nil {
+	if err := allowlist("name", "plaintext", "plaintext_crc32c", "additional_authenticated_data", "additional_authenticated_data_crc32c", "initialization_vector", "initialization_vector_crc32c").check(req); err != nil {
 		return nil, err
 	}
 
@@ -72,9 +75,45 @@ func (f *fakeKMS) RawEncrypt(ctx context.Context, req *kmspb.RawEncryptRequest) 
 		return nil, errInvalidArgument("invalid plaintext checksum")
 	}
 
-	aadChecksum := crc32c(req.AdditionalAuthenticatedData)
-	if req.AdditionalAuthenticatedData != nil && req.AdditionalAuthenticatedDataCrc32C != nil && aadChecksum.Value != req.AdditionalAuthenticatedDataCrc32C.Value {
-		return nil, errInvalidArgument("invalid aad checksum")
+	var nonce []byte
+	// Validate request fields.
+	switch ckv.pb.Algorithm {
+	case kmspb.CryptoKeyVersion_AES_128_GCM, kmspb.CryptoKeyVersion_AES_256_GCM:
+		if req.InitializationVector != nil {
+			return nil, errInvalidArgument("cannot specify iv when using AES-GCM")
+		}
+		nonce = make([]byte, 12)
+		if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+			return nil, err
+		}
+
+		aadChecksum := crc32c(req.AdditionalAuthenticatedData)
+		if req.AdditionalAuthenticatedData != nil &&
+			req.AdditionalAuthenticatedDataCrc32C != nil &&
+			aadChecksum.Value != req.AdditionalAuthenticatedDataCrc32C.Value {
+			return nil, errInvalidArgument("invalid aad checksum")
+		}
+	case kmspb.CryptoKeyVersion_AES_128_CTR,
+		kmspb.CryptoKeyVersion_AES_256_CTR,
+		kmspb.CryptoKeyVersion_AES_128_CBC,
+		kmspb.CryptoKeyVersion_AES_256_CBC:
+		if req.AdditionalAuthenticatedData != nil {
+			return nil, errInvalidArgument("cannot specify aad when using %s",
+				nameForValue(kmspb.CryptoKeyVersion_CryptoKeyVersionAlgorithm_name, int32(ckv.pb.Algorithm)))
+		}
+		if req.InitializationVector != nil {
+			if len(req.InitializationVector) > maxIvSize {
+				return nil, errInvalidArgument("len(iv)=%d, want len(iv)<=%d", len(req.InitializationVector), maxIvSize)
+			}
+			nonce = req.InitializationVector
+		} else {
+			nonce = make([]byte, 16)
+			if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+				return nil, err
+			}
+		}
+	default:
+		return nil, errInternal("unhandled algorithm")
 	}
 
 	var key []byte
@@ -88,17 +127,28 @@ func (f *fakeKMS) RawEncrypt(ctx context.Context, req *kmspb.RawEncryptRequest) 
 		return nil, errInternal("AES cipher creation failed: %v", err)
 	}
 
-	nonce := make([]byte, 12)
-	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
-		return nil, err
+	var ciphertext []byte
+	switch ckv.pb.Algorithm {
+	case kmspb.CryptoKeyVersion_AES_128_GCM, kmspb.CryptoKeyVersion_AES_256_GCM:
+		aesgcm, err := cipher.NewGCM(block)
+		if err != nil {
+			return nil, errInternal("GCM cipher creation failed: %v", err)
+		}
+		ciphertext = aesgcm.Seal(nil, nonce, plaintext, req.AdditionalAuthenticatedData)
+	case kmspb.CryptoKeyVersion_AES_128_CTR, kmspb.CryptoKeyVersion_AES_256_CTR:
+		ciphertext = make([]byte, len(plaintext))
+		aesctr := cipher.NewCTR(block, nonce)
+		aesctr.XORKeyStream(ciphertext, plaintext)
+	case kmspb.CryptoKeyVersion_AES_128_CBC, kmspb.CryptoKeyVersion_AES_256_CBC:
+		if len(plaintext)%block.BlockSize() != 0 {
+			return nil, errInvalidArgument("len(plaintext)=%d, want len(plaintext)=%d", len(plaintext), block.BlockSize())
+		}
+		ciphertext = make([]byte, len(plaintext))
+		aescbc := cipher.NewCBCEncrypter(block, nonce)
+		aescbc.CryptBlocks(ciphertext, plaintext)
+	default:
+		return nil, errInternal("unhandled algorithm")
 	}
-
-	aesgcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return nil, errInternal("GCM cipher creation failed: %v", err)
-	}
-
-	ciphertext := aesgcm.Seal(nil, nonce, plaintext, req.AdditionalAuthenticatedData)
 
 	return &kmspb.RawEncryptResponse{
 		Name:                       req.Name,
@@ -109,7 +159,8 @@ func (f *fakeKMS) RawEncrypt(ctx context.Context, req *kmspb.RawEncryptRequest) 
 		TagLength:                  16,
 		VerifiedPlaintextCrc32C:    req.PlaintextCrc32C != nil,
 		VerifiedAdditionalAuthenticatedDataCrc32C: req.AdditionalAuthenticatedDataCrc32C != nil,
-		ProtectionLevel: ckv.pb.ProtectionLevel,
+		VerifiedInitializationVectorCrc32C:        req.InitializationVectorCrc32C != nil,
+		ProtectionLevel:                           ckv.pb.ProtectionLevel,
 	}, nil
 }
 
@@ -153,13 +204,23 @@ func (f *fakeKMS) RawDecrypt(ctx context.Context, req *kmspb.RawDecryptRequest) 
 		return nil, errInvalidArgument("invalid ciphertext checksum")
 	}
 
-	if len(req.InitializationVector) != 12 {
-		return nil, errInvalidArgument("len(initialization_vector)=%d, want 12", len(req.InitializationVector))
+	if len(req.InitializationVector) > 16 {
+		return nil, errInvalidArgument("len(initialization_vector)=%d, want len(initialization_vector)<=%d", len(req.InitializationVector), maxIvSize)
 	}
 
 	ivChecksum := crc32c(req.InitializationVector)
 	if req.InitializationVector != nil && req.InitializationVectorCrc32C != nil && ivChecksum.Value != req.InitializationVectorCrc32C.Value {
 		return nil, errInvalidArgument("invalid iv checksum")
+	}
+
+	if req.AdditionalAuthenticatedData != nil {
+		switch ckv.pb.Algorithm {
+		case kmspb.CryptoKeyVersion_AES_128_GCM, kmspb.CryptoKeyVersion_AES_256_GCM:
+			break
+		default:
+			return nil, errInvalidArgument("cannot specify aad when using %s",
+				nameForValue(kmspb.CryptoKeyVersion_CryptoKeyVersionAlgorithm_name, int32(ckv.pb.Algorithm)))
+		}
 	}
 
 	aadChecksum := crc32c(req.AdditionalAuthenticatedData)
@@ -178,23 +239,36 @@ func (f *fakeKMS) RawDecrypt(ctx context.Context, req *kmspb.RawDecryptRequest) 
 		return nil, errInternal("AES cipher creation failed: %v", err)
 	}
 
-	aesgcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return nil, errInternal("GCM cipher creation failed: %v", err)
-	}
-
-	plaintext, err := aesgcm.Open(nil, req.InitializationVector, ciphertext, req.AdditionalAuthenticatedData)
-	if err != nil {
-		return nil, errInternal("decryption failed: %v", err)
+	var plaintext []byte
+	switch ckv.pb.Algorithm {
+	case kmspb.CryptoKeyVersion_AES_128_GCM, kmspb.CryptoKeyVersion_AES_256_GCM:
+		aesgcm, err := cipher.NewGCM(block)
+		if err != nil {
+			return nil, errInternal("GCM cipher creation failed: %v", err)
+		}
+		plaintext, err = aesgcm.Open(nil, req.InitializationVector, ciphertext, req.AdditionalAuthenticatedData)
+		if err != nil {
+			return nil, errInternal("decryption failed: %v", err)
+		}
+	case kmspb.CryptoKeyVersion_AES_128_CTR, kmspb.CryptoKeyVersion_AES_256_CTR:
+		plaintext = make([]byte, len(ciphertext))
+		aesctr := cipher.NewCTR(block, req.InitializationVector)
+		aesctr.XORKeyStream(plaintext, ciphertext)
+	case kmspb.CryptoKeyVersion_AES_128_CBC, kmspb.CryptoKeyVersion_AES_256_CBC:
+		plaintext = make([]byte, len(ciphertext))
+		aescbc := cipher.NewCBCDecrypter(block, req.InitializationVector)
+		aescbc.CryptBlocks(plaintext, ciphertext)
+	default:
+		return nil, errInternal("unhandled algorithm")
 	}
 
 	return &kmspb.RawDecryptResponse{
-		Plaintext:       plaintext,
-		PlaintextCrc32C: crc32c(plaintext),
+		Plaintext:                plaintext,
+		PlaintextCrc32C:          crc32c(plaintext),
 		VerifiedCiphertextCrc32C: req.CiphertextCrc32C != nil,
 		VerifiedAdditionalAuthenticatedDataCrc32C: req.AdditionalAuthenticatedDataCrc32C != nil,
 		VerifiedInitializationVectorCrc32C:        req.InitializationVectorCrc32C != nil,
-		ProtectionLevel: ckv.pb.ProtectionLevel,
+		ProtectionLevel:                           ckv.pb.ProtectionLevel,
 	}, nil
 }
 

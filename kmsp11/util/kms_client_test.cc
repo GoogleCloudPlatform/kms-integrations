@@ -403,6 +403,36 @@ TEST(KmsClientTest, RawDecryptFailureInvalidName) {
               StatusIs(absl::StatusCode::kInvalidArgument));
 }
 
+TEST(KmsClientTest, RawEncryptFailureCustomIvAesGcm) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake,
+                       fakekms::Server::New());
+  std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
+
+  kms_v1::KeyRing kr;
+  kr = CreateKeyRingOrDie(client->kms_stub(), kTestLocation, RandomId(), kr);
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::RAW_ENCRYPT_DECRYPT);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion::AES_256_GCM);
+  ck = CreateCryptoKeyOrDie(client->kms_stub(), kr.name(), "ck", ck, true);
+
+  kms_v1::CryptoKeyVersion ckv;
+  ckv = CreateCryptoKeyVersionOrDie(client->kms_stub(), ck.name(), ckv);
+  ckv = WaitForEnablement(client->kms_stub(), ckv);
+
+  std::string data = "Here is some data to encrypt";
+
+  kms_v1::RawEncryptRequest encrypt_req;
+  encrypt_req.set_name(ckv.name());
+  encrypt_req.set_plaintext(data);
+  encrypt_req.set_additional_authenticated_data("");
+  encrypt_req.set_initialization_vector("my_custom_iv_123");
+
+  EXPECT_THAT(client->RawEncrypt(encrypt_req),
+              StatusIs(absl::StatusCode::kInvalidArgument));
+}
+
 TEST(KmsClientTest, CreateCryptoKeyCreatesCryptoKey) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake,
                        fakekms::Server::New());

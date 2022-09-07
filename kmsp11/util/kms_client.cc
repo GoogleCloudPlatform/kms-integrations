@@ -276,6 +276,8 @@ absl::StatusOr<kms_v1::RawEncryptResponse> KmsClient::RawEncrypt(
       ComputeCRC32C(request.plaintext()));
   request.mutable_additional_authenticated_data_crc32c()->set_value(
       ComputeCRC32C(request.additional_authenticated_data()));
+  request.mutable_initialization_vector_crc32c()->set_value(
+      ComputeCRC32C(request.initialization_vector()));
 
   kms_v1::RawEncryptResponse response;
   absl::Status rpc_result =
@@ -293,7 +295,8 @@ absl::StatusOr<kms_v1::RawEncryptResponse> KmsClient::RawEncrypt(
   }
 
   if (!response.verified_plaintext_crc32c() ||
-      !response.verified_additional_authenticated_data_crc32c()) {
+      !response.verified_additional_authenticated_data_crc32c() ||
+      !response.verified_initialization_vector_crc32c()) {
     return NewInternalError(
         "The server did not verify the checksum values provided in the request",
         SOURCE_LOCATION);
