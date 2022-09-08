@@ -78,6 +78,33 @@ TEST(GetAlgorithmDetailsTest, AlgorithmAesGcm) {
   EXPECT_EQ(details.digest_mechanism, std::nullopt);
 }
 
+TEST(GetAlgorithmDetailsTest, AlgorithmAesCbc) {
+  ASSERT_OK_AND_ASSIGN(AlgorithmDetails details,
+                       GetDetails(kms_v1::CryptoKeyVersion::AES_128_CBC));
+
+  EXPECT_EQ(details.algorithm, kms_v1::CryptoKeyVersion::AES_128_CBC);
+  EXPECT_EQ(details.purpose, kms_v1::CryptoKey::RAW_ENCRYPT_DECRYPT);
+  EXPECT_THAT(details.allowed_mechanisms,
+              ElementsAre(CKM_AES_CBC, CKM_AES_CBC_PAD));
+  EXPECT_EQ(details.key_type, CKK_AES);
+  EXPECT_EQ(details.key_bit_length, 128);
+  EXPECT_EQ(details.key_gen_mechanism, CKM_AES_KEY_GEN);
+  EXPECT_EQ(details.digest_mechanism, std::nullopt);
+}
+
+TEST(GetAlgorithmDetailsTest, AlgorithmAesCtr) {
+  ASSERT_OK_AND_ASSIGN(AlgorithmDetails details,
+                       GetDetails(kms_v1::CryptoKeyVersion::AES_256_CTR));
+
+  EXPECT_EQ(details.algorithm, kms_v1::CryptoKeyVersion::AES_256_CTR);
+  EXPECT_EQ(details.purpose, kms_v1::CryptoKey::RAW_ENCRYPT_DECRYPT);
+  EXPECT_THAT(details.allowed_mechanisms, ElementsAre(CKM_AES_CTR));
+  EXPECT_EQ(details.key_type, CKK_AES);
+  EXPECT_EQ(details.key_bit_length, 256);
+  EXPECT_EQ(details.key_gen_mechanism, CKM_AES_KEY_GEN);
+  EXPECT_EQ(details.digest_mechanism, std::nullopt);
+}
+
 TEST(GetAlgorithmDetailsTest, AlgorithmNotFound) {
   absl::StatusOr<AlgorithmDetails> details =
       GetDetails(kms_v1::CryptoKeyVersion::EXTERNAL_SYMMETRIC_ENCRYPTION);

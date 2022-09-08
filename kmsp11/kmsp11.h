@@ -79,8 +79,18 @@ extern "C" {
 // HMAC-SHA224 signing with a 224 bit key.
 #define KMS_ALGORITHM_HMAC_SHA224 36UL
 
+// AES+GCM (Galois Counter Mode) with a 128 bit key.
+#define KMS_ALGORITHM_AES_128_GCM 41UL
 // AES+GCM (Galois Counter Mode) with a 256 bit key.
 #define KMS_ALGORITHM_AES_256_GCM 19UL
+// AES+CBC (Cipher Block Chaining Mode) with a 128 bit key.
+#define KMS_ALGORITHM_AES_128_CBC 42UL
+// AES+CBC (Cipher Block Chaining Mode) with a 256 bit key.
+#define KMS_ALGORITHM_AES_256_CBC 43UL
+// AES+CTR (Counter Mode) with a 128 bit key.
+#define KMS_ALGORITHM_AES_128_CTR 44UL
+// AES+CTR (Counter Mode) with a 256 bit key.
+#define KMS_ALGORITHM_AES_256_CTR 45UL
 
 // A marker for a PKCS #11 mechanism defined by Google.
 // (Note that 0x80000000UL is CKM_VENDOR_DEFINED).

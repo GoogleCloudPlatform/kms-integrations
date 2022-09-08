@@ -250,9 +250,54 @@ static const auto* const kAlgorithmDetails = new absl::btree_set<
     },
     // AES_*
     {
+        kms_v1::CryptoKeyVersion::AES_128_GCM,   // algorithm
+        kms_v1::CryptoKey::RAW_ENCRYPT_DECRYPT,  // purpose
+        {CKM_CLOUDKMS_AES_GCM},                  // allowed_mechanisms
+        CKK_AES,                                 // key_type
+        128,                                     // key_bit_length
+        CKM_AES_KEY_GEN,                         // key_gen_mechanism
+        std::nullopt,                            // digest_mechanism
+    },
+    {
         kms_v1::CryptoKeyVersion::AES_256_GCM,   // algorithm
         kms_v1::CryptoKey::RAW_ENCRYPT_DECRYPT,  // purpose
         {CKM_CLOUDKMS_AES_GCM},                  // allowed_mechanisms
+        CKK_AES,                                 // key_type
+        256,                                     // key_bit_length
+        CKM_AES_KEY_GEN,                         // key_gen_mechanism
+        std::nullopt,                            // digest_mechanism
+    },
+    {
+        kms_v1::CryptoKeyVersion::AES_128_CTR,   // algorithm
+        kms_v1::CryptoKey::RAW_ENCRYPT_DECRYPT,  // purpose
+        {CKM_AES_CTR},                           // allowed_mechanisms
+        CKK_AES,                                 // key_type
+        128,                                     // key_bit_length
+        CKM_AES_KEY_GEN,                         // key_gen_mechanism
+        std::nullopt,                            // digest_mechanism
+    },
+    {
+        kms_v1::CryptoKeyVersion::AES_256_CTR,   // algorithm
+        kms_v1::CryptoKey::RAW_ENCRYPT_DECRYPT,  // purpose
+        {CKM_AES_CTR},                           // allowed_mechanisms
+        CKK_AES,                                 // key_type
+        256,                                     // key_bit_length
+        CKM_AES_KEY_GEN,                         // key_gen_mechanism
+        std::nullopt,                            // digest_mechanism
+    },
+    {
+        kms_v1::CryptoKeyVersion::AES_128_CBC,   // algorithm
+        kms_v1::CryptoKey::RAW_ENCRYPT_DECRYPT,  // purpose
+        {CKM_AES_CBC, CKM_AES_CBC_PAD},          // allowed_mechanisms
+        CKK_AES,                                 // key_type
+        128,                                     // key_bit_length
+        CKM_AES_KEY_GEN,                         // key_gen_mechanism
+        std::nullopt,                            // digest_mechanism
+    },
+    {
+        kms_v1::CryptoKeyVersion::AES_256_CBC,   // algorithm
+        kms_v1::CryptoKey::RAW_ENCRYPT_DECRYPT,  // purpose
+        {CKM_AES_CBC, CKM_AES_CBC_PAD},          // allowed_mechanisms
         CKK_AES,                                 // key_type
         256,                                     // key_bit_length
         CKM_AES_KEY_GEN,                         // key_gen_mechanism

@@ -203,7 +203,31 @@ AllMechanisms() {
           {
               CKM_CLOUDKMS_AES_GCM,
               {
-                  32,                        // ulMinKeySize
+                  16,                        // ulMinKeySize
+                  32,                        // ulMaxKeySize
+                  CKF_DECRYPT | CKF_ENCRYPT  // flags
+              },
+          },
+          {
+              CKM_AES_CTR,
+              {
+                  16,                        // ulMinKeySize
+                  32,                        // ulMaxKeySize
+                  CKF_DECRYPT | CKF_ENCRYPT  // flags
+              },
+          },
+          {
+              CKM_AES_CBC,
+              {
+                  16,                        // ulMinKeySize
+                  32,                        // ulMaxKeySize
+                  CKF_DECRYPT | CKF_ENCRYPT  // flags
+              },
+          },
+          {
+              CKM_AES_CBC_PAD,
+              {
+                  16,                        // ulMinKeySize
                   32,                        // ulMaxKeySize
                   CKF_DECRYPT | CKF_ENCRYPT  // flags
               },
@@ -217,7 +241,7 @@ const absl::flat_hash_set<CK_MECHANISM_TYPE>& AllMacMechanisms() {
   // These mechanisms are only supported if the experimental_allow_mac_keys
   // config flag is set.
   static const absl::flat_hash_set<CK_MECHANISM_TYPE> kMacMechanisms = {
-      CKM_SHA_1_HMAC,  CKM_SHA224_HMAC, CKM_SHA256_HMAC,
+      CKM_SHA_1_HMAC, CKM_SHA224_HMAC, CKM_SHA256_HMAC,
       CKM_SHA384_HMAC, CKM_SHA512_HMAC,
   };
   return kMacMechanisms;
@@ -227,7 +251,7 @@ const absl::flat_hash_set<CK_MECHANISM_TYPE>& AllRawEncryptionMechanisms() {
   // These mechanisms are only supported if the
   // experimental_allow_raw_encryption_keys config flag is set.
   static const absl::flat_hash_set<CK_MECHANISM_TYPE> kRawEncryptionMechanisms =
-      {CKM_CLOUDKMS_AES_GCM};
+      {CKM_CLOUDKMS_AES_GCM, CKM_AES_CTR, CKM_AES_CBC, CKM_AES_CBC_PAD};
   return kRawEncryptionMechanisms;
 }
 

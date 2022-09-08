@@ -670,7 +670,7 @@ TEST_F(BridgeTest, GetMechanismInfoRawEncryptionKeysExperimentEnabled) {
   CK_MECHANISM_INFO info;
   EXPECT_OK(GetMechanismInfo(0, CKM_CLOUDKMS_AES_GCM, &info));
 
-  EXPECT_EQ(info.ulMinKeySize, 32);
+  EXPECT_EQ(info.ulMinKeySize, 16);
   EXPECT_EQ(info.ulMaxKeySize, 32);
   EXPECT_EQ(info.flags, CKF_DECRYPT | CKF_ENCRYPT);
 }
