@@ -3,14 +3,13 @@
 ## Requirements
 
 This guide provides instructions for setting up PKCS #11 Tool and PKCS #11 Spy
-for debugging purposes on Debian 10 (Buster). You may follow these instructions
-if you are using another OS or environment, but be aware that there may be
-slight differences.
+for debugging purposes on Debian 11 (Bullseye). You may follow these
+instructions if you are using another OS or environment, but be aware that there
+may be slight differences.
 
-> TODO(b/175421728): Add non-internal build download link.
-
-This guide assumes that you have downloaded the latest linux amd64 < release
-build > and have a yaml configuration file ready to go.
+This guide assumes that you have downloaded the latest linux amd64 [release
+build](https://github.com/GoogleCloudPlatform/kms-integrations/releases)
+and have a yaml configuration file ready to go.
 
 Remember to point `KMS_PKCS11_CONFIG` at your config file with:
 
