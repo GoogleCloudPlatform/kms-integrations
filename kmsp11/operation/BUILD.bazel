@@ -32,6 +32,35 @@ cc_test(
 )
 
 cc_library(
+    name = "aes_ctr",
+    srcs = ["aes_ctr.cc"],
+    hdrs = ["aes_ctr.h"],
+    deps = [
+        ":crypter_interfaces",
+        ":preconditions",
+        "//kmsp11:cryptoki_headers",
+        "//kmsp11/util:crypto_utils",
+        "//kmsp11/util:kms_client",
+        "//kmsp11/util:status_macros",
+        "//kmsp11/util:string_utils",
+        "@com_google_absl//absl/status:statusor",
+    ],
+)
+
+cc_test(
+    name = "aes_ctr_test",
+    size = "small",
+    srcs = ["aes_ctr_test.cc"],
+    deps = [
+        ":aes_ctr",
+        "//fakekms/cpp:fakekms",
+        "//kmsp11:cryptoki_headers",
+        "//kmsp11/test",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
     name = "crypter_interfaces",
     hdrs = ["crypter_interfaces.h"],
     deps = [
@@ -48,6 +77,7 @@ cc_library(
     srcs = ["crypter_ops.cc"],
     hdrs = ["crypter_ops.h"],
     deps = [
+        ":aes_ctr",
         ":aes_gcm",
         ":crypter_interfaces",
         ":ecdsa",

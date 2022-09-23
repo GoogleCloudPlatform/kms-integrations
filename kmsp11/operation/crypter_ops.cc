@@ -15,6 +15,7 @@
 #include "kmsp11/operation/crypter_ops.h"
 
 #include "kmsp11/kmsp11.h"
+#include "kmsp11/operation/aes_ctr.h"
 #include "kmsp11/operation/aes_gcm.h"
 #include "kmsp11/operation/ecdsa.h"
 #include "kmsp11/operation/hmac.h"
@@ -44,7 +45,12 @@ absl::StatusOr<DecryptOp> NewDecryptOp(std::shared_ptr<Object> key,
       if (allow_raw_encryption_keys) {
         return NewAesGcmDecrypter(key, mechanism);
       }
-      // fallthrough
+      ABSL_FALLTHROUGH_INTENDED;
+    case CKM_AES_CTR:
+      if (allow_raw_encryption_keys) {
+        return NewAesCtrDecrypter(key, mechanism);
+      }
+      ABSL_FALLTHROUGH_INTENDED;
     default:
       return InvalidMechanismError(mechanism->mechanism, "decrypt",
                                    SOURCE_LOCATION);
@@ -69,7 +75,12 @@ absl::StatusOr<EncryptOp> NewEncryptOp(std::shared_ptr<Object> key,
       if (allow_raw_encryption_keys) {
         return NewAesGcmEncrypter(key, mechanism);
       }
-      // fallthrough
+      ABSL_FALLTHROUGH_INTENDED;
+    case CKM_AES_CTR:
+      if (allow_raw_encryption_keys) {
+        return NewAesCtrEncrypter(key, mechanism);
+      }
+      ABSL_FALLTHROUGH_INTENDED;
     default:
       return InvalidMechanismError(mechanism->mechanism, "encrypt",
                                    SOURCE_LOCATION);
