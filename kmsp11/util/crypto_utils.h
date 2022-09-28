@@ -172,7 +172,7 @@ struct ZeroDelete {
     // https://wiki.sei.cmu.edu/confluence/display/c/MSC06-C.+Beware+of+compiler+optimizations
     // https://github.com/google/tink/blob/040ac621b3e9ff7a240b1e596a423a30d32f9013/cc/util/secret_data_internal.h#L67
     if (value) {
-      volatile char* ptr = static_cast<char*>(value->data());
+      volatile char* ptr = reinterpret_cast<char*>(value->data());
       size_t size = value->size();
       while (size--) {
         *ptr++ = 0;

@@ -109,6 +109,26 @@ TEST(DecryptOpTest, RawDecryptionCtrKeysExperimentEnabled) {
   EXPECT_OK(NewDecryptOp(key, &mech, true));
 }
 
+TEST(DecryptOpTest, RawDecryptionCbcKeysExperimentDisabled) {
+  CK_MECHANISM mech = {CKM_AES_CBC_PAD};
+  EXPECT_THAT(NewDecryptOp(nullptr, &mech, false),
+              StatusRvIs(CKR_MECHANISM_INVALID));
+}
+
+TEST(DecryptOpTest, RawDecryptionCbcKeysExperimentEnabled) {
+  ASSERT_OK_AND_ASSIGN(Object k,
+                       NewMockSecretKey(kms_v1::CryptoKeyVersion::AES_256_CBC));
+  std::shared_ptr<Object> key = std::make_shared<Object>(k);
+
+  CK_BYTE iv[16] = {1};
+  CK_MECHANISM mech{
+      CKM_AES_CBC_PAD,  // mechanism
+      iv,               // pParameter
+      16,               // ulParameterLen
+  };
+  EXPECT_OK(NewDecryptOp(key, &mech, true));
+}
+
 TEST(EncryptOpTest, ValidMechanismSuccess) {
   ASSERT_OK_AND_ASSIGN(
       KeyPair kp,
@@ -189,6 +209,26 @@ TEST(EncryptOpTest, RawEncryptionCtrKeysExperimentEnabled) {
       sizeof(params),  // ulParameterLen
   };
 
+  EXPECT_OK(NewEncryptOp(key, &mech, true));
+}
+
+TEST(EncryptOpTest, RawEncryptionCbcKeysExperimentDisabled) {
+  CK_MECHANISM mech = {CKM_AES_CBC_PAD};
+  EXPECT_THAT(NewEncryptOp(nullptr, &mech, false),
+              StatusRvIs(CKR_MECHANISM_INVALID));
+}
+
+TEST(EncryptOpTest, RawEncryptionCbcKeysExperimentEnabled) {
+  ASSERT_OK_AND_ASSIGN(Object k,
+                       NewMockSecretKey(kms_v1::CryptoKeyVersion::AES_256_CBC));
+  std::shared_ptr<Object> key = std::make_shared<Object>(k);
+
+  CK_BYTE iv[16] = {1};
+  CK_MECHANISM mech{
+      CKM_AES_CBC_PAD,  // mechanism
+      iv,               // pParameter
+      16,               // ulParameterLen
+  };
   EXPECT_OK(NewEncryptOp(key, &mech, true));
 }
 
