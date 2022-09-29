@@ -93,9 +93,15 @@ absl::StatusOr<std::string> ReadFileToString(const std::string& file_path) {
 }
 
 bool IsZeroInitialized(absl::Span<const uint8_t> buffer) {
-  if (buffer.data()[0] != '\0' ||
-      memcmp(buffer.data(), buffer.data() + 1, buffer.size() - 1) != 0) {
-    return false;
+  return OnlyContainsValue(buffer, '\0');
+}
+
+// Checks that buffer only contains the specified value.
+bool OnlyContainsValue(absl::Span<const uint8_t> buffer, uint8_t value) {
+  for (uint8_t v : buffer) {
+    if (v != value) {
+      return false;
+    }
   }
   return true;
 }

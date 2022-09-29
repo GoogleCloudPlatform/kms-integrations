@@ -90,6 +90,9 @@ absl::StatusOr<std::string> ReadFileToString(const std::string& file_path);
 // Checks if the data buffer is zero-initialized.
 bool IsZeroInitialized(absl::Span<const uint8_t> buffer);
 
+// Checks that buffer only contains the specified value.
+bool OnlyContainsValue(absl::Span<const uint8_t> buffer, uint8_t value);
+
 }  // namespace kmsp11
 
 #endif  // KMSP11_UTIL_STRING_UTILS_H_

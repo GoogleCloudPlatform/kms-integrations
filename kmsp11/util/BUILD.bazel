@@ -218,6 +218,28 @@ cc_library(
 )
 
 cc_library(
+    name = "padding",
+    srcs = ["padding.cc"],
+    hdrs = ["padding.h"],
+    deps = [
+      ":errors",
+      ":string_utils",
+      "@com_google_absl//absl/status:statusor",
+    ],
+)
+
+cc_test(
+    name = "padding_test",
+    size = "small",
+    srcs = ["padding_test.cc"],
+    deps = [
+        ":padding",
+        "//kmsp11/test",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
     name = "pagination_range",
     hdrs = ["pagination_range.h"],
     deps = [
