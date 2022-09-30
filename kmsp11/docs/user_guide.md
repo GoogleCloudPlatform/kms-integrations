@@ -247,14 +247,14 @@ input data.
 Compatibility                | Compatible With
 ---------------------------- | ---------------
 PKCS #11 Functions           | [`C_Sign`][C_Sign], [`C_Verify`][C_Verify]
-PKCS #11 Mechanism           | [`CKM_ECDSA`][CKM_ECDSA], [`CKM_ECDSA_SHA256`][CKM_ECDSA_SHA256], [`CKM_ECDSA_SHA384`][CKM_ECDSA_SHA384]
+PKCS #11 Mechanism           | [`CKM_ECDSA`][CKM_ECDSA], `CKM_ECDSA_SHA256`, `CKM_ECDSA_SHA384`
 PKCS #11 Mechanism Parameter | None
 Cloud KMS Algorithm          | [`EC_SIGN_P256_SHA256`][kms-ec-algorithms], [`EC_SIGN_P384_SHA384`][kms-ec-algorithms]
 
 Compatibility                | Compatible With
 ---------------------------- | ---------------
 PKCS #11 Functions           | [`C_SignUpdate`][C_SignUpdate], [`C_SignFinal`][C_SignFinal], [`C_VerifyUpdate`][C_VerifyUpdate], [`C_VerifyFinal`][C_VerifyFinal]
-PKCS #11 Mechanism           | [`CKM_ECDSA_SHA256`][CKM_ECDSA_SHA256], [`CKM_ECDSA_SHA384`][CKM_ECDSA_SHA384]
+PKCS #11 Mechanism           | `CKM_ECDSA_SHA256`, `CKM_ECDSA_SHA384`
 PKCS #11 Mechanism Parameter | None
 Cloud KMS Algorithm          | [`EC_SIGN_P256_SHA256`][kms-ec-algorithms], [`EC_SIGN_P384_SHA384`][kms-ec-algorithms]
 
@@ -296,14 +296,14 @@ arbitrary input is accepted.
 Compatibility                | Compatible With
 ---------------------------- | ---------------
 PKCS #11 Functions           | [`C_Sign`][C_Sign], [`C_Verify`][C_Verify]
-PKCS #11 Mechanism           | [`CKM_RSA_PKCS`][CKM_RSA_PKCS], [`CKM_RSA_PKCS_SHA256`][CKM_RSA_PKCS_SHA256], [`CKM_RSA_PKCS_SHA512`][CKM_RSA_PKCS_SHA512]
+PKCS #11 Mechanism           | [`CKM_RSA_PKCS`][CKM_RSA_PKCS], `CKM_RSA_PKCS_SHA256`, `CKM_RSA_PKCS_SHA512`
 PKCS #11 Mechanism Parameter | None
 Cloud KMS Algorithm          | [`RSA_SIGN_PKCS1_2048_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PKCS1_3072_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PKCS1_4096_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PKCS1_4096_SHA512`][kms-rsa-sign-algorithms], [`RSA_SIGN_RAW_PKCS1_2048_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_RAW_PKCS1_3072_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_RAW_PKCS1_4096_SHA256`][kms-rsa-sign-algorithms]
 
 Compatibility                | Compatible With
 ---------------------------- | ---------------
 PKCS #11 Functions           | [`C_SignUpdate`][C_SignUpdate], [`C_SignFinal`][C_SignFinal], [`C_VerifyUpdate`][C_VerifyUpdate], [`C_VerifyFinal`][C_VerifyFinal]
-PKCS #11 Mechanism           | [`CKM_RSA_PKCS_SHA256`][CKM_RSA_PKCS_SHA256], [`CKM_RSA_PKCS_SHA512`][CKM_RSA_PKCS_SHA512]
+PKCS #11 Mechanism           | `CKM_RSA_PKCS_SHA256`, `CKM_RSA_PKCS_SHA512`
 PKCS #11 Mechanism Parameter | None
 Cloud KMS Algorithm          | [`RSA_SIGN_PKCS1_2048_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PKCS1_3072_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PKCS1_4096_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PKCS1_4096_SHA512`][kms-rsa-sign-algorithms], [`RSA_SIGN_RAW_PKCS1_2048_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_RAW_PKCS1_3072_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_RAW_PKCS1_4096_SHA256`][kms-rsa-sign-algorithms]
 
@@ -324,7 +324,7 @@ Cloud KMS Algorithm          | [`RSA_SIGN_PSS_2048_SHA256`][kms-rsa-sign-algorit
 Compatibility                | Compatible With
 ---------------------------- | ---------------
 PKCS #11 Functions           | [`C_SignUpdate`][C_SignUpdate], [`C_SignFinal`][C_SignFinal], [`C_VerifyUpdate`][C_VerifyUpdate], [`C_VerifyFinal`][C_VerifyFinal]
-PKCS #11 Mechanism           | [`CKM_RSA_PKCS_PSS_SHA256`][CKM_RSA_PKCS_PSS_SHA256], [`CKM_RSA_PKCS_PSS_SHA512`][CKM_RSA_PKCS_PSS_SHA512]
+PKCS #11 Mechanism           | `CKM_RSA_PKCS_PSS_SHA256`, `CKM_RSA_PKCS_PSS_SHA512`
 PKCS #11 Mechanism Parameter | [`CK_RSA_PKCS_PSS_PARAMS`][CK_RSA_PKCS_PSS_PARAMS]
 Cloud KMS Algorithm          | [`RSA_SIGN_PSS_2048_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PSS_3072_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PSS_4096_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PSS_4096_SHA512`][kms-rsa-sign-algorithms]
 
@@ -339,18 +339,40 @@ Compatibility                 | Compatible With
 PKCS #11 Function             | [`C_GenerateKey`][C_GenerateKey]
 PKCS #11 Mechanism            | [`CKM_GENERIC_SECRET_KEY_GEN`][CKM_GENERIC_SECRET_KEY_GEN], [`CKM_AES_KEY_GEN`][CKM_AES_KEY_GEN]
 PKCS #11 Mechanism Parameters | None
-Cloud KMS Algorithm           | `AES_256_GCM`, [`HMAC_SHA1`][kms-mac-algorithms], [`HMAC_SHA224`][kms-mac-algorithms], [`HMAC_SHA256`][kms-mac-algorithms], [`HMAC_SHA384`][kms-mac-algorithms], [`HMAC_SHA512`][kms-mac-algorithms]
+Cloud KMS Algorithm           | `AES_128_GCM`, `AES_256_GCM`, `AES_128_CTR`, `AES_256_CTR`, `AES_128_CBC`, `AES_256_CBC`, [`HMAC_SHA1`][kms-mac-algorithms], [`HMAC_SHA224`][kms-mac-algorithms], [`HMAC_SHA256`][kms-mac-algorithms], [`HMAC_SHA384`][kms-mac-algorithms], [`HMAC_SHA512`][kms-mac-algorithms]
 
-### AES Encryption and Decryption
+### AES-CBC Encryption and Decryption
 
 The library may be used for AES encryption or decryption.
 
 Compatibility                | Compatible With
 ---------------------------- | ---------------
 PKCS #11 Functions           | [`C_Encrypt`][C_Encrypt], [`C_EncryptUpdate`][C_EncryptUpdate], [`C_EncryptFinal`][C_EncryptFinal], [`C_Decrypt`][C_Decrypt], [`C_DecryptUpdate`][C_DecryptUpdate], [`C_DecryptFinal`][C_DecryptFinal]
-PKCS #11 Mechanism           | [`CKM_CLOUDKMS_AES_GCM`][CKM_CLOUDKMS_AES_GCM]
+PKCS #11 Mechanism           | [`CKM_AES_CBC`][CKM_AES_CBC], [`CKM_AES_CBC_PAD`][CKM_AES_CBC_PAD]
+PKCS #11 Mechanism Parameter | CK_BYTE (initialization vector)
+Cloud KMS Algorithm          | `AES_128_CBC`, `AES_256_CBC`
+
+### AES-CTR Encryption and Decryption
+
+The library may be used for AES encryption or decryption.
+
+Compatibility                | Compatible With
+---------------------------- | ---------------
+PKCS #11 Functions           | [`C_Encrypt`][C_Encrypt], [`C_EncryptUpdate`][C_EncryptUpdate], [`C_EncryptFinal`][C_EncryptFinal], [`C_Decrypt`][C_Decrypt], [`C_DecryptUpdate`][C_DecryptUpdate], [`C_DecryptFinal`][C_DecryptFinal]
+PKCS #11 Mechanism           | [`CKM_AES_CTR`][CKM_AES_CTR]
+PKCS #11 Mechanism Parameter | [`CK_AES_CTR_PARAMS`][CK_AES_CTR_PARAMS]
+Cloud KMS Algorithm          | `AES_128_CTR`, `AES_256_CTR`
+
+### AES-GCM Encryption and Decryption
+
+The library may be used for AES encryption or decryption.
+
+Compatibility                | Compatible With
+---------------------------- | ---------------
+PKCS #11 Functions           | [`C_Encrypt`][C_Encrypt], [`C_EncryptUpdate`][C_EncryptUpdate], [`C_EncryptFinal`][C_EncryptFinal], [`C_Decrypt`][C_Decrypt], [`C_DecryptUpdate`][C_DecryptUpdate], [`C_DecryptFinal`][C_DecryptFinal]
+PKCS #11 Mechanism           | `CKM_CLOUDKMS_AES_GCM`
 PKCS #11 Mechanism Parameter | [`CK_GCM_PARAMS`][CK_GCM_PARAMS]
-Cloud KMS Algorithm          | `AES_256_GCM`
+Cloud KMS Algorithm          | `AES_128_GCM`, `AES_256_GCM`
 
 ### MAC Signing and Verification
 
@@ -476,12 +498,23 @@ This means that:
 [C_GenerateRandom]: http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/errata01/os/pkcs11-base-v2.40-errata01-os-complete.html#_Toc323024163
 [C_GetFunctionStatus]: http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/errata01/os/pkcs11-base-v2.40-errata01-os-complete.html#_Toc323024165
 [C_CancelFunction]: http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/errata01/os/pkcs11-base-v2.40-errata01-os-complete.html#_Toc323024166
+[CK_AES_CTR_PARAMS]: http://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/cos01/pkcs11-curr-v2.40-cos01.html#_Toc228894707
 [CK_GCM_PARAMS]: http://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/errata01/os/pkcs11-curr-v2.40-errata01-os-complete.html#_Toc228894714
 [CK_RSA_PKCS_OAEP_PARAMS]: http://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/errata01/os/pkcs11-curr-v2.40-errata01-os-complete.html#_Toc228807161
 [CK_RSA_PKCS_PSS_PARAMS]: http://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/errata01/os/pkcs11-curr-v2.40-errata01-os-complete.html#_Toc228807164
+[CKM_AES_CTR]: http://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/cos01/pkcs11-curr-v2.40-cos01.html#_Toc228894705
+[CKM_AES_CBC]: http://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/cos01/pkcs11-curr-v2.40-cos01.html#_Toc228894699
+[CKM_AES_CBC_PAD]: http://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/cos01/pkcs11-curr-v2.40-cos01.html#_Toc228894700
+[CKM_AES_KEY_GEN]: http://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/cs01/pkcs11-curr-v2.40-cs01.html#_Toc228894697
 [CKM_EC_KEY_PAIR_GEN]: http://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/errata01/os/pkcs11-curr-v2.40-errata01-os-complete.html#_Toc228894664
 [CKM_ECDSA]: http://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/errata01/os/pkcs11-curr-v2.40-errata01-os-complete.html#_Toc441850452
+[CKM_GENERIC_SECRET_KEY_GEN]: http://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/cs01/pkcs11-curr-v2.40-cs01.html#_Toc228894689
 [CKM_RSA_PKCS]: http://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/errata01/os/pkcs11-curr-v2.40-errata01-os-complete.html#_Toc228894635
 [CKM_RSA_PKCS_KEY_PAIR_GEN]: http://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/errata01/os/pkcs11-curr-v2.40-errata01-os-complete.html#_Toc228894633
 [CKM_RSA_PKCS_OAEP]: http://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/errata01/os/pkcs11-curr-v2.40-errata01-os-complete.html#_Toc228894637
 [CKM_RSA_PKCS_PSS]: http://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/errata01/os/pkcs11-curr-v2.40-errata01-os-complete.html#_Toc228894639
+[CKM_SHA1_HMAC]: http://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/cs01/pkcs11-curr-v2.40-cs01.html#_Toc228894748
+[CKM_SHA224_HMAC]: http://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/cs01/pkcs11-curr-v2.40-cs01.html#_Toc228894754
+[CKM_SHA256_HMAC]: http://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/cs01/pkcs11-curr-v2.40-cs01.html#_Toc228894760
+[CKM_SHA384_HMAC]: http://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/cs01/pkcs11-curr-v2.40-cs01.html#_Toc228894766
+[CKM_SHA512_HMAC]: http://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/cs01/pkcs11-curr-v2.40-cs01.html#_Toc228894772
