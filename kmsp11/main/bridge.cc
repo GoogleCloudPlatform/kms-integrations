@@ -509,6 +509,11 @@ absl::Status DecryptUpdate(CK_SESSION_HANDLE hSession,
   if (!result.ok()) {
     session->ReleaseOperation();
   }
+
+  // The library does not return partial decrypted plaintext, so we set the
+  // partial output length to 0.
+  *pulPartLen = 0;
+
   return result;
 }
 
@@ -631,6 +636,11 @@ absl::Status EncryptUpdate(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pPart,
   if (!result.ok()) {
     session->ReleaseOperation();
   }
+
+  // The library does not return partial encrypted ciphertext, so we set the
+  // partial output length to 0.
+  *pulEncryptedPartLen = 0;
+
   return result;
 }
 

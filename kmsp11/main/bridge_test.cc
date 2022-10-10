@@ -41,6 +41,8 @@ using ::testing::IsEmpty;
 using ::testing::IsSupersetOf;
 using ::testing::Not;
 
+// TODO(b/254080884): reevaluate use of fixtures and refactor bridge_test.cc to
+// improve clarity.
 class BridgeTest : public testing::Test {
  protected:
   void SetUp() override {
@@ -2384,6 +2386,170 @@ TEST_F(AsymmetricSignTest, VerifyInitMacKeysExperimentDisabled) {
               StatusRvIs(CKR_MECHANISM_INVALID));
 }
 
+class SymmetricCtrCryptTest : public BridgeTest {
+ protected:
+  void SetUp() override {
+    BridgeTest::SetUp();
+    auto kms_client = fake_server_->NewClient();
+
+    kms_v1::CryptoKey ck;
+    ck.set_purpose(kms_v1::CryptoKey::RAW_ENCRYPT_DECRYPT);
+    ck.mutable_version_template()->set_algorithm(
+        kms_v1::CryptoKeyVersion::AES_256_CTR);
+    ck.mutable_version_template()->set_protection_level(
+        kms_v1::ProtectionLevel::HSM);
+    ck = CreateCryptoKeyOrDie(kms_client.get(), kr1_.name(), "ck", ck, true);
+
+    kms_v1::CryptoKeyVersion ckv;
+    ckv = CreateCryptoKeyVersionOrDie(kms_client.get(), ck.name(), ckv);
+    ckv = WaitForEnablement(kms_client.get(), ckv);
+
+    std::ofstream(config_file_, std::ofstream::out | std::ofstream::app)
+        << "experimental_allow_raw_encryption_keys: true" << std::endl;
+    EXPECT_OK(Initialize(&init_args_));
+    EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session_));
+
+    CK_OBJECT_CLASS object_class = CKO_SECRET_KEY;
+    CK_ATTRIBUTE attr_template[2] = {
+        {CKA_ID, const_cast<char*>(ckv.name().data()), ckv.name().size()},
+        {CKA_CLASS, &object_class, sizeof(object_class)},
+    };
+    CK_ULONG found_count;
+
+    EXPECT_OK(FindObjectsInit(session_, attr_template, 2));
+    EXPECT_OK(FindObjects(session_, &secret_key_, 1, &found_count));
+    EXPECT_EQ(found_count, 1);
+    EXPECT_OK(FindObjectsFinal(session_));
+  }
+
+  void TearDown() override { EXPECT_OK(Finalize(nullptr)); }
+
+  CK_SESSION_HANDLE session_;
+  CK_OBJECT_HANDLE secret_key_;
+};
+
+TEST_F(SymmetricCtrCryptTest, EncryptDecryptSuccess) {
+  std::vector<uint8_t> plaintext(128);
+  RAND_bytes(plaintext.data(), plaintext.size());
+  std::vector<uint8_t> iv(16);
+  RAND_bytes(iv.data(), iv.size());
+
+  CK_AES_CTR_PARAMS params;
+  params.ulCounterBits = 128;
+  memcpy(params.cb, iv.data(), sizeof(params.cb));
+
+  CK_MECHANISM mech = {
+      CKM_AES_CTR,     // mechanism
+      &params,         // pParameter
+      sizeof(params),  // ulParameterLen
+  };
+
+  EXPECT_OK(EncryptInit(session_, &mech, secret_key_));
+
+  CK_ULONG ciphertext_size;
+  EXPECT_OK(Encrypt(session_, plaintext.data(), plaintext.size(), nullptr,
+                    &ciphertext_size));
+  EXPECT_EQ(ciphertext_size, plaintext.size());
+
+  std::vector<uint8_t> ciphertext(ciphertext_size);
+  EXPECT_OK(Encrypt(session_, plaintext.data(), plaintext.size(),
+                    ciphertext.data(), &ciphertext_size));
+  EXPECT_EQ(ciphertext_size, plaintext.size());
+
+  // Operation should be terminated after success
+  EXPECT_THAT(Encrypt(session_, plaintext.data(), plaintext.size(), nullptr,
+                      &ciphertext_size),
+              StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
+
+  EXPECT_OK(DecryptInit(session_, &mech, secret_key_));
+
+  CK_ULONG plaintext_size;
+  EXPECT_OK(Decrypt(session_, ciphertext.data(), ciphertext.size(), nullptr,
+                    &plaintext_size));
+  EXPECT_EQ(plaintext_size, plaintext.size());
+
+  std::vector<uint8_t> recovered_plaintext(plaintext_size);
+  EXPECT_OK(Decrypt(session_, ciphertext.data(), ciphertext.size(),
+                    recovered_plaintext.data(), &plaintext_size));
+
+  EXPECT_EQ(recovered_plaintext, plaintext);
+  EXPECT_EQ(plaintext_size, plaintext.size());
+
+  // Operation should be terminated after success
+  EXPECT_THAT(Decrypt(session_, ciphertext.data(), ciphertext.size(), nullptr,
+                      &plaintext_size),
+              StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
+}
+
+TEST_F(SymmetricCtrCryptTest, EncryptDecryptMultiPartSuccess) {
+  std::vector<uint8_t> iv(16);
+  RAND_bytes(iv.data(), iv.size());
+
+  CK_AES_CTR_PARAMS params;
+  params.ulCounterBits = 128;
+  memcpy(params.cb, iv.data(), sizeof(params.cb));
+
+  CK_MECHANISM mech = {
+      CKM_AES_CTR,     // mechanism
+      &params,         // pParameter
+      sizeof(params),  // ulParameterLen
+  };
+
+  EXPECT_OK(EncryptInit(session_, &mech, secret_key_));
+
+  std::vector<uint8_t> part1(64);
+  std::vector<uint8_t> part2(64);
+  RAND_bytes(part1.data(), part1.size());
+  RAND_bytes(part2.data(), part2.size());
+  std::vector<uint8_t> plaintext(part1);
+  plaintext.insert(plaintext.end(), part2.begin(), part2.end());
+
+  CK_ULONG ciphertext_size = 128;
+  CK_ULONG partial_ciphertext_size = 0;
+  std::vector<uint8_t> ciphertext(ciphertext_size);
+  EXPECT_OK(EncryptUpdate(session_, part1.data(), part1.size(),
+                          ciphertext.data(), &partial_ciphertext_size));
+  EXPECT_EQ(partial_ciphertext_size, 0);
+
+  EXPECT_OK(EncryptUpdate(session_, part2.data(), part2.size(),
+                          ciphertext.data(), &partial_ciphertext_size));
+  EXPECT_EQ(partial_ciphertext_size, 0);
+
+  EXPECT_OK(EncryptFinal(session_, ciphertext.data(), &ciphertext_size));
+
+  EXPECT_EQ(ciphertext.size(), ciphertext_size);
+
+  // Operation should be terminated after success
+  EXPECT_THAT(
+      Encrypt(session_, part1.data(), part1.size(), nullptr, &ciphertext_size),
+      StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
+
+  EXPECT_OK(DecryptInit(session_, &mech, secret_key_));
+
+  CK_ULONG plaintext_size = 128;
+  CK_ULONG partial_plaintext_size = 0;
+  std::vector<uint8_t> recovered_plaintext(plaintext_size);
+  EXPECT_OK(DecryptUpdate(session_, ciphertext.data(), 16,
+                          recovered_plaintext.data(), &partial_plaintext_size));
+  EXPECT_EQ(partial_plaintext_size, 0);
+
+  EXPECT_OK(DecryptUpdate(session_, ciphertext.data() + 16,
+                          ciphertext.size() - 16, recovered_plaintext.data(),
+                          &partial_plaintext_size));
+  EXPECT_EQ(partial_plaintext_size, 0);
+
+  EXPECT_OK(
+      DecryptFinal(session_, recovered_plaintext.data(), &plaintext_size));
+
+  EXPECT_EQ(recovered_plaintext, plaintext);
+  EXPECT_EQ(plaintext_size, plaintext.size());
+
+  // Operation should be terminated after success
+  EXPECT_THAT(Decrypt(session_, ciphertext.data(), ciphertext.size(), nullptr,
+                      &plaintext_size),
+              StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
+}
+
 class SymmetricCryptTest : public BridgeTest {
  protected:
   void SetUp() override {
@@ -2510,11 +2676,16 @@ TEST_F(SymmetricCryptTest, EncryptDecryptMultiPartSuccess) {
   plaintext.insert(plaintext.end(), part2.begin(), part2.end());
 
   CK_ULONG ciphertext_size = 144;
+  CK_ULONG partial_ciphertext_size = 0;
   std::vector<uint8_t> ciphertext(ciphertext_size);
   EXPECT_OK(EncryptUpdate(session_, part1.data(), part1.size(),
-                          ciphertext.data(), &ciphertext_size));
+                          ciphertext.data(), &partial_ciphertext_size));
+  EXPECT_EQ(partial_ciphertext_size, 0);
+
   EXPECT_OK(EncryptUpdate(session_, part2.data(), part2.size(),
-                          ciphertext.data(), &ciphertext_size));
+                          ciphertext.data(), &partial_ciphertext_size));
+  EXPECT_EQ(partial_ciphertext_size, 0);
+
   EXPECT_OK(EncryptFinal(session_, ciphertext.data(), &ciphertext_size));
 
   EXPECT_EQ(ciphertext.size(), ciphertext_size);
@@ -2527,12 +2698,17 @@ TEST_F(SymmetricCryptTest, EncryptDecryptMultiPartSuccess) {
   EXPECT_OK(DecryptInit(session_, &mech, secret_key_));
 
   CK_ULONG plaintext_size = 128;
+  CK_ULONG partial_plaintext_size = 0;
   std::vector<uint8_t> recovered_plaintext(plaintext_size);
   EXPECT_OK(DecryptUpdate(session_, ciphertext.data(), 16,
-                          recovered_plaintext.data(), &plaintext_size));
+                          recovered_plaintext.data(), &partial_plaintext_size));
+  EXPECT_EQ(partial_plaintext_size, 0);
+
   EXPECT_OK(DecryptUpdate(session_, ciphertext.data() + 16,
                           ciphertext.size() - 16, recovered_plaintext.data(),
-                          &plaintext_size));
+                          &partial_plaintext_size));
+  EXPECT_EQ(partial_plaintext_size, 0);
+
   EXPECT_OK(
       DecryptFinal(session_, recovered_plaintext.data(), &plaintext_size));
 
@@ -2781,11 +2957,16 @@ TEST_F(SymmetricCryptTest, EncryptMultiPartSuccess) {
   RAND_bytes(part2.data(), part2.size());
 
   CK_ULONG ciphertext_size = 144;
+  CK_ULONG partial_ciphertext_size = 0;
   std::vector<uint8_t> ciphertext(ciphertext_size);
   EXPECT_OK(EncryptUpdate(session_, part1.data(), part1.size(),
-                          ciphertext.data(), &ciphertext_size));
+                          ciphertext.data(), &partial_ciphertext_size));
+  EXPECT_EQ(partial_ciphertext_size, 0);
+
   EXPECT_OK(EncryptUpdate(session_, part2.data(), part2.size(),
-                          ciphertext.data(), &ciphertext_size));
+                          ciphertext.data(), &partial_ciphertext_size));
+  EXPECT_EQ(partial_ciphertext_size, 0);
+
   EXPECT_OK(EncryptFinal(session_, ciphertext.data(), &ciphertext_size));
 
   // Operation should be terminated after success
