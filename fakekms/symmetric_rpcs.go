@@ -35,6 +35,9 @@ const maxCiphertextSize = 10 * maxPlaintextSize
 // maxIvSize is the maximum initialization vector size accepted by Cloud KMS.
 const maxIvSize = 16
 
+// defaultTagLength is the authentication tag length used by Cloud KMS.
+const defaultTagLength = 16
+
 // RawEncrypt fakes a Cloud KMS API function.
 func (f *fakeKMS) RawEncrypt(ctx context.Context, req *kmspb.RawEncryptRequest) (*kmspb.RawEncryptResponse, error) {
 	if err := allowlist("name", "plaintext", "plaintext_crc32c", "additional_authenticated_data", "additional_authenticated_data_crc32c", "initialization_vector", "initialization_vector_crc32c").check(req); err != nil {
@@ -128,6 +131,7 @@ func (f *fakeKMS) RawEncrypt(ctx context.Context, req *kmspb.RawEncryptRequest) 
 	}
 
 	var ciphertext []byte
+	var tagLen int32
 	switch ckv.pb.Algorithm {
 	case kmspb.CryptoKeyVersion_AES_128_GCM, kmspb.CryptoKeyVersion_AES_256_GCM:
 		aesgcm, err := cipher.NewGCM(block)
@@ -135,6 +139,7 @@ func (f *fakeKMS) RawEncrypt(ctx context.Context, req *kmspb.RawEncryptRequest) 
 			return nil, errInternal("GCM cipher creation failed: %v", err)
 		}
 		ciphertext = aesgcm.Seal(nil, nonce, plaintext, req.AdditionalAuthenticatedData)
+		tagLen = defaultTagLength
 	case kmspb.CryptoKeyVersion_AES_128_CTR, kmspb.CryptoKeyVersion_AES_256_CTR:
 		ciphertext = make([]byte, len(plaintext))
 		aesctr := cipher.NewCTR(block, nonce)
@@ -156,7 +161,7 @@ func (f *fakeKMS) RawEncrypt(ctx context.Context, req *kmspb.RawEncryptRequest) 
 		CiphertextCrc32C:           crc32c(ciphertext),
 		InitializationVector:       nonce,
 		InitializationVectorCrc32C: crc32c(nonce),
-		TagLength:                  16,
+		TagLength:                  tagLen,
 		VerifiedPlaintextCrc32C:    req.PlaintextCrc32C != nil,
 		VerifiedAdditionalAuthenticatedDataCrc32C: req.AdditionalAuthenticatedDataCrc32C != nil,
 		VerifiedInitializationVectorCrc32C:        req.InitializationVectorCrc32C != nil,
@@ -242,6 +247,9 @@ func (f *fakeKMS) RawDecrypt(ctx context.Context, req *kmspb.RawDecryptRequest) 
 	var plaintext []byte
 	switch ckv.pb.Algorithm {
 	case kmspb.CryptoKeyVersion_AES_128_GCM, kmspb.CryptoKeyVersion_AES_256_GCM:
+		if len(ciphertext) < defaultTagLength {
+			return nil, errInvalidArgument("len(ciphertext)=%d, want len(ciphertext) > %d", len(ciphertext), defaultTagLength)
+		}
 		aesgcm, err := cipher.NewGCM(block)
 		if err != nil {
 			return nil, errInternal("GCM cipher creation failed: %v", err)

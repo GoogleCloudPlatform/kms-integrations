@@ -136,13 +136,6 @@ http_file(
 )
 
 http_archive(
-    name = "rules_jvm_external",  # v4.2 // 2021-11-23
-    sha256 = "2cd77de091e5376afaf9cc391c15f093ebd0105192373b334f0a855d89092ad5",
-    strip_prefix = "rules_jvm_external-4.2",
-    url = "https://github.com/bazelbuild/rules_jvm_external/archive/4.2.tar.gz",
-)
-
-http_archive(
     name = "rules_foreign_cc",  # 2021-03-18
     patch_args = [
         "-E",
@@ -162,10 +155,13 @@ rules_foreign_cc_dependencies(register_built_tools = False)
 
 load("@com_google_googleapis//:repository_rules.bzl", "switched_rules_by_language")
 
+# TODO(b/234842124): drop gapic and java once the interoperable AES proto changes are released.
 switched_rules_by_language(
     name = "com_google_googleapis_imports",
     cc = True,  # C++ support is only "Partially implemented", roll our own.
+    gapic = True,
     grpc = True,
+    java = True,
 )
 
 # gRPC
@@ -187,21 +183,129 @@ load("@build_bazel_apple_support//lib:repositories.bzl", "apple_support_dependen
 
 apple_support_dependencies()
 
+# rules_gapic also depends on rules_go, so it must come after our own dependency on rules_go.
+_rules_gapic_version = "0.13.0"
+_rules_gapic_sha256 = "1ebbd74b064697f4ff01d8f59764ba8431d52673f48f636be6b135b6da640b8e"
+http_archive(
+    name = "rules_gapic",
+    sha256 = _rules_gapic_sha256,
+    strip_prefix = "rules_gapic-%s" % _rules_gapic_version,
+    urls = ["https://github.com/googleapis/rules_gapic/archive/v%s.tar.gz" % _rules_gapic_version],
+)
+load("@rules_gapic//:repositories.bzl", "rules_gapic_repositories")
+rules_gapic_repositories()
+
 ## Java
+# Begin: Googleapis Java dependencies
+# This section is based off of the WORKSPACE file of googleapis:
+# https://github.com/googleapis/googleapis/blob/master/WORKSPACE
+load("@com_google_protobuf//:protobuf_deps.bzl", "PROTOBUF_MAVEN_ARTIFACTS")
+
+# Starting in protobuf 3.19, protobuf project started to provide
+# PROTOBUF_MAVEN_ARTIFACTS variable so that Bazel users can resolve their
+# dependencies through maven_install.
+# https://github.com/protocolbuffers/protobuf/issues/9132
+RULES_JVM_EXTERNAL_TAG = "4.2"
+RULES_JVM_EXTERNAL_SHA = "cd1a77b7b02e8e008439ca76fd34f5b07aecb8c752961f9640dea15e9e5ba1ca"
+
+http_archive(
+    name = "rules_jvm_external",
+    strip_prefix = "rules_jvm_external-%s" % RULES_JVM_EXTERNAL_TAG,
+    sha256 = RULES_JVM_EXTERNAL_SHA,
+    url = "https://github.com/bazelbuild/rules_jvm_external/archive/%s.zip" % RULES_JVM_EXTERNAL_TAG,
+)
 
 load("@rules_jvm_external//:defs.bzl", "maven_install")
 
 maven_install(
-    artifacts = [
-        "com.google.cloud:google-cloud-kms:2.4.0",
-        "com.google.guava:guava:31.0.1-jre",
-        "junit:junit:4.13.2",
-    ],
-    fetch_sources = True,
+    artifacts = PROTOBUF_MAVEN_ARTIFACTS + ["com.google.cloud:google-cloud-kms:2.4.0"],
+    generate_compat_repositories = True,
     repositories = [
         "https://repo.maven.apache.org/maven2/",
     ],
 )
+
+#############################################################################
+# Temporary dependencies to be able to patch the java version of googleapis #
+# TODO(b/234842124): drop once interoperable AES proto changes are released #
+#############################################################################
+http_archive(
+    name = "com_google_api_codegen",
+    sha256 = "65f72d3143bbcd53da37b04ec7d5dd647010a15272a004022e5b078552b64416",
+    strip_prefix = "gapic-generator-857e2aab8017ecbb2abc9adc02d8571c02f94b3b",
+    urls = ["https://github.com/googleapis/gapic-generator/archive/857e2aab8017ecbb2abc9adc02d8571c02f94b3b.zip"],
+)
+
+_gax_java_version = "2.18.1"
+
+http_archive(
+    name = "com_google_api_gax_java",
+    strip_prefix = "gax-java-%s" % _gax_java_version,
+    urls = ["https://github.com/googleapis/gax-java/archive/v%s.zip" % _gax_java_version],
+)
+
+load("@com_google_api_gax_java//:repository_rules.bzl", "com_google_api_gax_java_properties")
+
+com_google_api_gax_java_properties(
+    name = "com_google_api_gax_java_properties",
+    file = "@com_google_api_gax_java//:dependencies.properties",
+)
+
+load("@com_google_api_gax_java//:repositories.bzl", "com_google_api_gax_java_repositories")
+
+com_google_api_gax_java_repositories()
+
+load("@io_grpc_grpc_java//:repositories.bzl", "grpc_java_repositories")
+
+grpc_java_repositories()
+
+# Java microgenerator.
+# Must go AFTER java-gax, since both java gax and gapic-generator are written in java and may conflict.
+_gapic_generator_java_version = "2.8.2"
+
+http_archive(
+    name = "gapic_generator_java",
+    strip_prefix = "gapic-generator-java-%s" % _gapic_generator_java_version,
+    urls = ["https://github.com/googleapis/gapic-generator-java/archive/v%s.zip" % _gapic_generator_java_version],
+)
+
+load("@gapic_generator_java//:repositories.bzl", "gapic_generator_java_repositories")
+
+gapic_generator_java_repositories()
+
+# gapic-generator transitive
+# (goes AFTER java-gax, since both java gax and gapic-generator are written in java and may conflict)
+load("@com_google_api_codegen//:repository_rules.bzl", "com_google_api_codegen_properties")
+
+com_google_api_codegen_properties(
+    name = "com_google_api_codegen_properties",
+    file = "@com_google_api_codegen//:dependencies.properties",
+)
+
+load("@com_google_api_codegen//:repositories.bzl", "com_google_api_codegen_repositories")
+
+http_archive(
+    name = "com_google_protoc_java_resource_names_plugin",
+    sha256 = "4b714b35ee04ba90f560ee60e64c7357428efcb6b0f3a298f343f8ec2c6d4a5d",
+    strip_prefix = "protoc-java-resource-names-plugin-8d749cb5b7aa2734656e1ad36ceda92894f33153",
+    urls = ["https://github.com/googleapis/protoc-java-resource-names-plugin/archive/8d749cb5b7aa2734656e1ad36ceda92894f33153.zip"],
+)
+
+com_google_api_codegen_repositories()
+
+# protoc-java-resource-names-plugin (loaded in com_google_api_codegen_repositories())
+# (required to support resource names feature in gapic generator)
+load(
+    "@com_google_protoc_java_resource_names_plugin//:repositories.bzl",
+    "com_google_protoc_java_resource_names_plugin_repositories",
+)
+
+com_google_protoc_java_resource_names_plugin_repositories()
+########################################################
+# End of temporary java dependencies TODO(b/234842124) #
+########################################################
+
+# End: Googleapis Java dependencies
 
 ## Golang
 load("//:go.bzl", "go_repositories")

@@ -1,3 +1,4 @@
+load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@rules_cc//cc:defs.bzl", "cc_binary")
 load("@rules_java//java:defs.bzl", "java_library", "java_test")
 
@@ -57,6 +58,37 @@ java_test(
         "@maven//:com_google_api_grpc_proto_google_cloud_kms_v1",
         "@maven//:com_google_cloud_google_cloud_kms",
         "@maven//:com_google_protobuf_protobuf_java",
+        "@maven//:junit_junit",
+    ],
+)
+
+java_test(
+    name = "EncryptionTest",
+    size = "small",
+    srcs = ["EncryptionTest.java"],
+    # Since RawEncrypt/RawDecrypt is not GA yet, we have to use the patched
+    # version of googleapis instead of maven, which uses a gapic-generator
+    # that is only compatible with Linux and MacOS.
+    # This requirement can be dropped once the interoperable AES feature is
+    # released publicly, by switching back to maven.
+    target_compatible_with = selects.with_or({
+        ("@platforms//os:linux", "@platforms//os:macos"): [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    tags = [
+        # The workspace rules pull in 64-bit Java on 64-bit hosts, so we can't
+        # test with a 32-bit shared library.
+        "no_m32",
+        # The Java runtime we pull in with the workspace rules doesn't have
+        # sanitizer support.
+        "no_san",
+    ],
+    test_class = "kmsp11.test.jca.EncryptionTest",
+    deps = [
+        ":JcaTestFixture",
+        "@com_google_googleapis//google/cloud/kms/v1:kms_java_gapic",
+        "@com_google_googleapis//google/cloud/kms/v1:kms_java_proto",
+        "@com_google_protobuf//:protobuf_java",
         "@maven//:junit_junit",
     ],
 )
