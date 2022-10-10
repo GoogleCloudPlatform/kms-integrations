@@ -2386,7 +2386,8 @@ TEST_F(AsymmetricSignTest, VerifyInitMacKeysExperimentDisabled) {
               StatusRvIs(CKR_MECHANISM_INVALID));
 }
 
-class SymmetricCtrCryptTest : public BridgeTest {
+class SymmetricCryptBaseTest : public BridgeTest,
+  public testing::WithParamInterface<kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm>{
  protected:
   void SetUp() override {
     BridgeTest::SetUp();
@@ -2394,8 +2395,7 @@ class SymmetricCtrCryptTest : public BridgeTest {
 
     kms_v1::CryptoKey ck;
     ck.set_purpose(kms_v1::CryptoKey::RAW_ENCRYPT_DECRYPT);
-    ck.mutable_version_template()->set_algorithm(
-        kms_v1::CryptoKeyVersion::AES_256_CTR);
+    ck.mutable_version_template()->set_algorithm(GetParam());
     ck.mutable_version_template()->set_protection_level(
         kms_v1::ProtectionLevel::HSM);
     ck = CreateCryptoKeyOrDie(kms_client.get(), kr1_.name(), "ck", ck, true);
@@ -2428,7 +2428,144 @@ class SymmetricCtrCryptTest : public BridgeTest {
   CK_OBJECT_HANDLE secret_key_;
 };
 
-TEST_F(SymmetricCtrCryptTest, EncryptDecryptSuccess) {
+class SymmetricCbcCryptTest : public SymmetricCryptBaseTest {};
+
+class SymmetricCtrCryptTest : public SymmetricCryptBaseTest {};
+
+class SymmetricGcmCryptTest : public SymmetricCryptBaseTest {};
+
+const std::array kCbcAlgorithms = {
+    kms_v1::CryptoKeyVersion::AES_128_CBC, kms_v1::CryptoKeyVersion::AES_256_CBC};
+
+const std::array kCtrAlgorithms = {
+    kms_v1::CryptoKeyVersion::AES_128_CTR, kms_v1::CryptoKeyVersion::AES_256_CTR};
+
+const std::array kGcmAlgorithms = {
+    kms_v1::CryptoKeyVersion::AES_128_GCM, kms_v1::CryptoKeyVersion::AES_256_GCM};
+
+INSTANTIATE_TEST_SUITE_P(TestSymmetricEncryption, SymmetricCbcCryptTest,
+                         testing::ValuesIn(kCbcAlgorithms));
+
+INSTANTIATE_TEST_SUITE_P(TestSymmetricEncryption, SymmetricCtrCryptTest,
+                         testing::ValuesIn(kCtrAlgorithms));
+
+INSTANTIATE_TEST_SUITE_P(TestSymmetricEncryption, SymmetricGcmCryptTest,
+                         testing::ValuesIn(kGcmAlgorithms));
+
+TEST_P(SymmetricCbcCryptTest, EncryptDecryptSuccess) {
+  std::vector<uint8_t> plaintext(128);
+  RAND_bytes(plaintext.data(), plaintext.size());
+  std::vector<uint8_t> iv(16);
+  RAND_bytes(iv.data(), iv.size());
+
+  CK_MECHANISM mech = {
+      CKM_AES_CBC,  // mechanism
+      iv.data(),    // pParameter
+      iv.size(),    // ulParameterLen
+  };
+
+  EXPECT_OK(EncryptInit(session_, &mech, secret_key_));
+
+  CK_ULONG ciphertext_size;
+  EXPECT_OK(Encrypt(session_, plaintext.data(), plaintext.size(), nullptr,
+                    &ciphertext_size));
+  EXPECT_EQ(ciphertext_size, plaintext.size());
+
+  std::vector<uint8_t> ciphertext(ciphertext_size);
+  EXPECT_OK(Encrypt(session_, plaintext.data(), plaintext.size(),
+                    ciphertext.data(), &ciphertext_size));
+  EXPECT_EQ(ciphertext_size, plaintext.size());
+
+  // Operation should be terminated after success
+  EXPECT_THAT(Encrypt(session_, plaintext.data(), plaintext.size(), nullptr,
+                      &ciphertext_size),
+              StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
+
+  EXPECT_OK(DecryptInit(session_, &mech, secret_key_));
+
+  CK_ULONG plaintext_size;
+  EXPECT_OK(Decrypt(session_, ciphertext.data(), ciphertext.size(), nullptr,
+                    &plaintext_size));
+  EXPECT_EQ(plaintext_size, plaintext.size());
+
+  std::vector<uint8_t> recovered_plaintext(plaintext_size);
+  EXPECT_OK(Decrypt(session_, ciphertext.data(), ciphertext.size(),
+                    recovered_plaintext.data(), &plaintext_size));
+
+  EXPECT_EQ(recovered_plaintext, plaintext);
+  EXPECT_EQ(plaintext_size, plaintext.size());
+
+  // Operation should be terminated after success
+  EXPECT_THAT(Decrypt(session_, ciphertext.data(), ciphertext.size(), nullptr,
+                      &plaintext_size),
+              StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
+}
+
+TEST_P(SymmetricCbcCryptTest, EncryptDecryptMultiPartSuccess) {
+  std::vector<uint8_t> iv(16);
+  RAND_bytes(iv.data(), iv.size());
+
+  CK_MECHANISM mech = {
+      CKM_AES_CBC_PAD,  // mechanism
+      iv.data(),        // pParameter
+      iv.size(),        // ulParameterLen
+  };
+
+  EXPECT_OK(EncryptInit(session_, &mech, secret_key_));
+
+  std::vector<uint8_t> part1(64);
+  std::vector<uint8_t> part2(64);
+  RAND_bytes(part1.data(), part1.size());
+  RAND_bytes(part2.data(), part2.size());
+  std::vector<uint8_t> plaintext(part1);
+  plaintext.insert(plaintext.end(), part2.begin(), part2.end());
+
+  CK_ULONG ciphertext_size = 144;  // 128 + 16 (full padding block)
+  CK_ULONG partial_ciphertext_size = 0;
+  std::vector<uint8_t> ciphertext(ciphertext_size);
+  EXPECT_OK(EncryptUpdate(session_, part1.data(), part1.size(),
+                          ciphertext.data(), &partial_ciphertext_size));
+  EXPECT_EQ(partial_ciphertext_size, 0);
+
+  EXPECT_OK(EncryptUpdate(session_, part2.data(), part2.size(),
+                          ciphertext.data(), &partial_ciphertext_size));
+  EXPECT_EQ(partial_ciphertext_size, 0);
+
+  EXPECT_OK(EncryptFinal(session_, ciphertext.data(), &ciphertext_size));
+
+  EXPECT_EQ(ciphertext.size(), ciphertext_size);
+
+  // Operation should be terminated after success
+  EXPECT_THAT(
+      Encrypt(session_, part1.data(), part1.size(), nullptr, &ciphertext_size),
+      StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
+
+  EXPECT_OK(DecryptInit(session_, &mech, secret_key_));
+
+  CK_ULONG plaintext_size = 128;
+  CK_ULONG partial_plaintext_size = 0;
+  std::vector<uint8_t> recovered_plaintext(plaintext_size);
+  EXPECT_OK(DecryptUpdate(session_, ciphertext.data(), 16,
+                          recovered_plaintext.data(), &partial_plaintext_size));
+  EXPECT_EQ(partial_plaintext_size, 0);
+
+  EXPECT_OK(DecryptUpdate(session_, ciphertext.data() + 16,
+                          ciphertext.size() - 16, recovered_plaintext.data(),
+                          &partial_plaintext_size));
+  EXPECT_EQ(partial_plaintext_size, 0);
+
+  EXPECT_OK(
+      DecryptFinal(session_, recovered_plaintext.data(), &plaintext_size));
+
+  EXPECT_EQ(recovered_plaintext, plaintext);
+
+  // Operation should be terminated after success
+  EXPECT_THAT(Decrypt(session_, ciphertext.data(), ciphertext.size(), nullptr,
+                      &plaintext_size),
+              StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
+}
+
+TEST_P(SymmetricCtrCryptTest, EncryptDecryptSuccess) {
   std::vector<uint8_t> plaintext(128);
   RAND_bytes(plaintext.data(), plaintext.size());
   std::vector<uint8_t> iv(16);
@@ -2481,7 +2618,7 @@ TEST_F(SymmetricCtrCryptTest, EncryptDecryptSuccess) {
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
-TEST_F(SymmetricCtrCryptTest, EncryptDecryptMultiPartSuccess) {
+TEST_P(SymmetricCtrCryptTest, EncryptDecryptMultiPartSuccess) {
   std::vector<uint8_t> iv(16);
   RAND_bytes(iv.data(), iv.size());
 
@@ -2550,49 +2687,7 @@ TEST_F(SymmetricCtrCryptTest, EncryptDecryptMultiPartSuccess) {
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
-class SymmetricCryptTest : public BridgeTest {
- protected:
-  void SetUp() override {
-    BridgeTest::SetUp();
-    auto kms_client = fake_server_->NewClient();
-
-    kms_v1::CryptoKey ck;
-    ck.set_purpose(kms_v1::CryptoKey::RAW_ENCRYPT_DECRYPT);
-    ck.mutable_version_template()->set_algorithm(
-        kms_v1::CryptoKeyVersion::AES_256_GCM);
-    ck.mutable_version_template()->set_protection_level(
-        kms_v1::ProtectionLevel::HSM);
-    ck = CreateCryptoKeyOrDie(kms_client.get(), kr1_.name(), "ck", ck, true);
-
-    kms_v1::CryptoKeyVersion ckv;
-    ckv = CreateCryptoKeyVersionOrDie(kms_client.get(), ck.name(), ckv);
-    ckv = WaitForEnablement(kms_client.get(), ckv);
-
-    std::ofstream(config_file_, std::ofstream::out | std::ofstream::app)
-        << "experimental_allow_raw_encryption_keys: true" << std::endl;
-    EXPECT_OK(Initialize(&init_args_));
-    EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session_));
-
-    CK_OBJECT_CLASS object_class = CKO_SECRET_KEY;
-    CK_ATTRIBUTE attr_template[2] = {
-        {CKA_ID, const_cast<char*>(ckv.name().data()), ckv.name().size()},
-        {CKA_CLASS, &object_class, sizeof(object_class)},
-    };
-    CK_ULONG found_count;
-
-    EXPECT_OK(FindObjectsInit(session_, attr_template, 2));
-    EXPECT_OK(FindObjects(session_, &secret_key_, 1, &found_count));
-    EXPECT_EQ(found_count, 1);
-    EXPECT_OK(FindObjectsFinal(session_));
-  }
-
-  void TearDown() override { EXPECT_OK(Finalize(nullptr)); }
-
-  CK_SESSION_HANDLE session_;
-  CK_OBJECT_HANDLE secret_key_;
-};
-
-TEST_F(SymmetricCryptTest, EncryptDecryptSuccess) {
+TEST_P(SymmetricGcmCryptTest, EncryptDecryptSuccess) {
   std::vector<uint8_t> plaintext(128);
   RAND_bytes(plaintext.data(), plaintext.size());
 
@@ -2649,7 +2744,7 @@ TEST_F(SymmetricCryptTest, EncryptDecryptSuccess) {
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
-TEST_F(SymmetricCryptTest, EncryptDecryptMultiPartSuccess) {
+TEST_P(SymmetricGcmCryptTest, EncryptDecryptMultiPartSuccess) {
   std::vector<uint8_t> iv(12);
   std::vector<uint8_t> aad = {0xDE, 0xAD, 0xBE, 0xEF};
   CK_GCM_PARAMS params = {
@@ -2721,7 +2816,7 @@ TEST_F(SymmetricCryptTest, EncryptDecryptMultiPartSuccess) {
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
-TEST_F(SymmetricCryptTest, DecryptBufferTooSmall) {
+TEST_P(SymmetricGcmCryptTest, DecryptBufferTooSmall) {
   std::vector<uint8_t> plaintext(128);
   RAND_bytes(plaintext.data(), plaintext.size());
 
@@ -2778,12 +2873,12 @@ TEST_F(SymmetricCryptTest, DecryptBufferTooSmall) {
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
-TEST_F(SymmetricCryptTest, DecryptInitFailsInvalidSessionHandle) {
+TEST_P(SymmetricGcmCryptTest, DecryptInitFailsInvalidSessionHandle) {
   EXPECT_THAT(DecryptInit(0, nullptr, 0),
               StatusRvIs(CKR_SESSION_HANDLE_INVALID));
 }
 
-TEST_F(SymmetricCryptTest, DecryptInitFailsInvalidKeyHandle) {
+TEST_P(SymmetricGcmCryptTest, DecryptInitFailsInvalidKeyHandle) {
   std::vector<uint8_t> iv(12);
   std::vector<uint8_t> aad = {0xDE, 0xAD, 0xBE, 0xEF};
   CK_GCM_PARAMS params = {
@@ -2804,7 +2899,7 @@ TEST_F(SymmetricCryptTest, DecryptInitFailsInvalidKeyHandle) {
               StatusRvIs(CKR_KEY_HANDLE_INVALID));
 }
 
-TEST_F(SymmetricCryptTest, DecryptInitFailsOperationActive) {
+TEST_P(SymmetricGcmCryptTest, DecryptInitFailsOperationActive) {
   std::vector<uint8_t> iv(12);
   std::vector<uint8_t> aad = {0xDE, 0xAD, 0xBE, 0xEF};
   CK_GCM_PARAMS params = {
@@ -2826,7 +2921,7 @@ TEST_F(SymmetricCryptTest, DecryptInitFailsOperationActive) {
               StatusRvIs(CKR_OPERATION_ACTIVE));
 }
 
-TEST_F(SymmetricCryptTest, DecryptFailsOperationNotInitialized) {
+TEST_P(SymmetricGcmCryptTest, DecryptFailsOperationNotInitialized) {
   uint8_t ciphertext[256];
   CK_ULONG plaintext_size;
   EXPECT_THAT(Decrypt(session_, ciphertext, sizeof(ciphertext), nullptr,
@@ -2834,7 +2929,7 @@ TEST_F(SymmetricCryptTest, DecryptFailsOperationNotInitialized) {
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
-TEST_F(SymmetricCryptTest, DecryptFailsNullCiphertext) {
+TEST_P(SymmetricGcmCryptTest, DecryptFailsNullCiphertext) {
   std::vector<uint8_t> iv(12);
   std::vector<uint8_t> aad = {0xDE, 0xAD, 0xBE, 0xEF};
   CK_GCM_PARAMS params = {
@@ -2864,7 +2959,7 @@ TEST_F(SymmetricCryptTest, DecryptFailsNullCiphertext) {
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
-TEST_F(SymmetricCryptTest, DecryptFailsNullPlaintextSize) {
+TEST_P(SymmetricGcmCryptTest, DecryptFailsNullPlaintextSize) {
   std::vector<uint8_t> iv(12);
   std::vector<uint8_t> aad = {0xDE, 0xAD, 0xBE, 0xEF};
   CK_GCM_PARAMS params = {
@@ -2895,7 +2990,7 @@ TEST_F(SymmetricCryptTest, DecryptFailsNullPlaintextSize) {
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
-TEST_F(SymmetricCryptTest, EncryptSuccess) {
+TEST_P(SymmetricGcmCryptTest, EncryptSuccess) {
   std::vector<uint8_t> iv(12);
   std::vector<uint8_t> aad = {0xDE, 0xAD, 0xBE, 0xEF};
   CK_GCM_PARAMS params = {
@@ -2932,7 +3027,7 @@ TEST_F(SymmetricCryptTest, EncryptSuccess) {
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
-TEST_F(SymmetricCryptTest, EncryptMultiPartSuccess) {
+TEST_P(SymmetricGcmCryptTest, EncryptMultiPartSuccess) {
   std::vector<uint8_t> iv(12);
   std::vector<uint8_t> aad = {0xDE, 0xAD, 0xBE, 0xEF};
   CK_GCM_PARAMS params = {
@@ -2975,7 +3070,7 @@ TEST_F(SymmetricCryptTest, EncryptMultiPartSuccess) {
       StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
-TEST_F(SymmetricCryptTest, EncryptBufferTooSmall) {
+TEST_P(SymmetricGcmCryptTest, EncryptBufferTooSmall) {
   std::vector<uint8_t> iv(12);
   std::vector<uint8_t> aad = {0xDE, 0xAD, 0xBE, 0xEF};
   CK_GCM_PARAMS params = {
@@ -3015,12 +3110,12 @@ TEST_F(SymmetricCryptTest, EncryptBufferTooSmall) {
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
-TEST_F(SymmetricCryptTest, EncryptInitFailsInvalidSessionHandle) {
+TEST_P(SymmetricGcmCryptTest, EncryptInitFailsInvalidSessionHandle) {
   EXPECT_THAT(EncryptInit(0, nullptr, 0),
               StatusRvIs(CKR_SESSION_HANDLE_INVALID));
 }
 
-TEST_F(SymmetricCryptTest, EncryptInitFailsInvalidKeyHandle) {
+TEST_P(SymmetricGcmCryptTest, EncryptInitFailsInvalidKeyHandle) {
   std::vector<uint8_t> iv(12);
   std::vector<uint8_t> aad = {0xDE, 0xAD, 0xBE, 0xEF};
   CK_GCM_PARAMS params = {
@@ -3041,7 +3136,7 @@ TEST_F(SymmetricCryptTest, EncryptInitFailsInvalidKeyHandle) {
               StatusRvIs(CKR_KEY_HANDLE_INVALID));
 }
 
-TEST_F(SymmetricCryptTest, EncryptInitFailsOperationActive) {
+TEST_P(SymmetricGcmCryptTest, EncryptInitFailsOperationActive) {
   std::vector<uint8_t> iv(12);
   std::vector<uint8_t> aad = {0xDE, 0xAD, 0xBE, 0xEF};
   CK_GCM_PARAMS params = {
@@ -3063,7 +3158,7 @@ TEST_F(SymmetricCryptTest, EncryptInitFailsOperationActive) {
               StatusRvIs(CKR_OPERATION_ACTIVE));
 }
 
-TEST_F(SymmetricCryptTest, EncryptFailsOperationNotInitialized) {
+TEST_P(SymmetricGcmCryptTest, EncryptFailsOperationNotInitialized) {
   uint8_t plaintext[32];
   CK_ULONG ciphertext_size;
   EXPECT_THAT(Encrypt(session_, plaintext, sizeof(plaintext), nullptr,
@@ -3071,7 +3166,7 @@ TEST_F(SymmetricCryptTest, EncryptFailsOperationNotInitialized) {
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
-TEST_F(SymmetricCryptTest, EncryptFailsNullPLaintext) {
+TEST_P(SymmetricGcmCryptTest, EncryptFailsNullPLaintext) {
   std::vector<uint8_t> iv(12);
   std::vector<uint8_t> aad = {0xDE, 0xAD, 0xBE, 0xEF};
   CK_GCM_PARAMS params = {
@@ -3101,7 +3196,7 @@ TEST_F(SymmetricCryptTest, EncryptFailsNullPLaintext) {
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
-TEST_F(SymmetricCryptTest, EncryptFailsNullCiphertextSize) {
+TEST_P(SymmetricGcmCryptTest, EncryptFailsNullCiphertextSize) {
   std::vector<uint8_t> iv(12);
   std::vector<uint8_t> aad = {0xDE, 0xAD, 0xBE, 0xEF};
   CK_GCM_PARAMS params = {
