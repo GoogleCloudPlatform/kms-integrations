@@ -42,14 +42,49 @@ public class EncryptionTest {
   }
 
   @Test
+  public void testAes128CbcEncryptDecrypt() throws Exception {
+    String cryptoKeyId = "aes-128-cbc-key";
+    // TODO(b/234842124): use real enum values once the KMS proto changes are public.
+    CryptoKeyVersion ckv = createCkv(cryptoKeyId, /* RAW_ENCRYPT_DECRYPT */ 7,
+        /* AES_128_CBC */ 42);
+
+    encryptMatchesExpected(cryptoKeyId, ckv.getName(), "AES/CBC/NoPadding");
+    decryptMatchesExpected(cryptoKeyId, ckv.getName(), "AES/CBC/NoPadding");
+    encryptDecrypt(cryptoKeyId, "AES/CBC/NoPadding");
+    // Java treats PKCS#5 as PKCS#7 internally, it's a misnaming that ignores the fact that PKCS#5
+    // should be limited to 8-byte blocks, so we use */PKCS5Padding here.
+    encryptMatchesExpected(cryptoKeyId, ckv.getName(), "AES/CBC/PKCS5Padding");
+    decryptMatchesExpected(cryptoKeyId, ckv.getName(), "AES/CBC/PKCS5Padding");
+    encryptDecrypt(cryptoKeyId, "AES/CBC/PKCS5Padding");
+  }
+
+  @Test
+  public void testAes256CbcEncryptDecrypt() throws Exception {
+    String cryptoKeyId = "aes-256-cbc-key";
+    // TODO(b/234842124): use real enum values once the KMS proto changes are public.
+    CryptoKeyVersion ckv = createCkv(cryptoKeyId, /* RAW_ENCRYPT_DECRYPT */ 7,
+        /* AES_256_CBC */ 43);
+
+    encryptMatchesExpected(cryptoKeyId, ckv.getName(), "AES/CBC/NoPadding");
+    decryptMatchesExpected(cryptoKeyId, ckv.getName(), "AES/CBC/NoPadding");
+    encryptDecrypt(cryptoKeyId, "AES/CBC/NoPadding");
+    // Java treats PKCS#5 as PKCS#7 internally, it's a misnaming that ignores the fact that PKCS#5
+    // should be limited to 8-byte blocks, so we use */PKCS5Padding here.
+    encryptMatchesExpected(cryptoKeyId, ckv.getName(), "AES/CBC/PKCS5Padding");
+    decryptMatchesExpected(cryptoKeyId, ckv.getName(), "AES/CBC/PKCS5Padding");
+    encryptDecrypt(cryptoKeyId, "AES/CBC/PKCS5Padding");
+  }
+
+  @Test
   public void testAes128CtrEncryptDecrypt() throws Exception {
     String cryptoKeyId = "aes-128-ctr-key";
     // TODO(b/234842124): use real enum values once the KMS proto changes are public.
     CryptoKeyVersion ckv = createCkv(cryptoKeyId, /* RAW_ENCRYPT_DECRYPT */ 7,
         /* AES_128_CTR */ 44);
 
-    aesCtrEncryptMatchesExpected(cryptoKeyId, ckv.getName(), "AES/CTR/NoPadding");
-    aesCtrEncryptDecrypt(cryptoKeyId, "AES/CTR/NoPadding");
+    encryptMatchesExpected(cryptoKeyId, ckv.getName(), "AES/CTR/NoPadding");
+    decryptMatchesExpected(cryptoKeyId, ckv.getName(), "AES/CTR/NoPadding");
+    encryptDecrypt(cryptoKeyId, "AES/CTR/NoPadding");
   }
 
   @Test
@@ -59,12 +94,18 @@ public class EncryptionTest {
     CryptoKeyVersion ckv = createCkv(cryptoKeyId, /* RAW_ENCRYPT_DECRYPT */ 7,
         /* AES_256_CTR */ 45);
 
-    aesCtrEncryptMatchesExpected(cryptoKeyId, ckv.getName(), "AES/CTR/NoPadding");
-    aesCtrEncryptDecrypt(cryptoKeyId, "AES/CTR/NoPadding");
+    encryptMatchesExpected(cryptoKeyId, ckv.getName(), "AES/CTR/NoPadding");
+    decryptMatchesExpected(cryptoKeyId, ckv.getName(), "AES/CTR/NoPadding");
+    encryptDecrypt(cryptoKeyId, "AES/CTR/NoPadding");
   }
 
-  private void aesCtrEncryptDecrypt(String keyLabel, String jcaAlgorithm) throws Exception {
-    byte[] data = "Here is some data to encrypt".getBytes(StandardCharsets.UTF_8);
+  private void encryptDecrypt(String keyLabel, String jcaAlgorithm) throws Exception {
+    byte[] data;
+    if (jcaAlgorithm.contains("NoPadding")) {
+      data = "Here is my data to be encrypted.".getBytes(StandardCharsets.UTF_8);
+    } else {
+      data = "Here is some data that needs padding.".getBytes(StandardCharsets.UTF_8);
+    }
     byte[] iv = "my_custom_iv_123".getBytes(StandardCharsets.UTF_8);
     IvParameterSpec spec = new IvParameterSpec(iv);
 
@@ -82,28 +123,31 @@ public class EncryptionTest {
 
     Cipher cipher = Cipher.getInstance(jcaAlgorithm, provider);
     cipher.init(Cipher.ENCRYPT_MODE, sk.getSecretKey(), spec);
-    byte[] ciphertext = new byte[cipher.getOutputSize(data.length)];
-    cipher.update(data);
-    cipher.doFinal(ciphertext, 0);
+    byte[] ciphertext = cipher.doFinal(data);
 
     cipher.init(Cipher.DECRYPT_MODE, sk.getSecretKey(), spec);
-    byte[] recovered_plaintext = new byte[cipher.getOutputSize(ciphertext.length)];
-    cipher.update(ciphertext);
+    byte[] recoveredPlaintext = cipher.doFinal(ciphertext);
 
-    cipher.doFinal(recovered_plaintext, 0);
-
-    Assert.assertTrue(Arrays.equals(recovered_plaintext, data));
+    Assert.assertTrue(Arrays.equals(recoveredPlaintext, data));
   }
 
-  private void aesCtrEncryptMatchesExpected(
-      String keyLabel, String versionName, String jcaAlgorithm) throws Exception {
-    byte[] data = "Here is some data to encrypt".getBytes(StandardCharsets.UTF_8);
+  private void encryptMatchesExpected(String keyLabel, String versionName, String jcaAlgorithm)
+      throws Exception {
+    byte[] data, paddedData;
+    if (jcaAlgorithm.contains("NoPadding")) {
+      data = "Here is my data to be encrypted.".getBytes(StandardCharsets.UTF_8);
+      paddedData = data;
+    } else {
+      data = "Here is my data with padding".getBytes(StandardCharsets.UTF_8);
+      paddedData =
+          "Here is my data with padding\u0004\u0004\u0004\u0004".getBytes(StandardCharsets.UTF_8);
+    }
     byte[] iv = "my_custom_iv_123".getBytes(StandardCharsets.UTF_8);
 
     // Encrypt using KMS directly (RawEncrypt).
     RawEncryptRequest encryptReq = RawEncryptRequest.newBuilder()
                                        .setName(versionName)
-                                       .setPlaintext(ByteString.copyFrom(data))
+                                       .setPlaintext(ByteString.copyFrom(paddedData))
                                        .setInitializationVector(ByteString.copyFrom(iv))
                                        .build();
 
@@ -127,11 +171,54 @@ public class EncryptionTest {
     Cipher cipher = Cipher.getInstance(jcaAlgorithm, provider);
     IvParameterSpec spec = new IvParameterSpec(responseIv);
     cipher.init(Cipher.ENCRYPT_MODE, sk.getSecretKey(), spec);
-    byte[] ciphertext = new byte[cipher.getOutputSize(data.length)];
-    cipher.update(data);
-    cipher.doFinal(ciphertext, 0);
+    byte[] ciphertext = cipher.doFinal(data);
 
     Assert.assertTrue(Arrays.equals(ciphertext, expected_ciphertext));
+  }
+
+  private void decryptMatchesExpected(String keyLabel, String versionName, String jcaAlgorithm)
+      throws Exception {
+    byte[] data, paddedData;
+    if (jcaAlgorithm.contains("NoPadding")) {
+      paddedData = "Here is my data to be encrypted.".getBytes(StandardCharsets.UTF_8);
+      data = paddedData;
+    } else {
+      paddedData =
+          "Here is my data with padding\u0004\u0004\u0004\u0004".getBytes(StandardCharsets.UTF_8);
+      data = "Here is my data with padding".getBytes(StandardCharsets.UTF_8);
+    }
+    byte[] iv = "my_custom_iv_123".getBytes(StandardCharsets.UTF_8);
+
+    // Encrypt using KMS directly (RawEncrypt).
+    RawEncryptRequest encryptReq = RawEncryptRequest.newBuilder()
+                                       .setName(versionName)
+                                       .setPlaintext(ByteString.copyFrom(paddedData))
+                                       .setInitializationVector(ByteString.copyFrom(iv))
+                                       .build();
+
+    RawEncryptResponse encryptResp = f.getClient().rawEncrypt(encryptReq);
+    byte[] responseIv = encryptResp.getInitializationVector().toByteArray();
+    Assert.assertTrue(Arrays.equals(responseIv, iv));
+    byte[] ciphertext = encryptResp.getCiphertext().toByteArray();
+
+    Provider provider = f.newProvider();
+    KeyStore keyStore = KeyStore.getInstance("PKCS11", provider);
+    keyStore.load(null, null);
+    KeyStore.Entry e = keyStore.getEntry(keyLabel, null);
+    Assert.assertTrue(e instanceof KeyStore.SecretKeyEntry);
+
+    KeyStore.SecretKeyEntry sk = (KeyStore.SecretKeyEntry) e;
+    Assert.assertTrue(sk.getSecretKey() != null);
+    Assert.assertTrue(sk.getSecretKey().getFormat() == null);
+    Assert.assertTrue(sk.getSecretKey().getEncoded() == null);
+    Assert.assertTrue(sk.getSecretKey().getAlgorithm() == "AES");
+
+    Cipher cipher = Cipher.getInstance(jcaAlgorithm, provider);
+    IvParameterSpec spec = new IvParameterSpec(responseIv);
+    cipher.init(Cipher.DECRYPT_MODE, sk.getSecretKey(), spec);
+    byte[] plaintext = cipher.doFinal(ciphertext);
+
+    Assert.assertTrue(Arrays.equals(plaintext, data));
   }
 
   private CryptoKeyVersion createCkv(String cryptoKeyId, CryptoKey.CryptoKeyPurpose purpose,
