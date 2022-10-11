@@ -87,6 +87,9 @@ absl::StatusOr<std::string> ExtractLocationName(std::string_view key_ring_name);
 // are insufficient permissions to read it.
 absl::StatusOr<std::string> ReadFileToString(const std::string& file_path);
 
+// Checks if the data buffer is zero-initialized.
+bool IsZeroInitialized(absl::Span<const uint8_t> buffer);
+
 }  // namespace kmsp11
 
 #endif  // KMSP11_UTIL_STRING_UTILS_H_

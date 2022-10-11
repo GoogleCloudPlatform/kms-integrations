@@ -102,7 +102,7 @@ absl::StatusOr<std::unique_ptr<EncrypterInterface>> AesGcmEncrypter::New(
       ExtractGcmParameters(mechanism->pParameter, mechanism->ulParameterLen));
 
   // For encryption only, pIv should be zero-initialized.
-  if (params.pIv[0] != '\0' || memcmp(params.pIv, params.pIv + 1, 11) != 0) {
+  if (!IsZeroInitialized(absl::MakeConstSpan(params.pIv, params.ulIvLen))) {
     return InvalidMechanismParamError(
         "the pIv param should point to a zero-initialized 12-byte buffer",
         SOURCE_LOCATION);

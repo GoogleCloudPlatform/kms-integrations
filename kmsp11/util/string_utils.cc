@@ -92,4 +92,12 @@ absl::StatusOr<std::string> ReadFileToString(const std::string& file_path) {
                      (std::istreambuf_iterator<char>()));
 }
 
+bool IsZeroInitialized(absl::Span<const uint8_t> buffer) {
+  if (buffer.data()[0] != '\0' ||
+      memcmp(buffer.data(), buffer.data() + 1, buffer.size() - 1) != 0) {
+    return false;
+  }
+  return true;
+}
+
 }  // namespace kmsp11

@@ -169,5 +169,27 @@ TEST(ExtractorTest, ExtractLocationNameFailure) {
       StatusIs(absl::StatusCode::kInternal, HasSubstr("invalid KeyRing name")));
 }
 
+TEST(ZeroInitializationTest, ZeroInitializedSuccess) {
+  std::vector<uint8_t> data(16, '\0');
+  EXPECT_TRUE(IsZeroInitialized(data));
+}
+
+TEST(ZeroInitializationTest, NotZeroInitializedFails) {
+  std::vector<uint8_t> data(16, '\1');
+  EXPECT_FALSE(IsZeroInitialized(data));
+}
+
+TEST(ZeroInitializationTest, FirstByteNotZeroFails) {
+  std::vector<uint8_t> data(16, '\0');
+  data[0] = '\1';
+  EXPECT_FALSE(IsZeroInitialized(data));
+}
+
+TEST(ZeroInitializationTest, OnlyFirstByteZeroFails) {
+  std::vector<uint8_t> data(16, '\1');
+  data[0] = '\0';
+  EXPECT_FALSE(IsZeroInitialized(data));
+}
+
 }  // namespace
 }  // namespace kmsp11
