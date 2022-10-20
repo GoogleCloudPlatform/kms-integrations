@@ -26,28 +26,29 @@
 namespace kmsp11 {
 namespace {
 
+constexpr size_t kIvBytes = 16;
+constexpr size_t kIvBits = kIvBytes * 8;
 constexpr size_t kMaxPlaintextBytes = 64 * 1024;
 constexpr size_t kMaxCiphertextBytes = kMaxPlaintextBytes + 16;
 
-absl::StatusOr<CK_AES_CTR_PARAMS> ExtractCtrParameters(
-    void* parameters, CK_ULONG parameters_size) {
+absl::StatusOr<absl::Span<const uint8_t>> ExtractIv(void* parameters,
+                                                    CK_ULONG parameters_size) {
   if (parameters_size != sizeof(CK_AES_CTR_PARAMS)) {
     return InvalidMechanismParamError(
         "mechanism parameters must be of type CK_AES_CTR_PARAMS",
         SOURCE_LOCATION);
   }
 
-  CK_AES_CTR_PARAMS params = *reinterpret_cast<CK_AES_CTR_PARAMS*>(parameters);
+  CK_AES_CTR_PARAMS* params = reinterpret_cast<CK_AES_CTR_PARAMS*>(parameters);
 
-  if (params.ulCounterBits != 128) {
+  if (params->ulCounterBits != kIvBits) {
     return InvalidMechanismParamError(
-        absl::StrFormat(
-            "invalid number of counter block bits: got %d; want 128",
-            params.ulCounterBits),
+        absl::StrFormat("invalid number of counter block bits: got %u; want %u",
+                        params->ulCounterBits, kIvBits),
         SOURCE_LOCATION);
   }
 
-  return params;
+  return params->cb;
 }
 
 // An implementation of EncrypterInterface that generates AES-CTR ciphertexts
@@ -67,14 +68,15 @@ class AesCtrEncrypter : public EncrypterInterface {
   virtual ~AesCtrEncrypter() {}
 
  private:
-  AesCtrEncrypter(std::shared_ptr<Object> object, CK_BYTE cb[])
-      : object_(object) {
-    memcpy(cb_, cb, sizeof(cb_));
-  }
+  AesCtrEncrypter(std::shared_ptr<Object> object, absl::Span<const uint8_t> iv)
+      : object_(object), iv_(iv.begin(), iv.end()) {}
+
+  absl::StatusOr<absl::Span<const uint8_t>> EncryptInternal(
+      KmsClient* client, absl::Span<const uint8_t> plaintext);
 
   std::shared_ptr<Object> object_;
-  CK_BYTE cb_[16];
-  std::optional<std::vector<uint8_t>> plaintext_;
+  const std::vector<uint8_t> iv_;
+  std::optional<std::vector<uint8_t>> plaintext_;  // for multi-part only
   std::vector<uint8_t> ciphertext_;
 };
 
@@ -83,12 +85,10 @@ absl::StatusOr<std::unique_ptr<EncrypterInterface>> AesCtrEncrypter::New(
   RETURN_IF_ERROR(
       CheckKeyPreconditions(CKK_AES, CKO_SECRET_KEY, CKM_AES_CTR, key.get()));
 
-  ASSIGN_OR_RETURN(
-      CK_AES_CTR_PARAMS params,
-      ExtractCtrParameters(mechanism->pParameter, mechanism->ulParameterLen));
+  ASSIGN_OR_RETURN(absl::Span<const uint8_t> iv,
+                   ExtractIv(mechanism->pParameter, mechanism->ulParameterLen));
 
-  return std::unique_ptr<EncrypterInterface>(
-      new AesCtrEncrypter(key, params.cb));
+  return std::unique_ptr<EncrypterInterface>(new AesCtrEncrypter(key, iv));
 }
 
 absl::StatusOr<absl::Span<const uint8_t>> AesCtrEncrypter::Encrypt(
@@ -98,42 +98,19 @@ absl::StatusOr<absl::Span<const uint8_t>> AesCtrEncrypter::Encrypt(
         "Encrypt cannot be used to terminate a multi-part encryption operation",
         CKR_FUNCTION_FAILED, SOURCE_LOCATION);
   }
-
-  if (plaintext.size() > kMaxPlaintextBytes) {
-    return NewInvalidArgumentError(
-        absl::StrFormat(
-            "plaintext length (%d bytes) exceeds maximum allowed %d",
-            plaintext.size(), kMaxPlaintextBytes),
-        CKR_DATA_LEN_RANGE, SOURCE_LOCATION);
-  }
-
-  kms_v1::RawEncryptRequest req;
-  req.set_name(std::string(object_->kms_key_name()));
-  req.set_plaintext(std::string(reinterpret_cast<const char*>(plaintext.data()),
-                                plaintext.size()));
-  req.set_initialization_vector(
-      std::string(reinterpret_cast<const char*>(cb_), sizeof(cb_)));
-
-  ASSIGN_OR_RETURN(kms_v1::RawEncryptResponse resp, client->RawEncrypt(req));
-
-  ciphertext_.resize(resp.ciphertext().size());
-  std::copy_n(resp.ciphertext().begin(), resp.ciphertext().size(),
-              ciphertext_.begin());
-
-  return absl::MakeConstSpan(ciphertext_);
+  return EncryptInternal(client, plaintext);
 }
 
 absl::Status AesCtrEncrypter::EncryptUpdate(
     KmsClient* client, absl::Span<const uint8_t> plaintext_part) {
   if (!plaintext_) {
-    plaintext_.emplace(plaintext_part.begin(), plaintext_part.end());
-    return absl::OkStatus();
+    plaintext_.emplace();
   }
 
   if (plaintext_part.size() + plaintext_->size() > kMaxPlaintextBytes) {
     return NewInvalidArgumentError(
-        absl::StrFormat("plaintext length (%d bytes) exceeds maximum "
-                        "allowed (%d bytes)",
+        absl::StrFormat("plaintext length (%u bytes) exceeds maximum "
+                        "allowed (%u bytes)",
                         plaintext_part.size() + plaintext_->size(),
                         kMaxPlaintextBytes),
         CKR_DATA_LEN_RANGE, SOURCE_LOCATION);
@@ -154,13 +131,25 @@ absl::StatusOr<absl::Span<const uint8_t>> AesCtrEncrypter::EncryptFinal(
         "encryption operation",
         CKR_FUNCTION_FAILED, SOURCE_LOCATION);
   }
+  return EncryptInternal(client, *plaintext_);
+}
+
+absl::StatusOr<absl::Span<const uint8_t>> AesCtrEncrypter::EncryptInternal(
+    KmsClient* client, absl::Span<const uint8_t> plaintext) {
+  if (plaintext.size() > kMaxPlaintextBytes) {
+    return NewInvalidArgumentError(
+        absl::StrFormat(
+            "plaintext length (%d bytes) exceeds maximum allowed %d",
+            plaintext.size(), kMaxPlaintextBytes),
+        CKR_DATA_LEN_RANGE, SOURCE_LOCATION);
+  }
 
   kms_v1::RawEncryptRequest req;
   req.set_name(std::string(object_->kms_key_name()));
-  req.set_plaintext(std::string(
-      reinterpret_cast<const char*>(plaintext_->data()), plaintext_->size()));
+  req.set_plaintext(std::string(reinterpret_cast<const char*>(plaintext.data()),
+                                plaintext.size()));
   req.set_initialization_vector(
-      std::string(reinterpret_cast<const char*>(cb_), sizeof(cb_)));
+      std::string(reinterpret_cast<const char*>(iv_.data()), iv_.size()));
 
   ASSIGN_OR_RETURN(kms_v1::RawEncryptResponse resp, client->RawEncrypt(req));
 
@@ -168,7 +157,7 @@ absl::StatusOr<absl::Span<const uint8_t>> AesCtrEncrypter::EncryptFinal(
   std::copy_n(resp.ciphertext().begin(), resp.ciphertext().size(),
               ciphertext_.begin());
 
-  return absl::MakeConstSpan(ciphertext_);
+  return ciphertext_;
 }
 
 // An implementation of DecrypterInterface that decrypts AES-CTR ciphertexts
@@ -188,14 +177,15 @@ class AesCtrDecrypter : public DecrypterInterface {
   virtual ~AesCtrDecrypter() {}
 
  private:
-  AesCtrDecrypter(std::shared_ptr<Object> object, CK_BYTE cb[])
-      : object_(object) {
-    memcpy(cb_, cb, sizeof(cb_));
-  }
+  AesCtrDecrypter(std::shared_ptr<Object> object, absl::Span<const uint8_t> iv)
+      : object_(object), iv_(iv.begin(), iv.end()) {}
+
+  absl::StatusOr<absl::Span<const uint8_t>> DecryptInternal(
+      KmsClient* client, absl::Span<const uint8_t> ciphertext);
 
   std::shared_ptr<Object> object_;
-  CK_BYTE cb_[16];
-  std::optional<std::vector<uint8_t>> ciphertext_;
+  const std::vector<uint8_t> iv_;
+  std::optional<std::vector<uint8_t>> ciphertext_;  // for multi-part
   std::vector<uint8_t> plaintext_;
 };
 
@@ -204,12 +194,10 @@ absl::StatusOr<std::unique_ptr<DecrypterInterface>> AesCtrDecrypter::New(
   RETURN_IF_ERROR(
       CheckKeyPreconditions(CKK_AES, CKO_SECRET_KEY, CKM_AES_CTR, key.get()));
 
-  ASSIGN_OR_RETURN(
-      CK_AES_CTR_PARAMS params,
-      ExtractCtrParameters(mechanism->pParameter, mechanism->ulParameterLen));
+  ASSIGN_OR_RETURN(absl::Span<const uint8_t> iv,
+                   ExtractIv(mechanism->pParameter, mechanism->ulParameterLen));
 
-  return std::unique_ptr<DecrypterInterface>(
-      new AesCtrDecrypter(key, params.cb));
+  return std::unique_ptr<DecrypterInterface>(new AesCtrDecrypter(key, iv));
 }
 
 absl::StatusOr<absl::Span<const uint8_t>> AesCtrDecrypter::Decrypt(
@@ -221,28 +209,13 @@ absl::StatusOr<absl::Span<const uint8_t>> AesCtrDecrypter::Decrypt(
             ciphertext.size(), kMaxCiphertextBytes),
         CKR_DATA_LEN_RANGE, SOURCE_LOCATION);
   }
-
-  kms_v1::RawDecryptRequest req;
-  req.set_name(std::string(object_->kms_key_name()));
-  req.set_ciphertext(std::string(
-      reinterpret_cast<const char*>(ciphertext.data()), ciphertext.size()));
-  req.set_initialization_vector(
-      std::string(reinterpret_cast<const char*>(cb_), sizeof(cb_)));
-
-  ASSIGN_OR_RETURN(kms_v1::RawDecryptResponse resp, client->RawDecrypt(req));
-
-  plaintext_.resize(resp.plaintext().size());
-  std::copy_n(resp.plaintext().begin(), resp.plaintext().size(),
-              plaintext_.begin());
-
-  return absl::MakeConstSpan(plaintext_);
+  return DecryptInternal(client, ciphertext);
 }
 
 absl::Status AesCtrDecrypter::DecryptUpdate(
     KmsClient* client, absl::Span<const uint8_t> ciphertext_part) {
   if (!ciphertext_) {
-    ciphertext_.emplace(ciphertext_part.begin(), ciphertext_part.end());
-    return absl::OkStatus();
+    ciphertext_.emplace();
   }
 
   if (ciphertext_part.size() + ciphertext_->size() > kMaxCiphertextBytes) {
@@ -269,21 +242,24 @@ absl::StatusOr<absl::Span<const uint8_t>> AesCtrDecrypter::DecryptFinal(
         "decryption operation",
         CKR_FUNCTION_FAILED, SOURCE_LOCATION);
   }
+  return DecryptInternal(client, *ciphertext_);
+}
 
+absl::StatusOr<absl::Span<const uint8_t>> AesCtrDecrypter::DecryptInternal(
+    KmsClient* client, absl::Span<const uint8_t> ciphertext) {
   kms_v1::RawDecryptRequest req;
   req.set_name(std::string(object_->kms_key_name()));
   req.set_ciphertext(std::string(
-      reinterpret_cast<const char*>(ciphertext_->data()), ciphertext_->size()));
+      reinterpret_cast<const char*>(ciphertext.data()), ciphertext.size()));
   req.set_initialization_vector(
-      std::string(reinterpret_cast<const char*>(cb_), sizeof(cb_)));
-
+      std::string(reinterpret_cast<const char*>(iv_.data()), iv_.size()));
   ASSIGN_OR_RETURN(kms_v1::RawDecryptResponse resp, client->RawDecrypt(req));
 
   plaintext_.resize(resp.plaintext().size());
   std::copy_n(resp.plaintext().begin(), resp.plaintext().size(),
               plaintext_.begin());
 
-  return absl::MakeConstSpan(plaintext_);
+  return plaintext_;
 }
 
 }  // namespace

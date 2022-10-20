@@ -184,6 +184,19 @@ TEST_F(AesCtrTest, EncryptFailureBadPlaintextSize) {
               StatusRvIs(CKR_DATA_LEN_RANGE));
 }
 
+TEST_F(AesCtrTest, EncryptUpdateFailurePartLengthOversize) {
+  EXPECT_THAT(
+      encrypter_->EncryptUpdate(client_.get(), std::vector<uint8_t>(65537)),
+      StatusRvIs(CKR_DATA_LEN_RANGE));
+}
+
+TEST_F(AesCtrTest, EncryptUpdateFailurePartLengthSumOversize) {
+  EXPECT_OK(
+      encrypter_->EncryptUpdate(client_.get(), std::vector<uint8_t>(65535)));
+  EXPECT_THAT(encrypter_->EncryptUpdate(client_.get(), std::vector<uint8_t>(2)),
+              StatusRvIs(CKR_DATA_LEN_RANGE));
+}
+
 TEST_F(AesCtrTest, EncryptFailureKeyDisabled) {
   kms_v1::CryptoKeyVersion ckv;
   ckv.set_name(kms_key_name_);
@@ -259,6 +272,19 @@ TEST_F(AesCtrTest, EncryptFakeKmsDecryptLibrarySuccess) {
 TEST_F(AesCtrTest, DecryptFailureBadCiphertextSize) {
   uint8_t ciphertext[65536 + 16 + 1];
   EXPECT_THAT(decrypter_->Decrypt(client_.get(), ciphertext),
+              StatusRvIs(CKR_DATA_LEN_RANGE));
+}
+
+TEST_F(AesCtrTest, DecryptUpdateFailurePartLengthOversize) {
+  EXPECT_THAT(decrypter_->DecryptUpdate(client_.get(),
+                                        std::vector<uint8_t>(65536 + 16 + 1)),
+              StatusRvIs(CKR_DATA_LEN_RANGE));
+}
+
+TEST_F(AesCtrTest, DecryptUpdateFailurePartLengthSumOversize) {
+  EXPECT_OK(decrypter_->DecryptUpdate(client_.get(),
+                                      std::vector<uint8_t>(65536 + 16)));
+  EXPECT_THAT(decrypter_->DecryptUpdate(client_.get(), std::vector<uint8_t>(1)),
               StatusRvIs(CKR_DATA_LEN_RANGE));
 }
 
