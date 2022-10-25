@@ -71,6 +71,9 @@ class HmacSigner : public SignerInterface {
   HmacSigner(std::shared_ptr<Object> object, size_t signature_length)
       : signature_length_(signature_length), object_(object) {}
 
+  absl::Status SignInternal(KmsClient* client, absl::Span<const uint8_t> data,
+                            absl::Span<uint8_t> signature);
+
   const size_t signature_length_;
   std::shared_ptr<Object> object_;
   std::optional<std::vector<uint8_t>> buffer_;
@@ -111,21 +114,13 @@ absl::Status HmacSigner::Sign(KmsClient* client, absl::Span<const uint8_t> data,
         SOURCE_LOCATION);
   }
 
-  kms_v1::MacSignRequest req;
-  req.set_name(std::string(object_->kms_key_name()));
-  req.set_data(
-      std::string(reinterpret_cast<const char*>(data.data()), data.size()));
-
-  ASSIGN_OR_RETURN(kms_v1::MacSignResponse resp, client->MacSign(req));
-  std::copy(resp.mac().begin(), resp.mac().end(), signature.begin());
-  return absl::OkStatus();
+  return SignInternal(client, data, signature);
 }
 
 absl::Status HmacSigner::SignUpdate(KmsClient* client,
                                             absl::Span<const uint8_t> data) {
   if (!buffer_) {
-    buffer_.emplace(data.begin(), data.end());
-    return absl::OkStatus();
+    buffer_.emplace();
   }
 
   if (data.size() + buffer_->size() > kMaxMacDataBytes) {
@@ -136,9 +131,8 @@ absl::Status HmacSigner::SignUpdate(KmsClient* client,
         CKR_DATA_LEN_RANGE, SOURCE_LOCATION);
   }
 
-  size_t old_size = buffer_->size();
-  buffer_->resize(old_size + data.size());
-  std::copy_n(data.begin(), data.size(), buffer_->begin() + old_size);
+  buffer_->reserve(buffer_->size() + data.size());
+  buffer_->insert(buffer_->end(), data.begin(), data.end());
 
   return absl::OkStatus();
 }
@@ -160,10 +154,16 @@ absl::Status HmacSigner::SignFinal(KmsClient* client,
         SOURCE_LOCATION);
   }
 
+  return SignInternal(client, *buffer_, signature);
+}
+
+absl::Status HmacSigner::SignInternal(KmsClient* client,
+                                      absl::Span<const uint8_t> data,
+                                      absl::Span<uint8_t> signature) {
   kms_v1::MacSignRequest req;
   req.set_name(std::string(object_->kms_key_name()));
-  req.set_data(std::string(reinterpret_cast<const char*>(buffer_->data()),
-                           buffer_->size()));
+  req.set_data(
+      std::string(reinterpret_cast<const char*>(data.data()), data.size()));
 
   ASSIGN_OR_RETURN(kms_v1::MacSignResponse resp, client->MacSign(req));
   std::copy(resp.mac().begin(), resp.mac().end(), signature.begin());
@@ -193,6 +193,9 @@ class HmacVerifier : public VerifierInterface {
  private:
   HmacVerifier(std::shared_ptr<Object> object, size_t signature_length)
       : object_(object), signature_length_(signature_length) {}
+
+  absl::Status VerifyInternal(KmsClient* client, absl::Span<const uint8_t> data,
+                              absl::Span<const uint8_t> signature);
 
   std::shared_ptr<Object> object_;
   const size_t signature_length_;
@@ -236,26 +239,13 @@ absl::Status HmacVerifier::Verify(KmsClient* client,
         SOURCE_LOCATION);
   }
 
-  kms_v1::MacVerifyRequest req;
-  req.set_name(std::string(object_->kms_key_name()));
-  req.set_data(
-      std::string(reinterpret_cast<const char*>(data.data()), data.size()));
-  req.set_mac(std::string(reinterpret_cast<const char*>(signature.data()),
-                          signature.size()));
-
-  ASSIGN_OR_RETURN(kms_v1::MacVerifyResponse resp, client->MacVerify(req));
-  if (!resp.success()) {
-    return NewInvalidArgumentError("HMAC verification failed",
-                                   CKR_SIGNATURE_INVALID, SOURCE_LOCATION);
-  }
-  return absl::OkStatus();
+  return VerifyInternal(client, data, signature);
 }
 
 absl::Status HmacVerifier::VerifyUpdate(KmsClient* client,
                                         absl::Span<const uint8_t> data) {
   if (!buffer_) {
-    buffer_.emplace(data.begin(), data.end());
-    return absl::OkStatus();
+    buffer_.emplace();
   }
 
   if (data.size() + buffer_->size() > kMaxMacDataBytes) {
@@ -266,9 +256,8 @@ absl::Status HmacVerifier::VerifyUpdate(KmsClient* client,
         CKR_DATA_LEN_RANGE, SOURCE_LOCATION);
   }
 
-  size_t old_size = buffer_->size();
-  buffer_->resize(old_size + data.size());
-  std::copy_n(data.begin(), data.size(), buffer_->begin() + old_size);
+  buffer_->reserve(buffer_->size() + data.size());
+  buffer_->insert(buffer_->end(), data.begin(), data.end());
 
   return absl::OkStatus();
 }
@@ -290,10 +279,16 @@ absl::Status HmacVerifier::VerifyFinal(KmsClient* client,
         SOURCE_LOCATION);
   }
 
+  return VerifyInternal(client, *buffer_, signature);
+}
+
+absl::Status HmacVerifier::VerifyInternal(KmsClient* client,
+                                          absl::Span<const uint8_t> data,
+                                          absl::Span<const uint8_t> signature) {
   kms_v1::MacVerifyRequest req;
   req.set_name(std::string(object_->kms_key_name()));
-  req.set_data(std::string(reinterpret_cast<const char*>(buffer_->data()),
-                           buffer_->size()));
+  req.set_data(
+      std::string(reinterpret_cast<const char*>(data.data()), data.size()));
   req.set_mac(std::string(reinterpret_cast<const char*>(signature.data()),
                           signature.size()));
 

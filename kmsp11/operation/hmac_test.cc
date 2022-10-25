@@ -102,7 +102,7 @@ TEST_F(HmacTest, SignSuccess) {
   EXPECT_EQ(resp_bytes, sig);
 }
 
-TEST_F(HmacTest, SignDataLengthInvalid) {
+TEST_F(HmacTest, SignDataLengthOversize) {
   uint8_t data[65537], sig[32];
 
   CK_MECHANISM mech{CKM_SHA256_HMAC, nullptr, 0};
@@ -114,7 +114,32 @@ TEST_F(HmacTest, SignDataLengthInvalid) {
                     StatusRvIs(CKR_DATA_LEN_RANGE)));
 }
 
-TEST_F(HmacTest, SignSignatureLengthInvalid) {
+TEST_F(HmacTest, SignDataPartLengthOversize) {
+  uint8_t data[65537];
+
+  CK_MECHANISM mech{CKM_SHA256_HMAC, nullptr, 0};
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<SignerInterface> signer,
+                       NewHmacSigner(prv_, &mech));
+
+  EXPECT_THAT(signer->SignUpdate(client_.get(), data),
+              AllOf(StatusIs(absl::StatusCode::kInvalidArgument),
+                    StatusRvIs(CKR_DATA_LEN_RANGE)));
+}
+
+TEST_F(HmacTest, SignDataPartSumLengthOversize) {
+  uint8_t data1[65535], data2[2];
+
+  CK_MECHANISM mech{CKM_SHA256_HMAC, nullptr, 0};
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<SignerInterface> signer,
+                       NewHmacSigner(prv_, &mech));
+
+  EXPECT_OK(signer->SignUpdate(client_.get(), data1));
+  EXPECT_THAT(signer->SignUpdate(client_.get(), data2),
+              AllOf(StatusIs(absl::StatusCode::kInvalidArgument),
+                    StatusRvIs(CKR_DATA_LEN_RANGE)));
+}
+
+TEST_F(HmacTest, SignSignatureLengthOversize) {
   uint8_t data[65536], sig[33];
 
   CK_MECHANISM mech{CKM_SHA256_HMAC, nullptr, 0};
@@ -191,7 +216,7 @@ TEST_F(HmacTest, SignVerifySuccess) {
   EXPECT_OK(verifier->Verify(client_.get(), data_bytes, absl::MakeSpan(sig)));
 }
 
-TEST_F(HmacTest, VerifyDataLengthInvalid) {
+TEST_F(HmacTest, VerifyDataLengthOversize) {
   uint8_t data[65537], sig[32];
 
   CK_MECHANISM mech{CKM_SHA256_HMAC, nullptr, 0};
@@ -203,7 +228,32 @@ TEST_F(HmacTest, VerifyDataLengthInvalid) {
                     StatusRvIs(CKR_DATA_LEN_RANGE)));
 }
 
-TEST_F(HmacTest, VerifySignatureLengthInvalid) {
+TEST_F(HmacTest, VerifyDataPartLengthOversize) {
+  uint8_t data[65537];
+
+  CK_MECHANISM mech{CKM_SHA256_HMAC, nullptr, 0};
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<VerifierInterface> verifier,
+                       NewHmacVerifier(prv_, &mech));
+
+  EXPECT_THAT(verifier->VerifyUpdate(client_.get(), data),
+              AllOf(StatusIs(absl::StatusCode::kInvalidArgument),
+                    StatusRvIs(CKR_DATA_LEN_RANGE)));
+}
+
+TEST_F(HmacTest, VerifyDataPartSumLengthOversize) {
+  uint8_t data1[65535], data2[2];
+
+  CK_MECHANISM mech{CKM_SHA256_HMAC, nullptr, 0};
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<VerifierInterface> verifier,
+                       NewHmacVerifier(prv_, &mech));
+
+  EXPECT_OK(verifier->VerifyUpdate(client_.get(), data1));
+  EXPECT_THAT(verifier->VerifyUpdate(client_.get(), data2),
+              AllOf(StatusIs(absl::StatusCode::kInvalidArgument),
+                    StatusRvIs(CKR_DATA_LEN_RANGE)));
+}
+
+TEST_F(HmacTest, VerifySignatureLengthOversize) {
   uint8_t data[65536], sig[33];
 
   CK_MECHANISM mech{CKM_SHA256_HMAC, nullptr, 0};
