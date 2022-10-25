@@ -26,6 +26,9 @@
 namespace kmsp11 {
 namespace {
 
+constexpr size_t kIvBytes = 12;
+constexpr size_t kIvBits = kIvBytes * 8;
+constexpr size_t kTagBits = 128;
 constexpr size_t kMaxPlaintextBytes = 64 * 1024;
 constexpr size_t kMaxCiphertextBytes = kMaxPlaintextBytes + 16;
 
@@ -44,18 +47,20 @@ absl::StatusOr<CK_GCM_PARAMS> ExtractGcmParameters(void* parameters,
         "buffer",
         SOURCE_LOCATION);
   }
-  if (params.ulIvLen != 12 || params.ulIvBits != 96) {
+  if (params.ulIvLen != kIvBytes || params.ulIvBits != kIvBits) {
     return InvalidMechanismParamError(
-        "the only supported IV length is the default 12 bytes",
+        absl::StrFormat("the only supported IV length is the default %u bytes",
+                        kIvBytes),
         SOURCE_LOCATION);
   }
   if (params.ulAADLen != 0 && !params.pAAD) {
     return InvalidMechanismParamError(
         "AAD length specified but the AAD pointer is invalid", SOURCE_LOCATION);
   }
-  if (params.ulTagBits != 128) {
+  if (params.ulTagBits != kTagBits) {
     return InvalidMechanismParamError(
-        "the only supported tag length is the default 128 bits",
+        absl::StrFormat("the only supported tag length is the default %u bits",
+                        kTagBits),
         SOURCE_LOCATION);
   }
 
@@ -85,6 +90,9 @@ class AesGcmEncrypter : public EncrypterInterface {
         iv_(iv),
         aad_(reinterpret_cast<const char*>(aad.data()), aad.size()) {}
 
+  absl::StatusOr<absl::Span<const uint8_t>> EncryptInternal(
+      KmsClient* client, absl::Span<const uint8_t> plaintext);
+
   std::shared_ptr<Object> object_;
   absl::Span<uint8_t> iv_;
   std::string aad_;
@@ -104,7 +112,9 @@ absl::StatusOr<std::unique_ptr<EncrypterInterface>> AesGcmEncrypter::New(
   // For encryption only, pIv should be zero-initialized.
   if (!IsZeroInitialized(absl::MakeConstSpan(params.pIv, params.ulIvLen))) {
     return InvalidMechanismParamError(
-        "the pIv param should point to a zero-initialized 12-byte buffer",
+        absl::StrFormat(
+            "the pIv param should point to a zero-initialized %u-byte buffer",
+            kIvBytes),
         SOURCE_LOCATION);
   }
 
@@ -129,27 +139,13 @@ absl::StatusOr<absl::Span<const uint8_t>> AesGcmEncrypter::Encrypt(
         CKR_DATA_LEN_RANGE, SOURCE_LOCATION);
   }
 
-  kms_v1::RawEncryptRequest req;
-  req.set_name(std::string(object_->kms_key_name()));
-  req.set_plaintext(std::string(reinterpret_cast<const char*>(plaintext.data()),
-                                plaintext.size()));
-  req.set_additional_authenticated_data(aad_);
-
-  ASSIGN_OR_RETURN(kms_v1::RawEncryptResponse resp, client->RawEncrypt(req));
-
-  std::copy_n(resp.initialization_vector().begin(), resp.initialization_vector().size(), iv_.begin());
-
-  ciphertext_.resize(resp.ciphertext().size());
-  std::copy_n(resp.ciphertext().begin(), resp.ciphertext().size(), ciphertext_.begin());
-
-  return absl::MakeConstSpan(ciphertext_);
+  return EncryptInternal(client, plaintext);
 }
 
 absl::Status AesGcmEncrypter::EncryptUpdate(
     KmsClient* client, absl::Span<const uint8_t> plaintext_part) {
   if (!plaintext_) {
-    plaintext_.emplace(plaintext_part.begin(), plaintext_part.end());
-    return absl::OkStatus();
+    plaintext_.emplace();
   }
 
   if (plaintext_part.size() + plaintext_->size() > kMaxPlaintextBytes) {
@@ -177,10 +173,15 @@ absl::StatusOr<absl::Span<const uint8_t>> AesGcmEncrypter::EncryptFinal(
         CKR_FUNCTION_FAILED, SOURCE_LOCATION);
   }
 
+  return EncryptInternal(client, *plaintext_);
+}
+
+absl::StatusOr<absl::Span<const uint8_t>> AesGcmEncrypter::EncryptInternal(
+    KmsClient* client, absl::Span<const uint8_t> plaintext) {
   kms_v1::RawEncryptRequest req;
   req.set_name(std::string(object_->kms_key_name()));
-  req.set_plaintext(std::string(
-      reinterpret_cast<const char*>(plaintext_->data()), plaintext_->size()));
+  req.set_plaintext(std::string(reinterpret_cast<const char*>(plaintext.data()),
+                                plaintext.size()));
   req.set_additional_authenticated_data(aad_);
 
   ASSIGN_OR_RETURN(kms_v1::RawEncryptResponse resp, client->RawEncrypt(req));
@@ -218,6 +219,9 @@ class AesGcmDecrypter : public DecrypterInterface {
         iv_(iv.begin(), iv.end()),
         aad_(reinterpret_cast<const char*>(aad.data()), aad.size()) {}
 
+  absl::StatusOr<absl::Span<const uint8_t>> DecryptInternal(
+      KmsClient* client, absl::Span<const uint8_t> ciphertext);
+
   std::shared_ptr<Object> object_;
   std::vector<uint8_t> iv_;
   std::string aad_;
@@ -249,28 +253,13 @@ absl::StatusOr<absl::Span<const uint8_t>> AesGcmDecrypter::Decrypt(
         CKR_DATA_LEN_RANGE, SOURCE_LOCATION);
   }
 
-  kms_v1::RawDecryptRequest req;
-  req.set_name(std::string(object_->kms_key_name()));
-  req.set_ciphertext(std::string(
-      reinterpret_cast<const char*>(ciphertext.data()), ciphertext.size()));
-  req.set_initialization_vector(
-      std::string(reinterpret_cast<const char*>(iv_.data()), iv_.size()));
-  req.set_additional_authenticated_data(aad_);
-
-  ASSIGN_OR_RETURN(kms_v1::RawDecryptResponse resp, client->RawDecrypt(req));
-
-  plaintext_.resize(resp.plaintext().size());
-  std::copy_n(resp.plaintext().begin(), resp.plaintext().size(),
-              plaintext_.begin());
-
-  return absl::MakeConstSpan(plaintext_);
+  return DecryptInternal(client, ciphertext);
 }
 
 absl::Status AesGcmDecrypter::DecryptUpdate(
     KmsClient* client, absl::Span<const uint8_t> ciphertext_part) {
   if (!ciphertext_) {
-    ciphertext_.emplace(ciphertext_part.begin(), ciphertext_part.end());
-    return absl::OkStatus();
+    ciphertext_.emplace();
   }
 
   if (ciphertext_part.size() + ciphertext_->size() > kMaxCiphertextBytes) {
@@ -298,10 +287,15 @@ absl::StatusOr<absl::Span<const uint8_t>> AesGcmDecrypter::DecryptFinal(
         CKR_FUNCTION_FAILED, SOURCE_LOCATION);
   }
 
+  return DecryptInternal(client, *ciphertext_);
+}
+
+absl::StatusOr<absl::Span<const uint8_t>> AesGcmDecrypter::DecryptInternal(
+    KmsClient* client, absl::Span<const uint8_t> ciphertext) {
   kms_v1::RawDecryptRequest req;
   req.set_name(std::string(object_->kms_key_name()));
   req.set_ciphertext(std::string(
-      reinterpret_cast<const char*>(ciphertext_->data()), ciphertext_->size()));
+      reinterpret_cast<const char*>(ciphertext.data()), ciphertext.size()));
   req.set_initialization_vector(reinterpret_cast<const char*>(iv_.data()),
                                 iv_.size());
   req.set_additional_authenticated_data(aad_);

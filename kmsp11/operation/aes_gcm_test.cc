@@ -234,9 +234,22 @@ TEST_F(AesGcmTest, EncryptSuccess) {
   EXPECT_EQ(resp_bytes.size(), ciphertext.size());
 }
 
-TEST_F(AesGcmTest, EncryptFailureBadPlaintextSize) {
+TEST_F(AesGcmTest, EncryptFailurePlaintextOversize) {
   uint8_t plaintext[65537];
   EXPECT_THAT(encrypter_->Encrypt(client_.get(), plaintext),
+              StatusRvIs(CKR_DATA_LEN_RANGE));
+}
+
+TEST_F(AesGcmTest, EncryptFailurePlaintextPartOversize) {
+  uint8_t plaintext[65537];
+  EXPECT_THAT(encrypter_->EncryptUpdate(client_.get(), plaintext),
+              StatusRvIs(CKR_DATA_LEN_RANGE));
+}
+
+TEST_F(AesGcmTest, EncryptFailurePlaintextPartSumOversize) {
+  uint8_t plaintext1[65535], plaintext2[2];
+  EXPECT_OK(encrypter_->EncryptUpdate(client_.get(), plaintext1));
+  EXPECT_THAT(encrypter_->EncryptUpdate(client_.get(), plaintext2),
               StatusRvIs(CKR_DATA_LEN_RANGE));
 }
 
@@ -330,9 +343,22 @@ TEST_F(AesGcmTest, EncryptFakeKmsDecryptLibrarySuccess) {
   EXPECT_EQ(recovered_plaintext, plaintext_bytes);
 }
 
-TEST_F(AesGcmTest, DecryptFailureBadCiphertextSize) {
+TEST_F(AesGcmTest, DecryptFailureCiphertextOversize) {
   uint8_t ciphertext[65536 + 16 + 1];
   EXPECT_THAT(decrypter_->Decrypt(client_.get(), ciphertext),
+              StatusRvIs(CKR_DATA_LEN_RANGE));
+}
+
+TEST_F(AesGcmTest, DecryptFailureCiphertextPartOversize) {
+  uint8_t ciphertext[65536 + 16 + 1];
+  EXPECT_THAT(decrypter_->DecryptUpdate(client_.get(), ciphertext),
+              StatusRvIs(CKR_DATA_LEN_RANGE));
+}
+
+TEST_F(AesGcmTest, DecryptFailureCiphertextPartSumOversize) {
+  uint8_t ciphertext1[65536 + 16], ciphertext2[1];
+  EXPECT_OK(decrypter_->DecryptUpdate(client_.get(), ciphertext1));
+  EXPECT_THAT(decrypter_->DecryptUpdate(client_.get(), ciphertext2),
               StatusRvIs(CKR_DATA_LEN_RANGE));
 }
 
