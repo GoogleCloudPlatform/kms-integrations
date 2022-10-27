@@ -623,12 +623,6 @@ absl::StatusOr<std::vector<uint8_t>> BuildRsaDigestInfo(
                                        digest_info_der.size()));
 }
 
-void SafeZeroMemory(volatile char* ptr, size_t size) {
-  while (size--) {
-    *ptr++ = 0;
-  }
-}
-
 std::string SslErrorToString(std::string_view default_message) {
   CHECK(kCryptoLibraryInitialized);
   bssl::UniquePtr<BIO> bio(BIO_new(BIO_s_mem()));

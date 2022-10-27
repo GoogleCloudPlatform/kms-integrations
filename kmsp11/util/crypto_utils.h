@@ -152,19 +152,35 @@ bool IsRawRsaAlgorithm(
 absl::StatusOr<std::vector<uint8_t>> BuildRsaDigestInfo(
     int digest_nid, absl::Span<const uint8_t> digest);
 
-// Clear the memory at the provided location, taking care to avoid letting the
-// compiler optimize this out.
-//
-// More resources:
-// https://wiki.sei.cmu.edu/confluence/display/c/MSC06-C.+Beware+of+compiler+optimizations
-// https://github.com/google/tink/blob/040ac621b3e9ff7a240b1e596a423a30d32f9013/cc/util/secret_data_internal.h#L67
-void SafeZeroMemory(volatile char* ptr, size_t size);
-
 // Retrieves the contents of BoringSSL's error stack, and dumps it to a string.
 // If no errors are found on the stack, `default_message` is returned instead.
 std::string SslErrorToString(
     std::string_view default_message =
         "(error could not be retrieved from the SSL stack)");
+
+// A replacement for std::default_delete that zeroes before deleting.
+//
+// Suggested usage:
+//   std::unique_ptr<std::vector<uint8_t>, ZeroDelete<uint8_t>> t;
+template <typename T>
+struct ZeroDelete {
+  void operator()(T* value) const {
+    // Clear the memory at the provided location, taking care to avoid letting
+    // the compiler optimize this out.
+    //
+    // More resources:
+    // https://wiki.sei.cmu.edu/confluence/display/c/MSC06-C.+Beware+of+compiler+optimizations
+    // https://github.com/google/tink/blob/040ac621b3e9ff7a240b1e596a423a30d32f9013/cc/util/secret_data_internal.h#L67
+    if (value) {
+      volatile char* ptr = static_cast<char*>(value->data());
+      size_t size = value->size();
+      while (size--) {
+        *ptr++ = 0;
+      }
+    }
+    delete value;
+  }
+};
 
 }  // namespace kmsp11
 

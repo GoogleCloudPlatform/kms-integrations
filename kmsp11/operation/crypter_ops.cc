@@ -32,7 +32,7 @@ absl::StatusOr<DecryptOp> NewDecryptOp(std::shared_ptr<Object> key,
                                        bool allow_raw_encryption_keys) {
   switch (mechanism->mechanism) {
     case CKM_RSA_PKCS_OAEP:
-      return RsaOaepDecrypter::New(key, mechanism);
+      return NewRsaOaepDecrypter(key, mechanism);
     case CKM_AES_GCM:
       return NewInvalidArgumentError(
           absl::StrFormat(
@@ -62,7 +62,7 @@ absl::StatusOr<EncryptOp> NewEncryptOp(std::shared_ptr<Object> key,
                                        bool allow_raw_encryption_keys) {
   switch (mechanism->mechanism) {
     case CKM_RSA_PKCS_OAEP:
-      return RsaOaepEncrypter::New(key, mechanism);
+      return NewRsaOaepEncrypter(key, mechanism);
     case CKM_AES_GCM:
       return NewInvalidArgumentError(
           absl::StrFormat(
