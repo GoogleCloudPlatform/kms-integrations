@@ -156,8 +156,7 @@ absl::StatusOr<std::unique_ptr<EncrypterInterface>> NewRsaOaepEncrypter(
   ASSIGN_OR_RETURN(bssl::UniquePtr<EVP_PKEY> parsed_key,
                    ParseX509PublicKeyDer(key_der));
 
-  return std::unique_ptr<EncrypterInterface>(
-      new RsaOaepEncrypter(key, std::move(parsed_key)));
+  return std::make_unique<RsaOaepEncrypter>(key, std::move(parsed_key));
 }
 
 absl::StatusOr<std::unique_ptr<DecrypterInterface>> NewRsaOaepDecrypter(
@@ -166,7 +165,7 @@ absl::StatusOr<std::unique_ptr<DecrypterInterface>> NewRsaOaepDecrypter(
                                         CKM_RSA_PKCS_OAEP, key.get()));
   RETURN_IF_ERROR(ValidateRsaOaepParameters(key.get(), mechanism->pParameter,
                                             mechanism->ulParameterLen));
-  return std::unique_ptr<DecrypterInterface>(new RsaOaepDecrypter(key));
+  return std::make_unique<RsaOaepDecrypter>(key);
 }
 
 }  // namespace kmsp11
