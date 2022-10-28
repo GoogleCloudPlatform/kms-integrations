@@ -32,47 +32,15 @@ constexpr size_t kTagBits = 128;
 constexpr size_t kMaxPlaintextBytes = 64 * 1024;
 constexpr size_t kMaxCiphertextBytes = kMaxPlaintextBytes + 16;
 
-absl::StatusOr<CK_GCM_PARAMS> ExtractGcmParameters(void* parameters,
-                                                   CK_ULONG parameters_size) {
-  if (parameters_size != sizeof(CK_GCM_PARAMS)) {
-    return InvalidMechanismParamError(
-        "mechanism parameters must be of type CK_GCM_PARAMS", SOURCE_LOCATION);
-  }
-
-  CK_GCM_PARAMS params = *reinterpret_cast<CK_GCM_PARAMS*>(parameters);
-
-  if (!params.pIv) {
-    return InvalidMechanismParamError(
-        "missing pIv param, which should point to a zero-initialized 12-byte "
-        "buffer",
-        SOURCE_LOCATION);
-  }
-  if (params.ulIvLen != kIvBytes || params.ulIvBits != kIvBits) {
-    return InvalidMechanismParamError(
-        absl::StrFormat("the only supported IV length is the default %u bytes",
-                        kIvBytes),
-        SOURCE_LOCATION);
-  }
-  if (params.ulAADLen != 0 && !params.pAAD) {
-    return InvalidMechanismParamError(
-        "AAD length specified but the AAD pointer is invalid", SOURCE_LOCATION);
-  }
-  if (params.ulTagBits != kTagBits) {
-    return InvalidMechanismParamError(
-        absl::StrFormat("the only supported tag length is the default %u bits",
-                        kTagBits),
-        SOURCE_LOCATION);
-  }
-
-  return params;
-}
-
 // An implementation of EncrypterInterface that generates AES-GCM ciphertexts
 // using Cloud KMS.
 class AesGcmEncrypter : public EncrypterInterface {
  public:
-  static absl::StatusOr<std::unique_ptr<EncrypterInterface>> New(
-      std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
+  AesGcmEncrypter(std::shared_ptr<Object> object, absl::Span<const uint8_t> aad,
+                  absl::Span<uint8_t> iv)
+      : object_(object),
+        iv_(iv),
+        aad_(reinterpret_cast<const char*>(aad.data()), aad.size()) {}
 
   absl::StatusOr<absl::Span<const uint8_t>> Encrypt(
       KmsClient* client, absl::Span<const uint8_t> ciphertext) override;
@@ -84,44 +52,16 @@ class AesGcmEncrypter : public EncrypterInterface {
   virtual ~AesGcmEncrypter() {}
 
  private:
-  AesGcmEncrypter(std::shared_ptr<Object> object, absl::Span<const uint8_t> aad,
-                  absl::Span<uint8_t> iv)
-      : object_(object),
-        iv_(iv),
-        aad_(reinterpret_cast<const char*>(aad.data()), aad.size()) {}
-
   absl::StatusOr<absl::Span<const uint8_t>> EncryptInternal(
       KmsClient* client, absl::Span<const uint8_t> plaintext);
 
   std::shared_ptr<Object> object_;
   absl::Span<uint8_t> iv_;
   std::string aad_;
-  std::optional<std::vector<uint8_t>> plaintext_;
+  // TODO(b/255427306): zeroize multi-part plaintext.
+  std::optional<std::vector<uint8_t>> plaintext_;  // for multi-part only
   std::vector<uint8_t> ciphertext_;
 };
-
-absl::StatusOr<std::unique_ptr<EncrypterInterface>> AesGcmEncrypter::New(
-    std::shared_ptr<Object> key, const CK_MECHANISM* mechanism) {
-  RETURN_IF_ERROR(CheckKeyPreconditions(CKK_AES, CKO_SECRET_KEY,
-                                        CKM_CLOUDKMS_AES_GCM, key.get()));
-
-  ASSIGN_OR_RETURN(
-      CK_GCM_PARAMS params,
-      ExtractGcmParameters(mechanism->pParameter, mechanism->ulParameterLen));
-
-  // For encryption only, pIv should be zero-initialized.
-  if (!IsZeroInitialized(absl::MakeConstSpan(params.pIv, params.ulIvLen))) {
-    return InvalidMechanismParamError(
-        absl::StrFormat(
-            "the pIv param should point to a zero-initialized %u-byte buffer",
-            kIvBytes),
-        SOURCE_LOCATION);
-  }
-
-  return std::unique_ptr<EncrypterInterface>(new AesGcmEncrypter(
-      key, absl::MakeConstSpan(params.pAAD, params.ulAADLen),
-      absl::MakeSpan(params.pIv, params.ulIvLen)));
-}
 
 absl::StatusOr<absl::Span<const uint8_t>> AesGcmEncrypter::Encrypt(
     KmsClient* client, absl::Span<const uint8_t> plaintext) {
@@ -193,15 +133,23 @@ absl::StatusOr<absl::Span<const uint8_t>> AesGcmEncrypter::EncryptInternal(
   std::copy_n(resp.ciphertext().begin(), resp.ciphertext().size(),
               ciphertext_.begin());
 
-  return absl::MakeConstSpan(ciphertext_);
+  return ciphertext_;
 }
 
 // An implementation of DecrypterInterface that decrypts AES-GCM ciphertexts
 // using Cloud KMS.
 class AesGcmDecrypter : public DecrypterInterface {
  public:
-  static absl::StatusOr<std::unique_ptr<DecrypterInterface>> New(
-      std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
+  AesGcmDecrypter(std::shared_ptr<Object> object, absl::Span<const uint8_t> iv,
+                  absl::Span<const uint8_t> aad)
+      : object_(object),
+        iv_(iv.begin(), iv.end()),
+        aad_(reinterpret_cast<const char*>(aad.data()), aad.size()) {
+    // TODO(b/255427306): improve unique_ptr allocation.
+    plaintext_ =
+        std::unique_ptr<std::vector<uint8_t>, ZeroDelete<std::vector<uint8_t>>>(
+            new std::vector<uint8_t>(), ZeroDelete<std::vector<uint8_t>>());
+  }
 
   absl::StatusOr<absl::Span<const uint8_t>> Decrypt(
       KmsClient* client, absl::Span<const uint8_t> ciphertext) override;
@@ -213,12 +161,6 @@ class AesGcmDecrypter : public DecrypterInterface {
   virtual ~AesGcmDecrypter() {}
 
  private:
-  AesGcmDecrypter(std::shared_ptr<Object> object, absl::Span<const uint8_t> iv,
-                  absl::Span<const uint8_t> aad)
-      : object_(object),
-        iv_(iv.begin(), iv.end()),
-        aad_(reinterpret_cast<const char*>(aad.data()), aad.size()) {}
-
   absl::StatusOr<absl::Span<const uint8_t>> DecryptInternal(
       KmsClient* client, absl::Span<const uint8_t> ciphertext);
 
@@ -226,22 +168,9 @@ class AesGcmDecrypter : public DecrypterInterface {
   std::vector<uint8_t> iv_;
   std::string aad_;
   std::optional<std::vector<uint8_t>> ciphertext_;
-  std::vector<uint8_t> plaintext_;
+  std::unique_ptr<std::vector<uint8_t>, ZeroDelete<std::vector<uint8_t>>>
+      plaintext_;
 };
-
-absl::StatusOr<std::unique_ptr<DecrypterInterface>> AesGcmDecrypter::New(
-    std::shared_ptr<Object> key, const CK_MECHANISM* mechanism) {
-  RETURN_IF_ERROR(CheckKeyPreconditions(CKK_AES, CKO_SECRET_KEY,
-                                        CKM_CLOUDKMS_AES_GCM, key.get()));
-
-  ASSIGN_OR_RETURN(
-      CK_GCM_PARAMS params,
-      ExtractGcmParameters(mechanism->pParameter, mechanism->ulParameterLen));
-
-  return std::unique_ptr<DecrypterInterface>(
-      new AesGcmDecrypter(key, absl::MakeConstSpan(params.pIv, params.ulIvLen),
-                          absl::MakeConstSpan(params.pAAD, params.ulAADLen)));
-}
 
 absl::StatusOr<absl::Span<const uint8_t>> AesGcmDecrypter::Decrypt(
     KmsClient* client, absl::Span<const uint8_t> ciphertext) {
@@ -302,20 +231,72 @@ absl::StatusOr<absl::Span<const uint8_t>> AesGcmDecrypter::DecryptInternal(
 
   ASSIGN_OR_RETURN(kms_v1::RawDecryptResponse resp, client->RawDecrypt(req));
 
-  plaintext_.resize(resp.plaintext().size());
+  plaintext_->resize(resp.plaintext().size());
   std::copy_n(resp.plaintext().begin(), resp.plaintext().size(),
-              plaintext_.begin());
+              plaintext_->begin());
 
-  return absl::MakeConstSpan(plaintext_);
+  return *plaintext_;
+}
+
+absl::StatusOr<CK_GCM_PARAMS> ExtractGcmParameters(void* parameters,
+                                                   CK_ULONG parameters_size) {
+  if (parameters_size != sizeof(CK_GCM_PARAMS)) {
+    return InvalidMechanismParamError(
+        "mechanism parameters must be of type CK_GCM_PARAMS", SOURCE_LOCATION);
+  }
+
+  CK_GCM_PARAMS params = *reinterpret_cast<CK_GCM_PARAMS*>(parameters);
+
+  if (!params.pIv) {
+    return InvalidMechanismParamError(
+        "missing pIv param, which should point to a zero-initialized 12-byte "
+        "buffer",
+        SOURCE_LOCATION);
+  }
+  if (params.ulIvLen != kIvBytes || params.ulIvBits != kIvBits) {
+    return InvalidMechanismParamError(
+        absl::StrFormat("the only supported IV length is the default %u bytes",
+                        kIvBytes),
+        SOURCE_LOCATION);
+  }
+  if (params.ulAADLen != 0 && !params.pAAD) {
+    return InvalidMechanismParamError(
+        "AAD length specified but the AAD pointer is invalid", SOURCE_LOCATION);
+  }
+  if (params.ulTagBits != kTagBits) {
+    return InvalidMechanismParamError(
+        absl::StrFormat("the only supported tag length is the default %u bits",
+                        kTagBits),
+        SOURCE_LOCATION);
+  }
+
+  return params;
 }
 
 }  // namespace
 
 absl::StatusOr<std::unique_ptr<EncrypterInterface>> NewAesGcmEncrypter(
     std::shared_ptr<Object> key, const CK_MECHANISM* mechanism) {
+  RETURN_IF_ERROR(CheckKeyPreconditions(CKK_AES, CKO_SECRET_KEY,
+                                        mechanism->mechanism, key.get()));
+
   switch (mechanism->mechanism) {
-    case CKM_CLOUDKMS_AES_GCM:
-      return AesGcmEncrypter::New(key, mechanism);
+    case CKM_CLOUDKMS_AES_GCM: {
+      ASSIGN_OR_RETURN(CK_GCM_PARAMS params,
+                       ExtractGcmParameters(mechanism->pParameter,
+                                            mechanism->ulParameterLen));
+      // For encryption only, pIv should be zero-initialized.
+      if (!IsZeroInitialized(absl::MakeConstSpan(params.pIv, params.ulIvLen))) {
+        return InvalidMechanismParamError(
+            absl::StrFormat("the pIv param should point to a zero-initialized "
+                            "%u-byte buffer",
+                            kIvBytes),
+            SOURCE_LOCATION);
+      }
+      return std::make_unique<AesGcmEncrypter>(
+          key, absl::MakeConstSpan(params.pAAD, params.ulAADLen),
+          absl::MakeSpan(params.pIv, params.ulIvLen));
+    }
     default:
       return NewInternalError(
           absl::StrFormat("Mechanism %#x not supported for AES-GCM encryption",
@@ -326,9 +307,18 @@ absl::StatusOr<std::unique_ptr<EncrypterInterface>> NewAesGcmEncrypter(
 
 absl::StatusOr<std::unique_ptr<DecrypterInterface>> NewAesGcmDecrypter(
     std::shared_ptr<Object> key, const CK_MECHANISM* mechanism) {
+  RETURN_IF_ERROR(CheckKeyPreconditions(CKK_AES, CKO_SECRET_KEY,
+                                        mechanism->mechanism, key.get()));
+
   switch (mechanism->mechanism) {
-    case CKM_CLOUDKMS_AES_GCM:
-      return AesGcmDecrypter::New(key, mechanism);
+    case CKM_CLOUDKMS_AES_GCM: {
+      ASSIGN_OR_RETURN(CK_GCM_PARAMS params,
+                       ExtractGcmParameters(mechanism->pParameter,
+                                            mechanism->ulParameterLen));
+      return std::make_unique<AesGcmDecrypter>(
+          key, absl::MakeConstSpan(params.pIv, params.ulIvLen),
+          absl::MakeConstSpan(params.pAAD, params.ulAADLen));
+    }
     default:
       return NewInternalError(
           absl::StrFormat("Mechanism %#x not supported for AES-GCM decryption",

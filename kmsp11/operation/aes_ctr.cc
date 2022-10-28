@@ -31,32 +31,12 @@ constexpr size_t kIvBits = kIvBytes * 8;
 constexpr size_t kMaxPlaintextBytes = 64 * 1024;
 constexpr size_t kMaxCiphertextBytes = kMaxPlaintextBytes + 16;
 
-absl::StatusOr<absl::Span<const uint8_t>> ExtractIv(void* parameters,
-                                                    CK_ULONG parameters_size) {
-  if (parameters_size != sizeof(CK_AES_CTR_PARAMS)) {
-    return InvalidMechanismParamError(
-        "mechanism parameters must be of type CK_AES_CTR_PARAMS",
-        SOURCE_LOCATION);
-  }
-
-  CK_AES_CTR_PARAMS* params = reinterpret_cast<CK_AES_CTR_PARAMS*>(parameters);
-
-  if (params->ulCounterBits != kIvBits) {
-    return InvalidMechanismParamError(
-        absl::StrFormat("invalid number of counter block bits: got %u; want %u",
-                        params->ulCounterBits, kIvBits),
-        SOURCE_LOCATION);
-  }
-
-  return params->cb;
-}
-
 // An implementation of EncrypterInterface that generates AES-CTR ciphertexts
 // using Cloud KMS.
 class AesCtrEncrypter : public EncrypterInterface {
  public:
-  static absl::StatusOr<std::unique_ptr<EncrypterInterface>> New(
-      std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
+  AesCtrEncrypter(std::shared_ptr<Object> object, absl::Span<const uint8_t> iv)
+      : object_(object), iv_(iv.begin(), iv.end()) {}
 
   absl::StatusOr<absl::Span<const uint8_t>> Encrypt(
       KmsClient* client, absl::Span<const uint8_t> ciphertext) override;
@@ -68,28 +48,15 @@ class AesCtrEncrypter : public EncrypterInterface {
   virtual ~AesCtrEncrypter() {}
 
  private:
-  AesCtrEncrypter(std::shared_ptr<Object> object, absl::Span<const uint8_t> iv)
-      : object_(object), iv_(iv.begin(), iv.end()) {}
-
   absl::StatusOr<absl::Span<const uint8_t>> EncryptInternal(
       KmsClient* client, absl::Span<const uint8_t> plaintext);
 
   std::shared_ptr<Object> object_;
   const std::vector<uint8_t> iv_;
+  // TODO(b/255427306): zeroize multi-part plaintext.
   std::optional<std::vector<uint8_t>> plaintext_;  // for multi-part only
   std::vector<uint8_t> ciphertext_;
 };
-
-absl::StatusOr<std::unique_ptr<EncrypterInterface>> AesCtrEncrypter::New(
-    std::shared_ptr<Object> key, const CK_MECHANISM* mechanism) {
-  RETURN_IF_ERROR(
-      CheckKeyPreconditions(CKK_AES, CKO_SECRET_KEY, CKM_AES_CTR, key.get()));
-
-  ASSIGN_OR_RETURN(absl::Span<const uint8_t> iv,
-                   ExtractIv(mechanism->pParameter, mechanism->ulParameterLen));
-
-  return std::unique_ptr<EncrypterInterface>(new AesCtrEncrypter(key, iv));
-}
 
 absl::StatusOr<absl::Span<const uint8_t>> AesCtrEncrypter::Encrypt(
     KmsClient* client, absl::Span<const uint8_t> plaintext) {
@@ -153,6 +120,12 @@ absl::StatusOr<absl::Span<const uint8_t>> AesCtrEncrypter::EncryptInternal(
 
   ASSIGN_OR_RETURN(kms_v1::RawEncryptResponse resp, client->RawEncrypt(req));
 
+  if (req.initialization_vector() != resp.initialization_vector()) {
+    return NewInternalError(
+        "the IV returned by the server does not match user-supplied IV",
+        SOURCE_LOCATION);
+  }
+
   ciphertext_.resize(resp.ciphertext().size());
   std::copy_n(resp.ciphertext().begin(), resp.ciphertext().size(),
               ciphertext_.begin());
@@ -164,8 +137,13 @@ absl::StatusOr<absl::Span<const uint8_t>> AesCtrEncrypter::EncryptInternal(
 // using Cloud KMS.
 class AesCtrDecrypter : public DecrypterInterface {
  public:
-  static absl::StatusOr<std::unique_ptr<DecrypterInterface>> New(
-      std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
+  AesCtrDecrypter(std::shared_ptr<Object> object, absl::Span<const uint8_t> iv)
+      : object_(object), iv_(iv.begin(), iv.end()) {
+    // TODO(b/255427306): improve unique_ptr allocation.
+    plaintext_ =
+        std::unique_ptr<std::vector<uint8_t>, ZeroDelete<std::vector<uint8_t>>>(
+            new std::vector<uint8_t>(), ZeroDelete<std::vector<uint8_t>>());
+  }
 
   absl::StatusOr<absl::Span<const uint8_t>> Decrypt(
       KmsClient* client, absl::Span<const uint8_t> ciphertext) override;
@@ -177,28 +155,16 @@ class AesCtrDecrypter : public DecrypterInterface {
   virtual ~AesCtrDecrypter() {}
 
  private:
-  AesCtrDecrypter(std::shared_ptr<Object> object, absl::Span<const uint8_t> iv)
-      : object_(object), iv_(iv.begin(), iv.end()) {}
-
   absl::StatusOr<absl::Span<const uint8_t>> DecryptInternal(
       KmsClient* client, absl::Span<const uint8_t> ciphertext);
 
   std::shared_ptr<Object> object_;
   const std::vector<uint8_t> iv_;
   std::optional<std::vector<uint8_t>> ciphertext_;  // for multi-part
-  std::vector<uint8_t> plaintext_;
+
+  std::unique_ptr<std::vector<uint8_t>, ZeroDelete<std::vector<uint8_t>>>
+      plaintext_;
 };
-
-absl::StatusOr<std::unique_ptr<DecrypterInterface>> AesCtrDecrypter::New(
-    std::shared_ptr<Object> key, const CK_MECHANISM* mechanism) {
-  RETURN_IF_ERROR(
-      CheckKeyPreconditions(CKK_AES, CKO_SECRET_KEY, CKM_AES_CTR, key.get()));
-
-  ASSIGN_OR_RETURN(absl::Span<const uint8_t> iv,
-                   ExtractIv(mechanism->pParameter, mechanism->ulParameterLen));
-
-  return std::unique_ptr<DecrypterInterface>(new AesCtrDecrypter(key, iv));
-}
 
 absl::StatusOr<absl::Span<const uint8_t>> AesCtrDecrypter::Decrypt(
     KmsClient* client, absl::Span<const uint8_t> ciphertext) {
@@ -255,20 +221,47 @@ absl::StatusOr<absl::Span<const uint8_t>> AesCtrDecrypter::DecryptInternal(
       std::string(reinterpret_cast<const char*>(iv_.data()), iv_.size()));
   ASSIGN_OR_RETURN(kms_v1::RawDecryptResponse resp, client->RawDecrypt(req));
 
-  plaintext_.resize(resp.plaintext().size());
+  plaintext_->resize(resp.plaintext().size());
   std::copy_n(resp.plaintext().begin(), resp.plaintext().size(),
-              plaintext_.begin());
+              plaintext_->begin());
 
-  return plaintext_;
+  return *plaintext_;
+}
+
+absl::StatusOr<absl::Span<const uint8_t>> ExtractIv(void* parameters,
+                                                    CK_ULONG parameters_size) {
+  if (parameters_size != sizeof(CK_AES_CTR_PARAMS)) {
+    return InvalidMechanismParamError(
+        "mechanism parameters must be of type CK_AES_CTR_PARAMS",
+        SOURCE_LOCATION);
+  }
+
+  CK_AES_CTR_PARAMS* params = reinterpret_cast<CK_AES_CTR_PARAMS*>(parameters);
+
+  if (params->ulCounterBits != kIvBits) {
+    return InvalidMechanismParamError(
+        absl::StrFormat("invalid number of counter block bits: got %u; want %u",
+                        params->ulCounterBits, kIvBits),
+        SOURCE_LOCATION);
+  }
+
+  return params->cb;
 }
 
 }  // namespace
 
 absl::StatusOr<std::unique_ptr<EncrypterInterface>> NewAesCtrEncrypter(
     std::shared_ptr<Object> key, const CK_MECHANISM* mechanism) {
+  RETURN_IF_ERROR(CheckKeyPreconditions(CKK_AES, CKO_SECRET_KEY,
+                                        mechanism->mechanism, key.get()));
+
   switch (mechanism->mechanism) {
-    case CKM_AES_CTR:
-      return AesCtrEncrypter::New(key, mechanism);
+    case CKM_AES_CTR: {
+      ASSIGN_OR_RETURN(
+          absl::Span<const uint8_t> iv,
+          ExtractIv(mechanism->pParameter, mechanism->ulParameterLen));
+      return std::make_unique<AesCtrEncrypter>(key, iv);
+    }
     default:
       return NewInternalError(
           absl::StrFormat("Mechanism %#x not supported for AES-CTR encryption",
@@ -279,9 +272,16 @@ absl::StatusOr<std::unique_ptr<EncrypterInterface>> NewAesCtrEncrypter(
 
 absl::StatusOr<std::unique_ptr<DecrypterInterface>> NewAesCtrDecrypter(
     std::shared_ptr<Object> key, const CK_MECHANISM* mechanism) {
+  RETURN_IF_ERROR(CheckKeyPreconditions(CKK_AES, CKO_SECRET_KEY,
+                                        mechanism->mechanism, key.get()));
+
   switch (mechanism->mechanism) {
-    case CKM_AES_CTR:
-      return AesCtrDecrypter::New(key, mechanism);
+    case CKM_AES_CTR: {
+      ASSIGN_OR_RETURN(
+          absl::Span<const uint8_t> iv,
+          ExtractIv(mechanism->pParameter, mechanism->ulParameterLen));
+      return std::make_unique<AesCtrDecrypter>(key, iv);
+    }
     default:
       return NewInternalError(
           absl::StrFormat("Mechanism %#x not supported for AES-CTR decryption",

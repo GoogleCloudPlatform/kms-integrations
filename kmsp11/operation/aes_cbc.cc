@@ -161,7 +161,7 @@ absl::StatusOr<absl::Span<const uint8_t>> AesCbcEncrypter::EncryptInternal(
   std::copy_n(resp.ciphertext().begin(), resp.ciphertext().size(),
               ciphertext_.begin());
 
-  return absl::MakeConstSpan(ciphertext_);
+  return ciphertext_;
 }
 
 // An implementation of DecrypterInterface that decrypts AES-CBC ciphertexts
@@ -272,7 +272,7 @@ absl::StatusOr<absl::Span<const uint8_t>> AesCbcDecrypter::DecryptInternal(
   plaintext_->insert(plaintext_->end(), response_plaintext.begin(),
                      response_plaintext.end());
 
-  return absl::MakeConstSpan(*plaintext_);
+  return *plaintext_;
 }
 
 }  // namespace
