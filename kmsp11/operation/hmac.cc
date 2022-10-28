@@ -28,32 +28,11 @@ namespace {
 
 constexpr size_t kMaxMacDataBytes = 64 * 1024;
 
-absl::StatusOr<CK_KEY_TYPE> KeyTypeForMechanism(const CK_MECHANISM* mechanism) {
-  switch (mechanism->mechanism) {
-    case CKM_SHA_1_HMAC:
-      return CKK_SHA_1_HMAC;
-    case CKM_SHA224_HMAC:
-      return CKK_SHA224_HMAC;
-    case CKM_SHA256_HMAC:
-      return CKK_SHA256_HMAC;
-    case CKM_SHA384_HMAC:
-      return CKK_SHA384_HMAC;
-    case CKM_SHA512_HMAC:
-      return CKK_SHA512_HMAC;
-    default:
-      return NewInternalError(
-          absl::StrFormat("Cannot get CK_KEY_TYPE for mechanism %#x",
-                          mechanism->mechanism),
-          SOURCE_LOCATION);
-  }
-}
-
 // A SignerInterface implementation that makes HMAC signatures using Cloud KMS.
 class HmacSigner : public SignerInterface {
  public:
-  static absl::StatusOr<std::unique_ptr<SignerInterface>> New(
-      std::shared_ptr<Object> key, const CK_MECHANISM* mechanism,
-      size_t signature_length);
+  HmacSigner(std::shared_ptr<Object> object, size_t signature_length)
+      : signature_length_(signature_length), object_(object) {}
 
   size_t signature_length() override { return signature_length_; };
   Object* object() override { return object_.get(); };
@@ -68,9 +47,6 @@ class HmacSigner : public SignerInterface {
   virtual ~HmacSigner() {}
 
  private:
-  HmacSigner(std::shared_ptr<Object> object, size_t signature_length)
-      : signature_length_(signature_length), object_(object) {}
-
   absl::Status SignInternal(KmsClient* client, absl::Span<const uint8_t> data,
                             absl::Span<uint8_t> signature);
 
@@ -78,18 +54,6 @@ class HmacSigner : public SignerInterface {
   std::shared_ptr<Object> object_;
   std::optional<std::vector<uint8_t>> buffer_;
 };
-
-absl::StatusOr<std::unique_ptr<SignerInterface>> HmacSigner::New(
-    std::shared_ptr<Object> key, const CK_MECHANISM* mechanism,
-    size_t signature_length) {
-  ASSIGN_OR_RETURN(CK_KEY_TYPE key_type, KeyTypeForMechanism(mechanism));
-  RETURN_IF_ERROR(CheckKeyPreconditions(key_type, CKO_SECRET_KEY,
-                                        mechanism->mechanism, key.get()));
-  RETURN_IF_ERROR(EnsureNoParameters(mechanism));
-
-  return std::unique_ptr<SignerInterface>(
-      new HmacSigner(key, signature_length));
-}
 
 absl::Status HmacSigner::Sign(KmsClient* client, absl::Span<const uint8_t> data,
                               absl::Span<uint8_t> signature) {
@@ -174,9 +138,8 @@ absl::Status HmacSigner::SignInternal(KmsClient* client,
 // KMS.
 class HmacVerifier : public VerifierInterface {
  public:
-  static absl::StatusOr<std::unique_ptr<VerifierInterface>> New(
-      std::shared_ptr<Object> key, const CK_MECHANISM* mechanism,
-      size_t signature_length);
+  HmacVerifier(std::shared_ptr<Object> object, size_t signature_length)
+      : object_(object), signature_length_(signature_length) {}
 
   size_t signature_length() { return signature_length_; };
   Object* object() override { return object_.get(); };
@@ -191,9 +154,6 @@ class HmacVerifier : public VerifierInterface {
   virtual ~HmacVerifier() {}
 
  private:
-  HmacVerifier(std::shared_ptr<Object> object, size_t signature_length)
-      : object_(object), signature_length_(signature_length) {}
-
   absl::Status VerifyInternal(KmsClient* client, absl::Span<const uint8_t> data,
                               absl::Span<const uint8_t> signature);
 
@@ -201,18 +161,6 @@ class HmacVerifier : public VerifierInterface {
   const size_t signature_length_;
   std::optional<std::vector<uint8_t>> buffer_;
 };
-
-absl::StatusOr<std::unique_ptr<VerifierInterface>> HmacVerifier::New(
-    std::shared_ptr<Object> key, const CK_MECHANISM* mechanism,
-    size_t signature_length) {
-  ASSIGN_OR_RETURN(CK_KEY_TYPE key_type, KeyTypeForMechanism(mechanism));
-  RETURN_IF_ERROR(CheckKeyPreconditions(key_type, CKO_SECRET_KEY,
-                                        mechanism->mechanism, key.get()));
-  RETURN_IF_ERROR(EnsureNoParameters(mechanism));
-
-  return std::unique_ptr<VerifierInterface>(
-      new HmacVerifier(key, signature_length));
-}
 
 absl::Status HmacVerifier::Verify(KmsClient* client,
                                   absl::Span<const uint8_t> data,
@@ -300,21 +248,46 @@ absl::Status HmacVerifier::VerifyInternal(KmsClient* client,
   return absl::OkStatus();
 }
 
+absl::StatusOr<CK_KEY_TYPE> KeyTypeForMechanism(const CK_MECHANISM* mechanism) {
+  switch (mechanism->mechanism) {
+    case CKM_SHA_1_HMAC:
+      return CKK_SHA_1_HMAC;
+    case CKM_SHA224_HMAC:
+      return CKK_SHA224_HMAC;
+    case CKM_SHA256_HMAC:
+      return CKK_SHA256_HMAC;
+    case CKM_SHA384_HMAC:
+      return CKK_SHA384_HMAC;
+    case CKM_SHA512_HMAC:
+      return CKK_SHA512_HMAC;
+    default:
+      return NewInternalError(
+          absl::StrFormat("Cannot get CK_KEY_TYPE for mechanism %#x",
+                          mechanism->mechanism),
+          SOURCE_LOCATION);
+  }
+}
+
 }  // namespace
 
 absl::StatusOr<std::unique_ptr<SignerInterface>> NewHmacSigner(
     std::shared_ptr<Object> key, const CK_MECHANISM* mechanism) {
+  ASSIGN_OR_RETURN(CK_KEY_TYPE key_type, KeyTypeForMechanism(mechanism));
+  RETURN_IF_ERROR(CheckKeyPreconditions(key_type, CKO_SECRET_KEY,
+                                        mechanism->mechanism, key.get()));
+  RETURN_IF_ERROR(EnsureNoParameters(mechanism));
+
   switch (mechanism->mechanism) {
     case CKM_SHA_1_HMAC:
-      return HmacSigner::New(key, mechanism, 20);
+      return std::make_unique<HmacSigner>(key, 20);
     case CKM_SHA224_HMAC:
-      return HmacSigner::New(key, mechanism, 28);
+      return std::make_unique<HmacSigner>(key, 28);
     case CKM_SHA256_HMAC:
-      return HmacSigner::New(key, mechanism, 32);
+      return std::make_unique<HmacSigner>(key, 32);
     case CKM_SHA384_HMAC:
-      return HmacSigner::New(key, mechanism, 48);
+      return std::make_unique<HmacSigner>(key, 48);
     case CKM_SHA512_HMAC:
-      return HmacSigner::New(key, mechanism, 64);
+      return std::make_unique<HmacSigner>(key, 64);
     default:
       return NewInternalError(
           absl::StrFormat("Mechanism %#x not supported for HMAC signing",
@@ -325,17 +298,22 @@ absl::StatusOr<std::unique_ptr<SignerInterface>> NewHmacSigner(
 
 absl::StatusOr<std::unique_ptr<VerifierInterface>> NewHmacVerifier(
     std::shared_ptr<Object> key, const CK_MECHANISM* mechanism) {
+  ASSIGN_OR_RETURN(CK_KEY_TYPE key_type, KeyTypeForMechanism(mechanism));
+  RETURN_IF_ERROR(CheckKeyPreconditions(key_type, CKO_SECRET_KEY,
+                                        mechanism->mechanism, key.get()));
+  RETURN_IF_ERROR(EnsureNoParameters(mechanism));
+
   switch (mechanism->mechanism) {
     case CKM_SHA_1_HMAC:
-      return HmacVerifier::New(key, mechanism, 20);
+      return std::make_unique<HmacVerifier>(key, 20);
     case CKM_SHA224_HMAC:
-      return HmacVerifier::New(key, mechanism, 28);
+      return std::make_unique<HmacVerifier>(key, 28);
     case CKM_SHA256_HMAC:
-      return HmacVerifier::New(key, mechanism, 32);
+      return std::make_unique<HmacVerifier>(key, 32);
     case CKM_SHA384_HMAC:
-      return HmacVerifier::New(key, mechanism, 48);
+      return std::make_unique<HmacVerifier>(key, 48);
     case CKM_SHA512_HMAC:
-      return HmacVerifier::New(key, mechanism, 64);
+      return std::make_unique<HmacVerifier>(key, 64);
     default:
       return NewInternalError(
           absl::StrFormat("Mechanism %#x not supported for HMAC verification",
