@@ -193,7 +193,8 @@ absl::Status AddSecretKeyAttributes(AttributeMap* attrs,
   attrs->PutBool(CKA_EXTRACTABLE, false);
   attrs->PutBool(CKA_ALWAYS_SENSITIVE, ckv.import_job().empty());
   attrs->PutBool(CKA_NEVER_EXTRACTABLE, ckv.import_job().empty());
-  // TODO(b/231473430): Add CKA_CHECK_VALUE attribute from HSM attestation.
+  // CKA_CHECK_VALUE is intentionally skipped, as permitted by the spec.
+  // http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Ref320515101
   attrs->PutBool(CKA_WRAP_WITH_TRUSTED, false);
   attrs->PutBool(CKA_TRUSTED, false);
   attrs->Put(CKA_WRAP_TEMPLATE, "");
