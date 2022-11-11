@@ -158,25 +158,30 @@ std::string SslErrorToString(
     std::string_view default_message =
         "(error could not be retrieved from the SSL stack)");
 
+// A replacement for std::allocator that zeroes before deallocating.
+//
+// Suggested usage:
+//   std::vector<uint8_t, ZeroDeallocator<uint8_t>> t;
+template <typename T>
+struct ZeroDeallocator {
+  using value_type = T;
+
+  T* allocate(std::size_t len) { return static_cast<T*>(std::malloc(len)); }
+  void deallocate(T* ptr, std::size_t len) {
+    OPENSSL_cleanse(ptr, len);
+    std::free(ptr);
+  }
+};
+
 // A replacement for std::default_delete that zeroes before deleting.
 //
 // Suggested usage:
-//   std::unique_ptr<std::vector<uint8_t>, ZeroDelete<uint8_t>> t;
+//   std::unique_ptr<std::string, ZeroDelete<std::string>> t;
 template <typename T>
 struct ZeroDelete {
   void operator()(T* value) const {
-    // Clear the memory at the provided location, taking care to avoid letting
-    // the compiler optimize this out.
-    //
-    // More resources:
-    // https://wiki.sei.cmu.edu/confluence/display/c/MSC06-C.+Beware+of+compiler+optimizations
-    // https://github.com/google/tink/blob/040ac621b3e9ff7a240b1e596a423a30d32f9013/cc/util/secret_data_internal.h#L67
     if (value) {
-      volatile char* ptr = reinterpret_cast<char*>(value->data());
-      size_t size = value->size();
-      while (size--) {
-        *ptr++ = 0;
-      }
+      OPENSSL_cleanse(value->data(), value->size());
     }
     delete value;
   }

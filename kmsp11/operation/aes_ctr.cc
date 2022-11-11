@@ -53,8 +53,8 @@ class AesCtrEncrypter : public EncrypterInterface {
 
   std::shared_ptr<Object> object_;
   const std::vector<uint8_t> iv_;
-  // TODO(b/255427306): zeroize multi-part plaintext.
-  std::optional<std::vector<uint8_t>> plaintext_;  // for multi-part only
+  std::optional<std::vector<uint8_t, ZeroDeallocator<uint8_t>>>
+      plaintext_;  // for multi-part only
   std::vector<uint8_t> ciphertext_;
 };
 
@@ -138,12 +138,7 @@ absl::StatusOr<absl::Span<const uint8_t>> AesCtrEncrypter::EncryptInternal(
 class AesCtrDecrypter : public DecrypterInterface {
  public:
   AesCtrDecrypter(std::shared_ptr<Object> object, absl::Span<const uint8_t> iv)
-      : object_(object), iv_(iv.begin(), iv.end()) {
-    // TODO(b/255427306): improve unique_ptr allocation.
-    plaintext_ =
-        std::unique_ptr<std::vector<uint8_t>, ZeroDelete<std::vector<uint8_t>>>(
-            new std::vector<uint8_t>(), ZeroDelete<std::vector<uint8_t>>());
-  }
+      : object_(object), iv_(iv.begin(), iv.end()) {}
 
   absl::StatusOr<absl::Span<const uint8_t>> Decrypt(
       KmsClient* client, absl::Span<const uint8_t> ciphertext) override;
@@ -161,9 +156,7 @@ class AesCtrDecrypter : public DecrypterInterface {
   std::shared_ptr<Object> object_;
   const std::vector<uint8_t> iv_;
   std::optional<std::vector<uint8_t>> ciphertext_;  // for multi-part
-
-  std::unique_ptr<std::vector<uint8_t>, ZeroDelete<std::vector<uint8_t>>>
-      plaintext_;
+  std::unique_ptr<std::string, ZeroDelete<std::string>> plaintext_;
 };
 
 absl::StatusOr<absl::Span<const uint8_t>> AesCtrDecrypter::Decrypt(
@@ -221,11 +214,9 @@ absl::StatusOr<absl::Span<const uint8_t>> AesCtrDecrypter::DecryptInternal(
       std::string(reinterpret_cast<const char*>(iv_.data()), iv_.size()));
   ASSIGN_OR_RETURN(kms_v1::RawDecryptResponse resp, client->RawDecrypt(req));
 
-  plaintext_->resize(resp.plaintext().size());
-  std::copy_n(resp.plaintext().begin(), resp.plaintext().size(),
-              plaintext_->begin());
-
-  return *plaintext_;
+  plaintext_.reset(resp.release_plaintext());
+  return absl::MakeConstSpan(
+      reinterpret_cast<const uint8_t*>(plaintext_->data()), plaintext_->size());
 }
 
 absl::StatusOr<absl::Span<const uint8_t>> ExtractIv(void* parameters,

@@ -58,8 +58,8 @@ class AesGcmEncrypter : public EncrypterInterface {
   std::shared_ptr<Object> object_;
   absl::Span<uint8_t> iv_;
   std::string aad_;
-  // TODO(b/255427306): zeroize multi-part plaintext.
-  std::optional<std::vector<uint8_t>> plaintext_;  // for multi-part only
+  std::optional<std::vector<uint8_t, ZeroDeallocator<uint8_t>>>
+      plaintext_;  // for multi-part only
   std::vector<uint8_t> ciphertext_;
 };
 
@@ -144,12 +144,7 @@ class AesGcmDecrypter : public DecrypterInterface {
                   absl::Span<const uint8_t> aad)
       : object_(object),
         iv_(iv.begin(), iv.end()),
-        aad_(reinterpret_cast<const char*>(aad.data()), aad.size()) {
-    // TODO(b/255427306): improve unique_ptr allocation.
-    plaintext_ =
-        std::unique_ptr<std::vector<uint8_t>, ZeroDelete<std::vector<uint8_t>>>(
-            new std::vector<uint8_t>(), ZeroDelete<std::vector<uint8_t>>());
-  }
+        aad_(reinterpret_cast<const char*>(aad.data()), aad.size()) {}
 
   absl::StatusOr<absl::Span<const uint8_t>> Decrypt(
       KmsClient* client, absl::Span<const uint8_t> ciphertext) override;
@@ -168,8 +163,7 @@ class AesGcmDecrypter : public DecrypterInterface {
   std::vector<uint8_t> iv_;
   std::string aad_;
   std::optional<std::vector<uint8_t>> ciphertext_;
-  std::unique_ptr<std::vector<uint8_t>, ZeroDelete<std::vector<uint8_t>>>
-      plaintext_;
+  std::unique_ptr<std::string, ZeroDelete<std::string>> plaintext_;
 };
 
 absl::StatusOr<absl::Span<const uint8_t>> AesGcmDecrypter::Decrypt(
@@ -231,11 +225,9 @@ absl::StatusOr<absl::Span<const uint8_t>> AesGcmDecrypter::DecryptInternal(
 
   ASSIGN_OR_RETURN(kms_v1::RawDecryptResponse resp, client->RawDecrypt(req));
 
-  plaintext_->resize(resp.plaintext().size());
-  std::copy_n(resp.plaintext().begin(), resp.plaintext().size(),
-              plaintext_->begin());
-
-  return *plaintext_;
+  plaintext_.reset(resp.release_plaintext());
+  return absl::MakeConstSpan(
+      reinterpret_cast<const uint8_t*>(plaintext_->data()), plaintext_->size());
 }
 
 absl::StatusOr<CK_GCM_PARAMS> ExtractGcmParameters(void* parameters,

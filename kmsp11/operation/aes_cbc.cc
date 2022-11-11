@@ -59,8 +59,8 @@ class AesCbcEncrypter : public EncrypterInterface {
   std::shared_ptr<Object> object_;
   std::vector<uint8_t> iv_;
   PaddingMode padding_mode_;
-  // TODO(b/255427306): zeroize multi-part plaintext.
-  std::optional<std::vector<uint8_t>> plaintext_;  // for multi-part
+  std::optional<std::vector<uint8_t, ZeroDeallocator<uint8_t>>>
+      plaintext_;  // for multi-part
   std::vector<uint8_t> ciphertext_;
 };
 
@@ -170,12 +170,7 @@ class AesCbcDecrypter : public DecrypterInterface {
  public:
   AesCbcDecrypter(std::shared_ptr<Object> object, absl::Span<uint8_t> iv,
                   PaddingMode padding)
-      : object_(object), iv_(iv.begin(), iv.end()), padding_mode_(padding) {
-    // TODO(b/255427306): improve unique_ptr allocation.
-    plaintext_ =
-        std::unique_ptr<std::vector<uint8_t>, ZeroDelete<std::vector<uint8_t>>>(
-            new std::vector<uint8_t>(), ZeroDelete<std::vector<uint8_t>>());
-  }
+      : object_(object), iv_(iv.begin(), iv.end()), padding_mode_(padding) {}
 
   absl::StatusOr<absl::Span<const uint8_t>> Decrypt(
       KmsClient* client, absl::Span<const uint8_t> ciphertext) override;
@@ -194,8 +189,7 @@ class AesCbcDecrypter : public DecrypterInterface {
   std::vector<uint8_t> iv_;
   PaddingMode padding_mode_;
   std::optional<std::vector<uint8_t>> ciphertext_;  // for multi-part
-  std::unique_ptr<std::vector<uint8_t>, ZeroDelete<std::vector<uint8_t>>>
-      plaintext_;
+  std::unique_ptr<std::string, ZeroDelete<std::string>> plaintext_;
 };
 
 absl::StatusOr<absl::Span<const uint8_t>> AesCbcDecrypter::Decrypt(
@@ -256,23 +250,16 @@ absl::StatusOr<absl::Span<const uint8_t>> AesCbcDecrypter::DecryptInternal(
 
   ASSIGN_OR_RETURN(kms_v1::RawDecryptResponse resp, client->RawDecrypt(req));
 
-  if (padding_mode_ == PaddingMode::kNone) {
-    plaintext_->resize(resp.plaintext().size());
-    std::copy_n(resp.plaintext().begin(), resp.plaintext().size(),
-                plaintext_->begin());
+  plaintext_.reset(resp.release_plaintext());
+  absl::Span<const uint8_t> full_plaintext(
+      reinterpret_cast<const uint8_t*>(plaintext_->data()), plaintext_->size());
 
-    return absl::MakeConstSpan(*plaintext_);
+  switch (padding_mode_) {
+    case PaddingMode::kNone:
+      return full_plaintext;
+    case PaddingMode::kPkcs7:
+      return Unpad(full_plaintext);
   }
-
-  std::vector<uint8_t> padded_plaintext(resp.plaintext().begin(),
-                                        resp.plaintext().end());
-  ASSIGN_OR_RETURN(absl::Span<const uint8_t> response_plaintext,
-                   Unpad(padded_plaintext));
-  plaintext_->reserve(response_plaintext.size());
-  plaintext_->insert(plaintext_->end(), response_plaintext.begin(),
-                     response_plaintext.end());
-
-  return *plaintext_;
 }
 
 }  // namespace
