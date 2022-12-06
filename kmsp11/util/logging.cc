@@ -18,6 +18,7 @@
 #include "glog/logging.h"
 #include "grpc/support/log.h"
 #include "kmsp11/util/errors.h"
+#include "kmsp11/util/platform.h"
 #include "kmsp11/util/status_utils.h"
 
 namespace kmsp11 {
@@ -120,9 +121,11 @@ CK_RV LogAndResolve(std::string_view function_name,
 
   if (!logging_initialized) {
     // This failure occurred before library initialization. Write output to
-    // standard error so that it lands /somewhere/.
-    std::cerr << "kmsp11 failure occurred prior to library initialization: "
-              << message << std::endl;
+    // standard error and to the syslog (on Posix) so that it lands /somewhere/.
+    std::string preout_message = absl::StrCat(
+        "kmsp11 failure occurred prior to library initialization: ", message);
+    std::cerr << preout_message << std::endl;
+    WriteToSystemLog(preout_message.c_str());
     return rv;
   }
 

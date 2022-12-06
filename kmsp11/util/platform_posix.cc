@@ -16,6 +16,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/utsname.h>
+#include <syslog.h>
 #include <unistd.h>
 
 #ifdef __linux__
@@ -73,6 +74,15 @@ std::string GetHostPlatformInfo() {
   info = absl::StrCat(info, "; glibc/", gnu_get_libc_version());
 #endif
   return info;
+}
+
+void WriteToSystemLog(const char* message) {
+  // References
+  // https://www.man7.org/linux/man-pages/man3/syslog.3.html
+  // https://pubs.opengroup.org/onlinepubs/009695399/basedefs/syslog.h.html
+  openlog("kmsp11", LOG_PID, LOG_USER);
+  syslog(LOG_ERR, "%s", message);
+  closelog();
 }
 
 }  // namespace kmsp11

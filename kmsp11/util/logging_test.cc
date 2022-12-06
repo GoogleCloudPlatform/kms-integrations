@@ -47,6 +47,15 @@ TEST(LoggingTest, StandardErrorIsEmptyWhenNoLogMessageAreEmitted) {
   EXPECT_THAT(GetCapturedStderr(), IsEmpty());
 }
 
+TEST(LoggingTest, LogAndResolveWithUninitializedLoggerWritesToStandardError) {
+  CaptureStderr();
+  absl::Status error = absl::InvalidArgumentError("foobarbaz");
+
+  LogAndResolve("foo", error);
+
+  EXPECT_THAT(GetCapturedStderr(), HasSubstr(error.ToString()));
+}
+
 TEST(LoggingTest, NoDirectoryLogsInfoToStandardError) {
   CaptureStderr();
   ASSERT_OK(InitializeLogging("", ""));

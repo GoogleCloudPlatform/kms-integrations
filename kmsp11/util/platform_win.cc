@@ -150,4 +150,11 @@ std::string GetHostPlatformInfo() {
                          info->release_id, info->current_build, arch);
 }
 
+void WriteToSystemLog(const char* message) {
+  // Maybe this could be implemented but it's pretty gross.
+  // Windows event logs are highly structured and require a registered source.
+  // https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-reporteventa
+  // https://learn.microsoft.com/en-us/windows/win32/eventlog/event-sources
+}
+
 }  // namespace kmsp11

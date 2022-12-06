@@ -43,6 +43,9 @@ std::string_view GetTargetPlatform();
 // "Windows Server Datacenter/10.0.2004.19041-amd64"
 std::string GetHostPlatformInfo();
 
+// Writes the provided message to the system log. This is a no-op on Windows.
+void WriteToSystemLog(const char* message);
+
 }  // namespace kmsp11
 
 #endif  // KMSP11_UTIL_PLATFORM_H_

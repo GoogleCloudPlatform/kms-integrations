@@ -148,6 +148,7 @@ cc_library(
     hdrs = ["logging.h"],
     deps = [
         ":errors",
+        ":platform",
         ":status_utils",
         "@com_github_google_glog//:glog",
         "@com_github_grpc_grpc//:grpc",
@@ -222,9 +223,9 @@ cc_library(
     srcs = ["padding.cc"],
     hdrs = ["padding.h"],
     deps = [
-      ":errors",
-      ":string_utils",
-      "@com_google_absl//absl/status:statusor",
+        ":errors",
+        ":string_utils",
+        "@com_google_absl//absl/status:statusor",
     ],
 )
 
