@@ -327,7 +327,8 @@ func TestRawEncryptNotFound(t *testing.T) {
 	ctx := context.Background()
 
 	_, err := client.RawEncrypt(ctx, &kmspb.RawEncryptRequest{
-		Name: location + "/keyRings/foo/cryptoKeys/bar/cryptoKeyVersions/1",
+		Name:      location + "/keyRings/foo/cryptoKeys/bar/cryptoKeyVersions/1",
+		Plaintext: []byte("Here is a plaintext to encrypt, 48 bytes long..."),
 	})
 	if status.Code(err) != codes.NotFound {
 		t.Errorf("err=%v, want code=%s", err, codes.NotFound)
@@ -417,7 +418,8 @@ func TestRawEncryptKeyDisabled(t *testing.T) {
 	}
 
 	_, err = client.RawEncrypt(ctx, &kmspb.RawEncryptRequest{
-		Name: ckv.Name,
+		Name:      ckv.Name,
+		Plaintext: []byte("Here is a plaintext to encrypt, 48 bytes long..."),
 	})
 	if status.Code(err) != codes.FailedPrecondition {
 		t.Errorf("err=%v, want code=%s", err, codes.FailedPrecondition)
