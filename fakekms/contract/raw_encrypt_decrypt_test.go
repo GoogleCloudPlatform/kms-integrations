@@ -180,7 +180,6 @@ func TestRawEncryptDecryptWithoutChecksums(t *testing.T) {
 	}
 }
 
-/* TODO(b/234842124): Uncomment CBC/CTR tests with IV once HSM support is ready in staging.
 func TestRawEncryptDecryptCbcCtr(t *testing.T) {
 	ctx := context.Background()
 	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
@@ -203,9 +202,9 @@ func TestRawEncryptDecryptCbcCtr(t *testing.T) {
 	iv := []byte("my_custom_iv_123")
 
 	gotEncrypt, err := client.RawEncrypt(ctx, &kmspb.RawEncryptRequest{
-		Name:            ckv.Name,
-		Plaintext:       plaintext,
-		PlaintextCrc32C: crc32c(plaintext),
+		Name:                       ckv.Name,
+		Plaintext:                  plaintext,
+		PlaintextCrc32C:            crc32c(plaintext),
 		InitializationVector:       iv,
 		InitializationVectorCrc32C: crc32c(iv),
 	})
@@ -216,10 +215,9 @@ func TestRawEncryptDecryptCbcCtr(t *testing.T) {
 	verifyCRC32C(t, gotEncrypt.Ciphertext, gotEncrypt.CiphertextCrc32C)
 
 	wantEncrypt := &kmspb.RawEncryptResponse{
-		Name:                    ckv.Name,
-		ProtectionLevel:         kmspb.ProtectionLevel_HSM,
-		TagLength:               16,
-		VerifiedPlaintextCrc32C: true,
+		Name:                               ckv.Name,
+		ProtectionLevel:                    kmspb.ProtectionLevel_HSM,
+		VerifiedPlaintextCrc32C:            true,
 		VerifiedInitializationVectorCrc32C: true,
 	}
 
@@ -241,17 +239,17 @@ func TestRawEncryptDecryptCbcCtr(t *testing.T) {
 
 	verifyCRC32C(t, gotDecrypt.Plaintext, gotDecrypt.PlaintextCrc32C)
 
-        wantDecrypt := &kmspb.RawDecryptResponse{
-                Plaintext:                          plaintext,
-                PlaintextCrc32C:                    wrapperspb.Int64(int64(crc32.Checksum(plaintext, crc32CTable))),
-                VerifiedCiphertextCrc32C:           true,
-                VerifiedInitializationVectorCrc32C: true,
-                ProtectionLevel:                    kmspb.ProtectionLevel_HSM,
-        }
+	wantDecrypt := &kmspb.RawDecryptResponse{
+		Plaintext:                          plaintext,
+		PlaintextCrc32C:                    wrapperspb.Int64(int64(crc32.Checksum(plaintext, crc32CTable))),
+		VerifiedCiphertextCrc32C:           true,
+		VerifiedInitializationVectorCrc32C: true,
+		ProtectionLevel:                    kmspb.ProtectionLevel_HSM,
+	}
 
-        if diff := cmp.Diff(wantDecrypt, gotDecrypt, ProtoDiffOpts()...); diff != "" {
-                t.Errorf("proto mismatch (-want +got): %s", diff)
-        }
+	if diff := cmp.Diff(wantDecrypt, gotDecrypt, ProtoDiffOpts()...); diff != "" {
+		t.Errorf("proto mismatch (-want +got): %s", diff)
+	}
 }
 
 func TestRawEncryptDecryptCbcCtrWithoutChecksums(t *testing.T) {
@@ -272,13 +270,13 @@ func TestRawEncryptDecryptCbcCtrWithoutChecksums(t *testing.T) {
 		Parent: ck.Name,
 	})
 
-	plaintext := []byte("Here is some data to encrypt")
+	plaintext := []byte("Here is a plaintext to encrypt, 48 bytes long...")
 	iv := []byte("my_custom_iv_123")
 
 	gotEncrypt, err := client.RawEncrypt(ctx, &kmspb.RawEncryptRequest{
-		Name:                        ckv.Name,
-		Plaintext:                   plaintext,
-		InitializationVectorCrc32C: crc32c(iv),
+		Name:                 ckv.Name,
+		Plaintext:            plaintext,
+		InitializationVector: iv,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -287,10 +285,10 @@ func TestRawEncryptDecryptCbcCtrWithoutChecksums(t *testing.T) {
 	verifyCRC32C(t, gotEncrypt.Ciphertext, gotEncrypt.CiphertextCrc32C)
 
 	wantEncrypt := &kmspb.RawEncryptResponse{
-		Name:                    ckv.Name,
-		ProtectionLevel:         kmspb.ProtectionLevel_HSM,
-		VerifiedPlaintextCrc32C: false,
-		VerifiedInitializationVectorCrc32C:        false,
+		Name:                               ckv.Name,
+		ProtectionLevel:                    kmspb.ProtectionLevel_HSM,
+		VerifiedPlaintextCrc32C:            false,
+		VerifiedInitializationVectorCrc32C: false,
 	}
 
 	opts := append(ProtoDiffOpts(), ignoreCiphertextAndIVAndTagLength)
@@ -299,9 +297,9 @@ func TestRawEncryptDecryptCbcCtrWithoutChecksums(t *testing.T) {
 	}
 
 	gotDecrypt, err := client.RawDecrypt(ctx, &kmspb.RawDecryptRequest{
-		Name:                        ckv.Name,
-		Ciphertext:                  gotEncrypt.Ciphertext,
-		InitializationVector:        gotEncrypt.InitializationVector,
+		Name:                 ckv.Name,
+		Ciphertext:           gotEncrypt.Ciphertext,
+		InitializationVector: gotEncrypt.InitializationVector,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -310,18 +308,17 @@ func TestRawEncryptDecryptCbcCtrWithoutChecksums(t *testing.T) {
 	verifyCRC32C(t, gotDecrypt.Plaintext, gotDecrypt.PlaintextCrc32C)
 
 	wantDecrypt := &kmspb.RawDecryptResponse{
-                Plaintext:                plaintext,
-                PlaintextCrc32C:          wrapperspb.Int64(int64(crc32.Checksum(plaintext, crc32CTable))),
-                VerifiedCiphertextCrc32C: false,
-                VerifiedInitializationVectorCrc32C:        false,
-                ProtectionLevel:                           kmspb.ProtectionLevel_HSM,
-        }
+		Plaintext:                          plaintext,
+		PlaintextCrc32C:                    wrapperspb.Int64(int64(crc32.Checksum(plaintext, crc32CTable))),
+		VerifiedCiphertextCrc32C:           false,
+		VerifiedInitializationVectorCrc32C: false,
+		ProtectionLevel:                    kmspb.ProtectionLevel_HSM,
+	}
 
-        if diff := cmp.Diff(wantDecrypt, gotDecrypt, ProtoDiffOpts()...); diff != "" {
-                t.Errorf("proto mismatch (-want +got): %s", diff)
-        }
+	if diff := cmp.Diff(wantDecrypt, gotDecrypt, ProtoDiffOpts()...); diff != "" {
+		t.Errorf("proto mismatch (-want +got): %s", diff)
+	}
 }
-*/
 
 func TestRawEncryptNotFound(t *testing.T) {
 	ctx := context.Background()
@@ -635,8 +632,6 @@ func TestRawEncryptAesGcmCustomIvFails(t *testing.T) {
 	}
 }
 
-//TODO(b/234842124): Uncomment CBC/CTR tests once HSM support is ready in staging.
-/*
 func TestRawEncryptAesCbcCtrInvalidIvLength(t *testing.T) {
 	ctx := context.Background()
 	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
@@ -719,4 +714,3 @@ func TestRawDecryptAesCbcCtrAadSpecifiedFails(t *testing.T) {
 		t.Errorf("err=%v, want code=%s", err, codes.InvalidArgument)
 	}
 }
-*/

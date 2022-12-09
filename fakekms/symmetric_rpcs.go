@@ -146,7 +146,7 @@ func (f *fakeKMS) RawEncrypt(ctx context.Context, req *kmspb.RawEncryptRequest) 
 		aesctr.XORKeyStream(ciphertext, plaintext)
 	case kmspb.CryptoKeyVersion_AES_128_CBC, kmspb.CryptoKeyVersion_AES_256_CBC:
 		if len(plaintext)%block.BlockSize() != 0 {
-			return nil, errInvalidArgument("len(plaintext)=%d, want len(plaintext) % %d == 0", len(plaintext), block.BlockSize())
+			return nil, errInvalidArgument("len(plaintext)=%d, want len(plaintext) mod %d == 0", len(plaintext), block.BlockSize())
 		}
 		ciphertext = make([]byte, len(plaintext))
 		aescbc := cipher.NewCBCEncrypter(block, nonce)
