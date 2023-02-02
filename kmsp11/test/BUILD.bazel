@@ -7,6 +7,7 @@ cc_library(
     name = "test",
     testonly = 1,
     deps = [
+        ":common_setup",
         ":matchers",
         ":proto_parser",
         ":resource_helpers",
@@ -90,6 +91,16 @@ cc_library(
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest",
+    ],
+)
+
+cc_library(
+    name = "common_setup",
+    testonly = 1,
+    srcs = ["common_setup.cc"],
+    hdrs = ["common_setup.h"],
+    deps = [
+        "//kmsp11/util:crypto_utils",
     ],
 )
 

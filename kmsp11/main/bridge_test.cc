@@ -22,6 +22,7 @@
 #include "kmsp11/config/config.h"
 #include "kmsp11/kmsp11.h"
 #include "kmsp11/openssl.h"
+#include "kmsp11/test/common_setup.h"
 #include "kmsp11/test/matchers.h"
 #include "kmsp11/test/resource_helpers.h"
 #include "kmsp11/test/test_platform.h"
@@ -64,10 +65,6 @@ use_insecure_grpc_channel_credentials: true
 )",
                                                    kr1_.name(), kr2_.name(),
                                                    fake_server_->listen_addr());
-
-    init_args_ = {0};
-    init_args_.flags = CKF_OS_LOCKING_OK;
-    init_args_.pReserved = const_cast<char*>(config_file_.c_str());
   }
 
   void TearDown() override { std::remove(config_file_.c_str()); }
@@ -76,19 +73,20 @@ use_insecure_grpc_channel_credentials: true
   kms_v1::KeyRing kr1_;
   kms_v1::KeyRing kr2_;
   std::string config_file_;
-  CK_C_INITIALIZE_ARGS init_args_;
 };
 
 TEST_F(BridgeTest, InitializeFromArgs) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   EXPECT_OK(Finalize(nullptr));
 }
 
 TEST_F(BridgeTest, InitializeFailsOnSecondCall) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
-  EXPECT_THAT(Initialize(&init_args_),
+  EXPECT_THAT(Initialize(&init_args),
               StatusRvIs(CKR_CRYPTOKI_ALREADY_INITIALIZED));
 }
 
@@ -157,7 +155,8 @@ TEST_F(BridgeTest, FinalizeFailsWithoutInitialize) {
 }
 
 TEST_F(BridgeTest, GetInfoSuccess) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   CK_INFO info;
   EXPECT_OK(GetInfo(&info));
   EXPECT_OK(Finalize(nullptr));
@@ -168,7 +167,8 @@ TEST_F(BridgeTest, GetInfoFailsWithoutInitialize) {
 }
 
 TEST_F(BridgeTest, GetInfoFailsNullPtr) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   EXPECT_THAT(GetInfo(nullptr), StatusRvIs(CKR_ARGUMENTS_BAD));
@@ -180,10 +180,11 @@ TEST_F(BridgeTest, GetFunctionListSuccess) {
 }
 
 TEST_F(BridgeTest, FunctionListValidPointers) {
+  auto init_args = InitArgs(config_file_.c_str());
   CK_FUNCTION_LIST* f;
   EXPECT_OK(GetFunctionList(&f));
 
-  EXPECT_EQ(f->C_Initialize(&init_args_), CKR_OK);
+  EXPECT_EQ(f->C_Initialize(&init_args), CKR_OK);
   CK_INFO info;
   EXPECT_EQ(f->C_GetInfo(&info), CKR_OK);
   EXPECT_EQ(f->C_Finalize(nullptr), CKR_OK);
@@ -199,7 +200,8 @@ TEST_F(BridgeTest, GetSlotListFailsNotInitialized) {
 }
 
 TEST_F(BridgeTest, GetSlotListReturnsSlots) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   std::vector<CK_SLOT_ID> slots(2);
@@ -210,7 +212,8 @@ TEST_F(BridgeTest, GetSlotListReturnsSlots) {
 }
 
 TEST_F(BridgeTest, GetSlotListReturnsSize) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_ULONG slots_size;
@@ -219,7 +222,8 @@ TEST_F(BridgeTest, GetSlotListReturnsSize) {
 }
 
 TEST_F(BridgeTest, GetSlotListFailsBufferTooSmall) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   std::vector<CK_SLOT_ID> slots(1);
@@ -230,7 +234,8 @@ TEST_F(BridgeTest, GetSlotListFailsBufferTooSmall) {
 }
 
 TEST_F(BridgeTest, GetSlotInfoSuccess) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SLOT_INFO info;
@@ -246,14 +251,16 @@ TEST_F(BridgeTest, GetSlotInfoFailsNotInitialized) {
 }
 
 TEST_F(BridgeTest, GetSlotInfoFailsInvalidSlotId) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   EXPECT_THAT(GetSlotInfo(2, nullptr), StatusRvIs(CKR_SLOT_ID_INVALID));
 }
 
 TEST_F(BridgeTest, GetTokenInfoSuccess) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_TOKEN_INFO info;
@@ -269,14 +276,16 @@ TEST_F(BridgeTest, GetTokenInfoFailsNotInitialized) {
 }
 
 TEST_F(BridgeTest, GetTokenInfoFailsInvalidSlotId) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   EXPECT_THAT(GetTokenInfo(2, nullptr), StatusRvIs(CKR_SLOT_ID_INVALID));
 }
 
 TEST_F(BridgeTest, OpenSession) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE handle;
@@ -291,7 +300,8 @@ TEST_F(BridgeTest, OpenSessionFailsNotInitialized) {
 }
 
 TEST_F(BridgeTest, OpenSessionFailsInvalidSlotId) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE handle;
@@ -300,7 +310,8 @@ TEST_F(BridgeTest, OpenSessionFailsInvalidSlotId) {
 }
 
 TEST_F(BridgeTest, OpenSessionFailsNotSerial) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE handle;
@@ -309,7 +320,8 @@ TEST_F(BridgeTest, OpenSessionFailsNotSerial) {
 }
 
 TEST_F(BridgeTest, OpenSessionReadWrite) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE handle;
@@ -324,7 +336,8 @@ TEST_F(BridgeTest, OpenSessionReadWrite) {
 }
 
 TEST_F(BridgeTest, CloseSessionSuccess) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE handle;
@@ -337,7 +350,8 @@ TEST_F(BridgeTest, CloseSessionFailsNotInitialized) {
 }
 
 TEST_F(BridgeTest, CloseSessionFailsInvalidHandle) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE handle;
@@ -346,7 +360,8 @@ TEST_F(BridgeTest, CloseSessionFailsInvalidHandle) {
 }
 
 TEST_F(BridgeTest, CloseSessionFailsAlreadyClosed) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE handle;
@@ -357,7 +372,8 @@ TEST_F(BridgeTest, CloseSessionFailsAlreadyClosed) {
 }
 
 TEST_F(BridgeTest, CloseAllSessionsSuccessfullyClosesCorrectSessions) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE h1, h2, h3, h4;
@@ -378,14 +394,16 @@ TEST_F(BridgeTest, CloseAllSessionsFailsNotInitialized) {
 }
 
 TEST_F(BridgeTest, CloseAllSessionFailsInvalidSlotId) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   EXPECT_THAT(CloseAllSessions(1337), StatusRvIs(CKR_SLOT_ID_INVALID));
 }
 
 TEST_F(BridgeTest, GetSessionInfoSuccess) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE handle;
@@ -405,7 +423,8 @@ TEST_F(BridgeTest, GetSessionInfoFailsNotInitialized) {
 }
 
 TEST_F(BridgeTest, GetSessionInfoFailsInvalidHandle) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_INFO info;
@@ -413,7 +432,8 @@ TEST_F(BridgeTest, GetSessionInfoFailsInvalidHandle) {
 }
 
 TEST_F(BridgeTest, LoginSuccess) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE handle;
@@ -427,7 +447,8 @@ TEST_F(BridgeTest, LoginSuccess) {
 }
 
 TEST_F(BridgeTest, LoginAppliesToAllSessions) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE handle1;
@@ -451,7 +472,8 @@ TEST_F(BridgeTest, LoginFailsNotInitialized) {
 }
 
 TEST_F(BridgeTest, LoginFailsInvalidHandle) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   EXPECT_THAT(Login(0, CKU_USER, nullptr, 0),
@@ -459,7 +481,8 @@ TEST_F(BridgeTest, LoginFailsInvalidHandle) {
 }
 
 TEST_F(BridgeTest, LoginFailsUserSo) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE handle;
@@ -469,7 +492,8 @@ TEST_F(BridgeTest, LoginFailsUserSo) {
 }
 
 TEST_F(BridgeTest, LogoutSuccess) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE handle;
@@ -484,7 +508,8 @@ TEST_F(BridgeTest, LogoutSuccess) {
 }
 
 TEST_F(BridgeTest, LogoutAppliesToAllSessions) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE handle1;
@@ -507,14 +532,16 @@ TEST_F(BridgeTest, LogoutFailsNotInitialized) {
 }
 
 TEST_F(BridgeTest, LogoutFailsInvalidHandle) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   EXPECT_THAT(Logout(0), StatusRvIs(CKR_SESSION_HANDLE_INVALID));
 }
 
 TEST_F(BridgeTest, LogoutFailsNotLoggedIn) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE handle;
@@ -524,7 +551,8 @@ TEST_F(BridgeTest, LogoutFailsNotLoggedIn) {
 }
 
 TEST_F(BridgeTest, LogoutFailsSecondCall) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE handle;
@@ -537,7 +565,8 @@ TEST_F(BridgeTest, LogoutFailsSecondCall) {
 }
 
 TEST_F(BridgeTest, GetMechanismListSucceeds) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_ULONG count;
@@ -551,7 +580,8 @@ TEST_F(BridgeTest, GetMechanismListSucceeds) {
 }
 
 TEST_F(BridgeTest, GetMechanismListFailsInvalidSize) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   std::vector<CK_MECHANISM_TYPE> types(1);
@@ -564,7 +594,8 @@ TEST_F(BridgeTest, GetMechanismListFailsInvalidSize) {
 TEST_F(BridgeTest, GetMechanismListMacKeysExperimentEnabled) {
   std::ofstream(config_file_, std::ofstream::out | std::ofstream::app)
       << "experimental_allow_mac_keys: true" << std::endl;
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_ULONG count;
@@ -581,7 +612,8 @@ TEST_F(BridgeTest, GetMechanismListMacKeysExperimentEnabled) {
 TEST_F(BridgeTest, GetMechanismListRawEncryptionKeysExperimentEnabled) {
   std::ofstream(config_file_, std::ofstream::out | std::ofstream::app)
       << "experimental_allow_raw_encryption_keys: true" << std::endl;
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_ULONG count;
@@ -602,7 +634,8 @@ TEST_F(BridgeTest, GetMechanismListFailsNotInitialized) {
 }
 
 TEST_F(BridgeTest, GetMechanismListFailsInvalidSlotId) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_ULONG count;
@@ -611,7 +644,8 @@ TEST_F(BridgeTest, GetMechanismListFailsInvalidSlotId) {
 }
 
 TEST_F(BridgeTest, GetMechanismInfo) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_MECHANISM_INFO info;
@@ -623,7 +657,8 @@ TEST_F(BridgeTest, GetMechanismInfo) {
 }
 
 TEST_F(BridgeTest, GetMechanismInfoFailsInvalidMechanism) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_MECHANISM_INFO info;
@@ -632,7 +667,8 @@ TEST_F(BridgeTest, GetMechanismInfoFailsInvalidMechanism) {
 }
 
 TEST_F(BridgeTest, GetMechanismInfoMacKeysExperimentDisabled) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_MECHANISM_INFO info;
@@ -643,7 +679,8 @@ TEST_F(BridgeTest, GetMechanismInfoMacKeysExperimentDisabled) {
 TEST_F(BridgeTest, GetMechanismInfoMacKeysExperimentEnabled) {
   std::ofstream(config_file_, std::ofstream::out | std::ofstream::app)
       << "experimental_allow_mac_keys: true" << std::endl;
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_MECHANISM_INFO info;
@@ -655,7 +692,8 @@ TEST_F(BridgeTest, GetMechanismInfoMacKeysExperimentEnabled) {
 }
 
 TEST_F(BridgeTest, GetMechanismInfoRawEncryptionKeysExperimentDisabled) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_MECHANISM_INFO info;
@@ -666,7 +704,8 @@ TEST_F(BridgeTest, GetMechanismInfoRawEncryptionKeysExperimentDisabled) {
 TEST_F(BridgeTest, GetMechanismInfoRawEncryptionKeysExperimentEnabled) {
   std::ofstream(config_file_, std::ofstream::out | std::ofstream::app)
       << "experimental_allow_raw_encryption_keys: true" << std::endl;
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_MECHANISM_INFO info;
@@ -684,7 +723,8 @@ TEST_F(BridgeTest, GetMechanismInfoFailsNotInitialized) {
 }
 
 TEST_F(BridgeTest, GetMechanismInfoFailsInvalidSlotId) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_MECHANISM_INFO info;
@@ -707,7 +747,8 @@ TEST_F(BridgeTest, GetAttributeValueSuccess) {
   ckv1 = CreateCryptoKeyVersionOrDie(fake_client.get(), ck.name(), ckv1);
   ckv1 = WaitForEnablement(fake_client.get(), ckv1);
 
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE session;
@@ -743,7 +784,8 @@ TEST_F(BridgeTest, GetAttributeValueFailsSensitiveAttribute) {
   ckv1 = CreateCryptoKeyVersionOrDie(fake_client.get(), ck.name(), ckv1);
   ckv1 = WaitForEnablement(fake_client.get(), ckv1);
 
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE session;
@@ -780,7 +822,8 @@ TEST_F(BridgeTest, GetAttributeValueFailsNonExistentAttribute) {
   ckv1 = CreateCryptoKeyVersionOrDie(fake_client.get(), ck.name(), ckv1);
   ckv1 = WaitForEnablement(fake_client.get(), ckv1);
 
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE session;
@@ -817,7 +860,8 @@ TEST_F(BridgeTest, GetAttributeValueSuccessNoBuffer) {
   ckv1 = CreateCryptoKeyVersionOrDie(fake_client.get(), ck.name(), ckv1);
   ckv1 = WaitForEnablement(fake_client.get(), ckv1);
 
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE session;
@@ -851,7 +895,8 @@ TEST_F(BridgeTest, GetAttributeValueFailureBufferTooShort) {
   ckv1 = CreateCryptoKeyVersionOrDie(fake_client.get(), ck.name(), ckv1);
   ckv1 = WaitForEnablement(fake_client.get(), ckv1);
 
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE session;
@@ -888,7 +933,8 @@ TEST_F(BridgeTest, GetAttributeValueFailureAllAttributesProcessed) {
   ckv1 = CreateCryptoKeyVersionOrDie(fake_client.get(), ck.name(), ckv1);
   ckv1 = WaitForEnablement(fake_client.get(), ckv1);
 
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE session;
@@ -937,7 +983,8 @@ TEST_F(BridgeTest, GetAttributeValueFailureNotInitialized) {
 }
 
 TEST_F(BridgeTest, GetAttributeValueFailureInvalidSessionHandle) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   EXPECT_THAT(GetAttributeValue(0, 0, nullptr, 0),
@@ -945,7 +992,8 @@ TEST_F(BridgeTest, GetAttributeValueFailureInvalidSessionHandle) {
 }
 
 TEST_F(BridgeTest, GetAttributeValueFailureInvalidObjectHandle) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE session;
@@ -970,7 +1018,8 @@ TEST_F(BridgeTest, GetAttributeValueFailureNullTemplate) {
   ckv1 = CreateCryptoKeyVersionOrDie(fake_client.get(), ck.name(), ckv1);
   ckv1 = WaitForEnablement(fake_client.get(), ckv1);
 
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE session;
@@ -1004,7 +1053,8 @@ TEST_F(BridgeTest, FindEcPrivateKey) {
   ckv = CreateCryptoKeyVersionOrDie(fake_client.get(), ck.name(), ckv);
   ckv = WaitForEnablement(fake_client.get(), ckv);
 
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE session;
@@ -1054,7 +1104,8 @@ TEST_F(BridgeTest, FindCertificate) {
   std::ofstream(config_file_, std::ofstream::out | std::ofstream::app)
       << "generate_certs: true" << std::endl;
 
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE session;
@@ -1085,7 +1136,8 @@ TEST_F(BridgeTest, NoCertificatesWhenConfigNotSet) {
   ckv = CreateCryptoKeyVersionOrDie(fake_client.get(), ck.name(), ckv);
   ckv = WaitForEnablement(fake_client.get(), ckv);
 
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE session;
@@ -1102,7 +1154,8 @@ TEST_F(BridgeTest, NoCertificatesWhenConfigNotSet) {
 }
 
 TEST_F(BridgeTest, FindObjectsInitSuccess) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE session;
@@ -1117,7 +1170,8 @@ TEST_F(BridgeTest, FindObjectsInitFailsNotInitialized) {
 }
 
 TEST_F(BridgeTest, FindObjectsInitFailsInvalidSessionHandle) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   EXPECT_THAT(FindObjectsInit(0, nullptr, 0),
@@ -1125,7 +1179,8 @@ TEST_F(BridgeTest, FindObjectsInitFailsInvalidSessionHandle) {
 }
 
 TEST_F(BridgeTest, FindObjectsInitFailsAttributeTemplateNullptr) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE session;
@@ -1136,7 +1191,8 @@ TEST_F(BridgeTest, FindObjectsInitFailsAttributeTemplateNullptr) {
 }
 
 TEST_F(BridgeTest, FindObjectsInitFailsAlreadyInitialized) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE session;
@@ -1148,7 +1204,8 @@ TEST_F(BridgeTest, FindObjectsInitFailsAlreadyInitialized) {
 }
 
 TEST_F(BridgeTest, FindObjectsSuccess) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE session;
@@ -1168,7 +1225,8 @@ TEST_F(BridgeTest, FindObjectsFailsNotInitialized) {
 }
 
 TEST_F(BridgeTest, FindObjectsFailsInvalidSessionHandle) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   EXPECT_THAT(FindObjects(0, nullptr, 0, nullptr),
@@ -1176,7 +1234,8 @@ TEST_F(BridgeTest, FindObjectsFailsInvalidSessionHandle) {
 }
 
 TEST_F(BridgeTest, FindObjectsFailsPhObjectNull) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE session;
@@ -1190,7 +1249,8 @@ TEST_F(BridgeTest, FindObjectsFailsPhObjectNull) {
 }
 
 TEST_F(BridgeTest, FindObjectsFailsPulCountNull) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE session;
@@ -1204,7 +1264,8 @@ TEST_F(BridgeTest, FindObjectsFailsPulCountNull) {
 }
 
 TEST_F(BridgeTest, FindObjectsFailsOperationNotInitialized) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE session;
@@ -1217,7 +1278,8 @@ TEST_F(BridgeTest, FindObjectsFailsOperationNotInitialized) {
 }
 
 TEST_F(BridgeTest, FindObjectsFinalSuccess) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE session;
@@ -1232,14 +1294,16 @@ TEST_F(BridgeTest, FindObjectsFinalFailsNotInitialized) {
 }
 
 TEST_F(BridgeTest, FindObjectsFinalFailsInvalidSessionHandle) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   EXPECT_THAT(FindObjectsFinal(0), StatusRvIs(CKR_SESSION_HANDLE_INVALID));
 }
 
 TEST_F(BridgeTest, FindObjectsFinalFailsOperationNotInitialized) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE session;
@@ -1253,7 +1317,8 @@ TEST_F(BridgeTest, FindObjectsContainsNewResultsAfterRefresh) {
   std::ofstream(config_file_, std::ofstream::out | std::ofstream::app)
       << "refresh_interval_secs: 1" << std::endl;
 
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE session;
@@ -1295,7 +1360,8 @@ TEST_F(BridgeTest, GenerateKeyPairFailsNotInitialized) {
 }
 
 TEST_F(BridgeTest, GenerateKeyPairFailsInvalidSessionHandle) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   EXPECT_THAT(
@@ -1304,7 +1370,8 @@ TEST_F(BridgeTest, GenerateKeyPairFailsInvalidSessionHandle) {
 }
 
 TEST_F(BridgeTest, GenerateKeyPairFailsMechanismNullptr) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE session;
@@ -1326,7 +1393,8 @@ TEST_F(BridgeTest, GenerateKeyPairFailsMechanismNullptr) {
 }
 
 TEST_F(BridgeTest, GenerateKeyPairFailsPublicKeyTemplateMissingPointer) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE session;
@@ -1342,7 +1410,8 @@ TEST_F(BridgeTest, GenerateKeyPairFailsPublicKeyTemplateMissingPointer) {
 }
 
 TEST_F(BridgeTest, GenerateKeyPairFailsPrivateKeyTemplateMissingPointer) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE session;
@@ -1358,7 +1427,8 @@ TEST_F(BridgeTest, GenerateKeyPairFailsPrivateKeyTemplateMissingPointer) {
 }
 
 TEST_F(BridgeTest, GenerateKeyPairFailsPublicKeyHandleNullptr) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE session;
@@ -1381,7 +1451,8 @@ TEST_F(BridgeTest, GenerateKeyPairFailsPublicKeyHandleNullptr) {
 }
 
 TEST_F(BridgeTest, GenerateKeyPairFailsPrivateKeyHandleNullptr) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE session;
@@ -1404,7 +1475,8 @@ TEST_F(BridgeTest, GenerateKeyPairFailsPrivateKeyHandleNullptr) {
 }
 
 TEST_F(BridgeTest, GenerateKeyPairSuccess) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE session;
@@ -1448,7 +1520,8 @@ TEST_F(BridgeTest,
   std::ofstream(config_file_, std::ofstream::out | std::ofstream::app)
       << "experimental_create_multiple_versions: true" << std::endl;
 
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE session;
@@ -1477,14 +1550,16 @@ TEST_F(BridgeTest, DestroyObjectFailsNotInitialized) {
 }
 
 TEST_F(BridgeTest, DestroyObjectFailsInvalidSessionHandle) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   EXPECT_THAT(DestroyObject(0, 0), StatusRvIs(CKR_SESSION_HANDLE_INVALID));
 }
 
 TEST_F(BridgeTest, DestroyObjectFailsInvalidObjectHandle) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE session;
@@ -1509,7 +1584,8 @@ TEST_F(BridgeTest, DestroyObjectSuccessPrivateKey) {
   ckv = CreateCryptoKeyVersionOrDie(fake_client.get(), ck.name(), ckv);
   ckv = WaitForEnablement(fake_client.get(), ckv);
 
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE session;
@@ -1530,7 +1606,8 @@ TEST_F(BridgeTest, DestroyObjectSuccessPrivateKey) {
 }
 
 TEST_F(BridgeTest, GenerateRandomSuccess) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE session;
@@ -1548,7 +1625,8 @@ TEST_F(BridgeTest, GenerateRandomFailsNotInitialized) {
 }
 
 TEST_F(BridgeTest, GenerateRandomFailsInvalidSessionHandle) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   EXPECT_THAT(GenerateRandom(0, nullptr, 0),
@@ -1556,7 +1634,8 @@ TEST_F(BridgeTest, GenerateRandomFailsInvalidSessionHandle) {
 }
 
 TEST_F(BridgeTest, GenerateRandomFailsNullBuffer) {
-  EXPECT_OK(Initialize(&init_args_));
+  auto init_args = InitArgs(config_file_.c_str());
+  EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
   CK_SESSION_HANDLE session;
