@@ -14,9 +14,36 @@
 
 #include "kmsp11/test/common_setup.h"
 
+#include <fstream>
+
+#include "fakekms/cpp/fakekms.h"
+#include "kmsp11/test/resource_helpers.h"
 #include "kmsp11/util/crypto_utils.h"
 
 namespace kmsp11 {
+
+std::string CreateConfigFileWithOneKeyring(fakekms::Server* fake_server) {
+  kms_v1::KeyRing kr;
+  return CreateConfigFileWithOneKeyring(fake_server, &kr);
+}
+
+std::string CreateConfigFileWithOneKeyring(fakekms::Server* fake_server,
+                                           kms_v1::KeyRing* kr) {
+  auto client = fake_server->NewClient();
+  *kr = CreateKeyRingOrDie(client.get(), kTestLocation, RandomId(), *kr);
+
+  std::string config_file = std::tmpnam(nullptr);
+  std::ofstream(config_file)
+      << absl::StrFormat(R"(
+tokens:
+  - key_ring: "%s"
+    label: "foo"
+kms_endpoint: "%s"
+use_insecure_grpc_channel_credentials: true
+)",
+                         kr->name(), fake_server->listen_addr());
+  return config_file;
+}
 
 CK_C_INITIALIZE_ARGS InitArgs(const char* config_file) {
   CK_C_INITIALIZE_ARGS init_args = {0};

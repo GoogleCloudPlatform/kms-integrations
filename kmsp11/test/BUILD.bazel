@@ -100,6 +100,8 @@ cc_library(
     srcs = ["common_setup.cc"],
     hdrs = ["common_setup.h"],
     deps = [
+        ":resource_helpers",
+        "//fakekms/cpp:fakekms",
         "//kmsp11/util:crypto_utils",
     ],
 )

@@ -15,9 +15,19 @@
 #ifndef KMSP11_TEST_COMMON_RESOURCES_H_
 #define KMSP11_TEST_COMMON_RESOURCES_H_
 
+#include "fakekms/cpp/fakekms.h"
 #include "kmsp11/util/crypto_utils.h"
 
 namespace kmsp11 {
+
+// Creates a configuration file for one keyring/token for testing and
+// initializes the keyring in fake kms.
+std::string CreateConfigFileWithOneKeyring(fakekms::Server* fake_server);
+
+// Version of CreateConfigFileWithOneKeyring that returns the initialized
+// keyring.
+std::string CreateConfigFileWithOneKeyring(fakekms::Server* fake_server,
+                                           kms_v1::KeyRing* kr);
 
 // Initialize the CK_C_INITIALIZE_ARGS from a configuration file.
 CK_C_INITIALIZE_ARGS InitArgs(const char* config_file);
