@@ -135,6 +135,7 @@ require_fips_mode     | bool   | No       | false   | Whether to enable an initi
 Item Name                             | Type | Required | Default | Description
 ------------------------------------- | ---- | -------- | ------- | -----------
 experimental_create_multiple_versions | bool | No       | false   | Enables an experiment that allows multiple versions of a CryptoKey to be created.
+experimental_allow_mac_keys           | bool | No       | false   | Enables an experiment that allows the use of CryptoKeys with MAC purpose.
 
 ### Per token configuration
 
@@ -185,12 +186,12 @@ Function                                         | Status | Notes
 [`C_FindObjectsFinal`][C_FindObjectsFinal]       | ✅      |
 [`C_EncryptInit`][C_EncryptInit]                 | ✅      | Consult the [cryptographic operations](#cryptographic-operations) documentation for details on which encryption algorithms are supported.
 [`C_Encrypt`][C_Encrypt]                         | ✅      |
-[`C_EncryptUpdate`][C_EncryptUpdate]             | ✅      | Consult the [cryptographic operations](#cryptographic-operations) documentation for details on which encryption algorithms support multi-part encryption.
-[`C_EncryptFinal`][C_EncryptFinal]               | ✅      | Consult the [cryptographic operations](#cryptographic-operations) documentation for details on which encryption algorithms support multi-part encryption.
+[`C_EncryptUpdate`][C_EncryptUpdate]             | ✅      | Consult the [cryptographic operations](#cryptographic-operations) documentation for details on which encryption algorithms support multi-part encryption. See [other notes](#other-notes) for additional insights.
+[`C_EncryptFinal`][C_EncryptFinal]               | ✅      | Consult the [cryptographic operations](#cryptographic-operations) documentation for details on which encryption algorithms support multi-part encryption. See [other notes](#other-notes) for additional insights.
 [`C_DecryptInit`][C_DecryptInit]                 | ✅      | Consult the [cryptographic operations](#cryptographic-operations) documentation for details on which decryption algorithms are supported.
 [`C_Decrypt`][C_Decrypt]                         | ✅      |
-[`C_DecryptUpdate`][C_DecryptUpdate]             | ✅      | Consult the [cryptographic operations](#cryptographic-operations) documentation for details on which decryption algorithms support multi-part decryption.
-[`C_DecryptFinal`][C_DecryptFinal]               | ✅      | Consult the [cryptographic operations](#cryptographic-operations) documentation for details on which decryption algorithms support multi-part decryption.
+[`C_DecryptUpdate`][C_DecryptUpdate]             | ✅      | Consult the [cryptographic operations](#cryptographic-operations) documentation for details on which decryption algorithms support multi-part decryption. See [other notes](#other-notes) for additional insights.
+[`C_DecryptFinal`][C_DecryptFinal]               | ✅      | Consult the [cryptographic operations](#cryptographic-operations) documentation for details on which decryption algorithms support multi-part decryption. See [other notes](#other-notes) for additional insights.
 [`C_DigestInit`][C_DigestInit]                   | ❌      |
 [`C_Digest`][C_Digest]                           | ❌      |
 [`C_DigestUpdate`][C_DigestUpdate]               | ❌      |
@@ -198,14 +199,14 @@ Function                                         | Status | Notes
 [`C_DigestFinal`][C_DigestFinal]                 | ❌      |
 [`C_SignInit`][C_SignInit]                       | ✅      | Consult the [cryptographic operations](#cryptographic-operations) documentation for details on which signing algorithms are supported.
 [`C_Sign`][C_Sign]                               | ✅      |
-[`C_SignUpdate`][C_SignUpdate]                   | ✅      | Consult the [cryptographic operations](#cryptographic-operations) documentation for details on which signing algorithms support  multi-part signing.
-[`C_SignFinal`][C_SignFinal]                     | ✅      | Consult the [cryptographic operations](#cryptographic-operations) documentation for details on which signing algorithms support  multi-part signing.
+[`C_SignUpdate`][C_SignUpdate]                   | ✅      | Consult the [cryptographic operations](#cryptographic-operations) documentation for details on which signing algorithms support  multi-part signing. See [other notes](#other-notes) for additional insights.
+[`C_SignFinal`][C_SignFinal]                     | ✅      | Consult the [cryptographic operations](#cryptographic-operations) documentation for details on which signing algorithms support  multi-part signing. See [other notes](#other-notes) for additional insights.
 [`C_SignRecoverInit`][C_SignRecoverInit]         | ❌      |
 [`C_SignRecover`][C_SignRecover]                 | ❌      |
 [`C_VerifyInit`][C_VerifyInit]                   | ✅      | Consult the [cryptographic operations](#cryptographic-operations) documentation for details on which verification algorithms are supported.
 [`C_Verify`][C_Verify]                           | ✅      |
-[`C_VerifyUpdate`][C_VerifyUpdate]               | ✅      | Consult the [cryptographic operations](#cryptographic-operations) documentation for details on which signing algorithms support  multi-part verification.
-[`C_VerifyFinal`][C_VerifyFinal]                 | ✅      | Consult the [cryptographic operations](#cryptographic-operations) documentation for details on which signing algorithms support  multi-part verification.
+[`C_VerifyUpdate`][C_VerifyUpdate]               | ✅      | Consult the [cryptographic operations](#cryptographic-operations) documentation for details on which signing algorithms support  multi-part verification. See [other notes](#other-notes) for additional insights.
+[`C_VerifyFinal`][C_VerifyFinal]                 | ✅      | Consult the [cryptographic operations](#cryptographic-operations) documentation for details on which signing algorithms support  multi-part verification. See [other notes](#other-notes) for additional insights.
 [`C_VerifyRecoverInit`][C_VerifyRecoverInit]     | ❌      |
 [`C_VerifyRecover`][C_VerifyRecover]             | ❌      |
 [`C_DigestEncryptUpdate`][C_DigestEncryptUpdate] | ❌      |
@@ -417,6 +418,13 @@ This means that:
 *   Keys that are created or modified after the library is initialized will be
     stale if `refresh_interval_secs` is unspecified, or else will take up to
     that amount of time to become up-to-date in the library.
+
+## Other notes
+
+For multi-part crypto operations, the library caches input data and parameters
+in memory (up to a max buffer, depending on the specific crypto operation and
+algorithm), before sending the request to Cloud KMS. This is required for these
+operations to fit in the current APIs exposed by Cloud KMS.
 
 [gcp-authn-getting-started]: https://cloud.google.com/docs/authentication/getting-started
 [gcp-authn-prod]: https://cloud.google.com/docs/authentication/production
