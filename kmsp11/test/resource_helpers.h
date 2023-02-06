@@ -20,10 +20,12 @@
 #include <string_view>
 
 #include "absl/time/time.h"
+#include "fakekms/cpp/fakekms.h"
 #include "google/cloud/kms/v1/resources.pb.h"
 #include "google/cloud/kms/v1/service.grpc.pb.h"
 #include "google/cloud/kms/v1/service.pb.h"
 #include "kmsp11/object.h"
+#include "kmsp11/openssl.h"
 #include "kmsp11/test/test_status_macros.h"
 #include "kmsp11/util/kms_v1.h"
 
@@ -91,6 +93,21 @@ absl::StatusOr<KeyPair> NewMockKeyPair(
 absl::StatusOr<Object> NewMockSecretKey(
     google::cloud::kms::v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm
         algorithm);
+
+// Retrieves the public key associated with the private key and parses it in
+// EVP_PKEY format.
+absl::StatusOr<bssl::UniquePtr<EVP_PKEY>> GetEVPPublicKey(
+    fakekms::Server* fake_server, kms_v1::CryptoKeyVersion ckv);
+
+// Returns the object handle for the private key associated with the specified
+// crypto key version.
+absl::StatusOr<CK_OBJECT_HANDLE> GetPrivateKeyObjectHandle(
+    CK_SESSION_HANDLE session, kms_v1::CryptoKeyVersion ckv);
+
+// Returns the object handle for the public key associated with the specified
+// crypto key version.
+absl::StatusOr<CK_OBJECT_HANDLE> GetPublicKeyObjectHandle(
+    CK_SESSION_HANDLE session, kms_v1::CryptoKeyVersion ckv);
 
 }  // namespace kmsp11
 

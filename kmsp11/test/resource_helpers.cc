@@ -17,6 +17,9 @@
 #include "absl/strings/escaping.h"
 #include "absl/strings/str_format.h"
 #include "absl/time/clock.h"
+#include "fakekms/cpp/fakekms.h"
+#include "kmsp11/main/bridge.h"
+#include "kmsp11/openssl.h"
 #include "kmsp11/test/runfiles.h"
 #include "kmsp11/util/crypto_utils.h"
 
@@ -175,6 +178,43 @@ absl::StatusOr<Object> NewMockSecretKey(
   ckv.set_state(kms_v1::CryptoKeyVersion::ENABLED);
 
   return Object::NewSecretKey(ckv);
+}
+
+absl::StatusOr<bssl::UniquePtr<EVP_PKEY>> GetEVPPublicKey(
+    fakekms::Server* fake_server, kms_v1::CryptoKeyVersion ckv) {
+  auto client = fake_server->NewClient();
+  kms_v1::PublicKey pub_proto = GetPublicKey(client.get(), ckv);
+  return ParseX509PublicKeyPem(pub_proto.pem());
+}
+
+absl::StatusOr<CK_OBJECT_HANDLE> GetObjectHandle(CK_SESSION_HANDLE session,
+                                                 kms_v1::CryptoKeyVersion ckv,
+                                                 CK_OBJECT_CLASS object_class) {
+  CK_ATTRIBUTE attr_template[2] = {
+      {CKA_ID, const_cast<char*>(ckv.name().data()), ckv.name().size()},
+      {CKA_CLASS, &object_class, sizeof(object_class)},
+  };
+  CK_ULONG found_count;
+
+  CK_OBJECT_HANDLE key;
+  RETURN_IF_ERROR(FindObjectsInit(session, attr_template, 2));
+  RETURN_IF_ERROR(FindObjects(session, &key, 1, &found_count));
+  if (found_count != 1) {
+    return absl::InvalidArgumentError(
+        "Number of found keys should be exactly one!");
+  }
+  RETURN_IF_ERROR(FindObjectsFinal(session));
+  return key;
+}
+
+absl::StatusOr<CK_OBJECT_HANDLE> GetPrivateKeyObjectHandle(
+    CK_SESSION_HANDLE session, kms_v1::CryptoKeyVersion ckv) {
+  return GetObjectHandle(session, ckv, CKO_PRIVATE_KEY);
+}
+
+absl::StatusOr<CK_OBJECT_HANDLE> GetPublicKeyObjectHandle(
+    CK_SESSION_HANDLE session, kms_v1::CryptoKeyVersion ckv) {
+  return GetObjectHandle(session, ckv, CKO_PUBLIC_KEY);
 }
 
 }  // namespace kmsp11

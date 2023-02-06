@@ -72,7 +72,9 @@ cc_library(
     deps = [
         ":runfiles",
         ":test_status_macros",
+        "//fakekms/cpp:fakekms",
         "//kmsp11:object",
+        "//kmsp11/main:bridge",
         "//kmsp11/util:crypto_utils",
         "//kmsp11/util:kms_v1",
         "@com_google_absl//absl/strings",

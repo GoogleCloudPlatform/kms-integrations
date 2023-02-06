@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "kmsp11/main/bridge.h"
-
 #include <fstream>
 
 #include "absl/cleanup/cleanup.h"
@@ -21,7 +19,9 @@
 #include "gmock/gmock.h"
 #include "kmsp11/config/config.h"
 #include "kmsp11/kmsp11.h"
+#include "kmsp11/main/bridge.h"
 #include "kmsp11/openssl.h"
+#include "kmsp11/test/common_setup.h"
 #include "kmsp11/test/matchers.h"
 #include "kmsp11/test/resource_helpers.h"
 #include "kmsp11/test/test_platform.h"
@@ -41,89 +41,34 @@ using ::testing::IsEmpty;
 using ::testing::IsSupersetOf;
 using ::testing::Not;
 
-// TODO(b/254080884): reevaluate use of fixtures and refactor bridge_test.cc to
-// improve clarity.
-class BridgeTest : public testing::Test {
+class AsymmetricCryptTest : public testing::Test {
  protected:
   void SetUp() override {
     ASSERT_OK_AND_ASSIGN(fake_server_, fakekms::Server::New());
+    kms_v1::KeyRing kr;
+    config_file_ = CreateConfigFileWithOneKeyring(fake_server_.get(), &kr);
+    auto init_args = InitArgs(config_file_.c_str());
 
-    auto client = fake_server_->NewClient();
-    kr1_ = CreateKeyRingOrDie(client.get(), kTestLocation, RandomId(), kr1_);
-    kr2_ = CreateKeyRingOrDie(client.get(), kTestLocation, RandomId(), kr2_);
-
-    config_file_ = std::tmpnam(nullptr);
-    std::ofstream(config_file_) << absl::StrFormat(R"(
-tokens:
-  - key_ring: "%s"
-    label: "foo"
-  - key_ring: "%s"
-    label: "bar"
-kms_endpoint: "%s"
-use_insecure_grpc_channel_credentials: true
-)",
-                                                   kr1_.name(), kr2_.name(),
-                                                   fake_server_->listen_addr());
-
-    init_args_ = {0};
-    init_args_.flags = CKF_OS_LOCKING_OK;
-    init_args_.pReserved = const_cast<char*>(config_file_.c_str());
-  }
-
-  void TearDown() override { std::remove(config_file_.c_str()); }
-
-  std::unique_ptr<fakekms::Server> fake_server_;
-  kms_v1::KeyRing kr1_;
-  kms_v1::KeyRing kr2_;
-  std::string config_file_;
-  CK_C_INITIALIZE_ARGS init_args_;
-};
-
-class AsymmetricCryptTest : public BridgeTest {
- protected:
-  void SetUp() override {
-    BridgeTest::SetUp();
-    auto kms_client = fake_server_->NewClient();
-
-    kms_v1::CryptoKey ck;
-    ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_DECRYPT);
-    ck.mutable_version_template()->set_algorithm(
+    kms_v1::CryptoKeyVersion ckv = InitializeCryptoKeyAndKeyVersion(
+        fake_server_.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_DECRYPT,
         kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256);
-    ck.mutable_version_template()->set_protection_level(
-        kms_v1::ProtectionLevel::HSM);
-    ck = CreateCryptoKeyOrDie(kms_client.get(), kr1_.name(), "ck", ck, true);
+    ASSERT_OK_AND_ASSIGN(pub_pkey_, GetEVPPublicKey(fake_server_.get(), ckv));
 
-    kms_v1::CryptoKeyVersion ckv;
-    ckv = CreateCryptoKeyVersionOrDie(kms_client.get(), ck.name(), ckv);
-    ckv = WaitForEnablement(kms_client.get(), ckv);
-
-    kms_v1::PublicKey pub_proto = GetPublicKey(kms_client.get(), ckv);
-    ASSERT_OK_AND_ASSIGN(pub_pkey_, ParseX509PublicKeyPem(pub_proto.pem()));
-
-    EXPECT_OK(Initialize(&init_args_));
+    EXPECT_OK(Initialize(&init_args));
     EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session_));
 
-    CK_OBJECT_CLASS object_class = CKO_PRIVATE_KEY;
-    CK_ATTRIBUTE attr_template[2] = {
-        {CKA_ID, const_cast<char*>(ckv.name().data()), ckv.name().size()},
-        {CKA_CLASS, &object_class, sizeof(object_class)},
-    };
-    CK_ULONG found_count;
-
-    EXPECT_OK(FindObjectsInit(session_, attr_template, 2));
-    EXPECT_OK(FindObjects(session_, &private_key_, 1, &found_count));
-    EXPECT_EQ(found_count, 1);
-    EXPECT_OK(FindObjectsFinal(session_));
-
-    object_class = CKO_PUBLIC_KEY;
-    EXPECT_OK(FindObjectsInit(session_, attr_template, 2));
-    EXPECT_OK(FindObjects(session_, &public_key_, 1, &found_count));
-    EXPECT_EQ(found_count, 1);
-    EXPECT_OK(FindObjectsFinal(session_))
+    ASSERT_OK_AND_ASSIGN(private_key_,
+                         GetPrivateKeyObjectHandle(session_, ckv));
+    ASSERT_OK_AND_ASSIGN(public_key_, GetPublicKeyObjectHandle(session_, ckv));
   }
 
-  void TearDown() override { EXPECT_OK(Finalize(nullptr)); }
+  void TearDown() override {
+    std::remove(config_file_.c_str());
+    EXPECT_OK(Finalize(nullptr));
+  }
 
+  std::string config_file_;
+  std::unique_ptr<fakekms::Server> fake_server_;
   CK_SESSION_HANDLE session_;
   CK_OBJECT_HANDLE private_key_;
   CK_OBJECT_HANDLE public_key_;
