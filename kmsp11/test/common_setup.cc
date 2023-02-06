@@ -45,6 +45,24 @@ use_insecure_grpc_channel_credentials: true
   return config_file;
 }
 
+kms_v1::CryptoKeyVersion InitializeCryptoKeyAndKeyVersion(
+    fakekms::Server* fake_server, kms_v1::KeyRing kr,
+    kms_v1::CryptoKey::CryptoKeyPurpose purpose,
+    kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm) {
+  auto client = fake_server->NewClient();
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(purpose);
+  ck.mutable_version_template()->set_algorithm(algorithm);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM);
+  ck = CreateCryptoKeyOrDie(client.get(), kr.name(), "ck", ck, true);
+
+  kms_v1::CryptoKeyVersion ckv;
+  ckv = CreateCryptoKeyVersionOrDie(client.get(), ck.name(), ckv);
+  return WaitForEnablement(client.get(), ckv);
+}
+
 CK_C_INITIALIZE_ARGS InitArgs(const char* config_file) {
   CK_C_INITIALIZE_ARGS init_args = {0};
   init_args.flags = CKF_OS_LOCKING_OK;

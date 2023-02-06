@@ -29,6 +29,14 @@ std::string CreateConfigFileWithOneKeyring(fakekms::Server* fake_server);
 std::string CreateConfigFileWithOneKeyring(fakekms::Server* fake_server,
                                            kms_v1::KeyRing* kr);
 
+// Initializes an HSM CryptoKey in the specified keyring for the required
+// purpose and algorithm; initializes a version for this CryptoKey; and returns
+// the version.
+kms_v1::CryptoKeyVersion InitializeCryptoKeyAndKeyVersion(
+    fakekms::Server* fake_server, kms_v1::KeyRing kr,
+    kms_v1::CryptoKey::CryptoKeyPurpose purpose,
+    kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm);
+
 // Initialize the CK_C_INITIALIZE_ARGS from a configuration file.
 CK_C_INITIALIZE_ARGS InitArgs(const char* config_file);
 

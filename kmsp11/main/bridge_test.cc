@@ -1106,21 +1106,12 @@ TEST(BridgeTest, GetAttributeValueSuccess) {
     std::remove(config_file.c_str());
   };
 
-  auto fake_client = fake_server->NewClient();
-
-  kms_v1::CryptoKey ck;
-  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
-  ck.mutable_version_template()->set_algorithm(
-      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
-  ck.mutable_version_template()->set_protection_level(
-      kms_v1::ProtectionLevel::HSM);
-  ck = CreateCryptoKeyOrDie(fake_client.get(), kr.name(), "ck", ck, true);
-
-  kms_v1::CryptoKeyVersion ckv1;
-  ckv1 = CreateCryptoKeyVersionOrDie(fake_client.get(), ck.name(), ckv1);
-  ckv1 = WaitForEnablement(fake_client.get(), ckv1);
-
   auto init_args = InitArgs(config_file.c_str());
+
+  InitializeCryptoKeyAndKeyVersion(
+      fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_SIGN,
+      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
@@ -1152,21 +1143,12 @@ TEST(BridgeTest, GetAttributeValueFailsSensitiveAttribute) {
     std::remove(config_file.c_str());
   };
 
-  auto fake_client = fake_server->NewClient();
-
-  kms_v1::CryptoKey ck;
-  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
-  ck.mutable_version_template()->set_algorithm(
-      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
-  ck.mutable_version_template()->set_protection_level(
-      kms_v1::ProtectionLevel::HSM);
-  ck = CreateCryptoKeyOrDie(fake_client.get(), kr.name(), "ck", ck, true);
-
-  kms_v1::CryptoKeyVersion ckv1;
-  ckv1 = CreateCryptoKeyVersionOrDie(fake_client.get(), ck.name(), ckv1);
-  ckv1 = WaitForEnablement(fake_client.get(), ckv1);
-
   auto init_args = InitArgs(config_file.c_str());
+
+  InitializeCryptoKeyAndKeyVersion(
+      fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_SIGN,
+      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
@@ -1199,21 +1181,12 @@ TEST(BridgeTest, GetAttributeValueFailsNonExistentAttribute) {
     std::remove(config_file.c_str());
   };
 
-  auto fake_client = fake_server->NewClient();
-
-  kms_v1::CryptoKey ck;
-  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
-  ck.mutable_version_template()->set_algorithm(
-      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
-  ck.mutable_version_template()->set_protection_level(
-      kms_v1::ProtectionLevel::HSM);
-  ck = CreateCryptoKeyOrDie(fake_client.get(), kr.name(), "ck", ck, true);
-
-  kms_v1::CryptoKeyVersion ckv1;
-  ckv1 = CreateCryptoKeyVersionOrDie(fake_client.get(), ck.name(), ckv1);
-  ckv1 = WaitForEnablement(fake_client.get(), ckv1);
-
   auto init_args = InitArgs(config_file.c_str());
+
+  InitializeCryptoKeyAndKeyVersion(
+      fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_SIGN,
+      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
@@ -1246,21 +1219,12 @@ TEST(BridgeTest, GetAttributeValueSuccessNoBuffer) {
     std::remove(config_file.c_str());
   };
 
-  auto fake_client = fake_server->NewClient();
-
-  kms_v1::CryptoKey ck;
-  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
-  ck.mutable_version_template()->set_algorithm(
-      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
-  ck.mutable_version_template()->set_protection_level(
-      kms_v1::ProtectionLevel::HSM);
-  ck = CreateCryptoKeyOrDie(fake_client.get(), kr.name(), "ck", ck, true);
-
-  kms_v1::CryptoKeyVersion ckv1;
-  ckv1 = CreateCryptoKeyVersionOrDie(fake_client.get(), ck.name(), ckv1);
-  ckv1 = WaitForEnablement(fake_client.get(), ckv1);
-
   auto init_args = InitArgs(config_file.c_str());
+
+  InitializeCryptoKeyAndKeyVersion(
+      fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_SIGN,
+      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
@@ -1290,21 +1254,12 @@ TEST(BridgeTest, GetAttributeValueFailureBufferTooShort) {
     std::remove(config_file.c_str());
   };
 
-  auto fake_client = fake_server->NewClient();
-
-  kms_v1::CryptoKey ck;
-  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
-  ck.mutable_version_template()->set_algorithm(
-      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
-  ck.mutable_version_template()->set_protection_level(
-      kms_v1::ProtectionLevel::HSM);
-  ck = CreateCryptoKeyOrDie(fake_client.get(), kr.name(), "ck", ck, true);
-
-  kms_v1::CryptoKeyVersion ckv1;
-  ckv1 = CreateCryptoKeyVersionOrDie(fake_client.get(), ck.name(), ckv1);
-  ckv1 = WaitForEnablement(fake_client.get(), ckv1);
-
   auto init_args = InitArgs(config_file.c_str());
+
+  InitializeCryptoKeyAndKeyVersion(
+      fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_SIGN,
+      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
@@ -1337,21 +1292,12 @@ TEST(BridgeTest, GetAttributeValueFailureAllAttributesProcessed) {
     std::remove(config_file.c_str());
   };
 
-  auto fake_client = fake_server->NewClient();
-
-  kms_v1::CryptoKey ck;
-  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
-  ck.mutable_version_template()->set_algorithm(
-      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
-  ck.mutable_version_template()->set_protection_level(
-      kms_v1::ProtectionLevel::HSM);
-  ck = CreateCryptoKeyOrDie(fake_client.get(), kr.name(), "ck", ck, true);
-
-  kms_v1::CryptoKeyVersion ckv1;
-  ckv1 = CreateCryptoKeyVersionOrDie(fake_client.get(), ck.name(), ckv1);
-  ckv1 = WaitForEnablement(fake_client.get(), ckv1);
-
   auto init_args = InitArgs(config_file.c_str());
+
+  InitializeCryptoKeyAndKeyVersion(
+      fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_SIGN,
+      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
@@ -1445,21 +1391,12 @@ TEST(BridgeTest, GetAttributeValueFailureNullTemplate) {
     std::remove(config_file.c_str());
   };
 
-  auto fake_client = fake_server->NewClient();
-
-  kms_v1::CryptoKey ck;
-  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
-  ck.mutable_version_template()->set_algorithm(
-      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
-  ck.mutable_version_template()->set_protection_level(
-      kms_v1::ProtectionLevel::HSM);
-  ck = CreateCryptoKeyOrDie(fake_client.get(), kr.name(), "ck", ck, true);
-
-  kms_v1::CryptoKeyVersion ckv1;
-  ckv1 = CreateCryptoKeyVersionOrDie(fake_client.get(), ck.name(), ckv1);
-  ckv1 = WaitForEnablement(fake_client.get(), ckv1);
-
   auto init_args = InitArgs(config_file.c_str());
+
+  InitializeCryptoKeyAndKeyVersion(
+      fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_SIGN,
+      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
@@ -1489,21 +1426,12 @@ TEST(BridgeTest, FindEcPrivateKey) {
     std::remove(config_file.c_str());
   };
 
-  auto fake_client = fake_server->NewClient();
-
-  kms_v1::CryptoKey ck;
-  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
-  ck.mutable_version_template()->set_algorithm(
-      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
-  ck.mutable_version_template()->set_protection_level(
-      kms_v1::ProtectionLevel::HSM);
-  ck = CreateCryptoKeyOrDie(fake_client.get(), kr.name(), "ck", ck, true);
-
-  kms_v1::CryptoKeyVersion ckv;
-  ckv = CreateCryptoKeyVersionOrDie(fake_client.get(), ck.name(), ckv);
-  ckv = WaitForEnablement(fake_client.get(), ckv);
-
   auto init_args = InitArgs(config_file.c_str());
+
+  InitializeCryptoKeyAndKeyVersion(
+      fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_SIGN,
+      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
@@ -1542,28 +1470,18 @@ TEST(BridgeTest, FindCertificate) {
   kms_v1::KeyRing kr;
   std::string config_file =
       CreateConfigFileWithOneKeyring(fake_server.get(), &kr);
+  std::ofstream(config_file, std::ofstream::out | std::ofstream::app)
+      << "generate_certs: true" << std::endl;
   absl::Cleanup config_close = [config_file] {
     std::remove(config_file.c_str());
   };
 
-  auto fake_client = fake_server->NewClient();
+  auto init_args = InitArgs(const_cast<char*>(config_file.c_str()));
 
-  kms_v1::CryptoKey ck;
-  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
-  ck.mutable_version_template()->set_algorithm(
+  InitializeCryptoKeyAndKeyVersion(
+      fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_SIGN,
       kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
-  ck.mutable_version_template()->set_protection_level(
-      kms_v1::ProtectionLevel::HSM);
-  ck = CreateCryptoKeyOrDie(fake_client.get(), kr.name(), "ck", ck, true);
 
-  kms_v1::CryptoKeyVersion ckv;
-  ckv = CreateCryptoKeyVersionOrDie(fake_client.get(), ck.name(), ckv);
-  ckv = WaitForEnablement(fake_client.get(), ckv);
-
-  std::ofstream(config_file, std::ofstream::out | std::ofstream::app)
-      << "generate_certs: true" << std::endl;
-
-  auto init_args = InitArgs(config_file.c_str());
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
@@ -1590,21 +1508,12 @@ TEST(BridgeTest, NoCertificatesWhenConfigNotSet) {
     std::remove(config_file.c_str());
   };
 
-  auto fake_client = fake_server->NewClient();
-
-  kms_v1::CryptoKey ck;
-  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
-  ck.mutable_version_template()->set_algorithm(
-      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
-  ck.mutable_version_template()->set_protection_level(
-      kms_v1::ProtectionLevel::HSM);
-  ck = CreateCryptoKeyOrDie(fake_client.get(), kr.name(), "ck", ck, true);
-
-  kms_v1::CryptoKeyVersion ckv;
-  ckv = CreateCryptoKeyVersionOrDie(fake_client.get(), ck.name(), ckv);
-  ckv = WaitForEnablement(fake_client.get(), ckv);
-
   auto init_args = InitArgs(config_file.c_str());
+
+  InitializeCryptoKeyAndKeyVersion(
+      fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_SIGN,
+      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
@@ -1878,6 +1787,7 @@ TEST(BridgeTest, FindObjectsContainsNewResultsAfterRefresh) {
   };
 
   auto init_args = InitArgs(config_file.c_str());
+
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
@@ -1891,19 +1801,9 @@ TEST(BridgeTest, FindObjectsContainsNewResultsAfterRefresh) {
   EXPECT_EQ(found_count, 0);
   EXPECT_OK(FindObjectsFinal(session));
 
-  auto fake_client = fake_server->NewClient();
-
-  kms_v1::CryptoKey ck;
-  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
-  ck.mutable_version_template()->set_algorithm(
+  InitializeCryptoKeyAndKeyVersion(
+      fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_SIGN,
       kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
-  ck.mutable_version_template()->set_protection_level(
-      kms_v1::ProtectionLevel::HSM);
-  ck = CreateCryptoKeyOrDie(fake_client.get(), kr.name(), "ck", ck, true);
-
-  kms_v1::CryptoKeyVersion ckv;
-  ckv = CreateCryptoKeyVersionOrDie(fake_client.get(), ck.name(), ckv);
-  ckv = WaitForEnablement(fake_client.get(), ckv);
 
   absl::SleepFor(absl::Seconds(2));
 
@@ -2210,21 +2110,12 @@ TEST(BridgeTest, DestroyObjectSuccessPrivateKey) {
     std::remove(config_file.c_str());
   };
 
-  auto fake_client = fake_server->NewClient();
-
-  kms_v1::CryptoKey ck;
-  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
-  ck.mutable_version_template()->set_algorithm(
-      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
-  ck.mutable_version_template()->set_protection_level(
-      kms_v1::ProtectionLevel::HSM);
-  ck = CreateCryptoKeyOrDie(fake_client.get(), kr.name(), "ck", ck, true);
-
-  kms_v1::CryptoKeyVersion ckv;
-  ckv = CreateCryptoKeyVersionOrDie(fake_client.get(), ck.name(), ckv);
-  ckv = WaitForEnablement(fake_client.get(), ckv);
-
   auto init_args = InitArgs(config_file.c_str());
+
+  InitializeCryptoKeyAndKeyVersion(
+      fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_SIGN,
+      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
 
