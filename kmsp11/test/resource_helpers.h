@@ -109,6 +109,11 @@ absl::StatusOr<CK_OBJECT_HANDLE> GetPrivateKeyObjectHandle(
 absl::StatusOr<CK_OBJECT_HANDLE> GetPublicKeyObjectHandle(
     CK_SESSION_HANDLE session, kms_v1::CryptoKeyVersion ckv);
 
+// Returns the object handle for the secret key associated with the specified
+// crypto key version.
+absl::StatusOr<CK_OBJECT_HANDLE> GetSecretKeyObjectHandle(
+    CK_SESSION_HANDLE session, kms_v1::CryptoKeyVersion ckv);
+
 }  // namespace kmsp11
 
 #endif  // KMSP11_TEST_RESOURCE_HELPERS_H_

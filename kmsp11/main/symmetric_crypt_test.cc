@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "kmsp11/main/bridge.h"
-
 #include <fstream>
 
 #include "absl/cleanup/cleanup.h"
@@ -21,7 +19,9 @@
 #include "gmock/gmock.h"
 #include "kmsp11/config/config.h"
 #include "kmsp11/kmsp11.h"
+#include "kmsp11/main/bridge.h"
 #include "kmsp11/openssl.h"
+#include "kmsp11/test/common_setup.h"
 #include "kmsp11/test/matchers.h"
 #include "kmsp11/test/resource_helpers.h"
 #include "kmsp11/test/test_platform.h"
@@ -41,85 +41,10 @@ using ::testing::IsEmpty;
 using ::testing::IsSupersetOf;
 using ::testing::Not;
 
-// TODO(b/254080884): reevaluate use of fixtures and refactor bridge_test.cc to
-// improve clarity.
-class BridgeTest : public testing::Test {
- protected:
-  void SetUp() override {
-    ASSERT_OK_AND_ASSIGN(fake_server_, fakekms::Server::New());
-
-    auto client = fake_server_->NewClient();
-    kr1_ = CreateKeyRingOrDie(client.get(), kTestLocation, RandomId(), kr1_);
-    kr2_ = CreateKeyRingOrDie(client.get(), kTestLocation, RandomId(), kr2_);
-
-    config_file_ = std::tmpnam(nullptr);
-    std::ofstream(config_file_) << absl::StrFormat(R"(
-tokens:
-  - key_ring: "%s"
-    label: "foo"
-  - key_ring: "%s"
-    label: "bar"
-kms_endpoint: "%s"
-use_insecure_grpc_channel_credentials: true
-)",
-                                                   kr1_.name(), kr2_.name(),
-                                                   fake_server_->listen_addr());
-
-    init_args_ = {0};
-    init_args_.flags = CKF_OS_LOCKING_OK;
-    init_args_.pReserved = const_cast<char*>(config_file_.c_str());
-  }
-
-  void TearDown() override { std::remove(config_file_.c_str()); }
-
-  std::unique_ptr<fakekms::Server> fake_server_;
-  kms_v1::KeyRing kr1_;
-  kms_v1::KeyRing kr2_;
-  std::string config_file_;
-  CK_C_INITIALIZE_ARGS init_args_;
-};
-
-class SymmetricCryptBaseTest : public BridgeTest,
-  public testing::WithParamInterface<kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm>{
- protected:
-  void SetUp() override {
-    BridgeTest::SetUp();
-    auto kms_client = fake_server_->NewClient();
-
-    kms_v1::CryptoKey ck;
-    ck.set_purpose(kms_v1::CryptoKey::RAW_ENCRYPT_DECRYPT);
-    ck.mutable_version_template()->set_algorithm(GetParam());
-    ck.mutable_version_template()->set_protection_level(
-        kms_v1::ProtectionLevel::HSM);
-    ck = CreateCryptoKeyOrDie(kms_client.get(), kr1_.name(), "ck", ck, true);
-
-    kms_v1::CryptoKeyVersion ckv;
-    ckv = CreateCryptoKeyVersionOrDie(kms_client.get(), ck.name(), ckv);
-    ckv = WaitForEnablement(kms_client.get(), ckv);
-
-    std::ofstream(config_file_, std::ofstream::out | std::ofstream::app)
-        << "experimental_allow_raw_encryption_keys: true" << std::endl;
-    EXPECT_OK(Initialize(&init_args_));
-    EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session_));
-
-    CK_OBJECT_CLASS object_class = CKO_SECRET_KEY;
-    CK_ATTRIBUTE attr_template[2] = {
-        {CKA_ID, const_cast<char*>(ckv.name().data()), ckv.name().size()},
-        {CKA_CLASS, &object_class, sizeof(object_class)},
-    };
-    CK_ULONG found_count;
-
-    EXPECT_OK(FindObjectsInit(session_, attr_template, 2));
-    EXPECT_OK(FindObjects(session_, &secret_key_, 1, &found_count));
-    EXPECT_EQ(found_count, 1);
-    EXPECT_OK(FindObjectsFinal(session_));
-  }
-
-  void TearDown() override { EXPECT_OK(Finalize(nullptr)); }
-
-  CK_SESSION_HANDLE session_;
-  CK_OBJECT_HANDLE secret_key_;
-};
+class SymmetricCryptBaseTest
+    : public testing::Test,
+      public testing::WithParamInterface<
+          kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm> {};
 
 class SymmetricCbcCryptTest : public SymmetricCryptBaseTest {};
 
@@ -127,14 +52,14 @@ class SymmetricCtrCryptTest : public SymmetricCryptBaseTest {};
 
 class SymmetricGcmCryptTest : public SymmetricCryptBaseTest {};
 
-const std::array kCbcAlgorithms = {
-    kms_v1::CryptoKeyVersion::AES_128_CBC, kms_v1::CryptoKeyVersion::AES_256_CBC};
+const std::array kCbcAlgorithms = {kms_v1::CryptoKeyVersion::AES_128_CBC,
+                                   kms_v1::CryptoKeyVersion::AES_256_CBC};
 
-const std::array kCtrAlgorithms = {
-    kms_v1::CryptoKeyVersion::AES_128_CTR, kms_v1::CryptoKeyVersion::AES_256_CTR};
+const std::array kCtrAlgorithms = {kms_v1::CryptoKeyVersion::AES_128_CTR,
+                                   kms_v1::CryptoKeyVersion::AES_256_CTR};
 
-const std::array kGcmAlgorithms = {
-    kms_v1::CryptoKeyVersion::AES_128_GCM, kms_v1::CryptoKeyVersion::AES_256_GCM};
+const std::array kGcmAlgorithms = {kms_v1::CryptoKeyVersion::AES_128_GCM,
+                                   kms_v1::CryptoKeyVersion::AES_256_GCM};
 
 INSTANTIATE_TEST_SUITE_P(TestSymmetricEncryption, SymmetricCbcCryptTest,
                          testing::ValuesIn(kCbcAlgorithms));
@@ -146,6 +71,32 @@ INSTANTIATE_TEST_SUITE_P(TestSymmetricEncryption, SymmetricGcmCryptTest,
                          testing::ValuesIn(kGcmAlgorithms));
 
 TEST_P(SymmetricCbcCryptTest, EncryptDecryptSuccess) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
+                       fakekms::Server::New());
+  kms_v1::KeyRing kr;
+  std::string config_file =
+      CreateConfigFileWithOneKeyring(fake_server.get(), &kr);
+  std::ofstream(config_file, std::ofstream::out | std::ofstream::app)
+      << "experimental_allow_raw_encryption_keys: true" << std::endl;
+  absl::Cleanup config_close = [config_file] {
+    std::remove(config_file.c_str());
+  };
+
+  auto init_args = InitArgs(config_file.c_str());
+
+  auto ckv = InitializeCryptoKeyAndKeyVersion(
+      fake_server.get(), kr, kms_v1::CryptoKey::RAW_ENCRYPT_DECRYPT,
+      GetParam());
+
+  EXPECT_OK(Initialize(&init_args));
+  absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
+
+  ASSERT_OK_AND_ASSIGN(CK_OBJECT_HANDLE secret_key,
+                       GetSecretKeyObjectHandle(session, ckv));
+
   std::vector<uint8_t> plaintext(128);
   RAND_bytes(plaintext.data(), plaintext.size());
   std::vector<uint8_t> iv(16);
@@ -157,44 +108,70 @@ TEST_P(SymmetricCbcCryptTest, EncryptDecryptSuccess) {
       iv.size(),    // ulParameterLen
   };
 
-  EXPECT_OK(EncryptInit(session_, &mech, secret_key_));
+  EXPECT_OK(EncryptInit(session, &mech, secret_key));
 
   CK_ULONG ciphertext_size;
-  EXPECT_OK(Encrypt(session_, plaintext.data(), plaintext.size(), nullptr,
+  EXPECT_OK(Encrypt(session, plaintext.data(), plaintext.size(), nullptr,
                     &ciphertext_size));
   EXPECT_EQ(ciphertext_size, plaintext.size());
 
   std::vector<uint8_t> ciphertext(ciphertext_size);
-  EXPECT_OK(Encrypt(session_, plaintext.data(), plaintext.size(),
+  EXPECT_OK(Encrypt(session, plaintext.data(), plaintext.size(),
                     ciphertext.data(), &ciphertext_size));
   EXPECT_EQ(ciphertext_size, plaintext.size());
 
   // Operation should be terminated after success
-  EXPECT_THAT(Encrypt(session_, plaintext.data(), plaintext.size(), nullptr,
+  EXPECT_THAT(Encrypt(session, plaintext.data(), plaintext.size(), nullptr,
                       &ciphertext_size),
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 
-  EXPECT_OK(DecryptInit(session_, &mech, secret_key_));
+  EXPECT_OK(DecryptInit(session, &mech, secret_key));
 
   CK_ULONG plaintext_size;
-  EXPECT_OK(Decrypt(session_, ciphertext.data(), ciphertext.size(), nullptr,
+  EXPECT_OK(Decrypt(session, ciphertext.data(), ciphertext.size(), nullptr,
                     &plaintext_size));
   EXPECT_EQ(plaintext_size, plaintext.size());
 
   std::vector<uint8_t> recovered_plaintext(plaintext_size);
-  EXPECT_OK(Decrypt(session_, ciphertext.data(), ciphertext.size(),
+  EXPECT_OK(Decrypt(session, ciphertext.data(), ciphertext.size(),
                     recovered_plaintext.data(), &plaintext_size));
 
   EXPECT_EQ(recovered_plaintext, plaintext);
   EXPECT_EQ(plaintext_size, plaintext.size());
 
   // Operation should be terminated after success
-  EXPECT_THAT(Decrypt(session_, ciphertext.data(), ciphertext.size(), nullptr,
+  EXPECT_THAT(Decrypt(session, ciphertext.data(), ciphertext.size(), nullptr,
                       &plaintext_size),
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
 TEST_P(SymmetricCbcCryptTest, EncryptDecryptMultiPartSuccess) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
+                       fakekms::Server::New());
+  kms_v1::KeyRing kr;
+  std::string config_file =
+      CreateConfigFileWithOneKeyring(fake_server.get(), &kr);
+  std::ofstream(config_file, std::ofstream::out | std::ofstream::app)
+      << "experimental_allow_raw_encryption_keys: true" << std::endl;
+  absl::Cleanup config_close = [config_file] {
+    std::remove(config_file.c_str());
+  };
+
+  auto init_args = InitArgs(config_file.c_str());
+
+  auto ckv = InitializeCryptoKeyAndKeyVersion(
+      fake_server.get(), kr, kms_v1::CryptoKey::RAW_ENCRYPT_DECRYPT,
+      GetParam());
+
+  EXPECT_OK(Initialize(&init_args));
+  absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
+
+  ASSERT_OK_AND_ASSIGN(CK_OBJECT_HANDLE secret_key,
+                       GetSecretKeyObjectHandle(session, ckv));
+
   std::vector<uint8_t> iv(16);
   RAND_bytes(iv.data(), iv.size());
 
@@ -204,7 +181,7 @@ TEST_P(SymmetricCbcCryptTest, EncryptDecryptMultiPartSuccess) {
       iv.size(),        // ulParameterLen
   };
 
-  EXPECT_OK(EncryptInit(session_, &mech, secret_key_));
+  EXPECT_OK(EncryptInit(session, &mech, secret_key));
 
   std::vector<uint8_t> part1(64);
   std::vector<uint8_t> part2(64);
@@ -216,49 +193,74 @@ TEST_P(SymmetricCbcCryptTest, EncryptDecryptMultiPartSuccess) {
   CK_ULONG ciphertext_size = 144;  // 128 + 16 (full padding block)
   CK_ULONG partial_ciphertext_size = 0;
   std::vector<uint8_t> ciphertext(ciphertext_size);
-  EXPECT_OK(EncryptUpdate(session_, part1.data(), part1.size(),
+  EXPECT_OK(EncryptUpdate(session, part1.data(), part1.size(),
                           ciphertext.data(), &partial_ciphertext_size));
   EXPECT_EQ(partial_ciphertext_size, 0);
 
-  EXPECT_OK(EncryptUpdate(session_, part2.data(), part2.size(),
+  EXPECT_OK(EncryptUpdate(session, part2.data(), part2.size(),
                           ciphertext.data(), &partial_ciphertext_size));
   EXPECT_EQ(partial_ciphertext_size, 0);
 
-  EXPECT_OK(EncryptFinal(session_, ciphertext.data(), &ciphertext_size));
+  EXPECT_OK(EncryptFinal(session, ciphertext.data(), &ciphertext_size));
 
   EXPECT_EQ(ciphertext.size(), ciphertext_size);
 
   // Operation should be terminated after success
   EXPECT_THAT(
-      Encrypt(session_, part1.data(), part1.size(), nullptr, &ciphertext_size),
+      Encrypt(session, part1.data(), part1.size(), nullptr, &ciphertext_size),
       StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 
-  EXPECT_OK(DecryptInit(session_, &mech, secret_key_));
+  EXPECT_OK(DecryptInit(session, &mech, secret_key));
 
   CK_ULONG plaintext_size = 128;
   CK_ULONG partial_plaintext_size = 0;
   std::vector<uint8_t> recovered_plaintext(plaintext_size);
-  EXPECT_OK(DecryptUpdate(session_, ciphertext.data(), 16,
+  EXPECT_OK(DecryptUpdate(session, ciphertext.data(), 16,
                           recovered_plaintext.data(), &partial_plaintext_size));
   EXPECT_EQ(partial_plaintext_size, 0);
 
-  EXPECT_OK(DecryptUpdate(session_, ciphertext.data() + 16,
+  EXPECT_OK(DecryptUpdate(session, ciphertext.data() + 16,
                           ciphertext.size() - 16, recovered_plaintext.data(),
                           &partial_plaintext_size));
   EXPECT_EQ(partial_plaintext_size, 0);
 
-  EXPECT_OK(
-      DecryptFinal(session_, recovered_plaintext.data(), &plaintext_size));
+  EXPECT_OK(DecryptFinal(session, recovered_plaintext.data(), &plaintext_size));
 
   EXPECT_EQ(recovered_plaintext, plaintext);
 
   // Operation should be terminated after success
-  EXPECT_THAT(Decrypt(session_, ciphertext.data(), ciphertext.size(), nullptr,
+  EXPECT_THAT(Decrypt(session, ciphertext.data(), ciphertext.size(), nullptr,
                       &plaintext_size),
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
 TEST_P(SymmetricCtrCryptTest, EncryptDecryptSuccess) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
+                       fakekms::Server::New());
+  kms_v1::KeyRing kr;
+  std::string config_file =
+      CreateConfigFileWithOneKeyring(fake_server.get(), &kr);
+  std::ofstream(config_file, std::ofstream::out | std::ofstream::app)
+      << "experimental_allow_raw_encryption_keys: true" << std::endl;
+  absl::Cleanup config_close = [config_file] {
+    std::remove(config_file.c_str());
+  };
+
+  auto init_args = InitArgs(config_file.c_str());
+
+  auto ckv = InitializeCryptoKeyAndKeyVersion(
+      fake_server.get(), kr, kms_v1::CryptoKey::RAW_ENCRYPT_DECRYPT,
+      GetParam());
+
+  EXPECT_OK(Initialize(&init_args));
+  absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
+
+  ASSERT_OK_AND_ASSIGN(CK_OBJECT_HANDLE secret_key,
+                       GetSecretKeyObjectHandle(session, ckv));
+
   std::vector<uint8_t> plaintext(128);
   RAND_bytes(plaintext.data(), plaintext.size());
   std::vector<uint8_t> iv(16);
@@ -274,44 +276,70 @@ TEST_P(SymmetricCtrCryptTest, EncryptDecryptSuccess) {
       sizeof(params),  // ulParameterLen
   };
 
-  EXPECT_OK(EncryptInit(session_, &mech, secret_key_));
+  EXPECT_OK(EncryptInit(session, &mech, secret_key));
 
   CK_ULONG ciphertext_size;
-  EXPECT_OK(Encrypt(session_, plaintext.data(), plaintext.size(), nullptr,
+  EXPECT_OK(Encrypt(session, plaintext.data(), plaintext.size(), nullptr,
                     &ciphertext_size));
   EXPECT_EQ(ciphertext_size, plaintext.size());
 
   std::vector<uint8_t> ciphertext(ciphertext_size);
-  EXPECT_OK(Encrypt(session_, plaintext.data(), plaintext.size(),
+  EXPECT_OK(Encrypt(session, plaintext.data(), plaintext.size(),
                     ciphertext.data(), &ciphertext_size));
   EXPECT_EQ(ciphertext_size, plaintext.size());
 
   // Operation should be terminated after success
-  EXPECT_THAT(Encrypt(session_, plaintext.data(), plaintext.size(), nullptr,
+  EXPECT_THAT(Encrypt(session, plaintext.data(), plaintext.size(), nullptr,
                       &ciphertext_size),
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 
-  EXPECT_OK(DecryptInit(session_, &mech, secret_key_));
+  EXPECT_OK(DecryptInit(session, &mech, secret_key));
 
   CK_ULONG plaintext_size;
-  EXPECT_OK(Decrypt(session_, ciphertext.data(), ciphertext.size(), nullptr,
+  EXPECT_OK(Decrypt(session, ciphertext.data(), ciphertext.size(), nullptr,
                     &plaintext_size));
   EXPECT_EQ(plaintext_size, plaintext.size());
 
   std::vector<uint8_t> recovered_plaintext(plaintext_size);
-  EXPECT_OK(Decrypt(session_, ciphertext.data(), ciphertext.size(),
+  EXPECT_OK(Decrypt(session, ciphertext.data(), ciphertext.size(),
                     recovered_plaintext.data(), &plaintext_size));
 
   EXPECT_EQ(recovered_plaintext, plaintext);
   EXPECT_EQ(plaintext_size, plaintext.size());
 
   // Operation should be terminated after success
-  EXPECT_THAT(Decrypt(session_, ciphertext.data(), ciphertext.size(), nullptr,
+  EXPECT_THAT(Decrypt(session, ciphertext.data(), ciphertext.size(), nullptr,
                       &plaintext_size),
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
 TEST_P(SymmetricCtrCryptTest, EncryptDecryptMultiPartSuccess) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
+                       fakekms::Server::New());
+  kms_v1::KeyRing kr;
+  std::string config_file =
+      CreateConfigFileWithOneKeyring(fake_server.get(), &kr);
+  std::ofstream(config_file, std::ofstream::out | std::ofstream::app)
+      << "experimental_allow_raw_encryption_keys: true" << std::endl;
+  absl::Cleanup config_close = [config_file] {
+    std::remove(config_file.c_str());
+  };
+
+  auto init_args = InitArgs(config_file.c_str());
+
+  auto ckv = InitializeCryptoKeyAndKeyVersion(
+      fake_server.get(), kr, kms_v1::CryptoKey::RAW_ENCRYPT_DECRYPT,
+      GetParam());
+
+  EXPECT_OK(Initialize(&init_args));
+  absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
+
+  ASSERT_OK_AND_ASSIGN(CK_OBJECT_HANDLE secret_key,
+                       GetSecretKeyObjectHandle(session, ckv));
+
   std::vector<uint8_t> iv(16);
   RAND_bytes(iv.data(), iv.size());
 
@@ -325,7 +353,7 @@ TEST_P(SymmetricCtrCryptTest, EncryptDecryptMultiPartSuccess) {
       sizeof(params),  // ulParameterLen
   };
 
-  EXPECT_OK(EncryptInit(session_, &mech, secret_key_));
+  EXPECT_OK(EncryptInit(session, &mech, secret_key));
 
   std::vector<uint8_t> part1(64);
   std::vector<uint8_t> part2(64);
@@ -337,50 +365,75 @@ TEST_P(SymmetricCtrCryptTest, EncryptDecryptMultiPartSuccess) {
   CK_ULONG ciphertext_size = 128;
   CK_ULONG partial_ciphertext_size = 0;
   std::vector<uint8_t> ciphertext(ciphertext_size);
-  EXPECT_OK(EncryptUpdate(session_, part1.data(), part1.size(),
+  EXPECT_OK(EncryptUpdate(session, part1.data(), part1.size(),
                           ciphertext.data(), &partial_ciphertext_size));
   EXPECT_EQ(partial_ciphertext_size, 0);
 
-  EXPECT_OK(EncryptUpdate(session_, part2.data(), part2.size(),
+  EXPECT_OK(EncryptUpdate(session, part2.data(), part2.size(),
                           ciphertext.data(), &partial_ciphertext_size));
   EXPECT_EQ(partial_ciphertext_size, 0);
 
-  EXPECT_OK(EncryptFinal(session_, ciphertext.data(), &ciphertext_size));
+  EXPECT_OK(EncryptFinal(session, ciphertext.data(), &ciphertext_size));
 
   EXPECT_EQ(ciphertext.size(), ciphertext_size);
 
   // Operation should be terminated after success
   EXPECT_THAT(
-      Encrypt(session_, part1.data(), part1.size(), nullptr, &ciphertext_size),
+      Encrypt(session, part1.data(), part1.size(), nullptr, &ciphertext_size),
       StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 
-  EXPECT_OK(DecryptInit(session_, &mech, secret_key_));
+  EXPECT_OK(DecryptInit(session, &mech, secret_key));
 
   CK_ULONG plaintext_size = 128;
   CK_ULONG partial_plaintext_size = 0;
   std::vector<uint8_t> recovered_plaintext(plaintext_size);
-  EXPECT_OK(DecryptUpdate(session_, ciphertext.data(), 16,
+  EXPECT_OK(DecryptUpdate(session, ciphertext.data(), 16,
                           recovered_plaintext.data(), &partial_plaintext_size));
   EXPECT_EQ(partial_plaintext_size, 0);
 
-  EXPECT_OK(DecryptUpdate(session_, ciphertext.data() + 16,
+  EXPECT_OK(DecryptUpdate(session, ciphertext.data() + 16,
                           ciphertext.size() - 16, recovered_plaintext.data(),
                           &partial_plaintext_size));
   EXPECT_EQ(partial_plaintext_size, 0);
 
-  EXPECT_OK(
-      DecryptFinal(session_, recovered_plaintext.data(), &plaintext_size));
+  EXPECT_OK(DecryptFinal(session, recovered_plaintext.data(), &plaintext_size));
 
   EXPECT_EQ(recovered_plaintext, plaintext);
   EXPECT_EQ(plaintext_size, plaintext.size());
 
   // Operation should be terminated after success
-  EXPECT_THAT(Decrypt(session_, ciphertext.data(), ciphertext.size(), nullptr,
+  EXPECT_THAT(Decrypt(session, ciphertext.data(), ciphertext.size(), nullptr,
                       &plaintext_size),
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
 TEST_P(SymmetricGcmCryptTest, EncryptDecryptSuccess) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
+                       fakekms::Server::New());
+  kms_v1::KeyRing kr;
+  std::string config_file =
+      CreateConfigFileWithOneKeyring(fake_server.get(), &kr);
+  std::ofstream(config_file, std::ofstream::out | std::ofstream::app)
+      << "experimental_allow_raw_encryption_keys: true" << std::endl;
+  absl::Cleanup config_close = [config_file] {
+    std::remove(config_file.c_str());
+  };
+
+  auto init_args = InitArgs(config_file.c_str());
+
+  auto ckv = InitializeCryptoKeyAndKeyVersion(
+      fake_server.get(), kr, kms_v1::CryptoKey::RAW_ENCRYPT_DECRYPT,
+      GetParam());
+
+  EXPECT_OK(Initialize(&init_args));
+  absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
+
+  ASSERT_OK_AND_ASSIGN(CK_OBJECT_HANDLE secret_key,
+                       GetSecretKeyObjectHandle(session, ckv));
+
   std::vector<uint8_t> plaintext(128);
   RAND_bytes(plaintext.data(), plaintext.size());
 
@@ -400,44 +453,70 @@ TEST_P(SymmetricGcmCryptTest, EncryptDecryptSuccess) {
       sizeof(params),        // ulParameterLen
   };
 
-  EXPECT_OK(EncryptInit(session_, &mech, secret_key_));
+  EXPECT_OK(EncryptInit(session, &mech, secret_key));
 
   CK_ULONG ciphertext_size;
-  EXPECT_OK(Encrypt(session_, plaintext.data(), plaintext.size(), nullptr,
+  EXPECT_OK(Encrypt(session, plaintext.data(), plaintext.size(), nullptr,
                     &ciphertext_size));
   EXPECT_EQ(ciphertext_size, plaintext.size() + 16);
 
   std::vector<uint8_t> ciphertext(ciphertext_size);
-  EXPECT_OK(Encrypt(session_, plaintext.data(), plaintext.size(),
+  EXPECT_OK(Encrypt(session, plaintext.data(), plaintext.size(),
                     ciphertext.data(), &ciphertext_size));
   EXPECT_EQ(ciphertext_size, plaintext.size() + 16);
 
   // Operation should be terminated after success
-  EXPECT_THAT(Encrypt(session_, plaintext.data(), plaintext.size(), nullptr,
+  EXPECT_THAT(Encrypt(session, plaintext.data(), plaintext.size(), nullptr,
                       &ciphertext_size),
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 
-  EXPECT_OK(DecryptInit(session_, &mech, secret_key_));
+  EXPECT_OK(DecryptInit(session, &mech, secret_key));
 
   CK_ULONG plaintext_size;
-  EXPECT_OK(Decrypt(session_, ciphertext.data(), ciphertext.size(), nullptr,
+  EXPECT_OK(Decrypt(session, ciphertext.data(), ciphertext.size(), nullptr,
                     &plaintext_size));
   EXPECT_EQ(plaintext_size, plaintext.size());
 
   std::vector<uint8_t> recovered_plaintext(plaintext_size);
-  EXPECT_OK(Decrypt(session_, ciphertext.data(), ciphertext.size(),
+  EXPECT_OK(Decrypt(session, ciphertext.data(), ciphertext.size(),
                     recovered_plaintext.data(), &plaintext_size));
 
   EXPECT_EQ(recovered_plaintext, plaintext);
   EXPECT_EQ(plaintext_size, plaintext.size());
 
   // Operation should be terminated after success
-  EXPECT_THAT(Decrypt(session_, ciphertext.data(), ciphertext.size(), nullptr,
+  EXPECT_THAT(Decrypt(session, ciphertext.data(), ciphertext.size(), nullptr,
                       &plaintext_size),
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
 TEST_P(SymmetricGcmCryptTest, EncryptDecryptMultiPartSuccess) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
+                       fakekms::Server::New());
+  kms_v1::KeyRing kr;
+  std::string config_file =
+      CreateConfigFileWithOneKeyring(fake_server.get(), &kr);
+  std::ofstream(config_file, std::ofstream::out | std::ofstream::app)
+      << "experimental_allow_raw_encryption_keys: true" << std::endl;
+  absl::Cleanup config_close = [config_file] {
+    std::remove(config_file.c_str());
+  };
+
+  auto init_args = InitArgs(config_file.c_str());
+
+  auto ckv = InitializeCryptoKeyAndKeyVersion(
+      fake_server.get(), kr, kms_v1::CryptoKey::RAW_ENCRYPT_DECRYPT,
+      GetParam());
+
+  EXPECT_OK(Initialize(&init_args));
+  absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
+
+  ASSERT_OK_AND_ASSIGN(CK_OBJECT_HANDLE secret_key,
+                       GetSecretKeyObjectHandle(session, ckv));
+
   std::vector<uint8_t> iv(12);
   std::vector<uint8_t> aad = {0xDE, 0xAD, 0xBE, 0xEF};
   CK_GCM_PARAMS params = {
@@ -454,7 +533,7 @@ TEST_P(SymmetricGcmCryptTest, EncryptDecryptMultiPartSuccess) {
       sizeof(params),        // ulParameterLen
   };
 
-  EXPECT_OK(EncryptInit(session_, &mech, secret_key_));
+  EXPECT_OK(EncryptInit(session, &mech, secret_key));
 
   std::vector<uint8_t> part1(64);
   std::vector<uint8_t> part2(64);
@@ -466,50 +545,75 @@ TEST_P(SymmetricGcmCryptTest, EncryptDecryptMultiPartSuccess) {
   CK_ULONG ciphertext_size = 144;
   CK_ULONG partial_ciphertext_size = 0;
   std::vector<uint8_t> ciphertext(ciphertext_size);
-  EXPECT_OK(EncryptUpdate(session_, part1.data(), part1.size(),
+  EXPECT_OK(EncryptUpdate(session, part1.data(), part1.size(),
                           ciphertext.data(), &partial_ciphertext_size));
   EXPECT_EQ(partial_ciphertext_size, 0);
 
-  EXPECT_OK(EncryptUpdate(session_, part2.data(), part2.size(),
+  EXPECT_OK(EncryptUpdate(session, part2.data(), part2.size(),
                           ciphertext.data(), &partial_ciphertext_size));
   EXPECT_EQ(partial_ciphertext_size, 0);
 
-  EXPECT_OK(EncryptFinal(session_, ciphertext.data(), &ciphertext_size));
+  EXPECT_OK(EncryptFinal(session, ciphertext.data(), &ciphertext_size));
 
   EXPECT_EQ(ciphertext.size(), ciphertext_size);
 
   // Operation should be terminated after success
   EXPECT_THAT(
-      Encrypt(session_, part1.data(), part1.size(), nullptr, &ciphertext_size),
+      Encrypt(session, part1.data(), part1.size(), nullptr, &ciphertext_size),
       StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 
-  EXPECT_OK(DecryptInit(session_, &mech, secret_key_));
+  EXPECT_OK(DecryptInit(session, &mech, secret_key));
 
   CK_ULONG plaintext_size = 128;
   CK_ULONG partial_plaintext_size = 0;
   std::vector<uint8_t> recovered_plaintext(plaintext_size);
-  EXPECT_OK(DecryptUpdate(session_, ciphertext.data(), 16,
+  EXPECT_OK(DecryptUpdate(session, ciphertext.data(), 16,
                           recovered_plaintext.data(), &partial_plaintext_size));
   EXPECT_EQ(partial_plaintext_size, 0);
 
-  EXPECT_OK(DecryptUpdate(session_, ciphertext.data() + 16,
+  EXPECT_OK(DecryptUpdate(session, ciphertext.data() + 16,
                           ciphertext.size() - 16, recovered_plaintext.data(),
                           &partial_plaintext_size));
   EXPECT_EQ(partial_plaintext_size, 0);
 
-  EXPECT_OK(
-      DecryptFinal(session_, recovered_plaintext.data(), &plaintext_size));
+  EXPECT_OK(DecryptFinal(session, recovered_plaintext.data(), &plaintext_size));
 
   EXPECT_EQ(recovered_plaintext, plaintext);
   EXPECT_EQ(plaintext_size, plaintext.size());
 
   // Operation should be terminated after success
-  EXPECT_THAT(Decrypt(session_, ciphertext.data(), ciphertext.size(), nullptr,
+  EXPECT_THAT(Decrypt(session, ciphertext.data(), ciphertext.size(), nullptr,
                       &plaintext_size),
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
 TEST_P(SymmetricGcmCryptTest, DecryptBufferTooSmall) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
+                       fakekms::Server::New());
+  kms_v1::KeyRing kr;
+  std::string config_file =
+      CreateConfigFileWithOneKeyring(fake_server.get(), &kr);
+  std::ofstream(config_file, std::ofstream::out | std::ofstream::app)
+      << "experimental_allow_raw_encryption_keys: true" << std::endl;
+  absl::Cleanup config_close = [config_file] {
+    std::remove(config_file.c_str());
+  };
+
+  auto init_args = InitArgs(config_file.c_str());
+
+  auto ckv = InitializeCryptoKeyAndKeyVersion(
+      fake_server.get(), kr, kms_v1::CryptoKey::RAW_ENCRYPT_DECRYPT,
+      GetParam());
+
+  EXPECT_OK(Initialize(&init_args));
+  absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
+
+  ASSERT_OK_AND_ASSIGN(CK_OBJECT_HANDLE secret_key,
+                       GetSecretKeyObjectHandle(session, ckv));
+
   std::vector<uint8_t> plaintext(128);
   RAND_bytes(plaintext.data(), plaintext.size());
 
@@ -529,49 +633,76 @@ TEST_P(SymmetricGcmCryptTest, DecryptBufferTooSmall) {
       sizeof(params),        // ulParameterLen
   };
 
-  EXPECT_OK(EncryptInit(session_, &mech, secret_key_));
+  EXPECT_OK(EncryptInit(session, &mech, secret_key));
 
   CK_ULONG ciphertext_size;
-  EXPECT_OK(Encrypt(session_, plaintext.data(), plaintext.size(), nullptr,
+  EXPECT_OK(Encrypt(session, plaintext.data(), plaintext.size(), nullptr,
                     &ciphertext_size));
   EXPECT_EQ(ciphertext_size, plaintext.size() + 16);
 
   std::vector<uint8_t> ciphertext(ciphertext_size);
-  EXPECT_OK(Encrypt(session_, plaintext.data(), plaintext.size(),
+  EXPECT_OK(Encrypt(session, plaintext.data(), plaintext.size(),
                     ciphertext.data(), &ciphertext_size));
   EXPECT_EQ(ciphertext_size, plaintext.size() + 16);
 
   // Operation should be terminated after success
-  EXPECT_THAT(Encrypt(session_, plaintext.data(), plaintext.size(), nullptr,
+  EXPECT_THAT(Encrypt(session, plaintext.data(), plaintext.size(), nullptr,
                       &ciphertext_size),
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 
-  EXPECT_OK(DecryptInit(session_, &mech, secret_key_));
+  EXPECT_OK(DecryptInit(session, &mech, secret_key));
 
   std::vector<uint8_t> recovered_plaintext(32);
   CK_ULONG plaintext_size = recovered_plaintext.size();
-  EXPECT_THAT(Decrypt(session_, ciphertext.data(), ciphertext.size(),
+  EXPECT_THAT(Decrypt(session, ciphertext.data(), ciphertext.size(),
                       recovered_plaintext.data(), &plaintext_size),
               StatusRvIs(CKR_BUFFER_TOO_SMALL));
 
   // Operation should be able to proceed after CKR_BUFFER_TOO_SMALL.
   recovered_plaintext.resize(plaintext_size);
-  EXPECT_OK(Decrypt(session_, ciphertext.data(), ciphertext.size(),
+  EXPECT_OK(Decrypt(session, ciphertext.data(), ciphertext.size(),
                     recovered_plaintext.data(), &plaintext_size));
   EXPECT_EQ(plaintext, recovered_plaintext);
 
   // Operation should now be terminated.
-  EXPECT_THAT(Decrypt(session_, ciphertext.data(), ciphertext.size(), nullptr,
+  EXPECT_THAT(Decrypt(session, ciphertext.data(), ciphertext.size(), nullptr,
                       &plaintext_size),
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
 TEST_P(SymmetricGcmCryptTest, DecryptInitFailsInvalidSessionHandle) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
+                       fakekms::Server::New());
+  std::string config_file = CreateConfigFileWithOneKeyring(fake_server.get());
+  absl::Cleanup config_close = [config_file] {
+    std::remove(config_file.c_str());
+  };
+
+  auto init_args = InitArgs(config_file.c_str());
+
+  EXPECT_OK(Initialize(&init_args));
+  absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
+
   EXPECT_THAT(DecryptInit(0, nullptr, 0),
               StatusRvIs(CKR_SESSION_HANDLE_INVALID));
 }
 
 TEST_P(SymmetricGcmCryptTest, DecryptInitFailsInvalidKeyHandle) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
+                       fakekms::Server::New());
+  std::string config_file = CreateConfigFileWithOneKeyring(fake_server.get());
+  absl::Cleanup config_close = [config_file] {
+    std::remove(config_file.c_str());
+  };
+
+  auto init_args = InitArgs(config_file.c_str());
+
+  EXPECT_OK(Initialize(&init_args));
+  absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
+
   std::vector<uint8_t> iv(12);
   std::vector<uint8_t> aad = {0xDE, 0xAD, 0xBE, 0xEF};
   CK_GCM_PARAMS params = {
@@ -588,11 +719,37 @@ TEST_P(SymmetricGcmCryptTest, DecryptInitFailsInvalidKeyHandle) {
       sizeof(params),        // ulParameterLen
   };
 
-  EXPECT_THAT(DecryptInit(session_, &mech, 0),
+  EXPECT_THAT(DecryptInit(session, &mech, 0),
               StatusRvIs(CKR_KEY_HANDLE_INVALID));
 }
 
 TEST_P(SymmetricGcmCryptTest, DecryptInitFailsOperationActive) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
+                       fakekms::Server::New());
+  kms_v1::KeyRing kr;
+  std::string config_file =
+      CreateConfigFileWithOneKeyring(fake_server.get(), &kr);
+  std::ofstream(config_file, std::ofstream::out | std::ofstream::app)
+      << "experimental_allow_raw_encryption_keys: true" << std::endl;
+  absl::Cleanup config_close = [config_file] {
+    std::remove(config_file.c_str());
+  };
+
+  auto init_args = InitArgs(config_file.c_str());
+
+  auto ckv = InitializeCryptoKeyAndKeyVersion(
+      fake_server.get(), kr, kms_v1::CryptoKey::RAW_ENCRYPT_DECRYPT,
+      GetParam());
+
+  EXPECT_OK(Initialize(&init_args));
+  absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
+
+  ASSERT_OK_AND_ASSIGN(CK_OBJECT_HANDLE secret_key,
+                       GetSecretKeyObjectHandle(session, ckv));
+
   std::vector<uint8_t> iv(12);
   std::vector<uint8_t> aad = {0xDE, 0xAD, 0xBE, 0xEF};
   CK_GCM_PARAMS params = {
@@ -609,20 +766,61 @@ TEST_P(SymmetricGcmCryptTest, DecryptInitFailsOperationActive) {
       sizeof(params),        // ulParameterLen
   };
 
-  EXPECT_OK(DecryptInit(session_, &mech, secret_key_));
-  EXPECT_THAT(DecryptInit(session_, &mech, secret_key_),
+  EXPECT_OK(DecryptInit(session, &mech, secret_key));
+  EXPECT_THAT(DecryptInit(session, &mech, secret_key),
               StatusRvIs(CKR_OPERATION_ACTIVE));
 }
 
 TEST_P(SymmetricGcmCryptTest, DecryptFailsOperationNotInitialized) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
+                       fakekms::Server::New());
+  std::string config_file = CreateConfigFileWithOneKeyring(fake_server.get());
+  absl::Cleanup config_close = [config_file] {
+    std::remove(config_file.c_str());
+  };
+
+  auto init_args = InitArgs(config_file.c_str());
+
+  EXPECT_OK(Initialize(&init_args));
+  absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
+
   uint8_t ciphertext[256];
   CK_ULONG plaintext_size;
-  EXPECT_THAT(Decrypt(session_, ciphertext, sizeof(ciphertext), nullptr,
+  EXPECT_THAT(Decrypt(session, ciphertext, sizeof(ciphertext), nullptr,
                       &plaintext_size),
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
 TEST_P(SymmetricGcmCryptTest, DecryptFailsNullCiphertext) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
+                       fakekms::Server::New());
+  kms_v1::KeyRing kr;
+  std::string config_file =
+      CreateConfigFileWithOneKeyring(fake_server.get(), &kr);
+  std::ofstream(config_file, std::ofstream::out | std::ofstream::app)
+      << "experimental_allow_raw_encryption_keys: true" << std::endl;
+  absl::Cleanup config_close = [config_file] {
+    std::remove(config_file.c_str());
+  };
+
+  auto init_args = InitArgs(config_file.c_str());
+
+  auto ckv = InitializeCryptoKeyAndKeyVersion(
+      fake_server.get(), kr, kms_v1::CryptoKey::RAW_ENCRYPT_DECRYPT,
+      GetParam());
+
+  EXPECT_OK(Initialize(&init_args));
+  absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
+
+  ASSERT_OK_AND_ASSIGN(CK_OBJECT_HANDLE secret_key,
+                       GetSecretKeyObjectHandle(session, ckv));
+
   std::vector<uint8_t> iv(12);
   std::vector<uint8_t> aad = {0xDE, 0xAD, 0xBE, 0xEF};
   CK_GCM_PARAMS params = {
@@ -639,20 +837,46 @@ TEST_P(SymmetricGcmCryptTest, DecryptFailsNullCiphertext) {
       sizeof(params),        // ulParameterLen
   };
 
-  EXPECT_OK(DecryptInit(session_, &mech, secret_key_));
+  EXPECT_OK(DecryptInit(session, &mech, secret_key));
 
   CK_ULONG plaintext_size;
-  EXPECT_THAT(Decrypt(session_, nullptr, 0, nullptr, &plaintext_size),
+  EXPECT_THAT(Decrypt(session, nullptr, 0, nullptr, &plaintext_size),
               StatusRvIs(CKR_ARGUMENTS_BAD));
 
   uint8_t ciphertext[256];
   // Operation should now be terminated.
-  EXPECT_THAT(Decrypt(session_, ciphertext, sizeof(ciphertext), nullptr,
+  EXPECT_THAT(Decrypt(session, ciphertext, sizeof(ciphertext), nullptr,
                       &plaintext_size),
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
 TEST_P(SymmetricGcmCryptTest, DecryptFailsNullPlaintextSize) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
+                       fakekms::Server::New());
+  kms_v1::KeyRing kr;
+  std::string config_file =
+      CreateConfigFileWithOneKeyring(fake_server.get(), &kr);
+  std::ofstream(config_file, std::ofstream::out | std::ofstream::app)
+      << "experimental_allow_raw_encryption_keys: true" << std::endl;
+  absl::Cleanup config_close = [config_file] {
+    std::remove(config_file.c_str());
+  };
+
+  auto init_args = InitArgs(config_file.c_str());
+
+  auto ckv = InitializeCryptoKeyAndKeyVersion(
+      fake_server.get(), kr, kms_v1::CryptoKey::RAW_ENCRYPT_DECRYPT,
+      GetParam());
+
+  EXPECT_OK(Initialize(&init_args));
+  absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
+
+  ASSERT_OK_AND_ASSIGN(CK_OBJECT_HANDLE secret_key,
+                       GetSecretKeyObjectHandle(session, ckv));
+
   std::vector<uint8_t> iv(12);
   std::vector<uint8_t> aad = {0xDE, 0xAD, 0xBE, 0xEF};
   CK_GCM_PARAMS params = {
@@ -669,21 +893,47 @@ TEST_P(SymmetricGcmCryptTest, DecryptFailsNullPlaintextSize) {
       sizeof(params),        // ulParameterLen
   };
 
-  EXPECT_OK(DecryptInit(session_, &mech, secret_key_));
+  EXPECT_OK(DecryptInit(session, &mech, secret_key));
 
   uint8_t ciphertext[256];
   EXPECT_THAT(
-      Decrypt(session_, ciphertext, sizeof(ciphertext), nullptr, nullptr),
+      Decrypt(session, ciphertext, sizeof(ciphertext), nullptr, nullptr),
       StatusRvIs(CKR_ARGUMENTS_BAD));
 
   CK_ULONG plaintext_size;
   // Operation should now be terminated.
-  EXPECT_THAT(Decrypt(session_, ciphertext, sizeof(ciphertext), nullptr,
+  EXPECT_THAT(Decrypt(session, ciphertext, sizeof(ciphertext), nullptr,
                       &plaintext_size),
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
 TEST_P(SymmetricGcmCryptTest, EncryptSuccess) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
+                       fakekms::Server::New());
+  kms_v1::KeyRing kr;
+  std::string config_file =
+      CreateConfigFileWithOneKeyring(fake_server.get(), &kr);
+  std::ofstream(config_file, std::ofstream::out | std::ofstream::app)
+      << "experimental_allow_raw_encryption_keys: true" << std::endl;
+  absl::Cleanup config_close = [config_file] {
+    std::remove(config_file.c_str());
+  };
+
+  auto init_args = InitArgs(config_file.c_str());
+
+  auto ckv = InitializeCryptoKeyAndKeyVersion(
+      fake_server.get(), kr, kms_v1::CryptoKey::RAW_ENCRYPT_DECRYPT,
+      GetParam());
+
+  EXPECT_OK(Initialize(&init_args));
+  absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
+
+  ASSERT_OK_AND_ASSIGN(CK_OBJECT_HANDLE secret_key,
+                       GetSecretKeyObjectHandle(session, ckv));
+
   std::vector<uint8_t> iv(12);
   std::vector<uint8_t> aad = {0xDE, 0xAD, 0xBE, 0xEF};
   CK_GCM_PARAMS params = {
@@ -700,27 +950,53 @@ TEST_P(SymmetricGcmCryptTest, EncryptSuccess) {
       sizeof(params),        // ulParameterLen
   };
 
-  EXPECT_OK(EncryptInit(session_, &mech, secret_key_));
+  EXPECT_OK(EncryptInit(session, &mech, secret_key));
 
   std::vector<uint8_t> plaintext(128);
   RAND_bytes(plaintext.data(), plaintext.size());
 
   CK_ULONG ciphertext_size;
-  EXPECT_OK(Encrypt(session_, plaintext.data(), plaintext.size(), nullptr,
+  EXPECT_OK(Encrypt(session, plaintext.data(), plaintext.size(), nullptr,
                     &ciphertext_size));
   EXPECT_EQ(ciphertext_size, plaintext.size() + 16);
 
   std::vector<uint8_t> ciphertext(ciphertext_size);
-  EXPECT_OK(Encrypt(session_, plaintext.data(), plaintext.size(),
+  EXPECT_OK(Encrypt(session, plaintext.data(), plaintext.size(),
                     ciphertext.data(), &ciphertext_size));
 
   // Operation should be terminated after success
-  EXPECT_THAT(Encrypt(session_, plaintext.data(), plaintext.size(), nullptr,
+  EXPECT_THAT(Encrypt(session, plaintext.data(), plaintext.size(), nullptr,
                       &ciphertext_size),
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
 TEST_P(SymmetricGcmCryptTest, EncryptMultiPartSuccess) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
+                       fakekms::Server::New());
+  kms_v1::KeyRing kr;
+  std::string config_file =
+      CreateConfigFileWithOneKeyring(fake_server.get(), &kr);
+  std::ofstream(config_file, std::ofstream::out | std::ofstream::app)
+      << "experimental_allow_raw_encryption_keys: true" << std::endl;
+  absl::Cleanup config_close = [config_file] {
+    std::remove(config_file.c_str());
+  };
+
+  auto init_args = InitArgs(config_file.c_str());
+
+  auto ckv = InitializeCryptoKeyAndKeyVersion(
+      fake_server.get(), kr, kms_v1::CryptoKey::RAW_ENCRYPT_DECRYPT,
+      GetParam());
+
+  EXPECT_OK(Initialize(&init_args));
+  absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
+
+  ASSERT_OK_AND_ASSIGN(CK_OBJECT_HANDLE secret_key,
+                       GetSecretKeyObjectHandle(session, ckv));
+
   std::vector<uint8_t> iv(12);
   std::vector<uint8_t> aad = {0xDE, 0xAD, 0xBE, 0xEF};
   CK_GCM_PARAMS params = {
@@ -737,7 +1013,7 @@ TEST_P(SymmetricGcmCryptTest, EncryptMultiPartSuccess) {
       sizeof(params),        // ulParameterLen
   };
 
-  EXPECT_OK(EncryptInit(session_, &mech, secret_key_));
+  EXPECT_OK(EncryptInit(session, &mech, secret_key));
 
   std::vector<uint8_t> part1(64);
   std::vector<uint8_t> part2(64);
@@ -747,23 +1023,49 @@ TEST_P(SymmetricGcmCryptTest, EncryptMultiPartSuccess) {
   CK_ULONG ciphertext_size = 144;
   CK_ULONG partial_ciphertext_size = 0;
   std::vector<uint8_t> ciphertext(ciphertext_size);
-  EXPECT_OK(EncryptUpdate(session_, part1.data(), part1.size(),
+  EXPECT_OK(EncryptUpdate(session, part1.data(), part1.size(),
                           ciphertext.data(), &partial_ciphertext_size));
   EXPECT_EQ(partial_ciphertext_size, 0);
 
-  EXPECT_OK(EncryptUpdate(session_, part2.data(), part2.size(),
+  EXPECT_OK(EncryptUpdate(session, part2.data(), part2.size(),
                           ciphertext.data(), &partial_ciphertext_size));
   EXPECT_EQ(partial_ciphertext_size, 0);
 
-  EXPECT_OK(EncryptFinal(session_, ciphertext.data(), &ciphertext_size));
+  EXPECT_OK(EncryptFinal(session, ciphertext.data(), &ciphertext_size));
 
   // Operation should be terminated after success
   EXPECT_THAT(
-      Encrypt(session_, part1.data(), part1.size(), nullptr, &ciphertext_size),
+      Encrypt(session, part1.data(), part1.size(), nullptr, &ciphertext_size),
       StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
 TEST_P(SymmetricGcmCryptTest, EncryptBufferTooSmall) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
+                       fakekms::Server::New());
+  kms_v1::KeyRing kr;
+  std::string config_file =
+      CreateConfigFileWithOneKeyring(fake_server.get(), &kr);
+  std::ofstream(config_file, std::ofstream::out | std::ofstream::app)
+      << "experimental_allow_raw_encryption_keys: true" << std::endl;
+  absl::Cleanup config_close = [config_file] {
+    std::remove(config_file.c_str());
+  };
+
+  auto init_args = InitArgs(config_file.c_str());
+
+  auto ckv = InitializeCryptoKeyAndKeyVersion(
+      fake_server.get(), kr, kms_v1::CryptoKey::RAW_ENCRYPT_DECRYPT,
+      GetParam());
+
+  EXPECT_OK(Initialize(&init_args));
+  absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
+
+  ASSERT_OK_AND_ASSIGN(CK_OBJECT_HANDLE secret_key,
+                       GetSecretKeyObjectHandle(session, ckv));
+
   std::vector<uint8_t> iv(12);
   std::vector<uint8_t> aad = {0xDE, 0xAD, 0xBE, 0xEF};
   CK_GCM_PARAMS params = {
@@ -780,35 +1082,62 @@ TEST_P(SymmetricGcmCryptTest, EncryptBufferTooSmall) {
       sizeof(params),        // ulParameterLen
   };
 
-  EXPECT_OK(EncryptInit(session_, &mech, secret_key_));
+  EXPECT_OK(EncryptInit(session, &mech, secret_key));
 
   std::vector<uint8_t> plaintext(128);
   RAND_bytes(plaintext.data(), plaintext.size());
 
   std::vector<uint8_t> ciphertext(143);
   CK_ULONG ciphertext_size = ciphertext.size();
-  EXPECT_THAT(Encrypt(session_, plaintext.data(), plaintext.size(),
+  EXPECT_THAT(Encrypt(session, plaintext.data(), plaintext.size(),
                       ciphertext.data(), &ciphertext_size),
               StatusRvIs(CKR_BUFFER_TOO_SMALL));
   EXPECT_EQ(ciphertext_size, 144);
 
   // Operation should be able to proceed after CKR_BUFFER_TOO_SMALL.
   ciphertext.resize(ciphertext_size);
-  EXPECT_OK(Encrypt(session_, plaintext.data(), plaintext.size(),
+  EXPECT_OK(Encrypt(session, plaintext.data(), plaintext.size(),
                     ciphertext.data(), &ciphertext_size));
 
   // Operation should now be terminated.
-  EXPECT_THAT(Encrypt(session_, plaintext.data(), plaintext.size(), nullptr,
+  EXPECT_THAT(Encrypt(session, plaintext.data(), plaintext.size(), nullptr,
                       &ciphertext_size),
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
 TEST_P(SymmetricGcmCryptTest, EncryptInitFailsInvalidSessionHandle) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
+                       fakekms::Server::New());
+  std::string config_file = CreateConfigFileWithOneKeyring(fake_server.get());
+  absl::Cleanup config_close = [config_file] {
+    std::remove(config_file.c_str());
+  };
+
+  auto init_args = InitArgs(config_file.c_str());
+
+  EXPECT_OK(Initialize(&init_args));
+  absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
+
   EXPECT_THAT(EncryptInit(0, nullptr, 0),
               StatusRvIs(CKR_SESSION_HANDLE_INVALID));
 }
 
 TEST_P(SymmetricGcmCryptTest, EncryptInitFailsInvalidKeyHandle) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
+                       fakekms::Server::New());
+  std::string config_file = CreateConfigFileWithOneKeyring(fake_server.get());
+  absl::Cleanup config_close = [config_file] {
+    std::remove(config_file.c_str());
+  };
+
+  auto init_args = InitArgs(config_file.c_str());
+
+  EXPECT_OK(Initialize(&init_args));
+  absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
+
   std::vector<uint8_t> iv(12);
   std::vector<uint8_t> aad = {0xDE, 0xAD, 0xBE, 0xEF};
   CK_GCM_PARAMS params = {
@@ -825,11 +1154,37 @@ TEST_P(SymmetricGcmCryptTest, EncryptInitFailsInvalidKeyHandle) {
       sizeof(params),        // ulParameterLen
   };
 
-  EXPECT_THAT(EncryptInit(session_, &mech, 0),
+  EXPECT_THAT(EncryptInit(session, &mech, 0),
               StatusRvIs(CKR_KEY_HANDLE_INVALID));
 }
 
 TEST_P(SymmetricGcmCryptTest, EncryptInitFailsOperationActive) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
+                       fakekms::Server::New());
+  kms_v1::KeyRing kr;
+  std::string config_file =
+      CreateConfigFileWithOneKeyring(fake_server.get(), &kr);
+  std::ofstream(config_file, std::ofstream::out | std::ofstream::app)
+      << "experimental_allow_raw_encryption_keys: true" << std::endl;
+  absl::Cleanup config_close = [config_file] {
+    std::remove(config_file.c_str());
+  };
+
+  auto init_args = InitArgs(config_file.c_str());
+
+  auto ckv = InitializeCryptoKeyAndKeyVersion(
+      fake_server.get(), kr, kms_v1::CryptoKey::RAW_ENCRYPT_DECRYPT,
+      GetParam());
+
+  EXPECT_OK(Initialize(&init_args));
+  absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
+
+  ASSERT_OK_AND_ASSIGN(CK_OBJECT_HANDLE secret_key,
+                       GetSecretKeyObjectHandle(session, ckv));
+
   std::vector<uint8_t> iv(12);
   std::vector<uint8_t> aad = {0xDE, 0xAD, 0xBE, 0xEF};
   CK_GCM_PARAMS params = {
@@ -846,20 +1201,61 @@ TEST_P(SymmetricGcmCryptTest, EncryptInitFailsOperationActive) {
       sizeof(params),        // ulParameterLen
   };
 
-  EXPECT_OK(EncryptInit(session_, &mech, secret_key_));
-  EXPECT_THAT(EncryptInit(session_, &mech, secret_key_),
+  EXPECT_OK(EncryptInit(session, &mech, secret_key));
+  EXPECT_THAT(EncryptInit(session, &mech, secret_key),
               StatusRvIs(CKR_OPERATION_ACTIVE));
 }
 
 TEST_P(SymmetricGcmCryptTest, EncryptFailsOperationNotInitialized) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
+                       fakekms::Server::New());
+  std::string config_file = CreateConfigFileWithOneKeyring(fake_server.get());
+  absl::Cleanup config_close = [config_file] {
+    std::remove(config_file.c_str());
+  };
+
+  auto init_args = InitArgs(config_file.c_str());
+
+  EXPECT_OK(Initialize(&init_args));
+  absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
+
   uint8_t plaintext[32];
   CK_ULONG ciphertext_size;
-  EXPECT_THAT(Encrypt(session_, plaintext, sizeof(plaintext), nullptr,
-                      &ciphertext_size),
-              StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
+  EXPECT_THAT(
+      Encrypt(session, plaintext, sizeof(plaintext), nullptr, &ciphertext_size),
+      StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
 TEST_P(SymmetricGcmCryptTest, EncryptFailsNullPLaintext) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
+                       fakekms::Server::New());
+  kms_v1::KeyRing kr;
+  std::string config_file =
+      CreateConfigFileWithOneKeyring(fake_server.get(), &kr);
+  std::ofstream(config_file, std::ofstream::out | std::ofstream::app)
+      << "experimental_allow_raw_encryption_keys: true" << std::endl;
+  absl::Cleanup config_close = [config_file] {
+    std::remove(config_file.c_str());
+  };
+
+  auto init_args = InitArgs(config_file.c_str());
+
+  auto ckv = InitializeCryptoKeyAndKeyVersion(
+      fake_server.get(), kr, kms_v1::CryptoKey::RAW_ENCRYPT_DECRYPT,
+      GetParam());
+
+  EXPECT_OK(Initialize(&init_args));
+  absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
+
+  ASSERT_OK_AND_ASSIGN(CK_OBJECT_HANDLE secret_key,
+                       GetSecretKeyObjectHandle(session, ckv));
+
   std::vector<uint8_t> iv(12);
   std::vector<uint8_t> aad = {0xDE, 0xAD, 0xBE, 0xEF};
   CK_GCM_PARAMS params = {
@@ -876,20 +1272,46 @@ TEST_P(SymmetricGcmCryptTest, EncryptFailsNullPLaintext) {
       sizeof(params),        // ulParameterLen
   };
 
-  EXPECT_OK(EncryptInit(session_, &mech, secret_key_));
+  EXPECT_OK(EncryptInit(session, &mech, secret_key));
 
   CK_ULONG ciphertext_size;
-  EXPECT_THAT(Encrypt(session_, nullptr, 0, nullptr, &ciphertext_size),
+  EXPECT_THAT(Encrypt(session, nullptr, 0, nullptr, &ciphertext_size),
               StatusRvIs(CKR_ARGUMENTS_BAD));
 
   uint8_t plaintext[32];
   // Operation should now be terminated.
-  EXPECT_THAT(Encrypt(session_, plaintext, sizeof(plaintext), nullptr,
-                      &ciphertext_size),
-              StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
+  EXPECT_THAT(
+      Encrypt(session, plaintext, sizeof(plaintext), nullptr, &ciphertext_size),
+      StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
 TEST_P(SymmetricGcmCryptTest, EncryptFailsNullCiphertextSize) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
+                       fakekms::Server::New());
+  kms_v1::KeyRing kr;
+  std::string config_file =
+      CreateConfigFileWithOneKeyring(fake_server.get(), &kr);
+  std::ofstream(config_file, std::ofstream::out | std::ofstream::app)
+      << "experimental_allow_raw_encryption_keys: true" << std::endl;
+  absl::Cleanup config_close = [config_file] {
+    std::remove(config_file.c_str());
+  };
+
+  auto init_args = InitArgs(config_file.c_str());
+
+  auto ckv = InitializeCryptoKeyAndKeyVersion(
+      fake_server.get(), kr, kms_v1::CryptoKey::RAW_ENCRYPT_DECRYPT,
+      GetParam());
+
+  EXPECT_OK(Initialize(&init_args));
+  absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
+
+  ASSERT_OK_AND_ASSIGN(CK_OBJECT_HANDLE secret_key,
+                       GetSecretKeyObjectHandle(session, ckv));
+
   std::vector<uint8_t> iv(12);
   std::vector<uint8_t> aad = {0xDE, 0xAD, 0xBE, 0xEF};
   CK_GCM_PARAMS params = {
@@ -906,17 +1328,17 @@ TEST_P(SymmetricGcmCryptTest, EncryptFailsNullCiphertextSize) {
       sizeof(params),        // ulParameterLen
   };
 
-  EXPECT_OK(EncryptInit(session_, &mech, secret_key_));
+  EXPECT_OK(EncryptInit(session, &mech, secret_key));
 
   uint8_t plaintext[32];
-  EXPECT_THAT(Encrypt(session_, plaintext, sizeof(plaintext), nullptr, nullptr),
+  EXPECT_THAT(Encrypt(session, plaintext, sizeof(plaintext), nullptr, nullptr),
               StatusRvIs(CKR_ARGUMENTS_BAD));
 
   CK_ULONG ciphertext_size;
   // Operation should now be terminated.
-  EXPECT_THAT(Encrypt(session_, plaintext, sizeof(plaintext), nullptr,
-                      &ciphertext_size),
-              StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
+  EXPECT_THAT(
+      Encrypt(session, plaintext, sizeof(plaintext), nullptr, &ciphertext_size),
+      StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
 }  // namespace

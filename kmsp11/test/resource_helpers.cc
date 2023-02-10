@@ -217,4 +217,9 @@ absl::StatusOr<CK_OBJECT_HANDLE> GetPublicKeyObjectHandle(
   return GetObjectHandle(session, ckv, CKO_PUBLIC_KEY);
 }
 
+absl::StatusOr<CK_OBJECT_HANDLE> GetSecretKeyObjectHandle(
+    CK_SESSION_HANDLE session, kms_v1::CryptoKeyVersion ckv) {
+  return GetObjectHandle(session, ckv, CKO_SECRET_KEY);
+}
+
 }  // namespace kmsp11
