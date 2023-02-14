@@ -41,7 +41,33 @@ using ::testing::IsEmpty;
 using ::testing::IsSupersetOf;
 using ::testing::Not;
 
-TEST(AsymmetricCryptTest, DecryptSuccess) {
+struct AlgorithmInfo {
+  kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm;
+  int ciphertext_size;
+  const EVP_MD* evpHashAlg;
+  CK_RSA_PKCS_MGF_TYPE mgfAlg;
+  CK_MECHANISM_TYPE hashAlg;
+};
+
+class AsymmetricCryptTest : public testing::Test,
+                            public testing::WithParamInterface<AlgorithmInfo> {
+};
+
+const std::array kAsymmetricCryptAlgorithms = {
+    AlgorithmInfo{kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256, 256,
+                  EVP_sha256(), CKG_MGF1_SHA256, CKM_SHA256},
+    AlgorithmInfo{kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_3072_SHA256, 384,
+                  EVP_sha256(), CKG_MGF1_SHA256, CKM_SHA256},
+    AlgorithmInfo{kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_4096_SHA256, 512,
+                  EVP_sha256(), CKG_MGF1_SHA256, CKM_SHA256},
+    AlgorithmInfo{kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_4096_SHA512, 512,
+                  EVP_sha512(), CKG_MGF1_SHA512, CKM_SHA512},
+};
+
+INSTANTIATE_TEST_SUITE_P(TestAsymmetricEncryption, AsymmetricCryptTest,
+                         testing::ValuesIn(kAsymmetricCryptAlgorithms));
+
+TEST_P(AsymmetricCryptTest, DecryptSuccess) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   kms_v1::KeyRing kr;
@@ -55,7 +81,7 @@ TEST(AsymmetricCryptTest, DecryptSuccess) {
 
   kms_v1::CryptoKeyVersion ckv = InitializeCryptoKeyAndKeyVersion(
       fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_DECRYPT,
-      kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256);
+      GetParam().algorithm);
   ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub_pkey,
                        GetEVPPublicKey(fake_server.get(), ckv));
 
@@ -68,36 +94,35 @@ TEST(AsymmetricCryptTest, DecryptSuccess) {
   std::vector<uint8_t> plaintext(128);
   RAND_bytes(plaintext.data(), plaintext.size());
 
-  uint8_t ciphertext[256];
-  EXPECT_OK(EncryptRsaOaep(pub_pkey.get(), EVP_sha256(), plaintext,
+  std::vector<uint8_t> ciphertext(GetParam().ciphertext_size);
+  EXPECT_OK(EncryptRsaOaep(pub_pkey.get(), GetParam().evpHashAlg, plaintext,
                            absl::MakeSpan(ciphertext)));
-
   ASSERT_OK_AND_ASSIGN(CK_OBJECT_HANDLE private_key,
                        GetPrivateKeyObjectHandle(session, ckv));
 
-  CK_RSA_PKCS_OAEP_PARAMS params{CKM_SHA256, CKG_MGF1_SHA256,
+  CK_RSA_PKCS_OAEP_PARAMS params{GetParam().hashAlg, GetParam().mgfAlg,
                                  CKZ_DATA_SPECIFIED, nullptr, 0};
   CK_MECHANISM mech{CKM_RSA_PKCS_OAEP, &params, sizeof(params)};
   EXPECT_OK(DecryptInit(session, &mech, private_key));
 
   CK_ULONG plaintext_size;
-  EXPECT_OK(Decrypt(session, ciphertext, sizeof(ciphertext), nullptr,
+  EXPECT_OK(Decrypt(session, ciphertext.data(), ciphertext.size(), nullptr,
                     &plaintext_size));
   EXPECT_EQ(plaintext_size, plaintext.size());
 
   std::vector<uint8_t> recovered_plaintext(plaintext_size);
-  EXPECT_OK(Decrypt(session, ciphertext, sizeof(ciphertext),
+  EXPECT_OK(Decrypt(session, ciphertext.data(), ciphertext.size(),
                     recovered_plaintext.data(), &plaintext_size));
   EXPECT_EQ(recovered_plaintext, plaintext);
   EXPECT_EQ(plaintext_size, plaintext.size());
 
   // Operation should be terminated after success
-  EXPECT_THAT(Decrypt(session, ciphertext, sizeof(ciphertext), nullptr,
+  EXPECT_THAT(Decrypt(session, ciphertext.data(), ciphertext.size(), nullptr,
                       &plaintext_size),
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
-TEST(AsymmetricCryptTest, DecryptSuccessSameBuffer) {
+TEST_P(AsymmetricCryptTest, DecryptSuccessSameBuffer) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   kms_v1::KeyRing kr;
@@ -111,7 +136,7 @@ TEST(AsymmetricCryptTest, DecryptSuccessSameBuffer) {
 
   kms_v1::CryptoKeyVersion ckv = InitializeCryptoKeyAndKeyVersion(
       fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_DECRYPT,
-      kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256);
+      GetParam().algorithm);
   ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub_pkey,
                        GetEVPPublicKey(fake_server.get(), ckv));
 
@@ -124,14 +149,14 @@ TEST(AsymmetricCryptTest, DecryptSuccessSameBuffer) {
   std::vector<uint8_t> plaintext(128);
   RAND_bytes(plaintext.data(), plaintext.size());
 
-  std::vector<uint8_t> buf(256);
-  EXPECT_OK(EncryptRsaOaep(pub_pkey.get(), EVP_sha256(), plaintext,
+  std::vector<uint8_t> buf(GetParam().ciphertext_size);
+  EXPECT_OK(EncryptRsaOaep(pub_pkey.get(), GetParam().evpHashAlg, plaintext,
                            absl::MakeSpan(buf)));
 
   ASSERT_OK_AND_ASSIGN(CK_OBJECT_HANDLE private_key,
                        GetPrivateKeyObjectHandle(session, ckv));
 
-  CK_RSA_PKCS_OAEP_PARAMS params{CKM_SHA256, CKG_MGF1_SHA256,
+  CK_RSA_PKCS_OAEP_PARAMS params{GetParam().hashAlg, GetParam().mgfAlg,
                                  CKZ_DATA_SPECIFIED, nullptr, 0};
   CK_MECHANISM mech{CKM_RSA_PKCS_OAEP, &params, sizeof(params)};
   EXPECT_OK(DecryptInit(session, &mech, private_key));
@@ -145,7 +170,7 @@ TEST(AsymmetricCryptTest, DecryptSuccessSameBuffer) {
   EXPECT_EQ(buf, plaintext);
 }
 
-TEST(AsymmetricCryptTest, DecryptBufferTooSmall) {
+TEST_P(AsymmetricCryptTest, DecryptBufferTooSmall) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   kms_v1::KeyRing kr;
@@ -159,7 +184,7 @@ TEST(AsymmetricCryptTest, DecryptBufferTooSmall) {
 
   kms_v1::CryptoKeyVersion ckv = InitializeCryptoKeyAndKeyVersion(
       fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_DECRYPT,
-      kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256);
+      GetParam().algorithm);
   ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub_pkey,
                        GetEVPPublicKey(fake_server.get(), ckv));
 
@@ -172,38 +197,38 @@ TEST(AsymmetricCryptTest, DecryptBufferTooSmall) {
   std::vector<uint8_t> plaintext(128);
   RAND_bytes(plaintext.data(), plaintext.size());
 
-  uint8_t ciphertext[256];
-  EXPECT_OK(EncryptRsaOaep(pub_pkey.get(), EVP_sha256(), plaintext,
+  std::vector<uint8_t> ciphertext(GetParam().ciphertext_size);
+  EXPECT_OK(EncryptRsaOaep(pub_pkey.get(), GetParam().evpHashAlg, plaintext,
                            absl::MakeSpan(ciphertext)));
 
   ASSERT_OK_AND_ASSIGN(CK_OBJECT_HANDLE private_key,
                        GetPrivateKeyObjectHandle(session, ckv));
 
-  CK_RSA_PKCS_OAEP_PARAMS params{CKM_SHA256, CKG_MGF1_SHA256,
+  CK_RSA_PKCS_OAEP_PARAMS params{GetParam().hashAlg, GetParam().mgfAlg,
                                  CKZ_DATA_SPECIFIED, nullptr, 0};
   CK_MECHANISM mech{CKM_RSA_PKCS_OAEP, &params, sizeof(params)};
   EXPECT_OK(DecryptInit(session, &mech, private_key));
 
   std::vector<uint8_t> recovered_plaintext(32);
   CK_ULONG plaintext_size = recovered_plaintext.size();
-  EXPECT_THAT(Decrypt(session, ciphertext, sizeof(ciphertext),
+  EXPECT_THAT(Decrypt(session, ciphertext.data(), ciphertext.size(),
                       recovered_plaintext.data(), &plaintext_size),
               StatusRvIs(CKR_BUFFER_TOO_SMALL));
   EXPECT_EQ(plaintext_size, plaintext.size());
 
   // Operation should be able to proceed after CKR_BUFFER_TOO_SMALL.
   recovered_plaintext.resize(plaintext_size);
-  EXPECT_OK(Decrypt(session, ciphertext, sizeof(ciphertext),
+  EXPECT_OK(Decrypt(session, ciphertext.data(), ciphertext.size(),
                     recovered_plaintext.data(), &plaintext_size));
   EXPECT_EQ(plaintext, recovered_plaintext);
 
   // Operation should now be terminated.
-  EXPECT_THAT(Decrypt(session, ciphertext, sizeof(ciphertext), nullptr,
+  EXPECT_THAT(Decrypt(session, ciphertext.data(), ciphertext.size(), nullptr,
                       &plaintext_size),
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
-TEST(AsymmetricCryptTest, DecryptParametersMismatch) {
+TEST_P(AsymmetricCryptTest, DecryptParametersMismatch) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   kms_v1::KeyRing kr;
@@ -217,7 +242,7 @@ TEST(AsymmetricCryptTest, DecryptParametersMismatch) {
 
   kms_v1::CryptoKeyVersion ckv = InitializeCryptoKeyAndKeyVersion(
       fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_DECRYPT,
-      kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256);
+      GetParam().algorithm);
 
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
@@ -228,7 +253,7 @@ TEST(AsymmetricCryptTest, DecryptParametersMismatch) {
   ASSERT_OK_AND_ASSIGN(CK_OBJECT_HANDLE private_key,
                        GetPrivateKeyObjectHandle(session, ckv));
 
-  CK_RSA_PKCS_OAEP_PARAMS params{CKM_SHA512, CKG_MGF1_SHA512,
+  CK_RSA_PKCS_OAEP_PARAMS params{CKM_SHA384, CKG_MGF1_SHA384,
                                  CKZ_DATA_SPECIFIED, nullptr, 0};
   CK_MECHANISM mech{CKM_RSA_PKCS_OAEP, &params, sizeof(params)};
 
@@ -236,7 +261,7 @@ TEST(AsymmetricCryptTest, DecryptParametersMismatch) {
               StatusRvIs(CKR_MECHANISM_PARAM_INVALID));
 }
 
-TEST(AsymmetricCryptTest, DecryptInitFailsInvalidSessionHandle) {
+TEST_P(AsymmetricCryptTest, DecryptInitFailsInvalidSessionHandle) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   std::string config_file = CreateConfigFileWithOneKeyring(fake_server.get());
@@ -253,7 +278,7 @@ TEST(AsymmetricCryptTest, DecryptInitFailsInvalidSessionHandle) {
               StatusRvIs(CKR_SESSION_HANDLE_INVALID));
 }
 
-TEST(AsymmetricCryptTest, DecryptInitFailsInvalidKeyHandle) {
+TEST_P(AsymmetricCryptTest, DecryptInitFailsInvalidKeyHandle) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   std::string config_file = CreateConfigFileWithOneKeyring(fake_server.get());
@@ -269,7 +294,7 @@ TEST(AsymmetricCryptTest, DecryptInitFailsInvalidKeyHandle) {
   CK_SESSION_HANDLE session;
   EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
 
-  CK_RSA_PKCS_OAEP_PARAMS params{CKM_SHA256, CKG_MGF1_SHA256,
+  CK_RSA_PKCS_OAEP_PARAMS params{GetParam().hashAlg, GetParam().mgfAlg,
                                  CKZ_DATA_SPECIFIED, nullptr, 0};
   CK_MECHANISM mech{CKM_RSA_PKCS_OAEP, &params, sizeof(params)};
 
@@ -277,7 +302,7 @@ TEST(AsymmetricCryptTest, DecryptInitFailsInvalidKeyHandle) {
               StatusRvIs(CKR_KEY_HANDLE_INVALID));
 }
 
-TEST(AsymmetricCryptTest, DecryptInitFailsOperationActive) {
+TEST_P(AsymmetricCryptTest, DecryptInitFailsOperationActive) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   kms_v1::KeyRing kr;
@@ -291,7 +316,7 @@ TEST(AsymmetricCryptTest, DecryptInitFailsOperationActive) {
 
   kms_v1::CryptoKeyVersion ckv = InitializeCryptoKeyAndKeyVersion(
       fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_DECRYPT,
-      kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256);
+      GetParam().algorithm);
 
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
@@ -302,7 +327,7 @@ TEST(AsymmetricCryptTest, DecryptInitFailsOperationActive) {
   ASSERT_OK_AND_ASSIGN(CK_OBJECT_HANDLE private_key,
                        GetPrivateKeyObjectHandle(session, ckv));
 
-  CK_RSA_PKCS_OAEP_PARAMS params{CKM_SHA256, CKG_MGF1_SHA256,
+  CK_RSA_PKCS_OAEP_PARAMS params{GetParam().hashAlg, GetParam().mgfAlg,
                                  CKZ_DATA_SPECIFIED, nullptr, 0};
   CK_MECHANISM mech{CKM_RSA_PKCS_OAEP, &params, sizeof(params)};
 
@@ -311,7 +336,7 @@ TEST(AsymmetricCryptTest, DecryptInitFailsOperationActive) {
               StatusRvIs(CKR_OPERATION_ACTIVE));
 }
 
-TEST(AsymmetricCryptTest, DecryptFailsOperationNotInitialized) {
+TEST_P(AsymmetricCryptTest, DecryptFailsOperationNotInitialized) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   std::string config_file = CreateConfigFileWithOneKeyring(fake_server.get());
@@ -327,14 +352,14 @@ TEST(AsymmetricCryptTest, DecryptFailsOperationNotInitialized) {
   CK_SESSION_HANDLE session;
   EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
 
-  uint8_t ciphertext[256];
+  std::vector<uint8_t> ciphertext(GetParam().ciphertext_size);
   CK_ULONG plaintext_size;
-  EXPECT_THAT(Decrypt(session, ciphertext, sizeof(ciphertext), nullptr,
+  EXPECT_THAT(Decrypt(session, ciphertext.data(), ciphertext.size(), nullptr,
                       &plaintext_size),
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
-TEST(AsymmetricCryptTest, DecryptFailsNullCiphertext) {
+TEST_P(AsymmetricCryptTest, DecryptFailsNullCiphertext) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   kms_v1::KeyRing kr;
@@ -348,7 +373,7 @@ TEST(AsymmetricCryptTest, DecryptFailsNullCiphertext) {
 
   kms_v1::CryptoKeyVersion ckv = InitializeCryptoKeyAndKeyVersion(
       fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_DECRYPT,
-      kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256);
+      GetParam().algorithm);
 
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
@@ -359,7 +384,7 @@ TEST(AsymmetricCryptTest, DecryptFailsNullCiphertext) {
   ASSERT_OK_AND_ASSIGN(CK_OBJECT_HANDLE private_key,
                        GetPrivateKeyObjectHandle(session, ckv));
 
-  CK_RSA_PKCS_OAEP_PARAMS params{CKM_SHA256, CKG_MGF1_SHA256,
+  CK_RSA_PKCS_OAEP_PARAMS params{GetParam().hashAlg, GetParam().mgfAlg,
                                  CKZ_DATA_SPECIFIED, nullptr, 0};
   CK_MECHANISM mech{CKM_RSA_PKCS_OAEP, &params, sizeof(params)};
 
@@ -369,14 +394,14 @@ TEST(AsymmetricCryptTest, DecryptFailsNullCiphertext) {
   EXPECT_THAT(Decrypt(session, nullptr, 0, nullptr, &plaintext_size),
               StatusRvIs(CKR_ARGUMENTS_BAD));
 
-  uint8_t ciphertext[256];
+  std::vector<uint8_t> ciphertext(GetParam().ciphertext_size);
   // Operation should now be terminated.
-  EXPECT_THAT(Decrypt(session, ciphertext, sizeof(ciphertext), nullptr,
+  EXPECT_THAT(Decrypt(session, ciphertext.data(), ciphertext.size(), nullptr,
                       &plaintext_size),
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
-TEST(AsymmetricCryptTest, DecryptFailsNullPlaintextSize) {
+TEST_P(AsymmetricCryptTest, DecryptFailsNullPlaintextSize) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   kms_v1::KeyRing kr;
@@ -390,7 +415,7 @@ TEST(AsymmetricCryptTest, DecryptFailsNullPlaintextSize) {
 
   kms_v1::CryptoKeyVersion ckv = InitializeCryptoKeyAndKeyVersion(
       fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_DECRYPT,
-      kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256);
+      GetParam().algorithm);
 
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
@@ -401,25 +426,25 @@ TEST(AsymmetricCryptTest, DecryptFailsNullPlaintextSize) {
   ASSERT_OK_AND_ASSIGN(CK_OBJECT_HANDLE private_key,
                        GetPrivateKeyObjectHandle(session, ckv));
 
-  CK_RSA_PKCS_OAEP_PARAMS params{CKM_SHA256, CKG_MGF1_SHA256,
+  CK_RSA_PKCS_OAEP_PARAMS params{GetParam().hashAlg, GetParam().mgfAlg,
                                  CKZ_DATA_SPECIFIED, nullptr, 0};
   CK_MECHANISM mech{CKM_RSA_PKCS_OAEP, &params, sizeof(params)};
 
   EXPECT_OK(DecryptInit(session, &mech, private_key));
 
-  uint8_t ciphertext[256];
+  std::vector<uint8_t> ciphertext(GetParam().ciphertext_size);
   EXPECT_THAT(
-      Decrypt(session, ciphertext, sizeof(ciphertext), nullptr, nullptr),
+      Decrypt(session, ciphertext.data(), ciphertext.size(), nullptr, nullptr),
       StatusRvIs(CKR_ARGUMENTS_BAD));
 
   CK_ULONG plaintext_size;
   // Operation should now be terminated.
-  EXPECT_THAT(Decrypt(session, ciphertext, sizeof(ciphertext), nullptr,
+  EXPECT_THAT(Decrypt(session, ciphertext.data(), ciphertext.size(), nullptr,
                       &plaintext_size),
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
-TEST(AsymmetricCryptTest, EncryptSuccess) {
+TEST_P(AsymmetricCryptTest, EncryptSuccess) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   kms_v1::KeyRing kr;
@@ -433,7 +458,7 @@ TEST(AsymmetricCryptTest, EncryptSuccess) {
 
   kms_v1::CryptoKeyVersion ckv = InitializeCryptoKeyAndKeyVersion(
       fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_DECRYPT,
-      kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256);
+      GetParam().algorithm);
 
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
@@ -444,7 +469,7 @@ TEST(AsymmetricCryptTest, EncryptSuccess) {
   ASSERT_OK_AND_ASSIGN(CK_OBJECT_HANDLE public_key,
                        GetPublicKeyObjectHandle(session, ckv));
 
-  CK_RSA_PKCS_OAEP_PARAMS params{CKM_SHA256, CKG_MGF1_SHA256,
+  CK_RSA_PKCS_OAEP_PARAMS params{GetParam().hashAlg, GetParam().mgfAlg,
                                  CKZ_DATA_SPECIFIED, nullptr, 0};
   CK_MECHANISM mech{CKM_RSA_PKCS_OAEP, &params, sizeof(params)};
 
@@ -456,7 +481,7 @@ TEST(AsymmetricCryptTest, EncryptSuccess) {
   CK_ULONG ciphertext_size;
   EXPECT_OK(Encrypt(session, plaintext.data(), plaintext.size(), nullptr,
                     &ciphertext_size));
-  EXPECT_EQ(ciphertext_size, 256);
+  EXPECT_EQ(ciphertext_size, GetParam().ciphertext_size);
 
   std::vector<uint8_t> ciphertext(ciphertext_size);
   EXPECT_OK(Encrypt(session, plaintext.data(), plaintext.size(),
@@ -468,7 +493,7 @@ TEST(AsymmetricCryptTest, EncryptSuccess) {
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
-TEST(AsymmetricCryptTest, EncryptSuccessSameBuffer) {
+TEST_P(AsymmetricCryptTest, EncryptSuccessSameBuffer) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   kms_v1::KeyRing kr;
@@ -482,7 +507,7 @@ TEST(AsymmetricCryptTest, EncryptSuccessSameBuffer) {
 
   kms_v1::CryptoKeyVersion ckv = InitializeCryptoKeyAndKeyVersion(
       fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_DECRYPT,
-      kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256);
+      GetParam().algorithm);
 
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
@@ -495,7 +520,7 @@ TEST(AsymmetricCryptTest, EncryptSuccessSameBuffer) {
   ASSERT_OK_AND_ASSIGN(CK_OBJECT_HANDLE public_key,
                        GetPublicKeyObjectHandle(session, ckv));
 
-  CK_RSA_PKCS_OAEP_PARAMS params{CKM_SHA256, CKG_MGF1_SHA256,
+  CK_RSA_PKCS_OAEP_PARAMS params{GetParam().hashAlg, GetParam().mgfAlg,
                                  CKZ_DATA_SPECIFIED, nullptr, 0};
   CK_MECHANISM mech{CKM_RSA_PKCS_OAEP, &params, sizeof(params)};
 
@@ -504,12 +529,12 @@ TEST(AsymmetricCryptTest, EncryptSuccessSameBuffer) {
   std::vector<uint8_t> plaintext(128);
   RAND_bytes(plaintext.data(), plaintext.size());
 
-  std::vector<uint8_t> buf(256);
+  std::vector<uint8_t> buf(GetParam().ciphertext_size);
   std::copy(plaintext.begin(), plaintext.end(), buf.data());
 
   CK_ULONG ciphertext_size = buf.size();
   EXPECT_OK(Encrypt(session, buf.data(), 128, buf.data(), &ciphertext_size));
-  EXPECT_EQ(ciphertext_size, 256);
+  EXPECT_EQ(ciphertext_size, GetParam().ciphertext_size);
 
   EXPECT_OK(DecryptInit(session, &mech, private_key));
 
@@ -521,7 +546,7 @@ TEST(AsymmetricCryptTest, EncryptSuccessSameBuffer) {
   EXPECT_EQ(recovered_plaintext, plaintext);
 }
 
-TEST(AsymmetricCryptTest, EncryptBufferTooSmall) {
+TEST_P(AsymmetricCryptTest, EncryptBufferTooSmall) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   kms_v1::KeyRing kr;
@@ -535,7 +560,7 @@ TEST(AsymmetricCryptTest, EncryptBufferTooSmall) {
 
   kms_v1::CryptoKeyVersion ckv = InitializeCryptoKeyAndKeyVersion(
       fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_DECRYPT,
-      kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256);
+      GetParam().algorithm);
 
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
@@ -546,7 +571,7 @@ TEST(AsymmetricCryptTest, EncryptBufferTooSmall) {
   ASSERT_OK_AND_ASSIGN(CK_OBJECT_HANDLE public_key,
                        GetPublicKeyObjectHandle(session, ckv));
 
-  CK_RSA_PKCS_OAEP_PARAMS params{CKM_SHA256, CKG_MGF1_SHA256,
+  CK_RSA_PKCS_OAEP_PARAMS params{GetParam().hashAlg, GetParam().mgfAlg,
                                  CKZ_DATA_SPECIFIED, nullptr, 0};
   CK_MECHANISM mech{CKM_RSA_PKCS_OAEP, &params, sizeof(params)};
 
@@ -555,12 +580,12 @@ TEST(AsymmetricCryptTest, EncryptBufferTooSmall) {
   std::vector<uint8_t> plaintext(128);
   RAND_bytes(plaintext.data(), plaintext.size());
 
-  std::vector<uint8_t> ciphertext(255);
+  std::vector<uint8_t> ciphertext(GetParam().ciphertext_size - 1);
   CK_ULONG ciphertext_size = ciphertext.size();
   EXPECT_THAT(Encrypt(session, plaintext.data(), plaintext.size(),
                       ciphertext.data(), &ciphertext_size),
               StatusRvIs(CKR_BUFFER_TOO_SMALL));
-  EXPECT_EQ(ciphertext_size, 256);
+  EXPECT_EQ(ciphertext_size, GetParam().ciphertext_size);
 
   // Operation should be able to proceed after CKR_BUFFER_TOO_SMALL.
   ciphertext.resize(ciphertext_size);
@@ -573,7 +598,7 @@ TEST(AsymmetricCryptTest, EncryptBufferTooSmall) {
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
-TEST(AsymmetricCryptTest, EncryptParametersMismatch) {
+TEST_P(AsymmetricCryptTest, EncryptParametersMismatch) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   kms_v1::KeyRing kr;
@@ -587,7 +612,7 @@ TEST(AsymmetricCryptTest, EncryptParametersMismatch) {
 
   kms_v1::CryptoKeyVersion ckv = InitializeCryptoKeyAndKeyVersion(
       fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_DECRYPT,
-      kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256);
+      GetParam().algorithm);
 
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
@@ -598,7 +623,7 @@ TEST(AsymmetricCryptTest, EncryptParametersMismatch) {
   ASSERT_OK_AND_ASSIGN(CK_OBJECT_HANDLE public_key,
                        GetPublicKeyObjectHandle(session, ckv));
 
-  CK_RSA_PKCS_OAEP_PARAMS params{CKM_SHA512, CKG_MGF1_SHA512,
+  CK_RSA_PKCS_OAEP_PARAMS params{CKM_SHA384, CKG_MGF1_SHA384,
                                  CKZ_DATA_SPECIFIED, nullptr, 0};
   CK_MECHANISM mech{CKM_RSA_PKCS_OAEP, &params, sizeof(params)};
 
@@ -606,7 +631,7 @@ TEST(AsymmetricCryptTest, EncryptParametersMismatch) {
               StatusRvIs(CKR_MECHANISM_PARAM_INVALID));
 }
 
-TEST(AsymmetricCryptTest, EncryptInitFailsInvalidSessionHandle) {
+TEST_P(AsymmetricCryptTest, EncryptInitFailsInvalidSessionHandle) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   std::string config_file = CreateConfigFileWithOneKeyring(fake_server.get());
@@ -623,7 +648,7 @@ TEST(AsymmetricCryptTest, EncryptInitFailsInvalidSessionHandle) {
               StatusRvIs(CKR_SESSION_HANDLE_INVALID));
 }
 
-TEST(AsymmetricCryptTest, EncryptInitFailsInvalidKeyHandle) {
+TEST_P(AsymmetricCryptTest, EncryptInitFailsInvalidKeyHandle) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   std::string config_file = CreateConfigFileWithOneKeyring(fake_server.get());
@@ -639,7 +664,7 @@ TEST(AsymmetricCryptTest, EncryptInitFailsInvalidKeyHandle) {
   CK_SESSION_HANDLE session;
   EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
 
-  CK_RSA_PKCS_OAEP_PARAMS params{CKM_SHA256, CKG_MGF1_SHA256,
+  CK_RSA_PKCS_OAEP_PARAMS params{GetParam().hashAlg, GetParam().mgfAlg,
                                  CKZ_DATA_SPECIFIED, nullptr, 0};
   CK_MECHANISM mech{CKM_RSA_PKCS_OAEP, &params, sizeof(params)};
 
@@ -647,7 +672,7 @@ TEST(AsymmetricCryptTest, EncryptInitFailsInvalidKeyHandle) {
               StatusRvIs(CKR_KEY_HANDLE_INVALID));
 }
 
-TEST(AsymmetricCryptTest, EncryptInitFailsOperationActive) {
+TEST_P(AsymmetricCryptTest, EncryptInitFailsOperationActive) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   kms_v1::KeyRing kr;
@@ -661,7 +686,7 @@ TEST(AsymmetricCryptTest, EncryptInitFailsOperationActive) {
 
   kms_v1::CryptoKeyVersion ckv = InitializeCryptoKeyAndKeyVersion(
       fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_DECRYPT,
-      kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256);
+      GetParam().algorithm);
 
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
@@ -672,7 +697,7 @@ TEST(AsymmetricCryptTest, EncryptInitFailsOperationActive) {
   ASSERT_OK_AND_ASSIGN(CK_OBJECT_HANDLE public_key,
                        GetPublicKeyObjectHandle(session, ckv));
 
-  CK_RSA_PKCS_OAEP_PARAMS params{CKM_SHA256, CKG_MGF1_SHA256,
+  CK_RSA_PKCS_OAEP_PARAMS params{GetParam().hashAlg, GetParam().mgfAlg,
                                  CKZ_DATA_SPECIFIED, nullptr, 0};
   CK_MECHANISM mech{CKM_RSA_PKCS_OAEP, &params, sizeof(params)};
 
@@ -681,7 +706,7 @@ TEST(AsymmetricCryptTest, EncryptInitFailsOperationActive) {
               StatusRvIs(CKR_OPERATION_ACTIVE));
 }
 
-TEST(AsymmetricCryptTest, EncryptFailsOperationNotInitialized) {
+TEST_P(AsymmetricCryptTest, EncryptFailsOperationNotInitialized) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   std::string config_file = CreateConfigFileWithOneKeyring(fake_server.get());
@@ -704,7 +729,7 @@ TEST(AsymmetricCryptTest, EncryptFailsOperationNotInitialized) {
       StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
-TEST(AsymmetricCryptTest, EncryptFailsNullPLaintext) {
+TEST_P(AsymmetricCryptTest, EncryptFailsNullPLaintext) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   kms_v1::KeyRing kr;
@@ -718,7 +743,7 @@ TEST(AsymmetricCryptTest, EncryptFailsNullPLaintext) {
 
   kms_v1::CryptoKeyVersion ckv = InitializeCryptoKeyAndKeyVersion(
       fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_DECRYPT,
-      kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256);
+      GetParam().algorithm);
 
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
@@ -729,7 +754,7 @@ TEST(AsymmetricCryptTest, EncryptFailsNullPLaintext) {
   ASSERT_OK_AND_ASSIGN(CK_OBJECT_HANDLE public_key,
                        GetPublicKeyObjectHandle(session, ckv));
 
-  CK_RSA_PKCS_OAEP_PARAMS params{CKM_SHA256, CKG_MGF1_SHA256,
+  CK_RSA_PKCS_OAEP_PARAMS params{GetParam().hashAlg, GetParam().mgfAlg,
                                  CKZ_DATA_SPECIFIED, nullptr, 0};
   CK_MECHANISM mech{CKM_RSA_PKCS_OAEP, &params, sizeof(params)};
 
@@ -746,7 +771,7 @@ TEST(AsymmetricCryptTest, EncryptFailsNullPLaintext) {
       StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
-TEST(AsymmetricCryptTest, EncryptFailsNullCiphertextSize) {
+TEST_P(AsymmetricCryptTest, EncryptFailsNullCiphertextSize) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   kms_v1::KeyRing kr;
@@ -760,7 +785,7 @@ TEST(AsymmetricCryptTest, EncryptFailsNullCiphertextSize) {
 
   kms_v1::CryptoKeyVersion ckv = InitializeCryptoKeyAndKeyVersion(
       fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_DECRYPT,
-      kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256);
+      GetParam().algorithm);
 
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
@@ -771,7 +796,7 @@ TEST(AsymmetricCryptTest, EncryptFailsNullCiphertextSize) {
   ASSERT_OK_AND_ASSIGN(CK_OBJECT_HANDLE public_key,
                        GetPublicKeyObjectHandle(session, ckv));
 
-  CK_RSA_PKCS_OAEP_PARAMS params{CKM_SHA256, CKG_MGF1_SHA256,
+  CK_RSA_PKCS_OAEP_PARAMS params{GetParam().hashAlg, GetParam().mgfAlg,
                                  CKZ_DATA_SPECIFIED, nullptr, 0};
   CK_MECHANISM mech{CKM_RSA_PKCS_OAEP, &params, sizeof(params)};
 
