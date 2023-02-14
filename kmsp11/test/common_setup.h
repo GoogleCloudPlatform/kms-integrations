@@ -40,6 +40,27 @@ kms_v1::CryptoKeyVersion InitializeCryptoKeyAndKeyVersion(
 // Initialize the CK_C_INITIALIZE_ARGS from a configuration file.
 CK_C_INITIALIZE_ARGS InitArgs(const char* config_file);
 
+// Initializes a KMS KeyRing. Creates a configuration file with this keyring as
+// a token and initializes bridge with this configuration file. Returns the
+// configuration file.
+absl::StatusOr<std::string> InitializeBridgeForOneKmsKeyRing(
+    fakekms::Server* fake_server);
+
+// Initializes a KMS KeyRing, a key in this KeyRing, and a crypto key version
+// with the specified algorithm. Creates a configuration file with this keyring as
+// a token and initializes bridge with this configuration file. Returns the
+// configuration file.
+absl::StatusOr<std::string> InitializeBridgeForOneKmsKey(
+    fakekms::Server* fake_server, kms_v1::CryptoKey::CryptoKeyPurpose purpose,
+    kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm);
+
+// Version of InitializeBridgeForOneKmsKey that also returns the initialized crypto
+// key version.
+absl::StatusOr<std::string> InitializeBridgeForOneKmsKey(
+    fakekms::Server* fake_server, kms_v1::CryptoKey::CryptoKeyPurpose purpose,
+    kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm,
+    kms_v1::CryptoKeyVersion* ckv);
+
 }  // namespace kmsp11
 
 #endif  // KMSP11_TEST_COMMON_RESOURCES_H_

@@ -17,6 +17,7 @@
 #include <fstream>
 
 #include "fakekms/cpp/fakekms.h"
+#include "kmsp11/main/bridge.h"
 #include "kmsp11/test/resource_helpers.h"
 #include "kmsp11/util/crypto_utils.h"
 
@@ -68,6 +69,39 @@ CK_C_INITIALIZE_ARGS InitArgs(const char* config_file) {
   init_args.flags = CKF_OS_LOCKING_OK;
   init_args.pReserved = const_cast<char*>(config_file);
   return init_args;
+}
+
+absl::StatusOr<std::string> InitializeBridgeForOneKmsKeyRing(
+    fakekms::Server* fake_server) {
+  std::string config_file = CreateConfigFileWithOneKeyring(fake_server);
+
+  auto init_args = InitArgs(config_file.c_str());
+
+  RETURN_IF_ERROR(Initialize(&init_args));
+
+  return config_file;
+}
+
+absl::StatusOr<std::string> InitializeBridgeForOneKmsKey(
+    fakekms::Server* fake_server, kms_v1::CryptoKey::CryptoKeyPurpose purpose,
+    kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm) {
+  kms_v1::CryptoKeyVersion ckv;
+  return InitializeBridgeForOneKmsKey(fake_server, purpose, algorithm, &ckv);
+}
+
+absl::StatusOr<std::string> InitializeBridgeForOneKmsKey(
+    fakekms::Server* fake_server, kms_v1::CryptoKey::CryptoKeyPurpose purpose,
+    kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm,
+    kms_v1::CryptoKeyVersion* ckv) {
+  kms_v1::KeyRing kr;
+  std::string config_file = CreateConfigFileWithOneKeyring(fake_server, &kr);
+
+  auto init_args = InitArgs(config_file.c_str());
+
+  *ckv = InitializeCryptoKeyAndKeyVersion(fake_server, kr, purpose, algorithm);
+
+  RETURN_IF_ERROR(Initialize(&init_args));
+  return config_file;
 }
 
 }  // namespace kmsp11
