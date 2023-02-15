@@ -41,7 +41,28 @@ using ::testing::IsEmpty;
 using ::testing::IsSupersetOf;
 using ::testing::Not;
 
-TEST(AsymmetricSignTest, SignVerifySuccess) {
+struct AlgorithmInfo {
+  kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm;
+  CK_MECHANISM_TYPE allowedMechanism;
+  const EVP_MD* evpHashAlg;
+  int digest_size;
+  int signature_size;
+};
+
+class AsymmetricSignTest : public testing::Test,
+                           public testing::WithParamInterface<AlgorithmInfo> {};
+
+const std::array kAsymmetricSignAlgorithms = {
+    AlgorithmInfo{kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256,
+                  CKM_ECDSA_SHA256, EVP_sha256(), 32, 64},
+    AlgorithmInfo{kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384,
+                  CKM_ECDSA_SHA384, EVP_sha384(), 48, 96},
+};
+
+INSTANTIATE_TEST_SUITE_P(TestAsymmetricSigning, AsymmetricSignTest,
+                         testing::ValuesIn(kAsymmetricSignAlgorithms));
+
+TEST_P(AsymmetricSignTest, SignVerifySuccess) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   kms_v1::KeyRing kr;
@@ -55,7 +76,7 @@ TEST(AsymmetricSignTest, SignVerifySuccess) {
 
   kms_v1::CryptoKeyVersion ckv = InitializeCryptoKeyAndKeyVersion(
       fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_SIGN,
-      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+      GetParam().algorithm);
 
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
@@ -66,8 +87,8 @@ TEST(AsymmetricSignTest, SignVerifySuccess) {
   std::vector<uint8_t> data(128);
   RAND_bytes(data.data(), data.size());
 
-  uint8_t hash[32];
-  SHA256(data.data(), data.size(), hash);
+  std::vector<uint8_t> hash(GetParam().digest_size);
+  SHA256(data.data(), data.size(), hash.data());
 
   ASSERT_OK_AND_ASSIGN(CK_OBJECT_HANDLE private_key,
                        GetPrivateKeyObjectHandle(session, ckv));
@@ -77,27 +98,27 @@ TEST(AsymmetricSignTest, SignVerifySuccess) {
   EXPECT_OK(SignInit(session, &mech, private_key));
 
   CK_ULONG signature_size;
-  EXPECT_OK(Sign(session, hash, sizeof(hash), nullptr, &signature_size));
-  EXPECT_EQ(signature_size, 64);
+  EXPECT_OK(Sign(session, hash.data(), hash.size(), nullptr, &signature_size));
+  EXPECT_EQ(signature_size, GetParam().signature_size);
 
   std::vector<uint8_t> signature(signature_size);
-  EXPECT_OK(
-      Sign(session, hash, sizeof(hash), signature.data(), &signature_size));
+  EXPECT_OK(Sign(session, hash.data(), hash.size(), signature.data(),
+                 &signature_size));
 
   ASSERT_OK_AND_ASSIGN(CK_OBJECT_HANDLE public_key,
                        GetPublicKeyObjectHandle(session, ckv));
 
   EXPECT_OK(VerifyInit(session, &mech, public_key));
-  EXPECT_OK(
-      Verify(session, hash, sizeof(hash), signature.data(), signature.size()));
+  EXPECT_OK(Verify(session, hash.data(), hash.size(), signature.data(),
+                   signature.size()));
 
   // Operation should be terminated after success
-  EXPECT_THAT(
-      Verify(session, hash, sizeof(hash), signature.data(), signature.size()),
-      StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
+  EXPECT_THAT(Verify(session, hash.data(), hash.size(), signature.data(),
+                     signature.size()),
+              StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
-TEST(AsymmetricSignTest, SignVerifyMultiPartSuccess) {
+TEST_P(AsymmetricSignTest, SignVerifyMultiPartSuccess) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   kms_v1::KeyRing kr;
@@ -111,7 +132,7 @@ TEST(AsymmetricSignTest, SignVerifyMultiPartSuccess) {
 
   kms_v1::CryptoKeyVersion ckv = InitializeCryptoKeyAndKeyVersion(
       fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_SIGN,
-      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+      GetParam().algorithm);
 
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
@@ -125,7 +146,7 @@ TEST(AsymmetricSignTest, SignVerifyMultiPartSuccess) {
   ASSERT_OK_AND_ASSIGN(CK_OBJECT_HANDLE private_key,
                        GetPrivateKeyObjectHandle(session, ckv));
 
-  CK_MECHANISM mech{CKM_ECDSA_SHA256, nullptr, 0};
+  CK_MECHANISM mech{GetParam().allowedMechanism, nullptr, 0};
 
   EXPECT_OK(SignInit(session, &mech, private_key));
 
@@ -134,7 +155,7 @@ TEST(AsymmetricSignTest, SignVerifyMultiPartSuccess) {
 
   CK_ULONG signature_size;
   EXPECT_OK(SignFinal(session, nullptr, &signature_size));
-  EXPECT_EQ(signature_size, 64);
+  EXPECT_EQ(signature_size, GetParam().signature_size);
 
   std::vector<uint8_t> signature(signature_size);
   EXPECT_OK(SignFinal(session, signature.data(), &signature_size));
@@ -158,7 +179,7 @@ TEST(AsymmetricSignTest, SignVerifyMultiPartSuccess) {
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
-TEST(AsymmetricSignTest, SignHashTooSmall) {
+TEST_P(AsymmetricSignTest, SignHashTooSmall) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   kms_v1::KeyRing kr;
@@ -172,7 +193,7 @@ TEST(AsymmetricSignTest, SignHashTooSmall) {
 
   kms_v1::CryptoKeyVersion ckv = InitializeCryptoKeyAndKeyVersion(
       fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_SIGN,
-      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+      GetParam().algorithm);
 
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
@@ -186,13 +207,15 @@ TEST(AsymmetricSignTest, SignHashTooSmall) {
   CK_MECHANISM mech{CKM_ECDSA, nullptr, 0};
   EXPECT_OK(SignInit(session, &mech, private_key));
 
-  uint8_t hash[31], sig[64];
-  CK_ULONG signature_size = sizeof(sig);
-  EXPECT_THAT(Sign(session, hash, sizeof(hash), sig, &signature_size),
-              StatusRvIs(CKR_DATA_LEN_RANGE));
+  std::vector<uint8_t> hash(GetParam().digest_size - 1);
+  std::vector<uint8_t> sig(GetParam().signature_size);
+  CK_ULONG signature_size = sig.size();
+  EXPECT_THAT(
+      Sign(session, hash.data(), hash.size(), sig.data(), &signature_size),
+      StatusRvIs(CKR_DATA_LEN_RANGE));
 }
 
-TEST(AsymmetricSignTest, SignSameBuffer) {
+TEST_P(AsymmetricSignTest, SignSameBuffer) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   kms_v1::KeyRing kr;
@@ -206,7 +229,7 @@ TEST(AsymmetricSignTest, SignSameBuffer) {
 
   kms_v1::CryptoKeyVersion ckv = InitializeCryptoKeyAndKeyVersion(
       fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_SIGN,
-      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+      GetParam().algorithm);
 
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
@@ -220,23 +243,24 @@ TEST(AsymmetricSignTest, SignSameBuffer) {
   CK_MECHANISM mech{CKM_ECDSA, nullptr, 0};
   EXPECT_OK(SignInit(session, &mech, private_key));
 
-  std::vector<uint8_t> digest(32);
+  std::vector<uint8_t> digest(GetParam().digest_size);
   RAND_bytes(digest.data(), digest.size());
 
-  std::vector<uint8_t> buf(64);
+  std::vector<uint8_t> buf(GetParam().signature_size);
   std::copy(digest.begin(), digest.end(), buf.begin());
   CK_ULONG signature_size = buf.size();
 
-  EXPECT_OK(Sign(session, buf.data(), 32, buf.data(), &signature_size));
+  EXPECT_OK(Sign(session, buf.data(), GetParam().digest_size, buf.data(),
+                 &signature_size));
 
   ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub_pkey,
                        GetEVPPublicKey(fake_server.get(), ckv));
 
-  EXPECT_OK(EcdsaVerifyP1363(EVP_PKEY_get0_EC_KEY(pub_pkey.get()), EVP_sha256(),
-                             digest, buf));
+  EXPECT_OK(EcdsaVerifyP1363(EVP_PKEY_get0_EC_KEY(pub_pkey.get()),
+                             GetParam().evpHashAlg, digest, buf));
 }
 
-TEST(AsymmetricSignTest, SignBufferTooSmall) {
+TEST_P(AsymmetricSignTest, SignBufferTooSmall) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   kms_v1::KeyRing kr;
@@ -250,7 +274,7 @@ TEST(AsymmetricSignTest, SignBufferTooSmall) {
 
   kms_v1::CryptoKeyVersion ckv = InitializeCryptoKeyAndKeyVersion(
       fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_SIGN,
-      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+      GetParam().algorithm);
 
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
@@ -264,12 +288,13 @@ TEST(AsymmetricSignTest, SignBufferTooSmall) {
   CK_MECHANISM mech{CKM_ECDSA, nullptr, 0};
   EXPECT_OK(SignInit(session, &mech, private_key));
 
-  std::vector<uint8_t> hash(32), sig(63);
+  std::vector<uint8_t> hash(GetParam().digest_size),
+      sig(GetParam().signature_size - 1);
   CK_ULONG signature_size = sig.size();
   EXPECT_THAT(
       Sign(session, hash.data(), hash.size(), sig.data(), &signature_size),
       StatusRvIs(CKR_BUFFER_TOO_SMALL));
-  EXPECT_EQ(signature_size, 64);
+  EXPECT_EQ(signature_size, GetParam().signature_size);
 
   sig.resize(signature_size);
   EXPECT_OK(
@@ -281,7 +306,7 @@ TEST(AsymmetricSignTest, SignBufferTooSmall) {
       StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
-TEST(AsymmetricSignTest, SignInitFailsInvalidSessionHandle) {
+TEST_P(AsymmetricSignTest, SignInitFailsInvalidSessionHandle) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   std::string config_file = CreateConfigFileWithOneKeyring(fake_server.get());
@@ -297,7 +322,7 @@ TEST(AsymmetricSignTest, SignInitFailsInvalidSessionHandle) {
   EXPECT_THAT(SignInit(0, nullptr, 0), StatusRvIs(CKR_SESSION_HANDLE_INVALID));
 }
 
-TEST(AsymmetricSignTest, SignInitFailsInvalidKeyHandle) {
+TEST_P(AsymmetricSignTest, SignInitFailsInvalidKeyHandle) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   std::string config_file = CreateConfigFileWithOneKeyring(fake_server.get());
@@ -317,7 +342,7 @@ TEST(AsymmetricSignTest, SignInitFailsInvalidKeyHandle) {
   EXPECT_THAT(SignInit(session, &mech, 0), StatusRvIs(CKR_KEY_HANDLE_INVALID));
 }
 
-TEST(AsymmetricSignTest, SignInitFailsOperationActive) {
+TEST_P(AsymmetricSignTest, SignInitFailsOperationActive) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   kms_v1::KeyRing kr;
@@ -331,7 +356,7 @@ TEST(AsymmetricSignTest, SignInitFailsOperationActive) {
 
   kms_v1::CryptoKeyVersion ckv = InitializeCryptoKeyAndKeyVersion(
       fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_SIGN,
-      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+      GetParam().algorithm);
 
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
@@ -348,7 +373,7 @@ TEST(AsymmetricSignTest, SignInitFailsOperationActive) {
               StatusRvIs(CKR_OPERATION_ACTIVE));
 }
 
-TEST(AsymmetricSignTest, SignFailsOperationNotInitialized) {
+TEST_P(AsymmetricSignTest, SignFailsOperationNotInitialized) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   std::string config_file = CreateConfigFileWithOneKeyring(fake_server.get());
@@ -364,13 +389,13 @@ TEST(AsymmetricSignTest, SignFailsOperationNotInitialized) {
   CK_SESSION_HANDLE session;
   EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
 
-  uint8_t hash[32];
+  std::vector<uint8_t> hash(GetParam().digest_size);
   CK_ULONG signature_size;
-  EXPECT_THAT(Sign(session, hash, sizeof(hash), nullptr, &signature_size),
+  EXPECT_THAT(Sign(session, hash.data(), hash.size(), nullptr, &signature_size),
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
-TEST(AsymmetricSignTest, SignUpdateFailsOperationNotInitialized) {
+TEST_P(AsymmetricSignTest, SignUpdateFailsOperationNotInitialized) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   std::string config_file = CreateConfigFileWithOneKeyring(fake_server.get());
@@ -391,7 +416,7 @@ TEST(AsymmetricSignTest, SignUpdateFailsOperationNotInitialized) {
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
-TEST(AsymmetricSignTest, SignFinalFailsOperationNotInitialized) {
+TEST_P(AsymmetricSignTest, SignFinalFailsOperationNotInitialized) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   std::string config_file = CreateConfigFileWithOneKeyring(fake_server.get());
@@ -412,7 +437,7 @@ TEST(AsymmetricSignTest, SignFinalFailsOperationNotInitialized) {
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
-TEST(AsymmetricSignTest, SignFinalFailsWithoutUpdate) {
+TEST_P(AsymmetricSignTest, SignFinalFailsWithoutUpdate) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   kms_v1::KeyRing kr;
@@ -426,7 +451,7 @@ TEST(AsymmetricSignTest, SignFinalFailsWithoutUpdate) {
 
   kms_v1::CryptoKeyVersion ckv = InitializeCryptoKeyAndKeyVersion(
       fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_SIGN,
-      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+      GetParam().algorithm);
 
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
@@ -437,9 +462,9 @@ TEST(AsymmetricSignTest, SignFinalFailsWithoutUpdate) {
   ASSERT_OK_AND_ASSIGN(CK_OBJECT_HANDLE private_key,
                        GetPrivateKeyObjectHandle(session, ckv));
 
-  CK_MECHANISM mech{CKM_ECDSA_SHA256, nullptr, 0};
+  CK_MECHANISM mech{GetParam().allowedMechanism, nullptr, 0};
   EXPECT_OK(SignInit(session, &mech, private_key));
-  CK_ULONG signature_size = 64;
+  CK_ULONG signature_size = GetParam().signature_size;
   std::vector<uint8_t> signature(signature_size);
   EXPECT_THAT(SignFinal(session, signature.data(), &signature_size),
               AllOf(StatusIs(absl::StatusCode::kFailedPrecondition,
@@ -447,7 +472,7 @@ TEST(AsymmetricSignTest, SignFinalFailsWithoutUpdate) {
                     StatusRvIs(CKR_FUNCTION_FAILED)));
 }
 
-TEST(AsymmetricSignTest, SignSinglePartFailsAfterUpdate) {
+TEST_P(AsymmetricSignTest, SignSinglePartFailsAfterUpdate) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   kms_v1::KeyRing kr;
@@ -461,7 +486,7 @@ TEST(AsymmetricSignTest, SignSinglePartFailsAfterUpdate) {
 
   kms_v1::CryptoKeyVersion ckv = InitializeCryptoKeyAndKeyVersion(
       fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_SIGN,
-      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+      GetParam().algorithm);
 
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
@@ -472,10 +497,10 @@ TEST(AsymmetricSignTest, SignSinglePartFailsAfterUpdate) {
   ASSERT_OK_AND_ASSIGN(CK_OBJECT_HANDLE private_key,
                        GetPrivateKeyObjectHandle(session, ckv));
 
-  CK_MECHANISM mech{CKM_ECDSA_SHA256, nullptr, 0};
+  CK_MECHANISM mech{GetParam().allowedMechanism, nullptr, 0};
   EXPECT_OK(SignInit(session, &mech, private_key));
   std::vector<uint8_t> data = {0xDE, 0xAD, 0xBE, 0xEF};
-  CK_ULONG signature_size = 64;
+  CK_ULONG signature_size = GetParam().signature_size;
   std::vector<uint8_t> signature(signature_size);
   EXPECT_OK(SignUpdate(session, data.data(), data.size()));
   EXPECT_THAT(Sign(session, data.data(), data.size(), signature.data(),
@@ -485,7 +510,7 @@ TEST(AsymmetricSignTest, SignSinglePartFailsAfterUpdate) {
                     StatusRvIs(CKR_FUNCTION_FAILED)));
 }
 
-TEST(AsymmetricSignTest, SignFailsNullHash) {
+TEST_P(AsymmetricSignTest, SignFailsNullHash) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   kms_v1::KeyRing kr;
@@ -499,7 +524,7 @@ TEST(AsymmetricSignTest, SignFailsNullHash) {
 
   kms_v1::CryptoKeyVersion ckv = InitializeCryptoKeyAndKeyVersion(
       fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_SIGN,
-      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+      GetParam().algorithm);
 
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
@@ -517,14 +542,15 @@ TEST(AsymmetricSignTest, SignFailsNullHash) {
   EXPECT_THAT(Sign(session, nullptr, 0, nullptr, &signature_size),
               StatusRvIs(CKR_ARGUMENTS_BAD));
 
-  std::vector<uint8_t> hash(32), sig(64);
+  std::vector<uint8_t> hash(GetParam().digest_size),
+      sig(GetParam().signature_size);
   // Operation should now be terminated.
   EXPECT_THAT(
       Sign(session, hash.data(), hash.size(), sig.data(), &signature_size),
       StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
-TEST(AsymmetricSignTest, SignUpdateInvalidMechanism) {
+TEST_P(AsymmetricSignTest, SignUpdateInvalidMechanism) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   kms_v1::KeyRing kr;
@@ -538,7 +564,7 @@ TEST(AsymmetricSignTest, SignUpdateInvalidMechanism) {
 
   kms_v1::CryptoKeyVersion ckv = InitializeCryptoKeyAndKeyVersion(
       fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_SIGN,
-      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+      GetParam().algorithm);
 
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
@@ -558,7 +584,7 @@ TEST(AsymmetricSignTest, SignUpdateInvalidMechanism) {
                     StatusRvIs(CKR_FUNCTION_FAILED)));
 }
 
-TEST(AsymmetricSignTest, SignFinalInvalidMechanism) {
+TEST_P(AsymmetricSignTest, SignFinalInvalidMechanism) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   kms_v1::KeyRing kr;
@@ -572,7 +598,7 @@ TEST(AsymmetricSignTest, SignFinalInvalidMechanism) {
 
   kms_v1::CryptoKeyVersion ckv = InitializeCryptoKeyAndKeyVersion(
       fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_SIGN,
-      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+      GetParam().algorithm);
 
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
@@ -585,7 +611,7 @@ TEST(AsymmetricSignTest, SignFinalInvalidMechanism) {
 
   CK_MECHANISM mech{CKM_ECDSA, nullptr, 0};
   EXPECT_OK(SignInit(session, &mech, private_key));
-  CK_ULONG signature_size = 64;
+  CK_ULONG signature_size = GetParam().signature_size;
   std::vector<uint8_t> signature(signature_size);
   EXPECT_THAT(SignFinal(session, signature.data(), &signature_size),
               AllOf(StatusIs(absl::StatusCode::kFailedPrecondition,
@@ -593,7 +619,7 @@ TEST(AsymmetricSignTest, SignFinalInvalidMechanism) {
                     StatusRvIs(CKR_FUNCTION_FAILED)));
 }
 
-TEST(AsymmetricSignTest, SignInitMacKeysExperimentDisabled) {
+TEST_P(AsymmetricSignTest, SignInitMacKeysExperimentDisabled) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   kms_v1::KeyRing kr;
@@ -607,7 +633,7 @@ TEST(AsymmetricSignTest, SignInitMacKeysExperimentDisabled) {
 
   kms_v1::CryptoKeyVersion ckv = InitializeCryptoKeyAndKeyVersion(
       fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_SIGN,
-      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+      GetParam().algorithm);
 
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
@@ -623,7 +649,7 @@ TEST(AsymmetricSignTest, SignInitMacKeysExperimentDisabled) {
               StatusRvIs(CKR_MECHANISM_INVALID));
 }
 
-TEST(AsymmetricSignTest, VerifyFailsNullSignatureSize) {
+TEST_P(AsymmetricSignTest, VerifyFailsNullSignatureSize) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   kms_v1::KeyRing kr;
@@ -637,7 +663,7 @@ TEST(AsymmetricSignTest, VerifyFailsNullSignatureSize) {
 
   kms_v1::CryptoKeyVersion ckv = InitializeCryptoKeyAndKeyVersion(
       fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_SIGN,
-      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+      GetParam().algorithm);
 
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
@@ -656,7 +682,7 @@ TEST(AsymmetricSignTest, VerifyFailsNullSignatureSize) {
               StatusRvIs(CKR_ARGUMENTS_BAD));
 }
 
-TEST(AsymmetricSignTest, VerifyInvalidSignature) {
+TEST_P(AsymmetricSignTest, VerifyInvalidSignature) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   kms_v1::KeyRing kr;
@@ -670,7 +696,7 @@ TEST(AsymmetricSignTest, VerifyInvalidSignature) {
 
   kms_v1::CryptoKeyVersion ckv = InitializeCryptoKeyAndKeyVersion(
       fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_SIGN,
-      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+      GetParam().algorithm);
 
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
@@ -684,16 +710,17 @@ TEST(AsymmetricSignTest, VerifyInvalidSignature) {
   CK_MECHANISM mech{CKM_ECDSA, nullptr, 0};
   EXPECT_OK(VerifyInit(session, &mech, public_key));
 
-  uint8_t hash[32], sig[64];
-  EXPECT_THAT(Verify(session, hash, sizeof(hash), sig, sizeof(sig)),
+  std::vector<uint8_t> hash(GetParam().digest_size),
+      sig(GetParam().signature_size);
+  EXPECT_THAT(Verify(session, hash.data(), hash.size(), sig.data(), sig.size()),
               StatusRvIs(CKR_SIGNATURE_INVALID));
 
   // Operation should be terminated after failure
-  EXPECT_THAT(Verify(session, hash, sizeof(hash), sig, sizeof(sig)),
+  EXPECT_THAT(Verify(session, hash.data(), hash.size(), sig.data(), sig.size()),
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
-TEST(AsymmetricSignTest, VerifyHashTooSmall) {
+TEST_P(AsymmetricSignTest, VerifyHashTooSmall) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   kms_v1::KeyRing kr;
@@ -707,7 +734,7 @@ TEST(AsymmetricSignTest, VerifyHashTooSmall) {
 
   kms_v1::CryptoKeyVersion ckv = InitializeCryptoKeyAndKeyVersion(
       fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_SIGN,
-      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+      GetParam().algorithm);
 
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
@@ -721,16 +748,17 @@ TEST(AsymmetricSignTest, VerifyHashTooSmall) {
   CK_MECHANISM mech{CKM_ECDSA, nullptr, 0};
   EXPECT_OK(VerifyInit(session, &mech, public_key));
 
-  uint8_t hash[31], sig[64];
-  EXPECT_THAT(Verify(session, hash, sizeof(hash), sig, sizeof(sig)),
+  std::vector<uint8_t> hash(GetParam().digest_size - 1),
+      sig(GetParam().signature_size);
+  EXPECT_THAT(Verify(session, hash.data(), hash.size(), sig.data(), sig.size()),
               StatusRvIs(CKR_DATA_LEN_RANGE));
 
   // Operation should be terminated after failure
-  EXPECT_THAT(Verify(session, hash, sizeof(hash), sig, sizeof(sig)),
+  EXPECT_THAT(Verify(session, hash.data(), hash.size(), sig.data(), sig.size()),
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
-TEST(AsymmetricSignTest, VerifyHashTooLarge) {
+TEST_P(AsymmetricSignTest, VerifyHashTooLarge) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   kms_v1::KeyRing kr;
@@ -744,7 +772,7 @@ TEST(AsymmetricSignTest, VerifyHashTooLarge) {
 
   kms_v1::CryptoKeyVersion ckv = InitializeCryptoKeyAndKeyVersion(
       fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_SIGN,
-      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+      GetParam().algorithm);
 
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
@@ -758,12 +786,13 @@ TEST(AsymmetricSignTest, VerifyHashTooLarge) {
   CK_MECHANISM mech{CKM_ECDSA, nullptr, 0};
   EXPECT_OK(VerifyInit(session, &mech, public_key));
 
-  uint8_t hash[33], sig[64];
-  EXPECT_THAT(Verify(session, hash, sizeof(hash), sig, sizeof(sig)),
+  std::vector<uint8_t> hash(GetParam().digest_size + 1),
+      sig(GetParam().signature_size);
+  EXPECT_THAT(Verify(session, hash.data(), hash.size(), sig.data(), sig.size()),
               StatusRvIs(CKR_DATA_LEN_RANGE));
 }
 
-TEST(AsymmetricSignTest, VerifySignatureTooSmall) {
+TEST_P(AsymmetricSignTest, VerifySignatureTooSmall) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   kms_v1::KeyRing kr;
@@ -777,7 +806,7 @@ TEST(AsymmetricSignTest, VerifySignatureTooSmall) {
 
   kms_v1::CryptoKeyVersion ckv = InitializeCryptoKeyAndKeyVersion(
       fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_SIGN,
-      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+      GetParam().algorithm);
 
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
@@ -791,16 +820,17 @@ TEST(AsymmetricSignTest, VerifySignatureTooSmall) {
   CK_MECHANISM mech{CKM_ECDSA, nullptr, 0};
   EXPECT_OK(VerifyInit(session, &mech, public_key));
 
-  uint8_t hash[32], sig[63];
-  EXPECT_THAT(Verify(session, hash, sizeof(hash), sig, sizeof(sig)),
+  std::vector<uint8_t> hash(GetParam().digest_size),
+      sig(GetParam().signature_size - 1);
+  EXPECT_THAT(Verify(session, hash.data(), hash.size(), sig.data(), sig.size()),
               StatusRvIs(CKR_SIGNATURE_LEN_RANGE));
 
   // Operation should be terminated after failure
-  EXPECT_THAT(Verify(session, hash, sizeof(hash), sig, sizeof(sig)),
+  EXPECT_THAT(Verify(session, hash.data(), hash.size(), sig.data(), sig.size()),
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
-TEST(AsymmetricSignTest, VerifySignatureTooLarge) {
+TEST_P(AsymmetricSignTest, VerifySignatureTooLarge) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   kms_v1::KeyRing kr;
@@ -814,7 +844,7 @@ TEST(AsymmetricSignTest, VerifySignatureTooLarge) {
 
   kms_v1::CryptoKeyVersion ckv = InitializeCryptoKeyAndKeyVersion(
       fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_SIGN,
-      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+      GetParam().algorithm);
 
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
@@ -828,12 +858,13 @@ TEST(AsymmetricSignTest, VerifySignatureTooLarge) {
   CK_MECHANISM mech{CKM_ECDSA, nullptr, 0};
   EXPECT_OK(VerifyInit(session, &mech, public_key));
 
-  uint8_t hash[32], sig[65];
-  EXPECT_THAT(Verify(session, hash, sizeof(hash), sig, sizeof(sig)),
+  std::vector<uint8_t> hash(GetParam().digest_size),
+      sig(GetParam().signature_size + 1);
+  EXPECT_THAT(Verify(session, hash.data(), hash.size(), sig.data(), sig.size()),
               StatusRvIs(CKR_SIGNATURE_LEN_RANGE));
 }
 
-TEST(AsymmetricSignTest, VerifyInitFailsInvalidSessionHandle) {
+TEST_P(AsymmetricSignTest, VerifyInitFailsInvalidSessionHandle) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   std::string config_file = CreateConfigFileWithOneKeyring(fake_server.get());
@@ -850,7 +881,7 @@ TEST(AsymmetricSignTest, VerifyInitFailsInvalidSessionHandle) {
               StatusRvIs(CKR_SESSION_HANDLE_INVALID));
 }
 
-TEST(AsymmetricSignTest, VerifyInitFailsInvalidKeyHandle) {
+TEST_P(AsymmetricSignTest, VerifyInitFailsInvalidKeyHandle) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   std::string config_file = CreateConfigFileWithOneKeyring(fake_server.get());
@@ -871,7 +902,7 @@ TEST(AsymmetricSignTest, VerifyInitFailsInvalidKeyHandle) {
               StatusRvIs(CKR_KEY_HANDLE_INVALID));
 }
 
-TEST(AsymmetricSignTest, VerifyInitFailsOperationActive) {
+TEST_P(AsymmetricSignTest, VerifyInitFailsOperationActive) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   kms_v1::KeyRing kr;
@@ -885,7 +916,7 @@ TEST(AsymmetricSignTest, VerifyInitFailsOperationActive) {
 
   kms_v1::CryptoKeyVersion ckv = InitializeCryptoKeyAndKeyVersion(
       fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_SIGN,
-      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+      GetParam().algorithm);
 
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
@@ -902,7 +933,7 @@ TEST(AsymmetricSignTest, VerifyInitFailsOperationActive) {
               StatusRvIs(CKR_OPERATION_ACTIVE));
 }
 
-TEST(AsymmetricSignTest, VerifyFailsOperationNotInitialized) {
+TEST_P(AsymmetricSignTest, VerifyFailsOperationNotInitialized) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   std::string config_file = CreateConfigFileWithOneKeyring(fake_server.get());
@@ -918,12 +949,13 @@ TEST(AsymmetricSignTest, VerifyFailsOperationNotInitialized) {
   CK_SESSION_HANDLE session;
   EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
 
-  uint8_t hash[32], sig[64];
-  EXPECT_THAT(Verify(session, hash, sizeof(hash), sig, sizeof(sig)),
+  std::vector<uint8_t> hash(GetParam().digest_size),
+      sig(GetParam().signature_size);
+  EXPECT_THAT(Verify(session, hash.data(), hash.size(), sig.data(), sig.size()),
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
-TEST(AsymmetricSignTest, VerifyUpdateFailsOperationNotInitialized) {
+TEST_P(AsymmetricSignTest, VerifyUpdateFailsOperationNotInitialized) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   std::string config_file = CreateConfigFileWithOneKeyring(fake_server.get());
@@ -944,7 +976,7 @@ TEST(AsymmetricSignTest, VerifyUpdateFailsOperationNotInitialized) {
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
-TEST(AsymmetricSignTest, VerifyFinalFailsOperationNotInitialized) {
+TEST_P(AsymmetricSignTest, VerifyFinalFailsOperationNotInitialized) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   std::string config_file = CreateConfigFileWithOneKeyring(fake_server.get());
@@ -960,13 +992,13 @@ TEST(AsymmetricSignTest, VerifyFinalFailsOperationNotInitialized) {
   CK_SESSION_HANDLE session;
   EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
 
-  CK_ULONG signature_size = 64;
+  CK_ULONG signature_size = GetParam().signature_size;
   std::vector<uint8_t> signature(signature_size);
   EXPECT_THAT(VerifyFinal(session, signature.data(), signature_size),
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
-TEST(AsymmetricSignTest, VerifyFinalFailsWithoutUpdate) {
+TEST_P(AsymmetricSignTest, VerifyFinalFailsWithoutUpdate) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   kms_v1::KeyRing kr;
@@ -980,7 +1012,7 @@ TEST(AsymmetricSignTest, VerifyFinalFailsWithoutUpdate) {
 
   kms_v1::CryptoKeyVersion ckv = InitializeCryptoKeyAndKeyVersion(
       fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_SIGN,
-      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+      GetParam().algorithm);
 
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
@@ -991,9 +1023,9 @@ TEST(AsymmetricSignTest, VerifyFinalFailsWithoutUpdate) {
   ASSERT_OK_AND_ASSIGN(CK_OBJECT_HANDLE public_key,
                        GetPublicKeyObjectHandle(session, ckv));
 
-  CK_MECHANISM mech{CKM_ECDSA_SHA256, nullptr, 0};
+  CK_MECHANISM mech{GetParam().allowedMechanism, nullptr, 0};
   EXPECT_OK(VerifyInit(session, &mech, public_key));
-  CK_ULONG signature_size = 64;
+  CK_ULONG signature_size = GetParam().signature_size;
   std::vector<uint8_t> signature(signature_size);
   EXPECT_THAT(VerifyFinal(session, signature.data(), signature_size),
               AllOf(StatusIs(absl::StatusCode::kFailedPrecondition,
@@ -1001,7 +1033,7 @@ TEST(AsymmetricSignTest, VerifyFinalFailsWithoutUpdate) {
                     StatusRvIs(CKR_FUNCTION_FAILED)));
 }
 
-TEST(AsymmetricSignTest, VerifySinglePartFailsAfterUpdate) {
+TEST_P(AsymmetricSignTest, VerifySinglePartFailsAfterUpdate) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   kms_v1::KeyRing kr;
@@ -1015,7 +1047,7 @@ TEST(AsymmetricSignTest, VerifySinglePartFailsAfterUpdate) {
 
   kms_v1::CryptoKeyVersion ckv = InitializeCryptoKeyAndKeyVersion(
       fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_SIGN,
-      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+      GetParam().algorithm);
 
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
@@ -1026,10 +1058,10 @@ TEST(AsymmetricSignTest, VerifySinglePartFailsAfterUpdate) {
   ASSERT_OK_AND_ASSIGN(CK_OBJECT_HANDLE public_key,
                        GetPublicKeyObjectHandle(session, ckv));
 
-  CK_MECHANISM mech{CKM_ECDSA_SHA256, nullptr, 0};
+  CK_MECHANISM mech{GetParam().allowedMechanism, nullptr, 0};
   EXPECT_OK(VerifyInit(session, &mech, public_key));
   std::vector<uint8_t> data = {0xDE, 0xAD, 0xBE, 0xEF};
-  CK_ULONG signature_size = 64;
+  CK_ULONG signature_size = GetParam().signature_size;
   std::vector<uint8_t> signature(signature_size);
   EXPECT_OK(VerifyUpdate(session, data.data(), data.size()));
   EXPECT_THAT(Verify(session, data.data(), data.size(), signature.data(),
@@ -1039,7 +1071,7 @@ TEST(AsymmetricSignTest, VerifySinglePartFailsAfterUpdate) {
                     StatusRvIs(CKR_FUNCTION_FAILED)));
 }
 
-TEST(AsymmetricSignTest, VerifyFailsNullHash) {
+TEST_P(AsymmetricSignTest, VerifyFailsNullHash) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   kms_v1::KeyRing kr;
@@ -1053,7 +1085,7 @@ TEST(AsymmetricSignTest, VerifyFailsNullHash) {
 
   kms_v1::CryptoKeyVersion ckv = InitializeCryptoKeyAndKeyVersion(
       fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_SIGN,
-      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+      GetParam().algorithm);
 
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
@@ -1067,17 +1099,17 @@ TEST(AsymmetricSignTest, VerifyFailsNullHash) {
   CK_MECHANISM mech{CKM_ECDSA, nullptr, 0};
   EXPECT_OK(VerifyInit(session, &mech, public_key));
 
-  uint8_t sig[64];
-  EXPECT_THAT(Verify(session, nullptr, 0, sig, sizeof(sig)),
+  std::vector<uint8_t> sig(GetParam().signature_size);
+  EXPECT_THAT(Verify(session, nullptr, 0, sig.data(), sig.size()),
               StatusRvIs(CKR_ARGUMENTS_BAD));
 
-  uint8_t hash[32];
+  std::vector<uint8_t> hash(GetParam().digest_size);
   // Operation should be terminated after failure
-  EXPECT_THAT(Verify(session, hash, sizeof(hash), sig, sizeof(sig)),
+  EXPECT_THAT(Verify(session, hash.data(), hash.size(), sig.data(), sig.size()),
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
-TEST(AsymmetricSignTest, VerifyFailsNullSignature) {
+TEST_P(AsymmetricSignTest, VerifyFailsNullSignature) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   kms_v1::KeyRing kr;
@@ -1091,7 +1123,7 @@ TEST(AsymmetricSignTest, VerifyFailsNullSignature) {
 
   kms_v1::CryptoKeyVersion ckv = InitializeCryptoKeyAndKeyVersion(
       fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_SIGN,
-      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+      GetParam().algorithm);
 
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
@@ -1105,17 +1137,18 @@ TEST(AsymmetricSignTest, VerifyFailsNullSignature) {
   CK_MECHANISM mech{CKM_ECDSA, nullptr, 0};
   EXPECT_OK(VerifyInit(session, &mech, public_key));
 
-  uint8_t hash[32];
-  EXPECT_THAT(Verify(session, hash, sizeof(hash), nullptr, 0),
+  std::vector<uint8_t> hash(GetParam().digest_size);
+  EXPECT_THAT(Verify(session, hash.data(), hash.size(), nullptr, 0),
               StatusRvIs(CKR_ARGUMENTS_BAD));
 
-  uint8_t sig[64];
+  std::vector<uint8_t> sig(GetParam().signature_size);
+
   // Operation should be terminated after failure
-  EXPECT_THAT(Verify(session, hash, sizeof(hash), sig, sizeof(sig)),
+  EXPECT_THAT(Verify(session, hash.data(), hash.size(), sig.data(), sig.size()),
               StatusRvIs(CKR_OPERATION_NOT_INITIALIZED));
 }
 
-TEST(AsymmetricSignTest, VerifyUpdateInvalidMechanism) {
+TEST_P(AsymmetricSignTest, VerifyUpdateInvalidMechanism) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   kms_v1::KeyRing kr;
@@ -1129,7 +1162,7 @@ TEST(AsymmetricSignTest, VerifyUpdateInvalidMechanism) {
 
   kms_v1::CryptoKeyVersion ckv = InitializeCryptoKeyAndKeyVersion(
       fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_SIGN,
-      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+      GetParam().algorithm);
 
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
@@ -1149,7 +1182,7 @@ TEST(AsymmetricSignTest, VerifyUpdateInvalidMechanism) {
                     StatusRvIs(CKR_FUNCTION_FAILED)));
 }
 
-TEST(AsymmetricSignTest, VerifyFinalInvalidMechanism) {
+TEST_P(AsymmetricSignTest, VerifyFinalInvalidMechanism) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   kms_v1::KeyRing kr;
@@ -1163,7 +1196,7 @@ TEST(AsymmetricSignTest, VerifyFinalInvalidMechanism) {
 
   kms_v1::CryptoKeyVersion ckv = InitializeCryptoKeyAndKeyVersion(
       fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_SIGN,
-      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+      GetParam().algorithm);
 
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
@@ -1176,7 +1209,7 @@ TEST(AsymmetricSignTest, VerifyFinalInvalidMechanism) {
 
   CK_MECHANISM mech{CKM_ECDSA, nullptr, 0};
   EXPECT_OK(VerifyInit(session, &mech, public_key));
-  CK_ULONG signature_size = 64;
+  CK_ULONG signature_size = GetParam().signature_size;
   std::vector<uint8_t> signature(signature_size);
   EXPECT_THAT(VerifyFinal(session, signature.data(), signature_size),
               AllOf(StatusIs(absl::StatusCode::kFailedPrecondition,
@@ -1184,7 +1217,7 @@ TEST(AsymmetricSignTest, VerifyFinalInvalidMechanism) {
                     StatusRvIs(CKR_FUNCTION_FAILED)));
 }
 
-TEST(AsymmetricSignTest, VerifyInitMacKeysExperimentDisabled) {
+TEST_P(AsymmetricSignTest, VerifyInitMacKeysExperimentDisabled) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   kms_v1::KeyRing kr;
@@ -1198,7 +1231,7 @@ TEST(AsymmetricSignTest, VerifyInitMacKeysExperimentDisabled) {
 
   kms_v1::CryptoKeyVersion ckv = InitializeCryptoKeyAndKeyVersion(
       fake_server.get(), kr, kms_v1::CryptoKey::ASYMMETRIC_SIGN,
-      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+      GetParam().algorithm);
 
   EXPECT_OK(Initialize(&init_args));
   absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
