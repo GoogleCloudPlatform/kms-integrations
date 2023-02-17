@@ -39,14 +39,6 @@ http_archive(
 )
 
 http_archive(
-    name = "com_github_google_crc32c",  # 2021-10-05
-    sha256 = "ac07840513072b7fcebda6e821068aa04889018f24e10e46181068fb214d7e56",
-    strip_prefix = "crc32c-1.1.2",
-    url = "https://github.com/google/crc32c/archive/1.1.2.tar.gz",
-    build_file = "//kmsp11/bazel:crc32c.BUILD",
-)
-
-http_archive(
     name = "com_github_google_glog",  # 2020-02-16
     sha256 = "6fc352c434018b11ad312cd3b56be3597b4c6b88480f7bd4e18b3a3b2cf961aa",
     strip_prefix = "glog-3ba8976592274bc1f907c402ce22558011d6fc5e",
@@ -54,10 +46,10 @@ http_archive(
 )
 
 http_archive(
-    name = "com_github_grpc_grpc",  # v1.48.1 / 2022-08-31
-    sha256 = "320366665d19027cda87b2368c03939006a37e0388bfd1091c8d2a96fbc93bd8",
-    strip_prefix = "grpc-1.48.1",
-    url = "https://github.com/grpc/grpc/archive/v1.48.1.tar.gz",
+    name = "com_github_grpc_grpc",  # v1.52.1 / 2023-02-15
+    sha256 = "ec125d7fdb77ecc25b01050a0d5d32616594834d3fe163b016768e2ae42a2df6",
+    strip_prefix = "grpc-1.52.1",
+    url = "https://github.com/grpc/grpc/archive/v1.52.1.tar.gz",
 )
 
 http_archive(
@@ -68,17 +60,10 @@ http_archive(
 )
 
 http_archive(
-    name = "com_google_absl",  # 20211102.0 // 2021-11-02
-    # Patch is upstreamed at cl/425532352; and should no longer be needed after
-    # that makes it to OSS.
-    patch_args = [
-        "-E",
-        "-p1",
-    ],
-    patches = ["//:third_party/abseil_freebsd_i386.patch"],
-    sha256 = "dcf71b9cba8dc0ca9940c4b316a0c796be8fab42b070bb6b7cab62b48f0e66c4",
-    strip_prefix = "abseil-cpp-20211102.0",
-    url = "https://github.com/abseil/abseil-cpp/archive/20211102.0.tar.gz",
+    name = "com_google_absl",  # 20230125.0 // 2023-01-25
+    sha256 = "3ea49a7d97421b88a8c48a0de16c16048e17725c7ec0f1d3ea2683a2a75adc21",
+    strip_prefix = "abseil-cpp-20230125.0",
+    url = "https://github.com/abseil/abseil-cpp/archive/20230125.0.tar.gz",
 )
 
 http_archive(

@@ -20,34 +20,30 @@
 namespace kmsp11 {
 namespace {
 
-std::string kInputString = "hardcoded data";
-absl::Span<const uint8_t> kInputData(
-    reinterpret_cast<const uint8_t*>(kInputString.data()), kInputString.size());
+std::string_view kInputData = "hardcoded data";
 constexpr uint32_t kExpectedCrc32c = 4206952968;
 
 TEST(ChecksumsTest, ChecksumMatchesExpected) {
-  EXPECT_EQ(ComputeCRC32C(kInputData.data(), kInputData.size()),
-            kExpectedCrc32c);
+  EXPECT_EQ(ComputeCRC32C(kInputData), kExpectedCrc32c);
 }
 
 TEST(ChecksumsTest, ComputeVerifySuccess) {
-  uint32_t checksum = ComputeCRC32C(kInputData.data(), kInputData.size());
+  uint32_t checksum = ComputeCRC32C(kInputData);
 
-  EXPECT_TRUE(CRC32CMatches(kInputData.data(), kInputData.size(), checksum));
+  EXPECT_TRUE(CRC32CMatches(kInputData, checksum));
 }
 
 TEST(ChecksumsTest, ChecksumIsConsistent) {
-  uint32_t checksum = ComputeCRC32C(kInputData.data(), kInputData.size());
-  uint32_t consistent_checksum =
-      ComputeCRC32C(kInputData.data(), kInputData.size());
+  uint32_t checksum = ComputeCRC32C(kInputData);
+  uint32_t consistent_checksum = ComputeCRC32C(kInputData);
 
   EXPECT_EQ(checksum, consistent_checksum);
 }
 
-// ComputeCRC32C("") should return 0.
 TEST(ChecksumsTest, EmptyDataYieldsZeroChecksum) {
-  const uint8_t data = {};
-  EXPECT_EQ(ComputeCRC32C(&data, 0), 0);
+  // ComputeCRC32C("") should return 0.
+  const std::string_view data = "";
+  EXPECT_EQ(ComputeCRC32C(data), 0);
 }
 
 }  // namespace
