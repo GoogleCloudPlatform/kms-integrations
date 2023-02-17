@@ -132,10 +132,11 @@ require_fips_mode     | bool   | No       | false   | Whether to enable an initi
 
 #### Experimental global configuration options
 
-Item Name                             | Type | Required | Default | Description
-------------------------------------- | ---- | -------- | ------- | -----------
-experimental_create_multiple_versions | bool | No       | false   | Enables an experiment that allows multiple versions of a CryptoKey to be created.
-experimental_allow_mac_keys           | bool | No       | false   | Enables an experiment that allows the use of CryptoKeys with MAC purpose.
+Item Name                              | Type | Required | Default | Description
+-------------------------------------- | ---- | -------- | ------- | -----------
+experimental_create_multiple_versions  | bool | No       | false   | Enables an experiment that allows multiple versions of a CryptoKey to be created.
+experimental_allow_mac_keys            | bool | No       | false   | Enables an experiment that allows the use of CryptoKeys with MAC purpose.
+experimental_allow_raw_encryption_keys | bool | No       | false   | Enables an experiment that allows the use of interoperable AES keys. This feature is restricted to a set of preview customers.
 
 ### Per token configuration
 
