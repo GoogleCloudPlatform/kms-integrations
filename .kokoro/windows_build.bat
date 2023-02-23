@@ -25,6 +25,10 @@ mkdir "%RESULTS_DIR%"
 
 choco install -y bazel --version 4.2.1
 
+:: Install Microsoft's CNG SDK, stored in GCS for convenience.
+:: Install all features, without displaying the GUI.
+%KOKORO_GFILE_DIR%\cpdksetup.exe /features + /quiet
+
 :: Configure user.bazelrc with remote build caching options
 copy .kokoro\remote_cache.bazelrc user.bazelrc
 echo build --remote_default_exec_properties=cache-silo-key=windows >> user.bazelrc
