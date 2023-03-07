@@ -19,8 +19,8 @@
 
 #include "absl/status/status.h"
 #include "absl/strings/str_format.h"
+#include "common/source_location.h"
 #include "kmsp11/cryptoki.h"
-#include "kmsp11/util/source_location.h"
 #include "kmsp11/util/status_utils.h"
 
 namespace cloud_kms::kmsp11 {
