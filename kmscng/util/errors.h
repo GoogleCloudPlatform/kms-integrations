@@ -36,6 +36,14 @@ inline absl::Status NewInternalError(std::string_view msg,
   return NewError(absl::StatusCode::kInternal, msg, NTE_FAIL, source_location);
 }
 
+// Creates a new error with status code unimplemented and SECURITY_STATUS of
+// NTE_NOT_SUPPORTED.
+inline absl::Status UnsupportedError(const SourceLocation& source_location) {
+  return NewError(absl::StatusCode::kUnimplemented,
+                  "the function is not supported", NTE_NOT_SUPPORTED,
+                  source_location);
+}
+
 }  // namespace cloud_kms::kmscng
 
 #endif  // KMSCNG_UTIL_ERRORS_H_

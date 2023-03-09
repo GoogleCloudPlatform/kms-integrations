@@ -31,6 +31,10 @@ load("boringssl.bzl", "select_crypto_library")
 
 select_crypto_library()
 
+load("//kmscng:cpdk.bzl", "cpdk")
+
+cpdk(name = "cpdk")
+
 http_archive(
     name = "com_github_gflags_gflags",  # 2020-03-18
     sha256 = "68e26a487038a842da3ef2ddd1f886dad656e9efaf1a3d49e87d1d3a9fa3a8eb",
