@@ -18,15 +18,14 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "common/kms_client_service_config.h"
+#include "common/openssl.h"
 #include "common/status_macros.h"
 #include "grpcpp/client_context.h"
 #include "grpcpp/create_channel.h"
 #include "grpcpp/security/credentials.h"
-#include "kmsp11/openssl.h"
 #include "kmsp11/util/backoff.h"
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/platform.h"
-#include "kmsp11/version.h"
 
 namespace cloud_kms {
 namespace {
@@ -36,7 +35,6 @@ namespace {
 using ::cloud_kms::kmsp11::ComputeBackoff;
 using ::cloud_kms::kmsp11::GetHostPlatformInfo;
 using ::cloud_kms::kmsp11::GetTargetPlatform;
-using ::cloud_kms::kmsp11::kLibraryVersion;
 using ::cloud_kms::kmsp11::NewInternalError;
 using ::cloud_kms::kmsp11::SetErrorRv;
 
@@ -44,13 +42,22 @@ using ::cloud_kms::kmsp11::SetErrorRv;
 // Sample value:
 // `cloud-kms-pkcs11/0.21 (amd64; BoringSSL; Linux/4.15.0-1096-gcp-x86_64; glibc/2.23)`
 // clang-format on
-std::string ComputeUserAgentPrefix() {
+std::string ComputeUserAgentPrefix(UserAgent user_agent,
+                                   const int version_major,
+                                   const int version_minor) {
+  switch (user_agent) {
+    case UserAgent::kPkcs11:
+      return absl::StrFormat(
+          "cloud-kms-pkcs11/%d.%d (%s; %s%s; %s)", version_major, version_minor,
+          GetTargetPlatform(), OpenSSL_version(OPENSSL_VERSION),
+          FIPS_mode() == 1 ? " FIPS" : "", GetHostPlatformInfo());
+    case UserAgent::kCng:
+      return absl::StrFormat(
+          "cloud-kms-cng/%d.%d (%s; %s%s; %s)", version_major, version_minor,
+          GetTargetPlatform(), OpenSSL_version(OPENSSL_VERSION),
+          FIPS_mode() == 1 ? " FIPS" : "", GetHostPlatformInfo());
+  }
   // Registered in Concord (cl/315314203)
-  return absl::StrFormat("cloud-kms-pkcs11/%d.%d (%s; %s%s; %s)",
-                         kLibraryVersion.major, kLibraryVersion.minor,
-                         GetTargetPlatform(), OpenSSL_version(OPENSSL_VERSION),
-                         FIPS_mode() == 1 ? " FIPS" : "",
-                         GetHostPlatformInfo());
 }
 
 absl::StatusOr<std::string> GetDigestString(const kms_v1::Digest& digest) {
@@ -101,19 +108,16 @@ void KmsClient::AddContextSettings(grpc::ClientContext* ctx,
 
 KmsClient::KmsClient(std::string_view endpoint_address,
                      const std::shared_ptr<grpc::ChannelCredentials>& creds,
-                     absl::Duration rpc_timeout,
+                     absl::Duration rpc_timeout, const int version_major,
+                     const int version_minor,
                      std::string_view user_project_override,
                      std::string_view rpc_feature_flags, UserAgent user_agent)
     : rpc_timeout_(rpc_timeout),
       rpc_feature_flags_(rpc_feature_flags),
       user_project_override_(user_project_override) {
   grpc::ChannelArguments args;
-  switch (user_agent) {
-    case UserAgent::kPkcs11:
-      args.SetUserAgentPrefix(ComputeUserAgentPrefix());
-    case UserAgent::kCng:
-      args.SetUserAgentPrefix("CNG provider POC - update this UA");
-  }
+  args.SetUserAgentPrefix(
+      ComputeUserAgentPrefix(user_agent, version_major, version_minor));
   args.SetServiceConfigJSON(std::string(kDefaultKmsServiceConfig));
 
   std::shared_ptr<grpc::Channel> channel =

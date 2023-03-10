@@ -1,7 +1,10 @@
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
 
-package(default_visibility = ["//kmscng:__subpackages__"])
+package(default_visibility = [
+    "//common:__subpackages__",
+    "//kmscng:__subpackages__",
+])
 
 cc_library(
     name = "cng_headers",

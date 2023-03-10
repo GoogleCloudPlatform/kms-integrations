@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Google LLC
+ * Copyright 2023 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,18 +14,14 @@
  * limitations under the License.
  */
 
-#ifndef KMSP11_OPENSSL_H_
-#define KMSP11_OPENSSL_H_
+#ifndef KMSCNG_VERSION_H_
+#define KMSCNG_VERSION_H_
 
-#include "common/openssl.h"
+namespace cloud_kms::kmscng {
 
-namespace cloud_kms::kmsp11 {
+constexpr int kLibraryVersionMajor = 0;
+constexpr int kLibraryVersionMinor = 7;
 
-static const bool kCryptoLibraryInitialized = [] {
-  CRYPTO_library_init();
-  return true;
-}();
+}  // namespace cloud_kms::kmscng
 
-}  // namespace cloud_kms::kmsp11
-
-#endif  // KMSP11_OPENSSL_H_
+#endif  // KMSCNG_VERSION_H_

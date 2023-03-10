@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "kmsp11/openssl.h"
+#include "common/openssl.h"
 
 // BORINGSSL_FIPS and OpenSSL < 1.1.0 both require X509_SIG_* implementations.
 #if defined(BORINGSSL_FIPS) || \

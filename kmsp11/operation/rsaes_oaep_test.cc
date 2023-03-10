@@ -345,9 +345,10 @@ class OaepCryptTest : public testing::Test {
  protected:
   void SetUp() override {
     ASSERT_OK_AND_ASSIGN(fake_server_, fakekms::Server::New());
-    client_ = std::make_unique<KmsClient>(fake_server_->listen_addr(),
-                                          grpc::InsecureChannelCredentials(),
-                                          absl::Seconds(1));
+    client_ = std::make_unique<KmsClient>(
+        fake_server_->listen_addr(), grpc::InsecureChannelCredentials(),
+        absl::Seconds(1),
+        /*version_major=*/1, /*version_minor=*/1);
 
     auto fake_client = fake_server_->NewClient();
 

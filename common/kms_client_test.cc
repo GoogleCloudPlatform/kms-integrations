@@ -49,7 +49,8 @@ std::unique_ptr<KmsClient> NewClient(
     std::string_view listen_addr,
     absl::Duration rpc_timeout = absl::Milliseconds(500)) {
   return std::make_unique<KmsClient>(
-      listen_addr, grpc::InsecureChannelCredentials(), rpc_timeout);
+      listen_addr, grpc::InsecureChannelCredentials(), rpc_timeout,
+      /*version_major=*/1, /*version_minor=*/1);
 }
 
 TEST(KmsClientTest, ListCryptoKeysSuccess) {

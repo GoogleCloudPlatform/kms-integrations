@@ -49,7 +49,8 @@ class KmsClient {
  public:
   KmsClient(std::string_view endpoint_address,
             const std::shared_ptr<grpc::ChannelCredentials>& creds,
-            absl::Duration rpc_timeout, std::string_view rpc_feature_flags = "",
+            absl::Duration rpc_timeout, const int version_major,
+            const int version_minor, std::string_view rpc_feature_flags = "",
             std::string_view user_project_override = "",
             UserAgent user_agent = UserAgent::kPkcs11);
 

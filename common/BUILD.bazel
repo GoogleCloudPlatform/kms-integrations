@@ -16,11 +16,11 @@ cc_library(
     hdrs = ["kms_client.h"],
     deps = [
         ":kms_v1",
+        ":openssl",
         ":pagination_range",
         ":status_macros",
         ":status_utils",
         "//kmsp11:openssl",
-        "//kmsp11:version",
         "//kmsp11/util:backoff",
         "//kmsp11/util:errors",
         "//kmsp11/util:platform",
@@ -50,6 +50,16 @@ cc_library(
         "@com_google_googleapis//google/cloud/kms/v1:kms_cc_grpc",
         "@com_google_googleapis//google/cloud/kms/v1:kms_cc_proto",
     ],
+)
+
+cc_library(
+    name = "openssl",
+    srcs = ["openssl.cc"],
+    hdrs = ["openssl.h"],
+    deps = ["@boringssl//:crypto"] + select({
+        "//:openssl": ["@boringssl//:openssl_compat"],
+        "//conditions:default": [],
+    }),
 )
 
 cc_library(
