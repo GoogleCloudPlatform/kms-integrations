@@ -15,11 +15,11 @@
 #include <fstream>
 
 #include "absl/cleanup/cleanup.h"
+#include "common/test/test_status_macros.h"
 #include "fakekms/cpp/fakekms.h"
 #include "gmock/gmock.h"
 #include "kmsp11/kmsp11.h"
 #include "kmsp11/main/bridge.h"
-#include "kmsp11/test/test_status_macros.h"
 
 namespace cloud_kms::kmsp11 {
 namespace {

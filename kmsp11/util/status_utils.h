@@ -38,22 +38,6 @@ void SetErrorRv(absl::Status& status, CK_RV rv);
 // SetCkRv, or if no value was set, `kDefaultErrorCkRv`.
 CK_RV GetCkRv(const absl::Status& status);
 
-// These functions permit us to call ToStatus(x) on varying types of statuses.
-
-inline const absl::Status& ToStatus(const absl::Status& status) {
-  return status;
-}
-
-template <typename T>
-inline const absl::Status& ToStatus(const absl::StatusOr<T>& status_or) {
-  return status_or.status();
-}
-
-inline absl::Status ToStatus(const grpc::Status& status) {
-  return absl::Status(absl::StatusCode(status.error_code()),
-                      status.error_message());
-}
-
 }  // namespace cloud_kms::kmsp11
 
 #endif  // KMSP11_UTIL_STATUS_UTILS_H_

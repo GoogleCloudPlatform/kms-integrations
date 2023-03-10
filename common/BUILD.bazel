@@ -1,7 +1,11 @@
 load("@rules_cc//cc:defs.bzl", "cc_library", "cc_proto_library", "cc_test")
 load("@rules_proto//proto:defs.bzl", "proto_library")
 
-package(default_visibility = ["//kmsp11:__subpackages__", "//kmscng:__subpackages__"])
+package(default_visibility = [
+    "//common:__subpackages__",
+    "//kmscng:__subpackages__",
+    "//kmsp11:__subpackages__",
+])
 
 cc_library(
     name = "kms_client",
@@ -13,15 +17,15 @@ cc_library(
     deps = [
         ":kms_v1",
         ":pagination_range",
+        ":status_macros",
+        ":status_utils",
         "//kmsp11:openssl",
         "//kmsp11:version",
-	"//kmsp11/util:backoff",
+        "//kmsp11/util:backoff",
         "//kmsp11/util:errors",
         "//kmsp11/util:platform",
-        "//kmsp11/util:status_macros",
-        "//kmsp11/util:status_utils",
         "@com_github_grpc_grpc//:grpc++",
-	"@com_google_absl//absl/crc:crc32c",
+        "@com_google_absl//absl/crc:crc32c",
         "@com_google_absl//absl/status:statusor",
     ],
 )
@@ -62,7 +66,7 @@ cc_test(
     srcs = ["pagination_range_test.cc"],
     deps = [
         ":pagination_range",
-        "//kmsp11/test",
+        "//common/test:matchers",
         "@com_google_googleapis//google/bigtable/admin/v2:admin_cc_grpc",
         "@com_google_googletest//:gtest_main",
     ],
@@ -82,7 +86,63 @@ cc_test(
     srcs = ["source_location_test.cc"],
     deps = [
         ":source_location",
-        "//kmsp11/test:matchers",
+        "//common/test:matchers",
         "@com_google_googletest//:gtest_main",
     ],
+)
+
+cc_proto_library(
+    name = "status_details_cc_proto",
+    deps = [":status_details_proto"],
+)
+
+proto_library(
+    name = "status_details_proto",
+    srcs = ["status_details.proto"],
+)
+
+cc_library(
+    name = "status_macros",
+    hdrs = ["status_macros.h"],
+    deps = [
+        ":status_utils",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+    ],
+)
+
+cc_test(
+    name = "status_macros_test",
+    size = "small",
+    srcs = ["status_macros_test.cc"],
+    deps = [
+        ":status_macros",
+        "//common/test:test_status_macros",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "status_utils",
+    hdrs = ["status_utils.h"],
+    deps = [
+        ":status_details_cc_proto",
+        "@com_github_google_glog//:glog",
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+    ],
+)
+
+cc_proto_library(
+    name = "test_message_cc_proto",
+    testonly = 1,
+    deps = [":test_message_proto"],
+)
+
+proto_library(
+    name = "test_message_proto",
+    testonly = 1,
+    srcs = ["test_message.proto"],
 )

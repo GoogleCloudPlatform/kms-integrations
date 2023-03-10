@@ -18,8 +18,9 @@
 
 #include "absl/strings/str_cat.h"
 #include "absl/types/span.h"
+#include "common/test/test_status_macros.h"
 #include "gmock/gmock.h"
-#include "kmsp11/test/test_status_macros.h"
+#include "kmsp11/cryptoki.h"
 
 namespace cloud_kms::kmsp11 {
 namespace {

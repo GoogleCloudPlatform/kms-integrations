@@ -14,16 +14,17 @@
 
 #include "kmsp11/object_loader.h"
 
+#include "common/test/test_status_macros.h"
 #include "fakekms/cpp/fakekms.h"
 #include "gmock/gmock.h"
 #include "kmsp11/test/matchers.h"
 #include "kmsp11/test/resource_helpers.h"
-#include "kmsp11/test/test_status_macros.h"
 #include "kmsp11/util/crypto_utils.h"
 
 namespace cloud_kms::kmsp11 {
 namespace {
 
+using ::testing::ElementsAre;
 using ::testing::Property;
 
 class BuildStateTest : public testing::Test {

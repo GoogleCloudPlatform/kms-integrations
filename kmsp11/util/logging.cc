@@ -15,6 +15,7 @@
 #include "kmsp11/util/logging.h"
 
 #include "absl/synchronization/mutex.h"
+#include "common/status_utils.h"
 #include "glog/logging.h"
 #include "grpc/support/log.h"
 #include "kmsp11/util/errors.h"

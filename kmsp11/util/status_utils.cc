@@ -22,8 +22,9 @@
 #include "absl/strings/cord.h"
 #include "absl/strings/escaping.h"
 #include "absl/strings/str_format.h"
+#include "common/status_details.pb.h"
+#include "common/status_utils.h"
 #include "glog/logging.h"
-#include "kmsp11/util/status_details.pb.h"
 
 namespace cloud_kms::kmsp11 {
 namespace {
@@ -44,7 +45,7 @@ CK_RV ExtractRvFromCord(const absl::Cord& cord) {
                  << absl::BytesToHexString(payload)
                  << "' could not be parsed as a StatusDetails";
   }
-  return details.ck_rv();
+  return details.rv();
 }
 
 std::optional<std::string> PrintPayload(std::string_view type_url,
@@ -66,7 +67,7 @@ void SetErrorRv(absl::Status& status, CK_RV rv) {
   CHECK(!status.ok()) << "attempting to set rv=" << rv << " for status OK";
   CHECK(rv != CKR_OK) << "attempting to set rv=0 for status " << status;
   StatusDetails details;
-  details.set_ck_rv(rv);
+  details.set_rv(rv);
   status.SetPayload(kTypeUrl, absl::Cord(details.SerializeAsString()));
 }
 

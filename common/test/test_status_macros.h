@@ -14,27 +14,27 @@
  * limitations under the License.
  */
 
-#ifndef KMSP11_TEST_TEST_STATUS_MACROS_H_
-#define KMSP11_TEST_TEST_STATUS_MACROS_H_
+#ifndef COMMON_TEST_TEST_STATUS_MACROS_H_
+#define COMMON_TEST_TEST_STATUS_MACROS_H_
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_format.h"
+#include "common/status_macros.h"
+#include "common/status_utils.h"
+#include "common/test/matchers.h"
 #include "glog/logging.h"
 #include "gmock/gmock.h"
-#include "kmsp11/test/matchers.h"
-#include "kmsp11/util/status_macros.h"
-#include "kmsp11/util/status_utils.h"
 
 // Macros for testing the results of functions that return a status.
 #define EXPECT_OK(expr) \
-  EXPECT_THAT(::cloud_kms::kmsp11::ToStatus(expr), ::cloud_kms::kmsp11::IsOk());
+  EXPECT_THAT(::cloud_kms::ToStatus(expr), ::cloud_kms::IsOk());
 #define ASSERT_OK(expr) \
-  ASSERT_THAT(::cloud_kms::kmsp11::ToStatus(expr), ::cloud_kms::kmsp11::IsOk());
-#define CHECK_OK(expr)                                             \
-  do {                                                             \
-    ::absl::Status __status = ::cloud_kms::kmsp11::ToStatus(expr); \
-    CHECK(__status.ok()) << __status << " is not OK";              \
+  ASSERT_THAT(::cloud_kms::ToStatus(expr), ::cloud_kms::IsOk());
+#define CHECK_OK(expr)                                     \
+  do {                                                     \
+    ::absl::Status __status = ::cloud_kms::ToStatus(expr); \
+    CHECK(__status.ok()) << __status << " is not OK";      \
   } while (0);
 
 // Implementation for ASSERT_OK_AND_ASSIGN, declared below.
@@ -67,4 +67,4 @@
   ASSERT_OK_AND_ASSIGN_IMPL(STATUS_CONCAT_NAME(_status_or, __COUNTER__), lhs, \
                             rexpr);
 
-#endif  // KMSP11_TEST_TEST_STATUS_MACROS_H_
+#endif  // COMMON_TEST_TEST_STATUS_MACROS_H_

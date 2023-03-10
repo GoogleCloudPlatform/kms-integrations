@@ -19,10 +19,10 @@
 #include "absl/container/flat_hash_set.h"
 #include "absl/status/statusor.h"
 #include "common/kms_client.h"
+#include "common/status_macros.h"
 #include "kmsp11/object_loader.h"
 #include "kmsp11/object_store_state.pb.h"
 #include "kmsp11/util/errors.h"
-#include "kmsp11/util/status_macros.h"
 #include "kmsp11/util/string_utils.h"
 
 namespace cloud_kms::kmsp11 {

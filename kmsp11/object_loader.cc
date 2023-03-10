@@ -14,10 +14,10 @@
 
 #include "kmsp11/object_loader.h"
 
+#include "common/status_macros.h"
 #include "glog/logging.h"
 #include "kmsp11/algorithm_details.h"
 #include "kmsp11/util/crypto_utils.h"
-#include "kmsp11/util/status_macros.h"
 
 namespace cloud_kms::kmsp11 {
 namespace {

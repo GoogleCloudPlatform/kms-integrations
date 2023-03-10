@@ -14,10 +14,10 @@
 
 #include "kmsp11/test/proto_parser.h"
 
+#include "common/test_message.pb.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest-spi.h"
 #include "kmsp11/test/matchers.h"
-#include "kmsp11/test/test_message.pb.h"
 
 namespace cloud_kms::kmsp11 {
 namespace {

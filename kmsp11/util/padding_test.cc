@@ -14,8 +14,10 @@
 
 #include "kmsp11/util/padding.h"
 
+#include "common/test/test_status_macros.h"
 #include "gmock/gmock.h"
-#include "kmsp11/test/test_status_macros.h"
+#include "kmsp11/cryptoki.h"
+#include "kmsp11/test/matchers.h"
 
 namespace cloud_kms::kmsp11 {
 namespace {

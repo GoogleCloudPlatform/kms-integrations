@@ -17,9 +17,9 @@
 #include <regex>
 
 #include "common/kms_client.h"
+#include "common/status_macros.h"
 #include "kmsp11/kmsp11.h"
 #include "kmsp11/util/errors.h"
-#include "kmsp11/util/status_macros.h"
 
 namespace cloud_kms::kmsp11 {
 namespace {

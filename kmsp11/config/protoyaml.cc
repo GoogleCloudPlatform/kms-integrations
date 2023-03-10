@@ -15,8 +15,8 @@
 #include "kmsp11/config/protoyaml.h"
 
 #include "absl/container/flat_hash_set.h"
+#include "common/status_macros.h"
 #include "kmsp11/util/errors.h"
-#include "kmsp11/util/status_macros.h"
 
 namespace cloud_kms::kmsp11 {
 namespace {

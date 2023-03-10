@@ -113,8 +113,8 @@ cc_test(
     }),
     deps = [
         ":bridge",
+        "//common/test:test_status_macros",
         "//fakekms/cpp:fakekms",
-        "//kmsp11/test",
         "@com_google_absl//absl/cleanup",
         "@com_google_googletest//:gtest_main",
     ],

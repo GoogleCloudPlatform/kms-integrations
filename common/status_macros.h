@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-#ifndef KMSP11_UTIL_STATUS_MACROS_H_
-#define KMSP11_UTIL_STATUS_MACROS_H_
+#ifndef COMMON_STATUS_MACROS_H_
+#define COMMON_STATUS_MACROS_H_
 
-#include "kmsp11/util/status_utils.h"
+#include "common/status_utils.h"
 
 // Run a command that returns an absl::Status. If the called code returns a
 // non-OK status, return that value up out of this method too.
@@ -27,7 +27,7 @@
 #define RETURN_IF_ERROR(expr)                                                \
   do {                                                                       \
     /* Using _status below to avoid capture problems if expr is "status". */ \
-    const ::absl::Status _status = ::cloud_kms::kmsp11::ToStatus(expr);      \
+    const ::absl::Status _status = ::cloud_kms::ToStatus(expr);              \
     if (!_status.ok()) return _status;                                       \
   } while (0)
 
@@ -35,10 +35,10 @@
 #define STATUS_CONCAT_NAME_INNER(x, y) x##y
 #define STATUS_CONCAT_NAME(x, y) STATUS_CONCAT_NAME_INNER(x, y)
 
-#define ASSIGN_OR_RETURN_IMPL(var, lhs, rexpr)          \
-  auto var = (rexpr);                                   \
-  if (ABSL_PREDICT_FALSE(!var.ok()))                    \
-    return ::cloud_kms::kmsp11::ToStatus(var.status()); \
+#define ASSIGN_OR_RETURN_IMPL(var, lhs, rexpr)  \
+  auto var = (rexpr);                           \
+  if (ABSL_PREDICT_FALSE(!var.ok()))            \
+    return ::cloud_kms::ToStatus(var.status()); \
   lhs = std::move(var).value();
 
 // Executes an expression that returns a absl::StatusOr, extracting its value
@@ -54,4 +54,4 @@
   ASSIGN_OR_RETURN_IMPL(STATUS_CONCAT_NAME(_status_or, __COUNTER__), lhs, \
                         rexpr);
 
-#endif  // KMSP11_UTIL_STATUS_MACROS_H_
+#endif  // COMMON_STATUS_MACROS_H_

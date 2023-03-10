@@ -15,11 +15,11 @@
 #include "kmsp11/operation/rsaes_oaep.h"
 
 #include "absl/cleanup/cleanup.h"
+#include "common/status_macros.h"
 #include "kmsp11/object.h"
 #include "kmsp11/operation/preconditions.h"
 #include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/errors.h"
-#include "kmsp11/util/status_macros.h"
 #include "kmsp11/util/string_utils.h"
 
 namespace cloud_kms::kmsp11 {

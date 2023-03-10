@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "kmsp11/test/test_status_macros.h"
+#include "common/test/test_status_macros.h"
 
 #include "gmock/gmock.h"
 #include "gtest/gtest-spi.h"
 
-namespace cloud_kms::kmsp11 {
+namespace cloud_kms {
 namespace {
 
 TEST(ExpectOkTest, OkStatus) { EXPECT_OK(absl::OkStatus()); }
@@ -129,4 +129,4 @@ TEST(AssertOkAndAssignTest, NotOkMovableNewVar) {
 }
 
 }  // namespace
-}  // namespace cloud_kms::kmsp11
+}  // namespace cloud_kms

@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "kmsp11/util/status_macros.h"
+#include "common/status_macros.h"
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "common/test/test_status_macros.h"
 #include "gmock/gmock.h"
-#include "kmsp11/test/test_status_macros.h"
 
-namespace cloud_kms::kmsp11 {
+namespace cloud_kms {
 namespace {
 
 TEST(ReturnIfErrorTest, NoEarlyReturnOnOkStatus) {
@@ -104,4 +104,4 @@ TEST(AssignOrReturnTest, ReturnOnNonOkStatus) {
 }
 
 }  // namespace
-}  // namespace cloud_kms::kmsp11
+}  // namespace cloud_kms

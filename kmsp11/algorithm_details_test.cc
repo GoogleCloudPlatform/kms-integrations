@@ -14,8 +14,9 @@
 
 #include "kmsp11/algorithm_details.h"
 
+#include "common/test/test_status_macros.h"
 #include "kmsp11/kmsp11.h"
-#include "kmsp11/test/test_status_macros.h"
+#include "kmsp11/test/matchers.h"
 
 namespace cloud_kms::kmsp11 {
 namespace {

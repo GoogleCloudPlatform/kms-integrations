@@ -15,13 +15,13 @@
 #include "common/kms_client.h"
 
 #include "absl/time/time.h"
+#include "common/test/test_status_macros.h"
 #include "fakekms/cpp/fakekms.h"
 #include "fakekms/cpp/fault_helpers.h"
 #include "gmock/gmock.h"
 #include "kmsp11/openssl.h"
 #include "kmsp11/test/matchers.h"
 #include "kmsp11/test/resource_helpers.h"
-#include "kmsp11/test/test_status_macros.h"
 #include "kmsp11/util/crypto_utils.h"
 
 namespace cloud_kms {
@@ -37,15 +37,12 @@ using ::cloud_kms::kmsp11::CreateKeyRingOrDie;
 using ::cloud_kms::kmsp11::EcdsaSigAsn1ToP1363;
 using ::cloud_kms::kmsp11::EcdsaVerifyP1363;
 using ::cloud_kms::kmsp11::EncryptRsaOaep;
-using ::cloud_kms::kmsp11::EqualsProto;
 using ::cloud_kms::kmsp11::GetCryptoKeyOrDie;
 using ::cloud_kms::kmsp11::GetCryptoKeyVersionOrDie;
 using ::cloud_kms::kmsp11::kTestLocation;
 using ::cloud_kms::kmsp11::ParseX509PublicKeyPem;
 using ::cloud_kms::kmsp11::RandomId;
 using ::cloud_kms::kmsp11::SetErrorRv;
-using ::cloud_kms::kmsp11::StatusIs;
-using ::cloud_kms::kmsp11::ToStatus;
 using ::cloud_kms::kmsp11::WaitForEnablement;
 
 std::unique_ptr<KmsClient> NewClient(

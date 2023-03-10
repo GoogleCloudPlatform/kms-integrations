@@ -15,11 +15,11 @@
 #include "kmsp11/object.h"
 
 #include "absl/strings/str_split.h"
+#include "common/status_macros.h"
 #include "kmsp11/kmsp11.h"
 #include "kmsp11/openssl.h"
 #include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/errors.h"
-#include "kmsp11/util/status_macros.h"
 #include "kmsp11/util/string_utils.h"
 
 namespace cloud_kms::kmsp11 {

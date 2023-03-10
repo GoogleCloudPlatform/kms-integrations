@@ -16,10 +16,10 @@
 
 #include <cstdlib>
 
+#include "common/status_macros.h"
 #include "kmsp11/config/protoyaml.h"
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/platform.h"
-#include "kmsp11/util/status_macros.h"
 #include "yaml-cpp/yaml.h"
 
 namespace cloud_kms::kmsp11 {

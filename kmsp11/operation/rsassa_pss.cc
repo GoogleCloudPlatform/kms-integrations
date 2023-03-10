@@ -16,6 +16,7 @@
 
 #include <string_view>
 
+#include "common/status_macros.h"
 #include "kmsp11/openssl.h"
 #include "kmsp11/operation/crypter_interfaces.h"
 #include "kmsp11/operation/kms_digesting_signer.h"
@@ -24,7 +25,6 @@
 #include "kmsp11/operation/preconditions.h"
 #include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/errors.h"
-#include "kmsp11/util/status_macros.h"
 
 namespace cloud_kms::kmsp11 {
 namespace {

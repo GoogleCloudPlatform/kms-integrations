@@ -14,11 +14,11 @@
 
 #include "kmsp11/operation/preconditions.h"
 
+#include "common/test/test_status_macros.h"
 #include "gmock/gmock.h"
 #include "kmsp11/object.h"
 #include "kmsp11/test/matchers.h"
 #include "kmsp11/test/runfiles.h"
-#include "kmsp11/test/test_status_macros.h"
 #include "kmsp11/util/crypto_utils.h"
 
 namespace cloud_kms::kmsp11 {

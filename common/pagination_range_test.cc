@@ -18,9 +18,9 @@
 #include "common/pagination_range.h"
 
 #include "absl/status/status.h"
+#include "common/test/matchers.h"
 #include "gmock/gmock.h"
 #include "google/bigtable/admin/v2/bigtable_instance_admin.grpc.pb.h"
-#include "kmsp11/test/matchers.h"
 
 namespace cloud_kms {
 namespace {
@@ -216,7 +216,7 @@ TEST(RangeFromPagination, Unimplemented) {
   NonProtoRange range = UnimplementedPaginationRange<NonProtoRange>::Create();
   auto i = range.begin();
   EXPECT_NE(i, range.end());
-  EXPECT_THAT(*i, kmsp11::StatusIs(absl::StatusCode::kUnimplemented));
+  EXPECT_THAT(*i, StatusIs(absl::StatusCode::kUnimplemented));
 }
 
 }  // namespace

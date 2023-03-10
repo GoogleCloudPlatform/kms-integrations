@@ -14,8 +14,8 @@
 
 #include "common/source_location.h"
 
+#include "common/test/matchers.h"
 #include "gmock/gmock.h"
-#include "kmsp11/test/matchers.h"
 
 namespace cloud_kms {
 namespace {
@@ -35,8 +35,7 @@ TEST(SourceLocationTest, MacroLineNumber) {
 
 TEST(SourceLocationTest, MacroFileName) {
   SourceLocation s = SOURCE_LOCATION;
-  EXPECT_THAT(s.file_name(), ::cloud_kms::kmsp11::MatchesStdRegex(
-                                 ".*source_location_test.cc"));
+  EXPECT_THAT(s.file_name(), MatchesStdRegex(".*source_location_test.cc"));
 }
 
 TEST(SourceLocationTest, MacroToString) {

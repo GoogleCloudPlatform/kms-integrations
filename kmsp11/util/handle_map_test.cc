@@ -14,9 +14,9 @@
 
 #include "kmsp11/util/handle_map.h"
 
+#include "common/test/test_status_macros.h"
 #include "gtest/gtest.h"
 #include "kmsp11/test/matchers.h"
-#include "kmsp11/test/test_status_macros.h"
 #include "kmsp11/util/errors.h"
 
 namespace cloud_kms::kmsp11 {

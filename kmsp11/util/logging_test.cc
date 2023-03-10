@@ -18,12 +18,12 @@
 
 #include "absl/cleanup/cleanup.h"
 #include "absl/strings/escaping.h"
+#include "common/test/test_status_macros.h"
 #include "glog/logging.h"
 #include "gmock/gmock.h"
 #include "grpc/grpc.h"
 #include "kmsp11/test/matchers.h"
 #include "kmsp11/test/resource_helpers.h"
-#include "kmsp11/test/test_status_macros.h"
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/platform.h"
 #include "kmsp11/util/string_utils.h"

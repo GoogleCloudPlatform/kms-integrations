@@ -17,10 +17,10 @@
 
 #include "absl/cleanup/cleanup.h"
 #include "absl/status/statusor.h"
+#include "common/status_macros.h"
 #include "glog/logging.h"
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/platform.h"
-#include "kmsp11/util/status_macros.h"
 
 namespace cloud_kms::kmsp11 {
 namespace {

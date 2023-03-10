@@ -14,12 +14,12 @@
 
 #include "kmsp11/provider.h"
 
+#include "common/test/test_status_macros.h"
 #include "fakekms/cpp/fakekms.h"
 #include "gmock/gmock.h"
 #include "kmsp11/test/matchers.h"
 #include "kmsp11/test/proto_parser.h"
 #include "kmsp11/test/resource_helpers.h"
-#include "kmsp11/test/test_status_macros.h"
 #include "kmsp11/util/string_utils.h"
 
 namespace cloud_kms::kmsp11 {

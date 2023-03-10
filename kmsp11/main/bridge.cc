@@ -14,6 +14,7 @@
 
 #include "absl/status/status.h"
 #include "absl/types/optional.h"
+#include "common/status_macros.h"
 #include "glog/logging.h"
 #include "kmsp11/config/config.h"
 #include "kmsp11/cryptoki.h"
@@ -25,7 +26,6 @@
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/global_provider.h"
 #include "kmsp11/util/logging.h"
-#include "kmsp11/util/status_macros.h"
 #include "kmsp11/util/status_utils.h"
 
 namespace cloud_kms::kmsp11 {
@@ -59,19 +59,12 @@ absl::StatusOr<std::shared_ptr<Session>> GetSession(
 absl::Status Initialize(CK_VOID_PTR pInitArgs) {
   auto* init_args = static_cast<CK_C_INITIALIZE_ARGS*>(pInitArgs);
   if (init_args) {
-#ifdef _WIN32
-#pragma push_macro("CreateMutex")
-#undef CreateMutex
-#endif
     if ((init_args->flags & CKF_OS_LOCKING_OK) != CKF_OS_LOCKING_OK &&
         (init_args->CreateMutex || init_args->DestroyMutex ||
          init_args->LockMutex || init_args->UnlockMutex)) {
       return NewInvalidArgumentError("library requires os locking",
                                      CKR_CANT_LOCK, SOURCE_LOCATION);
     }
-#ifdef _WIN32
-#pragma pop_macro("CreateMutex")
-#endif
     if ((init_args->flags & CKF_LIBRARY_CANT_CREATE_OS_THREADS) ==
         CKF_LIBRARY_CANT_CREATE_OS_THREADS) {
       return NewInvalidArgumentError("library requires thread creation",

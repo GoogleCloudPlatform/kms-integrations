@@ -1,0 +1,56 @@
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_proto_library", "cc_test")
+load("@rules_proto//proto:defs.bzl", "proto_library")
+
+package(
+    default_testonly = 1,
+    default_visibility = [
+        "//common:__subpackages__",
+        "//kmscng:__subpackages__",
+        "//kmsp11:__subpackages__",
+    ],
+)
+
+cc_library(
+    name = "matchers",
+    hdrs = ["matchers.h"],
+    deps = [
+        "//common:status_utils",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings:str_format",
+    ],
+)
+
+cc_test(
+    name = "matchers_test",
+    size = "small",
+    srcs = ["matchers_test.cc"],
+    deps = [
+        ":matchers",
+        "//common:test_message_cc_proto",
+        "@com_google_absl//absl/status",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "test_status_macros",
+    hdrs = ["test_status_macros.h"],
+    deps = [
+        ":matchers",
+        "//common:status_macros",
+        "//common:status_utils",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_googletest//:gtest",
+    ],
+)
+
+cc_test(
+    name = "test_status_macros_test",
+    size = "small",
+    srcs = ["test_status_macros_test.cc"],
+    deps = [
+        ":test_status_macros",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
