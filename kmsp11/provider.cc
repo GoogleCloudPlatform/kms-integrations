@@ -14,10 +14,10 @@
 
 #include "kmsp11/provider.h"
 
+#include "common/kms_client.h"
 #include "glog/logging.h"
 #include "kmsp11/cert_authority.h"
 #include "kmsp11/mechanism.h"
-#include "kmsp11/util/kms_client.h"
 #include "kmsp11/util/status_macros.h"
 #include "kmsp11/util/string_utils.h"
 #include "kmsp11/version.h"

@@ -1,7 +1,7 @@
 load("@rules_cc//cc:defs.bzl", "cc_library", "cc_proto_library", "cc_test")
 load("@rules_proto//proto:defs.bzl", "proto_library")
 
-package(default_visibility = ["//kmsp11:__subpackages__"])
+package(default_visibility = ["//common:__subpackages__", "//kmsp11:__subpackages__"])
 
 cc_library(
     name = "algorithm_details",
@@ -9,8 +9,8 @@ cc_library(
     hdrs = ["algorithm_details.h"],
     deps = [
         ":cryptoki_headers",
+	"//common:kms_v1",
         "//kmsp11/util:errors",
-        "//kmsp11/util:kms_v1",
         "@com_google_absl//absl/container:btree",
         "@com_google_absl//absl/status:statusor",
     ],
@@ -61,9 +61,9 @@ cc_library(
     deps = [
         ":algorithm_details",
         ":openssl",
+	"//common:kms_client",
         "//kmsp11/util:crypto_utils",
         "//kmsp11/util:errors",
-        "//kmsp11/util:kms_client",
         "//kmsp11/util:string_utils",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
@@ -130,8 +130,8 @@ cc_library(
         ":algorithm_details",
         ":attribute_map",
         ":cryptoki_headers",
+	"//common:kms_v1",
         "//kmsp11/util:crypto_utils",
-        "//kmsp11/util:kms_v1",
         "//kmsp11/util:status_macros",
         "@com_google_absl//absl/strings",
     ],
@@ -287,8 +287,8 @@ cc_library(
         ":object_loader",
         ":object_store",
         ":object_store_state_cc_proto",
+	"//common:kms_client",
         "//kmsp11/config:config_cc_proto",
-        "//kmsp11/util:kms_client",
         "//kmsp11/util:status_macros",
         "//kmsp11/util:string_utils",
         "@com_google_absl//absl/status:statusor",

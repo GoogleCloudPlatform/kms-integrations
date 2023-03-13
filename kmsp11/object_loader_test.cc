@@ -24,6 +24,7 @@
 namespace kmsp11 {
 namespace {
 
+using ::cloud_kms::KmsClient;
 using ::testing::ElementsAre;
 using ::testing::Property;
 

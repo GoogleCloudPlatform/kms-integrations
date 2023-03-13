@@ -17,8 +17,8 @@
 // This file was ported from the Google Cloud Platform C++ Client Libraries,
 // the original source can be found here:
 // https://github.com/googleapis/google-cloud-cpp/blob/9d9591913f342bafcd83a34df8e96d4dd5d87534/google/cloud/internal/pagination_range.h
-#ifndef KMSP11_UTIL_PAGINATION_RANGE_H_
-#define KMSP11_UTIL_PAGINATION_RANGE_H_
+#ifndef COMMON_PAGINATION_RANGE_H_
+#define COMMON_PAGINATION_RANGE_H_
 
 #include <functional>
 #include <iterator>
@@ -30,7 +30,7 @@
 #include "absl/status/statusor.h"
 #include "google/protobuf/util/message_differencer.h"
 
-namespace kmsp11 {
+namespace cloud_kms {
 
 inline bool ComparePaginationValues(const google::protobuf::Message& lhs,
                                     const google::protobuf::Message& rhs) {
@@ -180,8 +180,7 @@ class PaginationRange {
    *   status. If the stream is exhausted, it returns the `.end()` iterator.
    */
   iterator GetNext() {
-    static absl::Status const kPastTheEndError(
-        absl::FailedPreconditionError(
+    static absl::Status const kPastTheEndError(absl::FailedPreconditionError(
         "Cannot iterating past the end of ListObjectReader"));
     if (current_page_.end() == current_) {
       if (on_last_page_) {
@@ -235,6 +234,6 @@ struct UnimplementedPaginationRange<PaginationRange<T, Request, Response>> {
   }
 };
 
-}  // namespace kmsp11
+}  // namespace cloud_kms
 
-#endif  // KMSP11_UTIL_PAGINATION_RANGE_H_
+#endif  // COMMON_PAGINATION_RANGE_H_

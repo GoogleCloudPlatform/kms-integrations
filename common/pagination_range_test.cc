@@ -15,14 +15,14 @@
 // This file was ported from the Google Cloud Platform C++ Client Libraries,
 // the original source can be found here:
 // https://github.com/googleapis/google-cloud-cpp/blob/9d9591913f342bafcd83a34df8e96d4dd5d87534/google/cloud/internal/pagination_range_test.cc
-#include "kmsp11/util/pagination_range.h"
+#include "common/pagination_range.h"
 
 #include "absl/status/status.h"
 #include "gmock/gmock.h"
 #include "google/bigtable/admin/v2/bigtable_instance_admin.grpc.pb.h"
 #include "kmsp11/test/matchers.h"
 
-namespace kmsp11 {
+namespace cloud_kms {
 namespace {
 
 using ::testing::_;
@@ -220,4 +220,4 @@ TEST(RangeFromPagination, Unimplemented) {
 }
 
 }  // namespace
-}  // namespace kmsp11
+}  // namespace cloud_kms

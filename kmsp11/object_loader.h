@@ -21,12 +21,14 @@
 #include "absl/container/flat_hash_set.h"
 #include "absl/status/statusor.h"
 #include "absl/synchronization/mutex.h"
+#include "common/kms_client.h"
 #include "kmsp11/cert_authority.h"
 #include "kmsp11/cryptoki.h"
 #include "kmsp11/object_store_state.pb.h"
-#include "kmsp11/util/kms_client.h"
 
 namespace kmsp11 {
+
+using ::cloud_kms::KmsClient;
 
 class ObjectLoader {
  public:

@@ -1,7 +1,7 @@
 load("@rules_cc//cc:defs.bzl", "cc_library", "cc_proto_library", "cc_test")
 load("@rules_proto//proto:defs.bzl", "proto_library")
 
-package(default_visibility = ["//kmsp11:__subpackages__"])
+package(default_visibility = ["//common:__subpackages__", "//kmsp11:__subpackages__"])
 
 cc_library(
     name = "backoff",
@@ -25,36 +25,15 @@ cc_test(
 )
 
 cc_library(
-    name = "checksums",
-    srcs = ["checksums.cc"],
-    hdrs = ["checksums.h"],
-    deps = [
-        "@com_google_absl//absl/crc:crc32c",
-        "@com_google_absl//absl/types:span",
-    ],
-)
-
-cc_test(
-    name = "checksums_test",
-    size = "small",
-    srcs = ["checksums_test.cc"],
-    deps = [
-        ":checksums",
-        "//kmsp11/test",
-        "@com_google_googletest//:gtest_main",
-    ],
-)
-
-cc_library(
     name = "crypto_utils",
     srcs = ["crypto_utils.cc"],
     hdrs = ["crypto_utils.h"],
     deps = [
         ":errors",
         ":status_macros",
+	"//common:kms_v1",
         "//kmsp11:cryptoki_headers",
         "//kmsp11:openssl",
-        "//kmsp11/util:kms_v1",
         "@com_google_absl//absl/random",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/synchronization",
@@ -174,51 +153,6 @@ cc_test(
 )
 
 cc_library(
-    name = "kms_client",
-    srcs = [
-        "kms_client.cc",
-        "kms_client_service_config.h",
-    ],
-    hdrs = ["kms_client.h"],
-    deps = [
-        ":backoff",
-        ":checksums",
-        ":errors",
-        ":kms_v1",
-        ":pagination_range",
-        ":platform",
-        ":status_macros",
-        ":status_utils",
-        "//kmsp11:openssl",
-        "//kmsp11:version",
-        "@com_github_grpc_grpc//:grpc++",
-        "@com_google_absl//absl/status:statusor",
-    ],
-)
-
-cc_test(
-    name = "kms_client_test",
-    size = "small",
-    srcs = ["kms_client_test.cc"],
-    deps = [
-        ":kms_client",
-        "//fakekms/cpp:fakekms",
-        "//fakekms/cpp:fault_helpers",
-        "//kmsp11/test",
-        "@com_google_googletest//:gtest_main",
-    ],
-)
-
-cc_library(
-    name = "kms_v1",
-    hdrs = ["kms_v1.h"],
-    deps = [
-        "@com_google_googleapis//google/cloud/kms/v1:kms_cc_grpc",
-        "@com_google_googleapis//google/cloud/kms/v1:kms_cc_proto",
-    ],
-)
-
-cc_library(
     name = "padding",
     srcs = ["padding.cc"],
     hdrs = ["padding.h"],
@@ -236,26 +170,6 @@ cc_test(
     deps = [
         ":padding",
         "//kmsp11/test",
-        "@com_google_googletest//:gtest_main",
-    ],
-)
-
-cc_library(
-    name = "pagination_range",
-    hdrs = ["pagination_range.h"],
-    deps = [
-        "@com_google_absl//absl/status",
-    ],
-)
-
-cc_test(
-    name = "pagination_range_test",
-    size = "small",
-    srcs = ["pagination_range_test.cc"],
-    deps = [
-        ":pagination_range",
-        "//kmsp11/test",
-        "@com_google_googleapis//google/bigtable/admin/v2:admin_cc_grpc",
         "@com_google_googletest//:gtest_main",
     ],
 )

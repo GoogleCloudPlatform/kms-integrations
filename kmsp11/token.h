@@ -20,14 +20,16 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/synchronization/mutex.h"
+#include "common/kms_client.h"
 #include "kmsp11/config/config.pb.h"
 #include "kmsp11/cryptoki.h"
 #include "kmsp11/object.h"
 #include "kmsp11/object_loader.h"
 #include "kmsp11/object_store.h"
-#include "kmsp11/util/kms_client.h"
 
 namespace kmsp11 {
+
+using ::cloud_kms::KmsClient;
 
 // Token models a PKCS #11 Token, and logically maps to a key ring in
 // Cloud KMS.

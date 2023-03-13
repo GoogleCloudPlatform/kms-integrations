@@ -12,24 +12,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "kmsp11/util/kms_client.h"
+#include "common/kms_client.h"
 
+#include "absl/crc/crc32c.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
+#include "common/kms_client_service_config.h"
 #include "grpcpp/client_context.h"
 #include "grpcpp/create_channel.h"
 #include "grpcpp/security/credentials.h"
 #include "kmsp11/openssl.h"
 #include "kmsp11/util/backoff.h"
-#include "kmsp11/util/checksums.h"
 #include "kmsp11/util/errors.h"
-#include "kmsp11/util/kms_client_service_config.h"
 #include "kmsp11/util/platform.h"
 #include "kmsp11/util/status_macros.h"
 #include "kmsp11/version.h"
 
-namespace kmsp11 {
+namespace cloud_kms {
 namespace {
+
+// TODO(b/270419822): Clean up these using statements once all relevant utils
+// have been moved to common.
+using ::kmsp11::ComputeBackoff;
+using ::kmsp11::GetHostPlatformInfo;
+using ::kmsp11::GetTargetPlatform;
+using ::kmsp11::kLibraryVersion;
+using ::kmsp11::NewInternalError;
+using ::kmsp11::SetErrorRv;
+using ::kmsp11::ToStatus;
 
 // clang-format off
 // Sample value:
@@ -63,6 +73,14 @@ absl::StatusOr<std::string> GetDigestString(const kms_v1::Digest& digest) {
                           SOURCE_LOCATION);
 }
 
+uint32_t ComputeCRC32C(std::string_view data) {
+  return static_cast<uint32_t>(absl::ComputeCrc32c(data));
+}
+
+bool CRC32CMatches(std::string_view data, uint32_t crc32c) {
+  return crc32c == ComputeCRC32C(data);
+}
+
 }  // namespace
 
 void KmsClient::AddContextSettings(grpc::ClientContext* ctx,
@@ -86,12 +104,17 @@ KmsClient::KmsClient(std::string_view endpoint_address,
                      const std::shared_ptr<grpc::ChannelCredentials>& creds,
                      absl::Duration rpc_timeout,
                      std::string_view user_project_override,
-                     std::string_view rpc_feature_flags)
+                     std::string_view rpc_feature_flags, UserAgent user_agent)
     : rpc_timeout_(rpc_timeout),
       rpc_feature_flags_(rpc_feature_flags),
       user_project_override_(user_project_override) {
   grpc::ChannelArguments args;
-  args.SetUserAgentPrefix(ComputeUserAgentPrefix());
+  switch (user_agent) {
+    case UserAgent::kPkcs11:
+      args.SetUserAgentPrefix(ComputeUserAgentPrefix());
+    case UserAgent::kCng:
+      args.SetUserAgentPrefix("CNG provider POC - update this UA");
+  }
   args.SetServiceConfigJSON(std::string(kDefaultKmsServiceConfig));
 
   std::shared_ptr<grpc::Channel> channel =
@@ -512,4 +535,4 @@ absl::Status KmsClient::WaitForGeneration(kms_v1::CryptoKeyVersion& ckv,
   return absl::OkStatus();
 }
 
-}  // namespace kmsp11
+}  // namespace cloud_kms

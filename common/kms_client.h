@@ -14,19 +14,22 @@
  * limitations under the License.
  */
 
-#ifndef KMSP11_UTIL_KMS_CLIENT_H_
-#define KMSP11_UTIL_KMS_CLIENT_H_
+#ifndef COMMON_KMS_CLIENT_H_
+#define COMMON_KMS_CLIENT_H_
 
 #include <string_view>
 
 #include "absl/status/statusor.h"
 #include "absl/time/clock.h"
 #include "absl/time/time.h"
+#include "common/kms_v1.h"
+#include "common/pagination_range.h"
 #include "grpcpp/security/credentials.h"
-#include "kmsp11/util/kms_v1.h"
-#include "kmsp11/util/pagination_range.h"
 
-namespace kmsp11 {
+namespace cloud_kms {
+
+// Enum representing the user agent to be used for metrics purposes.
+enum class UserAgent { kPkcs11, kCng };
 
 using CryptoKeysRange =
     PaginationRange<kms_v1::CryptoKey, kms_v1::ListCryptoKeysRequest,
@@ -47,7 +50,8 @@ class KmsClient {
   KmsClient(std::string_view endpoint_address,
             const std::shared_ptr<grpc::ChannelCredentials>& creds,
             absl::Duration rpc_timeout, std::string_view rpc_feature_flags = "",
-            std::string_view user_project_override = "");
+            std::string_view user_project_override = "",
+            UserAgent user_agent = UserAgent::kPkcs11);
 
   kms_v1::KeyManagementService::Stub* kms_stub() { return kms_stub_.get(); }
 
@@ -118,6 +122,6 @@ class KmsClient {
   const std::string user_project_override_;
 };
 
-}  // namespace kmsp11
+}  // namespace cloud_kms
 
-#endif  // KMSP11_UTIL_KMS_CLIENT_H_
+#endif  // COMMON_KMS_CLIENT_H_

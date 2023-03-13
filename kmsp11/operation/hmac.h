@@ -19,9 +19,9 @@
 
 #include <string_view>
 
+#include "common/kms_client.h"
 #include "kmsp11/operation/crypter_interfaces.h"
 #include "kmsp11/util/crypto_utils.h"
-#include "kmsp11/util/kms_client.h"
 #include "kmsp11/util/string_utils.h"
 
 namespace kmsp11 {

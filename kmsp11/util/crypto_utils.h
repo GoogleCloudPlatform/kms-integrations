@@ -22,9 +22,9 @@
 
 #include "absl/status/statusor.h"
 #include "absl/time/time.h"
+#include "common/kms_v1.h"
 #include "kmsp11/cryptoki.h"
 #include "kmsp11/openssl.h"
-#include "kmsp11/util/kms_v1.h"
 
 namespace kmsp11 {
 

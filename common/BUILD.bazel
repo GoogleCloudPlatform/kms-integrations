@@ -1,0 +1,69 @@
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_proto_library", "cc_test")
+load("@rules_proto//proto:defs.bzl", "proto_library")
+
+package(default_visibility = ["//kmsp11:__subpackages__", "//kmscng:__subpackages__"])
+
+cc_library(
+    name = "kms_client",
+    srcs = [
+        "kms_client.cc",
+        "kms_client_service_config.h",
+    ],
+    hdrs = ["kms_client.h"],
+    deps = [
+        ":kms_v1",
+        ":pagination_range",
+        "//kmsp11:openssl",
+        "//kmsp11:version",
+	"//kmsp11/util:backoff",
+        "//kmsp11/util:errors",
+        "//kmsp11/util:platform",
+        "//kmsp11/util:status_macros",
+        "//kmsp11/util:status_utils",
+        "@com_github_grpc_grpc//:grpc++",
+	"@com_google_absl//absl/crc:crc32c",
+        "@com_google_absl//absl/status:statusor",
+    ],
+)
+
+cc_test(
+    name = "kms_client_test",
+    size = "small",
+    srcs = ["kms_client_test.cc"],
+    deps = [
+        ":kms_client",
+        "//fakekms/cpp:fakekms",
+        "//fakekms/cpp:fault_helpers",
+        "//kmsp11/test",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "kms_v1",
+    hdrs = ["kms_v1.h"],
+    deps = [
+        "@com_google_googleapis//google/cloud/kms/v1:kms_cc_grpc",
+        "@com_google_googleapis//google/cloud/kms/v1:kms_cc_proto",
+    ],
+)
+
+cc_library(
+    name = "pagination_range",
+    hdrs = ["pagination_range.h"],
+    deps = [
+        "@com_google_absl//absl/status",
+    ],
+)
+
+cc_test(
+    name = "pagination_range_test",
+    size = "small",
+    srcs = ["pagination_range_test.cc"],
+    deps = [
+        ":pagination_range",
+        "//kmsp11/test",
+        "@com_google_googleapis//google/bigtable/admin/v2:admin_cc_grpc",
+        "@com_google_googletest//:gtest_main",
+    ],
+)

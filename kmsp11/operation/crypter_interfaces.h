@@ -18,11 +18,13 @@
 #define KMSP11_OPERATION_CRYPTER_INTERFACES_H_
 
 #include "absl/status/statusor.h"
+#include "common/kms_client.h"
 #include "kmsp11/object.h"
 #include "kmsp11/util/errors.h"
-#include "kmsp11/util/kms_client.h"
 
 namespace kmsp11 {
+
+using ::cloud_kms::KmsClient;
 
 class EncrypterInterface {
  public:

@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-#ifndef KMSP11_UTIL_KMS_CLIENT_SERVICE_CONFIG_H_
-#define KMSP11_UTIL_KMS_CLIENT_SERVICE_CONFIG_H_
+#ifndef COMMON_KMS_CLIENT_SERVICE_CONFIG_H_
+#define COMMON_KMS_CLIENT_SERVICE_CONFIG_H_
 
 #include <string_view>
 
-namespace kmsp11 {
+namespace cloud_kms {
 
 // TODO(bdhess): Pull this in dynamically from the Bazel dependency
 // once cl/362932396 is available in the googleapis version we consume.
@@ -153,6 +153,6 @@ constexpr std::string_view kDefaultKmsServiceConfig = R"(
   ]
 }
 )";
-}  // namespace kmsp11
+}  // namespace cloud_kms
 
-#endif  // KMSP11_UTIL_KMS_CLIENT_SERVICE_CONFIG_H_
+#endif  // COMMON_KMS_CLIENT_SERVICE_CONFIG_H_

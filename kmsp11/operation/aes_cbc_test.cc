@@ -14,6 +14,7 @@
 
 #include "kmsp11/operation/aes_cbc.h"
 
+#include "common/kms_client.h"
 #include "fakekms/cpp/fakekms.h"
 #include "gmock/gmock.h"
 #include "kmsp11/kmsp11.h"
@@ -23,7 +24,6 @@
 #include "kmsp11/test/runfiles.h"
 #include "kmsp11/test/test_status_macros.h"
 #include "kmsp11/util/crypto_utils.h"
-#include "kmsp11/util/kms_client.h"
 #include "kmsp11/util/padding.h"
 
 namespace kmsp11 {

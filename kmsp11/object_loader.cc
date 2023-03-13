@@ -22,6 +22,10 @@
 namespace kmsp11 {
 namespace {
 
+using ::cloud_kms::CryptoKeysRange;
+using ::cloud_kms::CryptoKeyVersionsRange;
+using ::cloud_kms::KmsClient;
+
 bool IsLoadable(const kms_v1::CryptoKey& key) {
   switch (key.purpose()) {
     case kms_v1::CryptoKey::ASYMMETRIC_DECRYPT:

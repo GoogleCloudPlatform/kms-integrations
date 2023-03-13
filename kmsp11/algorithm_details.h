@@ -20,10 +20,10 @@
 #include <optional>
 
 #include "absl/status/statusor.h"
+#include "common/kms_v1.h"
 #include "google/cloud/kms/v1/resources.pb.h"
 #include "google/cloud/kms/v1/service.pb.h"
 #include "kmsp11/cryptoki.h"
-#include "kmsp11/util/kms_v1.h"
 
 namespace kmsp11 {
 

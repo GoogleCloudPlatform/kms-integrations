@@ -16,13 +16,16 @@
 
 #include <regex>
 
+#include "common/kms_client.h"
 #include "kmsp11/kmsp11.h"
 #include "kmsp11/util/errors.h"
-#include "kmsp11/util/kms_client.h"
 #include "kmsp11/util/status_macros.h"
 
 namespace kmsp11 {
 namespace {
+
+using ::cloud_kms::CryptoKeyAndVersion;
+using ::cloud_kms::KmsClient;
 
 absl::Status SessionReadOnlyError(const SourceLocation& source_location) {
   return NewError(absl::StatusCode::kFailedPrecondition, "session is read-only",

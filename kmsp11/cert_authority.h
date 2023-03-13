@@ -17,9 +17,9 @@
 #ifndef KMSP11_CERT_AUTHORITY_H_
 #define KMSP11_CERT_AUTHORITY_H_
 
+#include "common/kms_client.h"
 #include "kmsp11/openssl.h"
 #include "kmsp11/util/crypto_utils.h"
-#include "kmsp11/util/kms_client.h"
 
 namespace kmsp11 {
 

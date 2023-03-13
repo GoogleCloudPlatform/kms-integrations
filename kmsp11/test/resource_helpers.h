@@ -20,6 +20,7 @@
 #include <string_view>
 
 #include "absl/time/time.h"
+#include "common/kms_v1.h"
 #include "fakekms/cpp/fakekms.h"
 #include "google/cloud/kms/v1/resources.pb.h"
 #include "google/cloud/kms/v1/service.grpc.pb.h"
@@ -27,7 +28,6 @@
 #include "kmsp11/object.h"
 #include "kmsp11/openssl.h"
 #include "kmsp11/test/test_status_macros.h"
-#include "kmsp11/util/kms_v1.h"
 
 namespace kmsp11 {
 

@@ -22,6 +22,7 @@
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"
 #include "absl/strings/str_format.h"
+#include "common/kms_v1.h"
 #include "glog/logging.h"
 #include "gmock/gmock.h"
 #include "grpc++/grpc++.h"
@@ -32,7 +33,6 @@
 #include "kmsp11/test/resource_helpers.h"
 #include "kmsp11/test/test_platform.h"
 #include "kmsp11/test/test_status_macros.h"
-#include "kmsp11/util/kms_v1.h"
 
 ABSL_FLAG(std::string, library_path, "",
           "Required. The path to the PKCS #11 library binary to be loaded. For "
