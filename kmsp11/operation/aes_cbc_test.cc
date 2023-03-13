@@ -26,7 +26,7 @@
 #include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/padding.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 namespace {
 
 CK_MECHANISM NewAesCbcMechanism(CK_BYTE* iv) {
@@ -360,4 +360,4 @@ TEST_F(AesCbcTest, DecryptFailureKeyDisabled) {
 }
 
 }  // namespace
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

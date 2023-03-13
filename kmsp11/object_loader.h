@@ -26,9 +26,7 @@
 #include "kmsp11/cryptoki.h"
 #include "kmsp11/object_store_state.pb.h"
 
-namespace kmsp11 {
-
-using ::cloud_kms::KmsClient;
+namespace cloud_kms::kmsp11 {
 
 class ObjectLoader {
  public:
@@ -68,6 +66,6 @@ class ObjectLoader {
   Cache cache_ ABSL_GUARDED_BY(cache_mutex_);
 };
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11
 
 #endif  // KMSP11_OBJECT_LOADER_H_

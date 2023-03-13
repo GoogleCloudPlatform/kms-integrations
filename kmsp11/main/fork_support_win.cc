@@ -14,11 +14,11 @@
 
 #include "kmsp11/main/fork_support.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 absl::Status RegisterForkHandlers() {
   // Forking is not supported on Windows.
   return absl::OkStatus();
 }
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

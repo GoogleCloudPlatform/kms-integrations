@@ -22,7 +22,7 @@
 #include "absl/types/span.h"
 #include "kmsp11/cryptoki.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 // Returns the mechanism types supported in this library and their corresponding
 // mechanism info.
@@ -36,6 +36,6 @@ const absl::flat_hash_set<CK_MECHANISM_TYPE>& AllMacMechanisms();
 // RAW_ENCRYPT_DECRYPT keys.
 const absl::flat_hash_set<CK_MECHANISM_TYPE>& AllRawEncryptionMechanisms();
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11
 
 #endif  // KMSP11_MECHANISM_H_

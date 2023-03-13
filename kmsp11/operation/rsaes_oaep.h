@@ -20,7 +20,7 @@
 #include "kmsp11/openssl.h"
 #include "kmsp11/operation/crypter_interfaces.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 // Returns an RsaOaepEncrypter.
 absl::StatusOr<std::unique_ptr<EncrypterInterface>> NewRsaOaepEncrypter(
@@ -30,6 +30,6 @@ absl::StatusOr<std::unique_ptr<EncrypterInterface>> NewRsaOaepEncrypter(
 absl::StatusOr<std::unique_ptr<DecrypterInterface>> NewRsaOaepDecrypter(
     std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11
 
 #endif  // KMSP11_OPERATION_RSAES_OAEP_H_

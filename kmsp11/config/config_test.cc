@@ -23,7 +23,7 @@
 #include "kmsp11/test/test_platform.h"
 #include "kmsp11/test/test_status_macros.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 namespace {
 
 using ::testing::HasSubstr;
@@ -160,4 +160,4 @@ tokens:
 }
 
 }  // namespace
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

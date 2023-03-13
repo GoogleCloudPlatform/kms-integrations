@@ -22,7 +22,7 @@
 #include "absl/status/status.h"
 #include "kmsp11/cryptoki.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 absl::Status InitializeLogging(std::string_view output_directory,
                                std::string_view output_filename_suffix);
@@ -30,6 +30,6 @@ void ShutdownLogging();
 
 CK_RV LogAndResolve(std::string_view function_name, const absl::Status& status);
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11
 
 #endif  // KMSP11_UTIL_LOGGING_H_

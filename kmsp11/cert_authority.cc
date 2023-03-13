@@ -22,7 +22,7 @@
 #include "kmsp11/util/status_macros.h"
 #include "kmsp11/util/string_utils.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 namespace {
 
 // For OpenSSL sequence functions that take an `int location`, -1 means add to
@@ -182,4 +182,4 @@ absl::StatusOr<bssl::UniquePtr<X509>> CertAuthority::GenerateCert(
   return std::move(cert);
 }
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

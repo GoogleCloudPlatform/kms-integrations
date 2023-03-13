@@ -24,7 +24,7 @@
 #include "kmsp11/operation/kms_prehashed_signer.h"
 #include "kmsp11/util/string_utils.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 // An implementation of SignerInterface that computes the appropriate digest of
 // plain input data and uses an inner KmsPrehashedSigner to compute signatures.
@@ -60,6 +60,6 @@ class KmsDigestingSigner : public SignerInterface {
   const EVP_MD* md_;
 };
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11
 
 #endif  // KMSP11_OPERATION_KMS_DIGESTING_SIGNER_H_

@@ -22,7 +22,7 @@
 #include "kmsp11/operation/crypter_interfaces.h"
 #include "kmsp11/util/string_utils.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 // An abstract SignerInterface that makes signatures using Cloud KMS.
 class KmsPrehashedSigner : public SignerInterface {
@@ -46,6 +46,6 @@ class KmsPrehashedSigner : public SignerInterface {
   std::shared_ptr<Object> object_;
 };
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11
 
 #endif  // KMSP11_OPERATION_KMS_PREHASHED_SIGNER_H_

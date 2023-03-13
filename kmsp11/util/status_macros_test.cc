@@ -19,7 +19,7 @@
 #include "gmock/gmock.h"
 #include "kmsp11/test/test_status_macros.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 namespace {
 
 TEST(ReturnIfErrorTest, NoEarlyReturnOnOkStatus) {
@@ -104,4 +104,4 @@ TEST(AssignOrReturnTest, ReturnOnNonOkStatus) {
 }
 
 }  // namespace
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

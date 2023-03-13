@@ -22,7 +22,7 @@
 #include "kmsp11/util/platform.h"
 #include "kmsp11/util/status_macros.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 namespace {
 
 struct SystemVersionInfo {
@@ -157,4 +157,4 @@ void WriteToSystemLog(const char* message) {
   // https://learn.microsoft.com/en-us/windows/win32/eventlog/event-sources
 }
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

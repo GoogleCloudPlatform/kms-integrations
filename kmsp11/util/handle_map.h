@@ -24,7 +24,7 @@
 #include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/errors.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 // A HandleMap contains a set of items with assigned CK_ULONG handles.
 // It is intended for use with the PKCS #11 Session and Object types, both
@@ -102,6 +102,6 @@ class HandleMap {
       ABSL_GUARDED_BY(mutex_);
 };
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11
 
 #endif  // KMSP11_UTIL_HANDLE_MAP_H_

@@ -19,7 +19,7 @@
 #include "kmsp11/test/test_status_macros.h"
 #include "kmsp11/util/errors.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 namespace {
 
 using ::testing::Pointee;
@@ -97,4 +97,4 @@ TEST(HandleMapTest, RemoveIfRemovesOnPredicate) {
 }
 
 }  // namespace
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

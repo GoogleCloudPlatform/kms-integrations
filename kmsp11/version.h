@@ -19,7 +19,7 @@
 
 #include "kmsp11/cryptoki.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 constexpr CK_VERSION kLibraryVersion = {1, 2};
 

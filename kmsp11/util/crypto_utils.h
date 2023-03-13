@@ -26,7 +26,7 @@
 #include "kmsp11/cryptoki.h"
 #include "kmsp11/openssl.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 // Convert an ASN1_TIME structure to an absl::Time.
 absl::StatusOr<absl::Time> Asn1TimeToAbsl(const ASN1_TIME* time);
@@ -187,6 +187,6 @@ struct ZeroDelete {
   }
 };
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11
 
 #endif  // KMSP11_UTIL_CRYPTO_UTILS_H_

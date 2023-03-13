@@ -20,7 +20,7 @@
 #include "kmsp11/util/global_provider.h"
 #include "kmsp11/util/logging.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 absl::Status RegisterForkHandlers() {
   int result = pthread_atfork(grpc_prefork, grpc_postfork_parent, [] {
@@ -37,4 +37,4 @@ absl::Status RegisterForkHandlers() {
   return absl::OkStatus();
 }
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

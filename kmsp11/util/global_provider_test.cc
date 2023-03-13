@@ -19,7 +19,7 @@
 #include "kmsp11/test/matchers.h"
 #include "kmsp11/test/test_status_macros.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 namespace {
 
 using ::testing::AllOf;
@@ -88,4 +88,4 @@ TEST(GlobalProviderTest, SetAndGetProviderAfterReleaseReturnsProvider) {
 }
 
 }  // namespace
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

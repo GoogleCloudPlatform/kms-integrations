@@ -14,7 +14,7 @@
 
 syntax = "proto3";
 
-package kmsp11;
+package cloud_kms.kmsp11;
 
 message StatusDetails {
   uint64 ck_rv = 1;

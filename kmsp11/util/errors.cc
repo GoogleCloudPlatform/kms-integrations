@@ -17,7 +17,7 @@
 #include "absl/strings/str_cat.h"
 #include "glog/logging.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 absl::Status NewError(absl::StatusCode code, std::string_view msg, CK_RV ck_rv,
                       const SourceLocation& source_location) {
@@ -33,4 +33,4 @@ absl::Status NewError(absl::StatusCode code, std::string_view msg, CK_RV ck_rv,
   return status;
 }
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

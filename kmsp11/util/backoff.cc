@@ -17,7 +17,7 @@
 
 #include "glog/logging.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 absl::Duration ComputeBackoff(absl::Duration min_delay,
                               absl::Duration max_delay, int previous_retries) {
@@ -49,4 +49,4 @@ absl::Duration ComputeBackoff(absl::Duration min_delay,
   return delay;
 }
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

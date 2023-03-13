@@ -33,13 +33,13 @@ namespace {
 
 // TODO(b/270419822): Clean up these using statements once all relevant utils
 // have been moved to common.
-using ::kmsp11::ComputeBackoff;
-using ::kmsp11::GetHostPlatformInfo;
-using ::kmsp11::GetTargetPlatform;
-using ::kmsp11::kLibraryVersion;
-using ::kmsp11::NewInternalError;
-using ::kmsp11::SetErrorRv;
-using ::kmsp11::ToStatus;
+using ::cloud_kms::kmsp11::ComputeBackoff;
+using ::cloud_kms::kmsp11::GetHostPlatformInfo;
+using ::cloud_kms::kmsp11::GetTargetPlatform;
+using ::cloud_kms::kmsp11::kLibraryVersion;
+using ::cloud_kms::kmsp11::NewInternalError;
+using ::cloud_kms::kmsp11::SetErrorRv;
+using ::cloud_kms::kmsp11::ToStatus;
 
 // clang-format off
 // Sample value:

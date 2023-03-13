@@ -22,7 +22,7 @@
 #include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/string_utils.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 namespace {
 
 using ::testing::AnyOf;
@@ -129,4 +129,4 @@ TEST_F(CertAuthorityTest, SubjectCnEqualsKeyId) {
 }
 
 }  // namespace
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

@@ -22,7 +22,7 @@
 #include "kmsp11/util/status_macros.h"
 #include "yaml-cpp/yaml.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 namespace {
 
 // Exceptions are disallowed by our style guide. Wrap YAML::LoadFile (which may
@@ -68,4 +68,4 @@ absl::StatusOr<LibraryConfig> LoadConfigFromFile(
   return config;
 }
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

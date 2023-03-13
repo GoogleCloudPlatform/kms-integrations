@@ -16,7 +16,7 @@
 
 #include "kmsp11/util/errors.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 absl::Status CheckKeyPreconditions(CK_KEY_TYPE key_type,
                                    CK_OBJECT_CLASS object_class,
@@ -117,4 +117,4 @@ absl::Status EnsureMgf1HashMatches(CK_RSA_PKCS_MGF_TYPE actual,
   return absl::OkStatus();
 }
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

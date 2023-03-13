@@ -18,7 +18,7 @@
 #include "kmsp11/kmsp11.h"
 #include "kmsp11/util/errors.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 struct AlgorithmCmp {
   using is_transparent = void;
@@ -315,4 +315,4 @@ absl::StatusOr<AlgorithmDetails> GetDetails(
   return *it;
 }
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

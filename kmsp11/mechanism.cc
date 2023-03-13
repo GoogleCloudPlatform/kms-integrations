@@ -17,7 +17,7 @@
 #include "absl/container/flat_hash_map.h"
 #include "kmsp11/kmsp11.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 namespace {
 
 constexpr CK_FLAGS kEcFlags =
@@ -255,4 +255,4 @@ const absl::flat_hash_set<CK_MECHANISM_TYPE>& AllRawEncryptionMechanisms() {
   return kRawEncryptionMechanisms;
 }
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

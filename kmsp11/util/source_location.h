@@ -23,7 +23,7 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 // Class representing a specific location in the source code of a program.
 //
@@ -49,10 +49,10 @@ class SourceLocation {
   const char* file_name_;
 };
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11
 
 // A macro for retrieving a SourceLocation object containing the curent file
 // path and line number.
-#define SOURCE_LOCATION ::kmsp11::SourceLocation(__LINE__, __FILE__)
+#define SOURCE_LOCATION ::cloud_kms::kmsp11::SourceLocation(__LINE__, __FILE__)
 
 #endif  // KMSP11_UTIL_SOURCE_LOCATION_H_

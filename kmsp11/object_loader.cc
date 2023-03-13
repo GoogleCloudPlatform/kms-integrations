@@ -19,12 +19,8 @@
 #include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/status_macros.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 namespace {
-
-using ::cloud_kms::CryptoKeysRange;
-using ::cloud_kms::CryptoKeyVersionsRange;
-using ::cloud_kms::KmsClient;
 
 bool IsLoadable(const kms_v1::CryptoKey& key) {
   switch (key.purpose()) {
@@ -220,4 +216,4 @@ absl::StatusOr<ObjectStoreState> ObjectLoader::BuildState(
   return result;
 }
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

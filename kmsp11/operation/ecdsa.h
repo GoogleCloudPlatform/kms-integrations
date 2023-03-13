@@ -21,7 +21,7 @@
 #include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/string_utils.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 // Returns either an EcdsaSigner or a KmsDigestingSigner based on mechanism.
 absl::StatusOr<std::unique_ptr<SignerInterface>> NewEcdsaSigner(
@@ -31,6 +31,6 @@ absl::StatusOr<std::unique_ptr<SignerInterface>> NewEcdsaSigner(
 absl::StatusOr<std::unique_ptr<VerifierInterface>> NewEcdsaVerifier(
     std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11
 
 #endif  // KMSP11_OPERATION_ECDSA_H_

@@ -26,7 +26,7 @@
 #include "kmsp11/operation/rsassa_raw_pkcs1.h"
 #include "kmsp11/util/errors.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 absl::StatusOr<DecryptOp> NewDecryptOp(std::shared_ptr<Object> key,
                                        const CK_MECHANISM* mechanism,
@@ -168,4 +168,4 @@ absl::StatusOr<VerifyOp> NewVerifyOp(std::shared_ptr<Object> key,
   }
 }
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

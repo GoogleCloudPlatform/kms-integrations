@@ -26,7 +26,7 @@
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/status_macros.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 // An implementation of SignerInterface that makes "raw" RSASSA-PKCS1 signatures
 // (i.e., without hashing/DigestInfo) using Cloud KMS.
@@ -191,4 +191,4 @@ absl::Status RsaRawPkcs1Verifier::Verify(KmsClient* client,
   return RsaVerifyRawPkcs1(key_.get(), data, signature);
 }
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

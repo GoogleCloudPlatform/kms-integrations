@@ -21,11 +21,9 @@
 #include "kmsp11/test/test_status_macros.h"
 #include "kmsp11/util/crypto_utils.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 namespace {
 
-using ::cloud_kms::KmsClient;
-using ::testing::ElementsAre;
 using ::testing::Property;
 
 class BuildStateTest : public testing::Test {
@@ -230,4 +228,4 @@ TEST_F(BuildStateTest, VersionWithAlgorithmP224IsOmitted) {
 }
 
 }  // namespace
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

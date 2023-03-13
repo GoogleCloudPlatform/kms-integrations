@@ -16,7 +16,7 @@
 
 #include "gmock/gmock.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 namespace {
 
 TEST(ComputeBackoffTest, Simple) {
@@ -73,4 +73,4 @@ TEST(ComputeBackoffTest, ManyRetries) {
 }
 
 }  // namespace
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

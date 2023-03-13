@@ -25,7 +25,7 @@
 #include "kmsp11/util/status_macros.h"
 #include "kmsp11/util/string_utils.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 namespace {
 
 absl::StatusOr<CK_SLOT_INFO> NewSlotInfo() {
@@ -146,4 +146,4 @@ absl::Status Token::RefreshState(const KmsClient& client) {
   return absl::OkStatus();
 }
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

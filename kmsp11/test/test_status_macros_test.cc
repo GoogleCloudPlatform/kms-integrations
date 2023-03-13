@@ -17,7 +17,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest-spi.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 namespace {
 
 TEST(ExpectOkTest, OkStatus) { EXPECT_OK(absl::OkStatus()); }
@@ -129,4 +129,4 @@ TEST(AssertOkAndAssignTest, NotOkMovableNewVar) {
 }
 
 }  // namespace
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

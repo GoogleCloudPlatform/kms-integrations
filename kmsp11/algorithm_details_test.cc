@@ -17,7 +17,7 @@
 #include "kmsp11/kmsp11.h"
 #include "kmsp11/test/test_status_macros.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 namespace {
 
 using ::testing::ElementsAre;
@@ -114,4 +114,4 @@ TEST(GetAlgorithmDetailsTest, AlgorithmNotFound) {
 }
 
 }  // namespace
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

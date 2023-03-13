@@ -23,7 +23,7 @@
 #include "kmsp11/operation/crypter_interfaces.h"
 #include "kmsp11/util/string_utils.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 // An implementation of VerifierInterface that computes the appropriate digest
 // of plain input data and uses an inner Verifier class to verify signatures.
@@ -58,6 +58,6 @@ class KmsDigestingVerifier : public VerifierInterface {
   const EVP_MD* md_;
 };
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11
 
 #endif  // KMSP11_OPERATION_KMS_DIGESTING_VERIFIER_H_

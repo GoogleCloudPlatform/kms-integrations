@@ -31,22 +31,22 @@ using ::testing::SizeIs;
 
 // TODO(b/270419822): Clean up these using statements once all relevant utils
 // have been moved to common.
-using ::kmsp11::CreateCryptoKeyOrDie;
-using ::kmsp11::CreateCryptoKeyVersionOrDie;
-using ::kmsp11::CreateKeyRingOrDie;
-using ::kmsp11::EcdsaSigAsn1ToP1363;
-using ::kmsp11::EcdsaVerifyP1363;
-using ::kmsp11::EncryptRsaOaep;
-using ::kmsp11::EqualsProto;
-using ::kmsp11::GetCryptoKeyOrDie;
-using ::kmsp11::GetCryptoKeyVersionOrDie;
-using ::kmsp11::kTestLocation;
-using ::kmsp11::ParseX509PublicKeyPem;
-using ::kmsp11::RandomId;
-using ::kmsp11::SetErrorRv;
-using ::kmsp11::StatusIs;
-using ::kmsp11::ToStatus;
-using ::kmsp11::WaitForEnablement;
+using ::cloud_kms::kmsp11::CreateCryptoKeyOrDie;
+using ::cloud_kms::kmsp11::CreateCryptoKeyVersionOrDie;
+using ::cloud_kms::kmsp11::CreateKeyRingOrDie;
+using ::cloud_kms::kmsp11::EcdsaSigAsn1ToP1363;
+using ::cloud_kms::kmsp11::EcdsaVerifyP1363;
+using ::cloud_kms::kmsp11::EncryptRsaOaep;
+using ::cloud_kms::kmsp11::EqualsProto;
+using ::cloud_kms::kmsp11::GetCryptoKeyOrDie;
+using ::cloud_kms::kmsp11::GetCryptoKeyVersionOrDie;
+using ::cloud_kms::kmsp11::kTestLocation;
+using ::cloud_kms::kmsp11::ParseX509PublicKeyPem;
+using ::cloud_kms::kmsp11::RandomId;
+using ::cloud_kms::kmsp11::SetErrorRv;
+using ::cloud_kms::kmsp11::StatusIs;
+using ::cloud_kms::kmsp11::ToStatus;
+using ::cloud_kms::kmsp11::WaitForEnablement;
 
 std::unique_ptr<KmsClient> NewClient(
     std::string_view listen_addr,

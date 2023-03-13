@@ -16,7 +16,7 @@
 
 #include "kmsp11/util/errors.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 void AttributeMap::Put(CK_ATTRIBUTE_TYPE type, std::string_view value) {
   attrs_[type] = std::string(value.data(), value.size());
@@ -58,4 +58,4 @@ absl::StatusOr<std::string_view> AttributeMap::Value(
   return std::string_view(s);
 }
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

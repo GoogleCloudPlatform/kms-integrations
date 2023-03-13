@@ -19,7 +19,7 @@
 #include "kmsp11/cryptoki.h"
 #include "kmsp11/util/errors.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 absl::Status InitToken(CK_SLOT_ID slotID, CK_UTF8CHAR_PTR pPin,
                        CK_ULONG ulPinLen, CK_UTF8CHAR_PTR pLabel) {
@@ -186,4 +186,4 @@ absl::Status WaitForSlotEvent(CK_FLAGS flags, CK_SLOT_ID_PTR pSlot,
   return UnsupportedError(SOURCE_LOCATION);
 }
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

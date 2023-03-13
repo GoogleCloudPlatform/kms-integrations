@@ -22,7 +22,7 @@
 #include "kmsp11/util/status_macros.h"
 #include "kmsp11/util/string_utils.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 namespace {
 
@@ -168,4 +168,4 @@ absl::StatusOr<std::unique_ptr<DecrypterInterface>> NewRsaOaepDecrypter(
   return std::make_unique<RsaOaepDecrypter>(key);
 }
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

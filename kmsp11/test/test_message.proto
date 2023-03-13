@@ -14,7 +14,7 @@
 
 syntax = "proto3";
 
-package kmsp11;
+package cloud_kms.kmsp11;
 
 message TestMessage {
   string string_value = 1;

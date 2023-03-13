@@ -22,7 +22,7 @@
 #include "absl/types/span.h"
 #include "kmsp11/cryptoki.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 // FindOp models a PKCS #11 Find operation.
 //
@@ -55,6 +55,6 @@ class FindOp {
   size_t offset_;
 };
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11
 
 #endif  // KMSP11_OPERATION_FIND_H_

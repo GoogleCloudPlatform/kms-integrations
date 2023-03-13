@@ -16,7 +16,7 @@
 
 #include "gmock/gmock.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 namespace {
 
 using ::testing::HasSubstr;
@@ -27,4 +27,4 @@ TEST(PlatformTest, HostPlatformInfoIsKnown) {
 }
 
 }  // namespace
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

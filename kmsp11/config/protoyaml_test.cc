@@ -19,7 +19,7 @@
 #include "kmsp11/test/proto_parser.h"
 #include "kmsp11/test/test_status_macros.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 namespace {
 
 using ::testing::ElementsAre;
@@ -207,4 +207,4 @@ scalars {
 }
 
 }  // namespace
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

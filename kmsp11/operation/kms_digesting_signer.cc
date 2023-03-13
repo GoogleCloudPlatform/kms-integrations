@@ -20,7 +20,7 @@
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/status_macros.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 absl::StatusOr<std::unique_ptr<SignerInterface>> KmsDigestingSigner::New(
     std::shared_ptr<Object> key, std::unique_ptr<SignerInterface> inner_signer,
@@ -130,4 +130,4 @@ size_t KmsDigestingSigner::signature_length() {
   return inner_signer_->signature_length();
 }
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

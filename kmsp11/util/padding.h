@@ -19,7 +19,7 @@
 
 #include "absl/status/statusor.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 // Add PKCS#7 padding.
 // The block size is hardcoded to 16 bytes.
@@ -29,6 +29,6 @@ std::vector<uint8_t> Pad(absl::Span<const uint8_t> data);
 // The block size is hardcoded to 16 bytes.
 absl::StatusOr<absl::Span<const uint8_t>> Unpad(absl::Span<const uint8_t> data);
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11
 
 #endif  // KMSP11_UTIL_PADDING_H_

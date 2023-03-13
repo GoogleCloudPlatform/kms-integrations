@@ -21,7 +21,7 @@
 #include "gtest/gtest.h"
 #include "tools/cpp/runfiles/runfiles.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 namespace {
 
 using ::bazel::tools::cpp::runfiles::Runfiles;
@@ -54,4 +54,4 @@ absl::StatusOr<std::string> LoadTestRunfile(std::string_view filename) {
   return result;
 }
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

@@ -22,7 +22,7 @@
 #include "kmsp11/util/status_macros.h"
 #include "kmsp11/util/string_utils.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 namespace {
 
 absl::Status AddStorageAttributes(AttributeMap* attrs,
@@ -318,4 +318,4 @@ absl::StatusOr<Object> Object::NewCertificate(
   return Object(ckv.name(), CKO_CERTIFICATE, algorithm, cert_attrs);
 }
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

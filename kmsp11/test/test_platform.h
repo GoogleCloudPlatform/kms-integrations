@@ -21,7 +21,7 @@
 
 #include "absl/status/status.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 // Set the named environment variable to the provided value, replacing any
 // existing value.
@@ -45,6 +45,6 @@ inline void ClearEnvVariable(const std::string& name) {
 // Unimplemented on Windows.
 absl::Status SetMode(const char* filename, int mode);
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11
 
 #endif  // KMSP11_TEST_TEST_PLATFORM_H_

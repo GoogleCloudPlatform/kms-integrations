@@ -24,7 +24,7 @@
 #include "kmsp11/util/status_macros.h"
 #include "kmsp11/util/string_utils.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 namespace {
 
 // Enum representing the padding mode used by the specified mechanism.
@@ -324,4 +324,4 @@ absl::StatusOr<std::unique_ptr<DecrypterInterface>> NewAesCbcDecrypter(
   }
 }
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

@@ -17,7 +17,7 @@
 #include "gmock/gmock.h"
 #include "kmsp11/test/matchers.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 namespace {
 
 TEST(SourceLocationTest, FixedToString) {
@@ -48,4 +48,4 @@ TEST(SourceLocationTest, MacroToString) {
 }
 
 }  // namespace
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

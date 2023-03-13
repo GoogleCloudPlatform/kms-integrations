@@ -52,7 +52,7 @@ ABSL_FLAG(std::string, rpc_feature_flags, "",
           "Optional. Cloud KMS feature flags to include with RPC requests. "
           "Empty means no feature flags.");
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 namespace {
 
 using ::testing::IsNull;
@@ -210,7 +210,7 @@ TEST_F(EndToEndTest, TestEcdsaSignVerify) {
 }
 
 }  // namespace
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11
 
 int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);

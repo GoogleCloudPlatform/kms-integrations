@@ -23,7 +23,7 @@
 #include "kmsp11/test/runfiles.h"
 #include "kmsp11/util/crypto_utils.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 const std::string_view kTestLocation =
     "projects/kmsp11-test/locations/us-central1";
@@ -222,4 +222,4 @@ absl::StatusOr<CK_OBJECT_HANDLE> GetSecretKeyObjectHandle(
   return GetObjectHandle(session, ckv, CKO_SECRET_KEY);
 }
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

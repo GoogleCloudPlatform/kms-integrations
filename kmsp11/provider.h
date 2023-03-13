@@ -29,7 +29,7 @@
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/handle_map.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 // Provider models a "run" of a Cryptoki library, from C_Initialize to
 // C_Finalize.
@@ -116,6 +116,6 @@ class Provider {
   std::vector<CK_MECHANISM_TYPE> mechanism_types_;
 };
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11
 
 #endif  // KMSP11_PROVIDER_H_

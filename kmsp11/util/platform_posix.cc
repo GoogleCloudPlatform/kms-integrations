@@ -27,7 +27,7 @@
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/platform.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 absl::Status EnsureWriteProtected(const char* filename) {
   struct stat buf;
@@ -85,4 +85,4 @@ void WriteToSystemLog(const char* message) {
   closelog();
 }
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

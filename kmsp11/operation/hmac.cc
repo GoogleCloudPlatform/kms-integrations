@@ -23,7 +23,7 @@
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/status_macros.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 namespace {
 
 constexpr size_t kMaxMacDataBytes = 64 * 1024;
@@ -322,4 +322,4 @@ absl::StatusOr<std::unique_ptr<VerifierInterface>> NewHmacVerifier(
   }
 }
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

@@ -21,7 +21,7 @@
 #include "kmsp11/cryptoki.h"
 #include "kmsp11/object.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 // Ensures that object is consistent with the specified key_type,
 // mechanism_type, and object_class, or returns an appropriate error.
@@ -42,6 +42,6 @@ absl::Status EnsureHashMatches(CK_MECHANISM_TYPE actual,
 absl::Status EnsureMgf1HashMatches(CK_RSA_PKCS_MGF_TYPE actual,
                                    const EVP_MD* expected);
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11
 
 #endif  // KMSP11_OPERATION_MECHANISM_PRECONDITIONS_H_

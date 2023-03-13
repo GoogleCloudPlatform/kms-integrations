@@ -1,7 +1,7 @@
 #include "absl/status/status.h"
 #include "kmsp11/cryptoki.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 {{/* Iterate over all the functions. */ -}}
 {{range .Functions -}}

@@ -17,14 +17,14 @@ CK_RV {{.Name}} (
 {{- end -}}) {
 
   // Clear any existing errors from the OpenSSL stack.
-  std::string cleared_error = kmsp11::SslErrorToString("");
+  std::string cleared_error = cloud_kms::kmsp11::SslErrorToString("");
   if (!cleared_error.empty()) {
     LOG(INFO) << "Found an existing OpenSSL error on the stack; clearing:"
               << std::endl << cleared_error;
   }
 
 {{- /* Invoke the bridge function (without the 'C_' prefix). */}}
-  absl::Status status = kmsp11::{{slice .Name 2 }}(
+  absl::Status status = cloud_kms::kmsp11::{{slice .Name 2 }}(
 
 {{- /* Iterate over the args to forward them to the bridge. */ -}}
 {{- range $index, $arg := .Args -}}
@@ -34,7 +34,7 @@ CK_RV {{.Name}} (
 );
 
   // Convert the returned status to a CK_RV, logging error info if it's not OK.
-  return kmsp11::LogAndResolve("{{.Name}}", status);
+  return cloud_kms::kmsp11::LogAndResolve("{{.Name}}", status);
 }
 
 {{end}}

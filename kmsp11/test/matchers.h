@@ -27,7 +27,7 @@
 #include "google/protobuf/util/message_differencer.h"
 #include "kmsp11/util/status_utils.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 // A regex matcher with the same signature as ::testing::MatchesRegex, but whose
 // implementation is backed by std::regex.
@@ -98,6 +98,6 @@ MATCHER_P(IsOkAndHolds, matcher, "") {
   return testing::ExplainMatchResult(matcher, arg.value(), result_listener);
 }
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11
 
 #endif  // KMSP11_TEST_MATCHERS_H_

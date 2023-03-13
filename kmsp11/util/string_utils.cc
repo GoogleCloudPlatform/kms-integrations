@@ -20,7 +20,7 @@
 #include "absl/strings/str_join.h"
 #include "kmsp11/util/errors.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 absl::Status CryptokiStrCopy(std::string_view src, absl::Span<uint8_t> dest,
                              char pad_char) {
@@ -106,4 +106,4 @@ bool OnlyContainsValue(absl::Span<const uint8_t> buffer, uint8_t value) {
   return true;
 }
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

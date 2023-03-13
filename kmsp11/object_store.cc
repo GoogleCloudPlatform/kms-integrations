@@ -18,7 +18,7 @@
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/status_macros.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 namespace {
 
 // Cryptoki defines CK_OBJECT_HANDLE (and CK_ULONG) as simply `unsigned long`,
@@ -184,4 +184,4 @@ absl::StatusOr<CK_OBJECT_HANDLE> ObjectStore::FindSingle(
   return *match;
 }
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

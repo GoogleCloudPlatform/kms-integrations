@@ -23,7 +23,7 @@
 #include "kmsp11/object.h"
 #include "kmsp11/object_store_state.pb.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 using ObjectStoreMap =
     absl::flat_hash_map<CK_OBJECT_HANDLE, std::shared_ptr<Object>>;
@@ -61,6 +61,6 @@ class ObjectStore {
   const ObjectStoreMap entries_;
 };
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11
 
 #endif  // KMSP11_OBJECT_STORE_H_

@@ -16,7 +16,7 @@
 
 #include "kmsp11/util/errors.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 namespace {
 // The singleton provider instance associated with the running process. The
 // value is nullptr if the provider is not currently initialized.
@@ -58,4 +58,4 @@ absl::Status ReleaseGlobalProvider() {
   return absl::OkStatus();
 }
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

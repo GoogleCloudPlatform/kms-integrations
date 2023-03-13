@@ -20,7 +20,7 @@
 #include "google/protobuf/text_format.h"
 #include "gtest/gtest.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 // A helper for parsing a text format protobuf message, and converting it on
 // demand to a desired type. Conversion EXPECT fails if the provided string
@@ -45,6 +45,6 @@ inline ParseProtoHelper ParseTestProto(std::string text) {
   return ParseProtoHelper(text);
 }
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11
 
 #endif  // KMSP11_TEST_PROTO_PARSER_H_

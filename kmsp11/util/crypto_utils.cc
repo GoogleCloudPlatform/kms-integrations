@@ -23,7 +23,7 @@
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/status_macros.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 namespace {
 
 static const ASN1_TIME kUnixEpoch = [] {
@@ -635,4 +635,4 @@ std::string SslErrorToString(std::string_view default_message) {
   return std::string(contents, size_t(len));
 }
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

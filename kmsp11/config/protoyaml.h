@@ -22,7 +22,7 @@
 #include "google/protobuf/message.h"
 #include "yaml-cpp/yaml.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 // Parse the supplied YAML node into the provided protobuf message. The message
 // descriptor of the supplied protobuf message supplies the parsing rules.
@@ -74,6 +74,6 @@ namespace kmsp11 {
 absl::Status YamlToProto(const YAML::Node& node,
                          google::protobuf::Message* message);
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11
 
 #endif  // KMSP11_CONFIG_PROTOYAML_H_

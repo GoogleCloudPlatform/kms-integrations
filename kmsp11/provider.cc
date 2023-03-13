@@ -22,7 +22,7 @@
 #include "kmsp11/util/string_utils.h"
 #include "kmsp11/version.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 namespace {
 
 static const char* kDefaultKmsEndpoint = "cloudkms.googleapis.com:443";
@@ -155,4 +155,4 @@ absl::StatusOr<CK_MECHANISM_INFO> Provider::MechanismInfo(
   return entry->second;
 }
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

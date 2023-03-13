@@ -17,7 +17,7 @@
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/string_utils.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 constexpr size_t kCipherBlockSize = 16;
 
@@ -49,4 +49,4 @@ absl::StatusOr<absl::Span<const uint8_t>> Unpad(
   return data.first(data.size() - padding_len);
 }
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

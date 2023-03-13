@@ -25,7 +25,7 @@
 #include "kmsp11/test/test_status_macros.h"
 #include "kmsp11/util/crypto_utils.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 namespace {
 
 CK_AES_CTR_PARAMS NewCtrParams(CK_BYTE cb[]) {
@@ -305,4 +305,4 @@ TEST_F(AesCtrTest, DecryptFailureKeyDisabled) {
 }
 
 }  // namespace
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

@@ -26,7 +26,7 @@
 #include "kmsp11/attribute_map.h"
 #include "kmsp11/cryptoki.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 struct KeyPair;
 
@@ -68,6 +68,6 @@ struct KeyPair {
   Object private_key;
 };
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11
 
 #endif  // KMSP11_OBJECT_H_

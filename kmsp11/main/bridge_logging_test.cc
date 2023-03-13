@@ -26,7 +26,7 @@
 #include "kmsp11/util/platform.h"
 #include "kmsp11/util/string_utils.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 namespace {
 
 using ::testing::HasSubstr;
@@ -227,4 +227,4 @@ TEST_F(BridgeLoggingTest, ExistingSslErrorIsClearedAndLogged) {
 }
 
 }  // namespace
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

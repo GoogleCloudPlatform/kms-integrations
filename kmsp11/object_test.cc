@@ -23,7 +23,7 @@
 #include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/status_macros.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 namespace {
 
 using ::testing::Each;
@@ -270,4 +270,4 @@ TEST(NewCertificateTest, CertificateAttributes) {
 }
 
 }  // namespace
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

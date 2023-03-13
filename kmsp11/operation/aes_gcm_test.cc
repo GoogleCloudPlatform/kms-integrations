@@ -25,7 +25,7 @@
 #include "kmsp11/test/test_status_macros.h"
 #include "kmsp11/util/crypto_utils.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 namespace {
 
 CK_GCM_PARAMS NewGcmParams(std::vector<uint8_t>* iv,
@@ -379,4 +379,4 @@ TEST_F(AesGcmTest, DecryptFailureKeyDisabled) {
 }
 
 }  // namespace
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

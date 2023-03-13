@@ -27,9 +27,7 @@
 #include "kmsp11/object_loader.h"
 #include "kmsp11/object_store.h"
 
-namespace kmsp11 {
-
-using ::cloud_kms::KmsClient;
+namespace cloud_kms::kmsp11 {
 
 // Token models a PKCS #11 Token, and logically maps to a key ring in
 // Cloud KMS.
@@ -104,6 +102,6 @@ class Token {
   bool is_logged_in_ ABSL_GUARDED_BY(login_mutex_);
 };
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11
 
 #endif  // KMSP11_TOKEN_H_

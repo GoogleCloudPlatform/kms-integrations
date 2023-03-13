@@ -21,7 +21,7 @@
 #include "kmsp11/main/bridge.h"
 #include "kmsp11/test/test_status_macros.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 namespace {
 
 TEST(FipsTest, InitializePassesFipsSelfTestFipsModeRequired) {
@@ -47,4 +47,4 @@ require_fips_mode: true
 }
 
 }  // namespace
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

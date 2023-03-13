@@ -29,7 +29,7 @@
 #include "kmsp11/openssl.h"
 #include "kmsp11/test/test_status_macros.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 // A location name where test resources should be created.
 ABSL_CONST_INIT extern const std::string_view kTestLocation;
@@ -114,6 +114,6 @@ absl::StatusOr<CK_OBJECT_HANDLE> GetPublicKeyObjectHandle(
 absl::StatusOr<CK_OBJECT_HANDLE> GetSecretKeyObjectHandle(
     CK_SESSION_HANDLE session, kms_v1::CryptoKeyVersion ckv);
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11
 
 #endif  // KMSP11_TEST_RESOURCE_HELPERS_H_

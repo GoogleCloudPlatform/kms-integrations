@@ -24,7 +24,7 @@
 #include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/string_utils.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 // Returns an AesGcmEncrypter.
 absl::StatusOr<std::unique_ptr<EncrypterInterface>> NewAesGcmEncrypter(
@@ -34,6 +34,6 @@ absl::StatusOr<std::unique_ptr<EncrypterInterface>> NewAesGcmEncrypter(
 absl::StatusOr<std::unique_ptr<DecrypterInterface>> NewAesGcmDecrypter(
     std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11
 
 #endif  // KMSP11_OPERATION_AES_GCM_H_

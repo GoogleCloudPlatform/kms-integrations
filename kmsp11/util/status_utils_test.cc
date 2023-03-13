@@ -17,7 +17,7 @@
 #include "absl/status/status.h"
 #include "gmock/gmock.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 namespace {
 
 using ::testing::AllOf;
@@ -79,4 +79,4 @@ TEST(StatusPayloadTest, StatusToStringIsReadable) {
 }
 
 }  // namespace
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

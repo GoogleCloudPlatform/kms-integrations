@@ -22,11 +22,11 @@
 #include "kmsp11/operation/crypter_ops.h"
 #include "kmsp11/operation/find.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 // Operation models an in progress stateful PKCS #11 operation.
 using Operation = std::variant<FindOp, DecryptOp, EncryptOp, SignOp, VerifyOp>;
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11
 
 #endif  // KMSP11_OPERATION_OPERATION_H_

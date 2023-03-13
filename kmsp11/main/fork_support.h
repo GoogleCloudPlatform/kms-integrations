@@ -19,10 +19,10 @@
 
 #include "absl/status/status.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 absl::Status RegisterForkHandlers();
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11
 
 #endif  // KMSP11_MAIN_FORK_SUPPORT_H_

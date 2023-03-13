@@ -22,7 +22,7 @@
 #include "kmsp11/test/runfiles.h"
 #include "kmsp11/test/test_status_macros.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 namespace {
 
 using ::testing::ElementsAre;
@@ -852,4 +852,4 @@ TEST(SslErrorToStringTest, DefaultMessageEmittedOnNoError) {
 }
 
 }  // namespace
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

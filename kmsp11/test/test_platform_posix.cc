@@ -20,7 +20,7 @@
 #include "kmsp11/test/test_platform.h"
 #include "kmsp11/util/errors.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 void SetEnvVariable(const char* name, const char* value) {
   setenv(name, value, 1);
@@ -39,4 +39,4 @@ absl::Status SetMode(const char* filename, int mode) {
   return absl::OkStatus();
 }
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

@@ -21,7 +21,7 @@
 #include "kmsp11/openssl.h"
 #include "kmsp11/util/crypto_utils.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 // CertAuthority implements an x.509 v3 certificate authority that generates
 // certificates suitable for lookup in JCA.
@@ -39,6 +39,6 @@ class CertAuthority {
   std::string issuer_cn_;
 };
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11
 
 #endif  // KMSP11_CERT_AUTHORITY_H_

@@ -26,7 +26,7 @@
 #include "absl/types/span.h"
 #include "kmsp11/openssl.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 // Constructs a new string by reinterepting `data` as chars.
 //
@@ -93,6 +93,6 @@ bool IsZeroInitialized(absl::Span<const uint8_t> buffer);
 // Checks that buffer only contains the specified value.
 bool OnlyContainsValue(absl::Span<const uint8_t> buffer, uint8_t value);
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11
 
 #endif  // KMSP11_UTIL_STRING_UTILS_H_

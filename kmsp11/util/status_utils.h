@@ -22,7 +22,7 @@
 #include "grpcpp/support/status.h"
 #include "kmsp11/cryptoki.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 // A catch-all default Cryptoki error value to return in the event that no
 // specific error is provided.
@@ -54,6 +54,6 @@ inline absl::Status ToStatus(const grpc::Status& status) {
                       status.error_message());
 }
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11
 
 #endif  // KMSP11_UTIL_STATUS_UTILS_H_

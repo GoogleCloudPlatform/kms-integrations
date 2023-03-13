@@ -18,7 +18,7 @@
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/status_macros.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 absl::Status KmsPrehashedSigner::Sign(KmsClient* client,
                                       absl::Span<const uint8_t> digest,
@@ -79,4 +79,4 @@ absl::Status KmsPrehashedSigner::CopySignature(std::string_view src,
   return absl::OkStatus();
 }
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

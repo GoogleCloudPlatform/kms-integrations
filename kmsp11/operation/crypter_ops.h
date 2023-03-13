@@ -19,7 +19,7 @@
 
 #include "kmsp11/operation/crypter_interfaces.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 using DecryptOp = std::unique_ptr<DecrypterInterface>;
 
@@ -45,6 +45,6 @@ absl::StatusOr<VerifyOp> NewVerifyOp(std::shared_ptr<Object> key,
                                      const CK_MECHANISM* mechanism,
                                      bool allow_mac_keys = false);
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11
 
 #endif  // KMSP11_OPERATION_CRYPTER_OPS_H_

@@ -19,7 +19,7 @@
 #include "kmsp11/kmsp11.h"
 #include "kmsp11/main/bridge.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 namespace {
 
 using ::testing::AllOf;
@@ -40,4 +40,4 @@ TEST(FipsTest, InitializeFailsFipsSelfTestFipsModeRequired) {
 }
 
 }  // namespace
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

@@ -21,11 +21,8 @@
 #include "kmsp11/util/errors.h"
 #include "kmsp11/util/status_macros.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 namespace {
-
-using ::cloud_kms::CryptoKeyAndVersion;
-using ::cloud_kms::KmsClient;
 
 absl::Status SessionReadOnlyError(const SourceLocation& source_location) {
   return NewError(absl::StatusCode::kFailedPrecondition, "session is read-only",
@@ -579,4 +576,4 @@ absl::Status Session::GenerateRandom(absl::Span<uint8_t> buffer) {
   return absl::OkStatus();
 }
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

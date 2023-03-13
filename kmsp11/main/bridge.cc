@@ -28,7 +28,7 @@
 #include "kmsp11/util/status_macros.h"
 #include "kmsp11/util/status_utils.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 namespace {
 
 constexpr CK_FUNCTION_LIST kFunctionList = NewFunctionList();
@@ -979,4 +979,4 @@ absl::Status GenerateRandom(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pRandomData,
   return session->GenerateRandom(absl::MakeSpan(pRandomData, ulRandomLen));
 }
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

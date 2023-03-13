@@ -21,7 +21,7 @@
 #include "kmsp11/util/platform.h"
 #include "kmsp11/util/status_utils.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 namespace {
 
 ABSL_CONST_INIT static absl::Mutex logging_lock(absl::kConstInit);
@@ -141,4 +141,4 @@ CK_RV LogAndResolve(std::string_view function_name,
   return rv;
 }
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

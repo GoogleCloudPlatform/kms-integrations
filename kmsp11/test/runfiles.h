@@ -21,7 +21,7 @@
 
 #include "absl/status/statusor.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 // Resolves the absolute location of the provided runfile.
 std::string RunfileLocation(std::string_view filename);
@@ -29,6 +29,6 @@ std::string RunfileLocation(std::string_view filename);
 // Loads the testdata file with the provided filename into a string.
 absl::StatusOr<std::string> LoadTestRunfile(std::string_view filename);
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11
 
 #endif  // KMSP11_TEST_RUNFILES_H_

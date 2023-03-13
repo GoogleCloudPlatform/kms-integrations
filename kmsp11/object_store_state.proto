@@ -14,7 +14,7 @@
 
 syntax = "proto3";
 
-package kmsp11;
+package cloud_kms.kmsp11;
 
 import "google/cloud/kms/v1/resources.proto";
 

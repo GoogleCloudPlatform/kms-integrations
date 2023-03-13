@@ -24,7 +24,7 @@
 #include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/string_utils.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 // Returns an HmacSigner.
 absl::StatusOr<std::unique_ptr<SignerInterface>> NewHmacSigner(
@@ -34,6 +34,6 @@ absl::StatusOr<std::unique_ptr<SignerInterface>> NewHmacSigner(
 absl::StatusOr<std::unique_ptr<VerifierInterface>> NewHmacVerifier(
     std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11
 
 #endif  // KMSP11_OPERATION_HMAC_H_

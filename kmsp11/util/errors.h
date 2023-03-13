@@ -23,7 +23,7 @@
 #include "kmsp11/util/source_location.h"
 #include "kmsp11/util/status_utils.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 // Creates a new error status with the provided parameters.
 // `code` and `ck_rv` must not be OK; these requirements are CHECKed.
@@ -128,6 +128,6 @@ inline absl::Status UnsupportedError(const SourceLocation& source_location) {
                   source_location);
 }
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11
 
 #endif  // KMSP11_UTIL_ERRORS_H_

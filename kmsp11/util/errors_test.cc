@@ -17,7 +17,7 @@
 #include "gtest/gtest.h"
 #include "kmsp11/test/matchers.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 namespace {
 
 TEST(NewErrorTest, ErrorCodeMatches) {
@@ -58,4 +58,4 @@ TEST(NewErrorTest, SourceLocationIncluded) {
 }
 
 }  // namespace
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

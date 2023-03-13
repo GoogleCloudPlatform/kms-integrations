@@ -21,7 +21,7 @@
 #include "kmsp11/test/resource_helpers.h"
 #include "kmsp11/util/crypto_utils.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 std::string CreateConfigFileWithOneKeyring(fakekms::Server* fake_server) {
   kms_v1::KeyRing kr;
@@ -104,4 +104,4 @@ absl::StatusOr<std::string> InitializeBridgeForOneKmsKey(
   return config_file;
 }
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

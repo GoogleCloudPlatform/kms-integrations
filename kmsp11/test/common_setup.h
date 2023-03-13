@@ -18,7 +18,7 @@
 #include "fakekms/cpp/fakekms.h"
 #include "kmsp11/util/crypto_utils.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 // Creates a configuration file for one keyring/token for testing and
 // initializes the keyring in fake kms.
@@ -61,6 +61,6 @@ absl::StatusOr<std::string> InitializeBridgeForOneKmsKey(
     kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm,
     kms_v1::CryptoKeyVersion* ckv);
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11
 
 #endif  // KMSP11_TEST_COMMON_RESOURCES_H_

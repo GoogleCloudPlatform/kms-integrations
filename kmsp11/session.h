@@ -20,7 +20,7 @@
 #include "kmsp11/operation/operation.h"
 #include "kmsp11/token.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 enum class SessionType { kReadOnly, kReadWrite };
 
@@ -100,6 +100,6 @@ class Session {
   std::optional<Operation> op_ ABSL_GUARDED_BY(op_mutex_);
 };
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11
 
 #endif  // KMSP11_SESSION_H_

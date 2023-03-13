@@ -21,7 +21,7 @@
 #include "absl/status/statusor.h"
 #include "kmsp11/provider.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 // Sets the provided Provider as the global Provider for serving requests from
 // this process. Returns InternalError/CKR_GENERAL_ERROR if provider is nullptr,
@@ -35,6 +35,6 @@ Provider* GetGlobalProvider();
 // if no global provider instance exists.
 absl::Status ReleaseGlobalProvider();
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11
 
 #endif  // KMSP11_UTIL_GLOBAL_PROVIDER_H_

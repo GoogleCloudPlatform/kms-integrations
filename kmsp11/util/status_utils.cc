@@ -25,7 +25,7 @@
 #include "glog/logging.h"
 #include "kmsp11/util/status_details.pb.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 namespace {
 
 // The URL we'll use for storing a custom payload in the status.
@@ -89,4 +89,4 @@ CK_RV GetCkRv(const absl::Status& status) {
   return rv;
 }
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11

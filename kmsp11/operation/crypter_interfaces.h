@@ -22,9 +22,7 @@
 #include "kmsp11/object.h"
 #include "kmsp11/util/errors.h"
 
-namespace kmsp11 {
-
-using ::cloud_kms::KmsClient;
+namespace cloud_kms::kmsp11 {
 
 class EncrypterInterface {
  public:
@@ -123,6 +121,6 @@ class VerifierInterface {
   virtual ~VerifierInterface() {}
 };
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11
 
 #endif  // KMSP11_OPERATION_CRYPTER_INTERFACES_H_

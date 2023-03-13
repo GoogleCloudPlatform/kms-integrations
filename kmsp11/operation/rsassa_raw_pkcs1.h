@@ -24,7 +24,7 @@
 #include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/string_utils.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 // Returns either an RsaRawPkcs1Signer or a KmsDigestingSigner based on
 // mechanism.
@@ -36,6 +36,6 @@ absl::StatusOr<std::unique_ptr<SignerInterface>> NewRsaRawPkcs1Signer(
 absl::StatusOr<std::unique_ptr<VerifierInterface>> NewRsaRawPkcs1Verifier(
     std::shared_ptr<Object> key, const CK_MECHANISM* mechanism);
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11
 
 #endif  // KMSP11_OPERATION_RSASSA_RAW_PKCS1_H_

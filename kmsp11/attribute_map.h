@@ -25,7 +25,7 @@
 #include "kmsp11/openssl.h"
 #include "kmsp11/util/string_utils.h"
 
-namespace kmsp11 {
+namespace cloud_kms::kmsp11 {
 
 // AttributeMap is a container for PKCS #11 attributes.
 // http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/errata01/os/pkcs11-base-v2.40-errata01-os-complete.html#_Toc235002350
@@ -82,6 +82,6 @@ class AttributeMap {
   absl::flat_hash_map<CK_ATTRIBUTE_TYPE, AttributeValue> attrs_;
 };
 
-}  // namespace kmsp11
+}  // namespace cloud_kms::kmsp11
 
 #endif  // KMSP11_ATTRIBUTE_MAP_H_
