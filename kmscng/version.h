@@ -19,8 +19,12 @@
 
 namespace cloud_kms::kmscng {
 
-constexpr int kLibraryVersionMajor = 0;
-constexpr int kLibraryVersionMinor = 7;
+constexpr uint8_t kLibraryVersionMajor = 0;
+constexpr uint8_t kLibraryVersionMinor = 7;
+
+// https://learn.microsoft.com/en-us/windows/win32/seccng/key-storage-property-identifiers#ncrypt_version_property
+constexpr uint32_t kLibraryVersionHex =
+    (uint32_t(kLibraryVersionMajor) << 16) + kLibraryVersionMinor;
 
 }  // namespace cloud_kms::kmscng
 

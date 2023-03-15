@@ -9,15 +9,40 @@ package(default_visibility = [
 cc_library(
     name = "cng_headers",
     hdrs = ["cng_headers.h"],
+    target_compatible_with = ["@platforms//os:windows"],
     deps = ["@cpdk//:ncrypt_provider"],
 )
 
 cc_library(
     name = "provider",
+    srcs = ["provider.cc"],
     hdrs = ["provider.h"],
+    target_compatible_with = ["@platforms//os:windows"],
+    deps = [
+        ":cng_headers",
+        ":version",
+        "//kmscng/util:errors",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/status:statusor",
+    ],
+)
+
+cc_test(
+    name = "provider_test",
+    srcs = ["provider_test.cc"],
+    target_compatible_with = ["@platforms//os:windows"],
+    deps = [
+        ":provider",
+        ":version",
+        "//common/test:test_status_macros",
+        "//kmscng:cng_headers",
+        "//kmscng/test:matchers",
+        "@com_google_googletest//:gtest_main",
+    ],
 )
 
 cc_library(
     name = "version",
     hdrs = ["version.h"],
+    target_compatible_with = ["@platforms//os:windows"],
 )

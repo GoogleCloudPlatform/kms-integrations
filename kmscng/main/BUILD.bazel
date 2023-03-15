@@ -22,6 +22,8 @@ cc_library(
         "//kmscng/util:errors",
         "//kmscng/util:status_utils",
         "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
     ],
     alwayslink = True,
 )
@@ -34,6 +36,7 @@ cc_test(
     target_compatible_with = ["@platforms//os:windows"],
     deps = [
         ":bridge",
+        "//common/test:test_status_macros",
         "//kmscng:cng_headers",
         "//kmscng/test:matchers",
         "@com_google_absl//absl/strings:str_format",
@@ -52,6 +55,7 @@ cc_binary(
 cc_library(
     name = "main",
     srcs = ["main.cc"],
+    target_compatible_with = ["@platforms//os:windows"],
     deps = [
         ":bridge",
         "//kmscng:cng_headers",

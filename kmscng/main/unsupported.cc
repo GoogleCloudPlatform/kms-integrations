@@ -42,15 +42,6 @@ absl::Status CreatePersistedKey(__in NCRYPT_PROV_HANDLE hProvider,
   return UnsupportedError(SOURCE_LOCATION);
 }
 
-absl::Status GetProviderProperty(__in NCRYPT_PROV_HANDLE hProvider,
-                                 __in LPCWSTR pszProperty,
-                                 __out_bcount_part_opt(cbOutput, *pcbResult)
-                                     PBYTE pbOutput,
-                                 __in DWORD cbOutput, __out DWORD* pcbResult,
-                                 __in DWORD dwFlags) {
-  return UnsupportedError(SOURCE_LOCATION);
-}
-
 absl::Status GetKeyProperty(__in NCRYPT_PROV_HANDLE hProvider,
                             __in NCRYPT_KEY_HANDLE hKey,
                             __in LPCWSTR pszProperty,

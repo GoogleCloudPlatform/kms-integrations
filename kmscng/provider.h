@@ -15,6 +15,7 @@
 #ifndef KMSCNG_PROVIDER_H_
 #define KMSCNG_PROVIDER_H_
 
+#include "absl/container/flat_hash_map.h"
 #include "absl/status/statusor.h"
 #include "kmscng/cng_headers.h"
 
@@ -22,14 +23,12 @@ namespace cloud_kms::kmscng {
 
 class Provider {
  public:
-  // TODO(b/270417019): expand this constructor to perform initial setup.
-  static Provider* New() {
-    // using `new` to invoke a private constructor
-    return new Provider();
-  }
+  Provider();
+
+  absl::StatusOr<std::string_view> GetProperty(std::wstring_view name);
 
  private:
-  Provider(){};
+  const absl::flat_hash_map<std::wstring, std::string> provider_info_;
 };
 
 }  // namespace cloud_kms::kmscng
