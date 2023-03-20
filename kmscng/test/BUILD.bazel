@@ -33,3 +33,31 @@ cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
+
+cc_library(
+    name = "register_provider",
+    srcs = ["register_provider.cc"],
+    hdrs = ["register_provider.h"],
+    target_compatible_with = ["@platforms//os:windows"],
+    deps = [
+        "//kmscng:cng_headers",
+	"@com_google_absl//absl/status",
+        "@com_google_absl//absl/strings:str_format",
+        "@cpdk//:bcrypt_provider",
+    ],
+)
+
+cc_test(
+    name = "registered_provider_test",
+    size = "small",
+    srcs = ["registered_provider_test.cc"],
+    linkopts = ["-DEFAULTLIB:ncrypt.lib"],
+    target_compatible_with = ["@platforms//os:windows"],
+    deps = [
+        ":register_provider",
+	"//common/test:test_status_macros",
+        "//kmscng:cng_headers",
+        "@com_google_absl//absl/strings:str_format",
+        "@com_google_googletest//:gtest_main",
+    ],
+)

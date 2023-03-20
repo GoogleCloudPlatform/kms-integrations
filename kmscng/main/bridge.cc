@@ -14,6 +14,8 @@
 
 #include "kmscng/main/bridge.h"
 
+#include <string_view>
+
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_format.h"
@@ -48,6 +50,13 @@ absl::Status OpenProvider(__out NCRYPT_PROV_HANDLE* phProvider,
   if (phProvider == nullptr) {
     return NewError(absl::StatusCode::kInvalidArgument,
                     "the provider handle cannot be null", NTE_INVALID_PARAMETER,
+                    SOURCE_LOCATION);
+  }
+  // Check that the user is actually trying to open our provider, and not a
+  // default / different provider.
+  if (!pszProviderName || std::wstring_view(pszProviderName) != kProviderName) {
+    return NewError(absl::StatusCode::kInvalidArgument,
+                    "unexpected provider name", NTE_INVALID_PARAMETER,
                     SOURCE_LOCATION);
   }
   if (dwFlags != 0 && dwFlags != NCRYPT_SILENT_FLAG) {

@@ -63,3 +63,16 @@ cc_library(
         "@com_google_absl//absl/status",
     ],
 )
+
+# This genrule creates a copy of the DLL named "libkmscng.dll" just to have a
+# value to use for the outs field, and then copies kmscng.dll to system32.
+# Robocopy only copies the DLL if it's newer than the version in system32, or
+# if it's the first time copying it.
+genrule(
+    name = "move_dll_to_system32",
+    srcs = [
+        ":kmscng.dll",
+    ],
+    outs = ["libkmscng.dll"],
+    cmd_bat = "copy $(@D)\\kmscng.dll $(@D)\\libkmscng.dll > NUL && robocopy $(@D) C:\\Windows\\System32 kmscng.dll /xc /xo > NUL & exit /b 0",
+)

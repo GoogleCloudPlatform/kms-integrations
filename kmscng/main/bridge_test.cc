@@ -24,31 +24,37 @@ namespace {
 
 TEST(BridgeTest, OpenProviderSuccess) {
   NCRYPT_PROV_HANDLE provider_handle;
-  EXPECT_OK(OpenProvider(&provider_handle, L"libkmscng.dll", 0));
+  EXPECT_OK(OpenProvider(&provider_handle, kProviderName.data(), 0));
 }
 
 TEST(BridgeTest, OpenProviderInvalidHandle) {
-  EXPECT_THAT(OpenProvider(nullptr, L"libkmscng.dll", 0),
+  EXPECT_THAT(OpenProvider(nullptr, kProviderName.data(), 0),
+              StatusSsIs(NTE_INVALID_PARAMETER));
+}
+
+TEST(BridgeTest, OpenProviderUnexpectedName) {
+  NCRYPT_PROV_HANDLE* hProvider;
+  EXPECT_THAT(OpenProvider(hProvider, MS_KEY_STORAGE_PROVIDER, 0),
               StatusSsIs(NTE_INVALID_PARAMETER));
 }
 
 TEST(BridgeTest, OpenProviderInvalidFlag) {
   NCRYPT_PROV_HANDLE provider_handle;
-  EXPECT_THAT(OpenProvider(&provider_handle, L"libkmscng.dll",
+  EXPECT_THAT(OpenProvider(&provider_handle, kProviderName.data(),
                            NCRYPT_PERSIST_ONLY_FLAG),
               StatusSsIs(NTE_BAD_FLAGS));
 }
 
 TEST(BridgeTest, FreeProviderSuccess) {
   NCRYPT_PROV_HANDLE provider_handle;
-  EXPECT_OK(OpenProvider(&provider_handle, L"libkmscng.dll", 0));
+  EXPECT_OK(OpenProvider(&provider_handle, kProviderName.data(), 0));
 
   EXPECT_OK(FreeProvider(provider_handle));
 }
 
 TEST(BridgeTest, GetProviderPropertyGetSizeSuccess) {
   NCRYPT_PROV_HANDLE provider_handle;
-  EXPECT_OK(OpenProvider(&provider_handle, L"libkmscng.dll", 0));
+  EXPECT_OK(OpenProvider(&provider_handle, kProviderName.data(), 0));
 
   DWORD output_size = 0;
   EXPECT_OK(GetProviderProperty(provider_handle, NCRYPT_IMPL_TYPE_PROPERTY,
@@ -58,7 +64,7 @@ TEST(BridgeTest, GetProviderPropertyGetSizeSuccess) {
 
 TEST(BridgeTest, GetProviderPropertySuccess) {
   NCRYPT_PROV_HANDLE provider_handle;
-  EXPECT_OK(OpenProvider(&provider_handle, L"libkmscng.dll", 0));
+  EXPECT_OK(OpenProvider(&provider_handle, kProviderName.data(), 0));
 
   DWORD output = 0;
   DWORD output_size = 0;
@@ -78,7 +84,7 @@ TEST(BridgeTest, GetProviderInvalidHandle) {
 
 TEST(BridgeTest, GetProviderPropertyNameNull) {
   NCRYPT_PROV_HANDLE provider_handle;
-  EXPECT_OK(OpenProvider(&provider_handle, L"libkmscng.dll", 0));
+  EXPECT_OK(OpenProvider(&provider_handle, kProviderName.data(), 0));
 
   DWORD output_size;
   EXPECT_THAT(GetProviderProperty(provider_handle, nullptr, nullptr,
@@ -88,7 +94,7 @@ TEST(BridgeTest, GetProviderPropertyNameNull) {
 
 TEST(BridgeTest, GetProviderPropertyInvalidName) {
   NCRYPT_PROV_HANDLE provider_handle;
-  EXPECT_OK(OpenProvider(&provider_handle, L"libkmscng.dll", 0));
+  EXPECT_OK(OpenProvider(&provider_handle, kProviderName.data(), 0));
 
   DWORD output_size;
   EXPECT_THAT(GetProviderProperty(provider_handle, NCRYPT_UI_POLICY_PROPERTY,
@@ -98,7 +104,7 @@ TEST(BridgeTest, GetProviderPropertyInvalidName) {
 
 TEST(BridgeTest, GetProviderPropertyOutputSizeBufferNull) {
   NCRYPT_PROV_HANDLE provider_handle;
-  EXPECT_OK(OpenProvider(&provider_handle, L"libkmscng.dll", 0));
+  EXPECT_OK(OpenProvider(&provider_handle, kProviderName.data(), 0));
 
   EXPECT_THAT(GetProviderProperty(provider_handle, NCRYPT_IMPL_TYPE_PROPERTY,
                                   nullptr, sizeof(DWORD), nullptr, 0),
@@ -107,7 +113,7 @@ TEST(BridgeTest, GetProviderPropertyOutputSizeBufferNull) {
 
 TEST(BridgeTest, GetProviderPropertyOutputBufferTooShort) {
   NCRYPT_PROV_HANDLE provider_handle;
-  EXPECT_OK(OpenProvider(&provider_handle, L"libkmscng.dll", 0));
+  EXPECT_OK(OpenProvider(&provider_handle, kProviderName.data(), 0));
 
   uint8_t output;
   DWORD output_size;
@@ -119,7 +125,7 @@ TEST(BridgeTest, GetProviderPropertyOutputBufferTooShort) {
 
 TEST(BridgeTest, GetProviderPropertyInvalidFlag) {
   NCRYPT_PROV_HANDLE provider_handle;
-  EXPECT_OK(OpenProvider(&provider_handle, L"libkmscng.dll", 0));
+  EXPECT_OK(OpenProvider(&provider_handle, kProviderName.data(), 0));
 
   DWORD output_size = 0;
   EXPECT_THAT(GetProviderProperty(provider_handle, NCRYPT_IMPL_TYPE_PROPERTY,

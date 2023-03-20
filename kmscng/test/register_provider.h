@@ -14,26 +14,21 @@
  * limitations under the License.
  */
 
-// A wrapper for CNG headers, for easier inclusion in other files.
+#ifndef KMSCNG_TEST_REGISTER_PROVIDER_H_
+#define KMSCNG_TEST_REGISTER_PROVIDER_H_
 
-#ifndef KMSCNG_CNG_HEADERS_H_
-#define KMSCNG_CNG_HEADERS_H_
-
-// clang-format off
 #include <windows.h>
-#include <wincrypt.h>
-#include <bcrypt.h>
-#include <bcrypt_provider.h>
-#include <ncrypt.h>
-#include <ncrypt_provider.h>
-// clang-format on
 
-#include <string_view>
+#include "absl/status/status.h"
 
 namespace cloud_kms::kmscng {
 
-constexpr std::wstring_view kProviderName = L"kmscng.dll";
+// Register custom provider for use in tests.
+absl::Status RegisterTestProvider();
+
+// Unregister custom provider after use in tests.
+absl::Status UnregisterTestProvider();
 
 }  // namespace cloud_kms::kmscng
 
-#endif  // KMSCNG_CNG_HEADERS_H_
+#endif  // KMSCNG_TEST_REGISTER_PROVIDER_H_

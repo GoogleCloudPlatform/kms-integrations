@@ -10,7 +10,10 @@ cc_library(
     name = "cng_headers",
     hdrs = ["cng_headers.h"],
     target_compatible_with = ["@platforms//os:windows"],
-    deps = ["@cpdk//:ncrypt_provider"],
+    deps = [
+        "@cpdk//:bcrypt_provider",
+        "@cpdk//:ncrypt_provider",
+    ],
 )
 
 cc_library(
