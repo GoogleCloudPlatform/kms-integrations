@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-#ifndef KMSP11_UTIL_PLATFORM_H_
-#define KMSP11_UTIL_PLATFORM_H_
+#ifndef COMMON_PLATFORM_H_
+#define COMMON_PLATFORM_H_
 
 #include <cstdlib>
 #include <string>
 
 #include "absl/status/status.h"
 
-namespace cloud_kms::kmsp11 {
+namespace cloud_kms {
 
 // Ensure that the file at the provided path is not group- or world- writeable.
 // Note that always returns OK on Windows. (See b/148377771).
@@ -46,6 +46,6 @@ std::string GetHostPlatformInfo();
 // Writes the provided message to the system log. This is a no-op on Windows.
 void WriteToSystemLog(const char* message);
 
-}  // namespace cloud_kms::kmsp11
+}  // namespace cloud_kms
 
-#endif  // KMSP11_UTIL_PLATFORM_H_
+#endif  // COMMON_PLATFORM_H_

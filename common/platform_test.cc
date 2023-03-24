@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "kmsp11/util/platform.h"
+#include "common/platform.h"
 
 #include "gmock/gmock.h"
 
-namespace cloud_kms::kmsp11 {
+namespace cloud_kms {
 namespace {
 
 using ::testing::HasSubstr;
@@ -27,4 +27,4 @@ TEST(PlatformTest, HostPlatformInfoIsKnown) {
 }
 
 }  // namespace
-}  // namespace cloud_kms::kmsp11
+}  // namespace cloud_kms

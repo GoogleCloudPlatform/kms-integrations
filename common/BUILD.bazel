@@ -18,12 +18,12 @@ cc_library(
         ":kms_v1",
         ":openssl",
         ":pagination_range",
+        ":platform",
         ":status_macros",
         ":status_utils",
         "//kmsp11:openssl",
         "//kmsp11/util:backoff",
         "//kmsp11/util:errors",
-        "//kmsp11/util:platform",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/crc:crc32c",
         "@com_google_absl//absl/status:statusor",
@@ -78,6 +78,34 @@ cc_test(
         ":pagination_range",
         "//common/test:matchers",
         "@com_google_googleapis//google/bigtable/admin/v2:admin_cc_grpc",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "platform",
+    srcs = select({
+        "//:windows": ["platform_win.cc"],
+        "//conditions:default": ["platform_posix.cc"],
+    }),
+    hdrs = ["platform.h"],
+    deps = [
+        ":source_location",
+        ":status_macros",
+        "@com_google_absl//absl/cleanup",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings:str_format",
+    ],
+)
+
+cc_test(
+    name = "platform_test",
+    size = "small",
+    srcs = ["platform_test.cc"],
+    deps = [
+        ":platform",
+        "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",
     ],
 )

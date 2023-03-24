@@ -15,11 +15,11 @@
 #include "kmsp11/util/logging.h"
 
 #include "absl/synchronization/mutex.h"
+#include "common/platform.h"
 #include "common/status_utils.h"
 #include "glog/logging.h"
 #include "grpc/support/log.h"
 #include "kmsp11/util/errors.h"
-#include "kmsp11/util/platform.h"
 #include "kmsp11/util/status_utils.h"
 
 namespace cloud_kms::kmsp11 {

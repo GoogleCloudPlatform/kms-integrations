@@ -23,27 +23,26 @@
 #include <gnu/libc-version.h>
 #endif
 
+#include "absl/strings/str_format.h"
+#include "common/platform.h"
+#include "common/source_location.h"
 #include "glog/logging.h"
-#include "kmsp11/util/errors.h"
-#include "kmsp11/util/platform.h"
 
-namespace cloud_kms::kmsp11 {
+namespace cloud_kms {
 
 absl::Status EnsureWriteProtected(const char* filename) {
   struct stat buf;
   if (stat(filename, &buf) != 0) {
-    return NewError(
-        absl::StatusCode::kNotFound,
-        absl::StrFormat("unable to stat file %s: error %d", filename, errno),
-        CKR_GENERAL_ERROR, SOURCE_LOCATION);
+    return absl::NotFoundError(
+        absl::StrFormat("at %s: unable to stat file %s: error %d",
+                        SOURCE_LOCATION.ToString(), filename, errno));
   }
 
   if ((buf.st_mode & S_IWGRP) == S_IWGRP ||
       (buf.st_mode & S_IWOTH) == S_IWOTH) {
-    return NewError(
-        absl::StatusCode::kFailedPrecondition,
-        absl::StrFormat("file %s has excessive write permissions", filename),
-        CKR_GENERAL_ERROR, SOURCE_LOCATION);
+    return absl::FailedPreconditionError(
+        absl::StrFormat("at %s: file %s has excessive write permissions",
+                        SOURCE_LOCATION.ToString(), filename));
   }
 
   return absl::OkStatus();
@@ -85,4 +84,4 @@ void WriteToSystemLog(const char* message) {
   closelog();
 }
 
-}  // namespace cloud_kms::kmsp11
+}  // namespace cloud_kms

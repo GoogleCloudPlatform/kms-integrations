@@ -17,12 +17,13 @@
 
 #include "absl/cleanup/cleanup.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/str_format.h"
+#include "common/platform.h"
+#include "common/source_location.h"
 #include "common/status_macros.h"
 #include "glog/logging.h"
-#include "kmsp11/util/errors.h"
-#include "kmsp11/util/platform.h"
 
-namespace cloud_kms::kmsp11 {
+namespace cloud_kms {
 namespace {
 
 struct SystemVersionInfo {
@@ -45,9 +46,9 @@ absl::StatusOr<SystemVersionInfo> GetSystemVersionInfo() {
   LSTATUS open_status =
       RegOpenKeyEx(HKEY_LOCAL_MACHINE, kKey, 0, KEY_READ, &key_handle);
   if (open_status != ERROR_SUCCESS) {
-    return NewInternalError(
-        absl::StrFormat("Error %d opening key '%s'.", open_status, kKey),
-        SOURCE_LOCATION);
+    return absl::InternalError(
+        absl::StrFormat("at %s: error %d opening key '%s'.",
+                        SOURCE_LOCATION.ToString(), open_status, kKey));
   }
   absl::Cleanup c = [&] { DCHECK_EQ(RegCloseKey(key_handle), ERROR_SUCCESS); };
 
@@ -57,10 +58,9 @@ absl::StatusOr<SystemVersionInfo> GetSystemVersionInfo() {
     LSTATUS query_status = RegQueryValueEx(key_handle, value_name, nullptr,
                                            nullptr, nullptr, &length);
     if (query_status != ERROR_SUCCESS) {
-      return NewInternalError(
-          absl::StrFormat("Error %d retrieving length for '%s'.", query_status,
-                          value_name),
-          SOURCE_LOCATION);
+      return absl::InternalError(absl::StrFormat(
+          "at %s: error %d retrieving length for '%s'.",
+          SOURCE_LOCATION.ToString(), query_status, value_name));
     }
 
     DWORD type = REG_SZ;
@@ -69,10 +69,9 @@ absl::StatusOr<SystemVersionInfo> GetSystemVersionInfo() {
         RegQueryValueEx(key_handle, value_name, nullptr, &type,
                         reinterpret_cast<LPBYTE>(result.data()), &length);
     if (query_status != ERROR_SUCCESS) {
-      return NewInternalError(
-          absl::StrFormat("Error %d retrieving value for '%s'.", query_status,
-                          value_name),
-          SOURCE_LOCATION);
+      return absl::InternalError(absl::StrFormat(
+          "at %s: error %d retrieving value for '%s'.",
+          SOURCE_LOCATION.ToString(), query_status, value_name));
     }
     return result;
   };
@@ -84,10 +83,9 @@ absl::StatusOr<SystemVersionInfo> GetSystemVersionInfo() {
         RegQueryValueEx(key_handle, value_name, nullptr, &type,
                         reinterpret_cast<LPBYTE>(&value), &value_size);
     if (query_status != ERROR_SUCCESS) {
-      return NewInternalError(
-          absl::StrFormat("Error %d retrieving value for '%s'.", query_status,
-                          value_name),
-          SOURCE_LOCATION);
+      return absl::InternalError(absl::StrFormat(
+          "at %s: error %d retrieving value for '%s'.",
+          SOURCE_LOCATION.ToString(), query_status, value_name));
     }
     return value;
   };
@@ -157,4 +155,4 @@ void WriteToSystemLog(const char* message) {
   // https://learn.microsoft.com/en-us/windows/win32/eventlog/event-sources
 }
 
-}  // namespace cloud_kms::kmsp11
+}  // namespace cloud_kms

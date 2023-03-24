@@ -131,8 +131,8 @@ cc_library(
     hdrs = ["logging.h"],
     deps = [
         ":errors",
-        ":platform",
         ":status_utils",
+        "//common:platform",
         "//common:status_utils",
         "@com_github_google_glog//:glog",
         "@com_github_grpc_grpc//:grpc",
@@ -148,8 +148,8 @@ cc_test(
     srcs = ["logging_test.cc"],
     deps = [
         ":logging",
-        ":platform",
         ":string_utils",
+        "//common:platform",
         "//fakekms/cpp:fakekms",
         "//kmsp11/test",
         "@com_google_absl//absl/cleanup",
@@ -176,33 +176,6 @@ cc_test(
         ":padding",
         "//kmsp11:cryptoki_headers",
         "//kmsp11/test",
-        "@com_google_googletest//:gtest_main",
-    ],
-)
-
-cc_library(
-    name = "platform",
-    srcs = select({
-        "//:windows": ["platform_win.cc"],
-        "//conditions:default": ["platform_posix.cc"],
-    }),
-    hdrs = ["platform.h"],
-    deps = [
-        ":errors",
-        "//common:status_macros",
-        "@com_google_absl//absl/cleanup",
-        "@com_google_absl//absl/status",
-        "@com_google_absl//absl/status:statusor",
-    ],
-)
-
-cc_test(
-    name = "platform_test",
-    size = "small",
-    srcs = ["platform_test.cc"],
-    deps = [
-        ":platform",
-        "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",
     ],
 )

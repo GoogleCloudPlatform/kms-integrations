@@ -10,8 +10,8 @@ cc_library(
     deps = [
         ":config_cc_proto",
         ":protoyaml",
+        "//common:platform",
         "//kmsp11/util:errors",
-        "//kmsp11/util:platform",
     ],
 )
 
