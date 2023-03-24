@@ -7,27 +7,6 @@ package(default_visibility = [
 ])
 
 cc_library(
-    name = "backoff",
-    srcs = ["backoff.cc"],
-    hdrs = ["backoff.h"],
-    deps = [
-        "@com_github_google_glog//:glog",
-        "@com_google_absl//absl/time",
-    ],
-)
-
-cc_test(
-    name = "backoff_test",
-    size = "small",
-    srcs = ["backoff_test.cc"],
-    deps = [
-        ":backoff",
-        "//kmsp11/test",
-        "@com_google_googletest//:gtest_main",
-    ],
-)
-
-cc_library(
     name = "crypto_utils",
     srcs = ["crypto_utils.cc"],
     hdrs = ["crypto_utils.h"],

@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-#ifndef KMSP11_UTIL_BACKOFF_H_
-#define KMSP11_UTIL_BACKOFF_H_
+#ifndef COMMON_BACKOFF_H_
+#define COMMON_BACKOFF_H_
 
 #include "absl/time/time.h"
 
-namespace cloud_kms::kmsp11 {
+namespace cloud_kms {
 
 absl::Duration ComputeBackoff(absl::Duration min_delay,
                               absl::Duration max_delay, int previous_tries);
 
-}  // namespace cloud_kms::kmsp11
+}  // namespace cloud_kms
 
-#endif  // KMSP11_UTIL_BACKOFF_H_
+#endif  // COMMON_BACKOFF_H_

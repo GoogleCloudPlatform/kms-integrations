@@ -17,6 +17,7 @@
 #include "absl/crc/crc32c.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
+#include "common/backoff.h"
 #include "common/kms_client_service_config.h"
 #include "common/openssl.h"
 #include "common/platform.h"
@@ -24,7 +25,6 @@
 #include "grpcpp/client_context.h"
 #include "grpcpp/create_channel.h"
 #include "grpcpp/security/credentials.h"
-#include "kmsp11/util/backoff.h"
 #include "kmsp11/util/errors.h"
 
 namespace cloud_kms {
@@ -32,7 +32,6 @@ namespace {
 
 // TODO(b/270419822): Clean up these using statements once all relevant utils
 // have been moved to common.
-using ::cloud_kms::kmsp11::ComputeBackoff;
 using ::cloud_kms::kmsp11::NewInternalError;
 using ::cloud_kms::kmsp11::SetErrorRv;
 

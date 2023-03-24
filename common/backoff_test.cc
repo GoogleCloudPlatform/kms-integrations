@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "kmsp11/util/backoff.h"
+#include "common/backoff.h"
 
 #include "gmock/gmock.h"
 
-namespace cloud_kms::kmsp11 {
+namespace cloud_kms {
 namespace {
 
 TEST(ComputeBackoffTest, Simple) {
@@ -73,4 +73,4 @@ TEST(ComputeBackoffTest, ManyRetries) {
 }
 
 }  // namespace
-}  // namespace cloud_kms::kmsp11
+}  // namespace cloud_kms

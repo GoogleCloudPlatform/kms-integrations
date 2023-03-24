@@ -12,12 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
-#include "kmsp11/util/backoff.h"
+#include "common/backoff.h"
 
 #include "glog/logging.h"
 
-namespace cloud_kms::kmsp11 {
+namespace cloud_kms {
 
 absl::Duration ComputeBackoff(absl::Duration min_delay,
                               absl::Duration max_delay, int previous_retries) {
@@ -49,4 +48,4 @@ absl::Duration ComputeBackoff(absl::Duration min_delay,
   return delay;
 }
 
-}  // namespace cloud_kms::kmsp11
+}  // namespace cloud_kms
