@@ -75,6 +75,7 @@ cc_library(
     deps = [
         ":runfiles",
         "//common:kms_v1",
+        "//common/test:resource_helpers",
         "//common/test:test_status_macros",
         "//fakekms/cpp:fakekms",
         "//kmsp11:object",

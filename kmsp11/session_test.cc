@@ -308,7 +308,7 @@ TEST_F(SessionTest, Decrypt) {
   ckv = CreateCryptoKeyVersionOrDie(kms_client.get(), ck.name(), ckv);
   ckv = WaitForEnablement(kms_client.get(), ckv);
 
-  kms_v1::PublicKey pub_proto = GetPublicKey(kms_client.get(), ckv);
+  kms_v1::PublicKey pub_proto = GetPublicKeyOrDie(kms_client.get(), ckv);
   ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub,
                        ParseX509PublicKeyPem(pub_proto.pem()));
 
@@ -611,7 +611,7 @@ TEST_F(SessionTest, Sign) {
   ckv = CreateCryptoKeyVersionOrDie(kms_client.get(), ck.name(), ckv);
   ckv = WaitForEnablement(kms_client.get(), ckv);
 
-  kms_v1::PublicKey pub_proto = GetPublicKey(kms_client.get(), ckv);
+  kms_v1::PublicKey pub_proto = GetPublicKeyOrDie(kms_client.get(), ckv);
   ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<EVP_PKEY> pub,
                        ParseX509PublicKeyPem(pub_proto.pem()));
 

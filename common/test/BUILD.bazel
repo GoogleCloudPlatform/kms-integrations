@@ -34,6 +34,21 @@ cc_test(
 )
 
 cc_library(
+    name = "resource_helpers",
+    testonly = 1,
+    srcs = ["resource_helpers.cc"],
+    hdrs = ["resource_helpers.h"],
+    deps = [
+        "//common:kms_v1",
+        "//common:openssl",
+        "//common/test:test_status_macros",
+        "//fakekms/cpp:fakekms",
+        "//kmsp11/util:crypto_utils",
+        "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_library(
     name = "test_status_macros",
     hdrs = ["test_status_macros.h"],
     deps = [

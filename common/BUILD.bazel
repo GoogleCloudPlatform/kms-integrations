@@ -57,9 +57,12 @@ cc_test(
     srcs = ["kms_client_test.cc"],
     deps = [
         ":kms_client",
+        "//common/test:matchers",
+        "//common/test:resource_helpers",
+        "//common/test:test_status_macros",
         "//fakekms/cpp:fakekms",
         "//fakekms/cpp:fault_helpers",
-        "//kmsp11/test",
+        "//kmsp11/util:status_utils",
         "@com_google_googletest//:gtest_main",
     ],
 )

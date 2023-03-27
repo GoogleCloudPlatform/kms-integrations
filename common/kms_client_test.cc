@@ -15,35 +15,28 @@
 #include "common/kms_client.h"
 
 #include "absl/time/time.h"
+#include "common/openssl.h"
+#include "common/test/matchers.h"
+#include "common/test/resource_helpers.h"
 #include "common/test/test_status_macros.h"
 #include "fakekms/cpp/fakekms.h"
 #include "fakekms/cpp/fault_helpers.h"
 #include "gmock/gmock.h"
-#include "kmsp11/openssl.h"
-#include "kmsp11/test/matchers.h"
-#include "kmsp11/test/resource_helpers.h"
 #include "kmsp11/util/crypto_utils.h"
+#include "kmsp11/util/status_utils.h"
 
 namespace cloud_kms {
 namespace {
 
 using ::testing::SizeIs;
 
-// TODO(b/270419822): Clean up these using statements once all relevant utils
-// have been moved to common.
-using ::cloud_kms::kmsp11::CreateCryptoKeyOrDie;
-using ::cloud_kms::kmsp11::CreateCryptoKeyVersionOrDie;
-using ::cloud_kms::kmsp11::CreateKeyRingOrDie;
+// TODO(b/270419822): Clean up these using statements once crypto_utils has
+// been moved to common and PKCS#11 errors have been dropped.
 using ::cloud_kms::kmsp11::EcdsaSigAsn1ToP1363;
 using ::cloud_kms::kmsp11::EcdsaVerifyP1363;
 using ::cloud_kms::kmsp11::EncryptRsaOaep;
-using ::cloud_kms::kmsp11::GetCryptoKeyOrDie;
-using ::cloud_kms::kmsp11::GetCryptoKeyVersionOrDie;
-using ::cloud_kms::kmsp11::kTestLocation;
 using ::cloud_kms::kmsp11::ParseX509PublicKeyPem;
-using ::cloud_kms::kmsp11::RandomId;
 using ::cloud_kms::kmsp11::SetErrorRv;
-using ::cloud_kms::kmsp11::WaitForEnablement;
 
 std::unique_ptr<KmsClient> NewClient(
     std::string_view listen_addr,
