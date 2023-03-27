@@ -43,3 +43,7 @@ We recommend that you use a binary distribution of this library rather than
 building from source.  Support for a library that you build yourself from source
 is on a best-effort basis, via GitHub issues. Further information about
 build configurations is available in [BUILDING](BUILDING.md).
+
+## Cloud KMS CNG Provider
+
+The CNG provider is currently under development and is not yet ready for use.
