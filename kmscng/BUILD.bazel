@@ -7,6 +7,33 @@ package(default_visibility = [
 ])
 
 cc_library(
+    name = "algorithm_details",
+    srcs = ["algorithm_details.cc"],
+    hdrs = ["algorithm_details.h"],
+    deps = [
+        ":cng_headers",
+        "//common:kms_v1",
+        "//kmscng/util:errors",
+        "@com_google_absl//absl/container:btree",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings:str_format",
+    ],
+)
+
+cc_test(
+    name = "algorithm_details_test",
+    size = "small",
+    srcs = ["algorithm_details_test.cc"],
+    deps = [
+        ":algorithm_details",
+        ":cng_headers",
+        "//common/test:test_status_macros",
+        "//kmscng/test:matchers",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
     name = "cng_headers",
     hdrs = ["cng_headers.h"],
     target_compatible_with = ["@platforms//os:windows"],

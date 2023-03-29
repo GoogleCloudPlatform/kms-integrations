@@ -33,7 +33,8 @@ absl::Status NewError(absl::StatusCode code, std::string_view msg,
 // Creates a new Internal error with a SECURITY_STATUS of .
 inline absl::Status NewInternalError(std::string_view msg,
                                      const SourceLocation& source_location) {
-  return NewError(absl::StatusCode::kInternal, msg, NTE_FAIL, source_location);
+  return NewError(absl::StatusCode::kInternal, msg, NTE_INTERNAL_ERROR,
+                  source_location);
 }
 
 // Creates a new error with status code unimplemented and SECURITY_STATUS of
