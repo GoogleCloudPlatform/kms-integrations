@@ -23,7 +23,6 @@
 #include "fakekms/cpp/fault_helpers.h"
 #include "gmock/gmock.h"
 #include "kmsp11/util/crypto_utils.h"
-#include "kmsp11/util/status_utils.h"
 
 namespace cloud_kms {
 namespace {
@@ -31,12 +30,11 @@ namespace {
 using ::testing::SizeIs;
 
 // TODO(b/270419822): Clean up these using statements once crypto_utils has
-// been moved to common and PKCS#11 errors have been dropped.
+// been moved to common.
 using ::cloud_kms::kmsp11::EcdsaSigAsn1ToP1363;
 using ::cloud_kms::kmsp11::EcdsaVerifyP1363;
 using ::cloud_kms::kmsp11::EncryptRsaOaep;
 using ::cloud_kms::kmsp11::ParseX509PublicKeyPem;
-using ::cloud_kms::kmsp11::SetErrorRv;
 
 std::unique_ptr<KmsClient> NewClient(
     std::string_view listen_addr,

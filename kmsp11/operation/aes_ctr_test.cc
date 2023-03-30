@@ -116,7 +116,8 @@ class AesCtrTest : public testing::Test {
     client_ = std::make_unique<KmsClient>(
         fake_server_->listen_addr(), grpc::InsecureChannelCredentials(),
         absl::Seconds(1),
-        /*version_major=*/1, /*version_minor=*/1);
+        /*version_major=*/1, /*version_minor=*/1, UserAgent::kPkcs11,
+        [](absl::Status& status) { SetErrorRv(status, CKR_DEVICE_ERROR); });
 
     auto fake_client = fake_server_->NewClient();
 

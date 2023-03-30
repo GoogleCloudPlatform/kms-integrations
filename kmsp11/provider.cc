@@ -58,8 +58,9 @@ std::unique_ptr<KmsClient> NewKmsClient(const LibraryConfig& config) {
 
   return std::make_unique<KmsClient>(
       endpoint_address, creds, rpc_timeout, kLibraryVersion.major,
-      kLibraryVersion.minor, config.experimental_rpc_feature_flags(),
-      config.user_project_override());
+      kLibraryVersion.minor, UserAgent::kPkcs11,
+      [](absl::Status& status) { SetErrorRv(status, CKR_DEVICE_ERROR); },
+      config.experimental_rpc_feature_flags(), config.user_project_override());
 }
 
 }  // namespace

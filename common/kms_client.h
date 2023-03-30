@@ -17,6 +17,7 @@
 #ifndef COMMON_KMS_CLIENT_H_
 #define COMMON_KMS_CLIENT_H_
 
+#include <functional>
 #include <string_view>
 
 #include "absl/status/statusor.h"
@@ -27,6 +28,8 @@
 #include "grpcpp/security/credentials.h"
 
 namespace cloud_kms {
+
+using ErrorDecorator = std::function<void(absl::Status&)>;
 
 // Enum representing the user agent to be used for metrics purposes.
 enum class UserAgent { kPkcs11, kCng };
@@ -50,9 +53,10 @@ class KmsClient {
   KmsClient(std::string_view endpoint_address,
             const std::shared_ptr<grpc::ChannelCredentials>& creds,
             absl::Duration rpc_timeout, const int version_major,
-            const int version_minor, std::string_view rpc_feature_flags = "",
-            std::string_view user_project_override = "",
-            UserAgent user_agent = UserAgent::kPkcs11);
+            const int version_minor, UserAgent user_agent = UserAgent::kPkcs11,
+            std::optional<ErrorDecorator> error_decorator = std::nullopt,
+            std::string_view rpc_feature_flags = "",
+            std::string_view user_project_override = "");
 
   kms_v1::KeyManagementService::Stub* kms_stub() { return kms_stub_.get(); }
 
@@ -105,6 +109,8 @@ class KmsClient {
   absl::Status WaitForGeneration(kms_v1::CryptoKeyVersion& ckv,
                                  absl::Time deadline) const;
 
+  absl::Status DecorateStatus(absl::Status& status) const;
+
   void AddContextSettings(grpc::ClientContext* ctx,
                           std::string_view relative_resource,
                           std::string_view resource_name,
@@ -121,6 +127,7 @@ class KmsClient {
   const absl::Duration rpc_timeout_;
   const std::string rpc_feature_flags_;
   const std::string user_project_override_;
+  const std::optional<ErrorDecorator> error_decorator_;
 };
 
 }  // namespace cloud_kms

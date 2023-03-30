@@ -21,19 +21,14 @@
 #include "common/kms_client_service_config.h"
 #include "common/openssl.h"
 #include "common/platform.h"
+#include "common/source_location.h"
 #include "common/status_macros.h"
 #include "grpcpp/client_context.h"
 #include "grpcpp/create_channel.h"
 #include "grpcpp/security/credentials.h"
-#include "kmsp11/util/errors.h"
 
 namespace cloud_kms {
 namespace {
-
-// TODO(b/270419822): Clean up these using statements once all relevant utils
-// have been moved to common.
-using ::cloud_kms::kmsp11::NewInternalError;
-using ::cloud_kms::kmsp11::SetErrorRv;
 
 // clang-format off
 // Sample value:
@@ -42,6 +37,7 @@ using ::cloud_kms::kmsp11::SetErrorRv;
 std::string ComputeUserAgentPrefix(UserAgent user_agent,
                                    const int version_major,
                                    const int version_minor) {
+  // New user agents need to be registered in Concord, see cl/315314203.
   switch (user_agent) {
     case UserAgent::kPkcs11:
       return absl::StrFormat(
@@ -54,7 +50,6 @@ std::string ComputeUserAgentPrefix(UserAgent user_agent,
           GetTargetPlatform(), OpenSSL_version(OPENSSL_VERSION),
           FIPS_mode() == 1 ? " FIPS" : "", GetHostPlatformInfo());
   }
-  // Registered in Concord (cl/315314203)
 }
 
 absl::StatusOr<std::string> GetDigestString(const kms_v1::Digest& digest) {
@@ -68,12 +63,10 @@ absl::StatusOr<std::string> GetDigestString(const kms_v1::Digest& digest) {
     case kms_v1::Digest::kSha512:
       return digest.sha512();
     default:
-      return NewInternalError("Could not get digest field of the request",
-                              SOURCE_LOCATION);
+      return absl::InternalError(
+          absl::StrFormat("at %s: could not get digest field of the request",
+                          SOURCE_LOCATION.ToString()));
   }
-
-  return NewInternalError("Could not get digest field of the request",
-                          SOURCE_LOCATION);
 }
 
 uint32_t ComputeCRC32C(std::string_view data) {
@@ -103,15 +96,24 @@ void KmsClient::AddContextSettings(grpc::ClientContext* ctx,
   }
 }
 
+absl::Status KmsClient::DecorateStatus(absl::Status& status) const {
+  if (error_decorator_.has_value()) {
+    (*error_decorator_)(status);
+  }
+  return status;
+}
+
 KmsClient::KmsClient(std::string_view endpoint_address,
                      const std::shared_ptr<grpc::ChannelCredentials>& creds,
                      absl::Duration rpc_timeout, const int version_major,
-                     const int version_minor,
+                     const int version_minor, UserAgent user_agent,
+                     std::optional<ErrorDecorator> error_decorator,
                      std::string_view user_project_override,
-                     std::string_view rpc_feature_flags, UserAgent user_agent)
+                     std::string_view rpc_feature_flags)
     : rpc_timeout_(rpc_timeout),
       rpc_feature_flags_(rpc_feature_flags),
-      user_project_override_(user_project_override) {
+      user_project_override_(user_project_override),
+      error_decorator_(error_decorator) {
   grpc::ChannelArguments args;
   args.SetUserAgentPrefix(
       ComputeUserAgentPrefix(user_agent, version_major, version_minor));
@@ -135,21 +137,23 @@ absl::StatusOr<kms_v1::AsymmetricDecryptResponse> KmsClient::AsymmetricDecrypt(
   absl::Status rpc_result =
       ToStatus(kms_stub_->AsymmetricDecrypt(&ctx, request, &response));
   if (!rpc_result.ok()) {
-    SetErrorRv(rpc_result, CKR_DEVICE_ERROR);
-    return rpc_result;
+    return DecorateStatus(rpc_result);
   }
 
   if (!CRC32CMatches(response.plaintext(),
                      response.plaintext_crc32c().value())) {
-    return NewInternalError(
-        "The response crc32c did not match the expected checksum value",
-        SOURCE_LOCATION);
+    rpc_result = absl::InternalError(absl::StrFormat(
+        "at %s: the response crc32c did not match the expected checksum value",
+        SOURCE_LOCATION.ToString()));
+    return DecorateStatus(rpc_result);
   }
 
   if (!response.verified_ciphertext_crc32c()) {
-    return NewInternalError(
-        "The server did not verify the checksum values provided in the request",
-        SOURCE_LOCATION);
+    rpc_result = absl::InternalError(
+        absl::StrFormat("at %s: the server did not verify the checksum values "
+                        "provided in the request",
+                        SOURCE_LOCATION.ToString()));
+    return DecorateStatus(rpc_result);
   }
 
   return response;
@@ -165,35 +169,43 @@ absl::StatusOr<kms_v1::AsymmetricSignResponse> KmsClient::AsymmetricSign(
     use_data = true;
     request.mutable_data_crc32c()->set_value(ComputeCRC32C(request.data()));
   } else {
-    ASSIGN_OR_RETURN(std::string digest_string,
-                     GetDigestString(request.digest()));
-    request.mutable_digest_crc32c()->set_value(ComputeCRC32C(digest_string));
+    absl::StatusOr<std::string> digest_string =
+        GetDigestString(request.digest());
+    if (!digest_string.ok()) {
+      absl::Status status = digest_string.status();
+      return DecorateStatus(status);
+    }
+    request.mutable_digest_crc32c()->set_value(ComputeCRC32C(*digest_string));
   }
 
   kms_v1::AsymmetricSignResponse response;
   absl::Status rpc_result =
       ToStatus(kms_stub_->AsymmetricSign(&ctx, request, &response));
   if (!rpc_result.ok()) {
-    SetErrorRv(rpc_result, CKR_DEVICE_ERROR);
-    return rpc_result;
+    return DecorateStatus(rpc_result);
   }
 
   if (!CRC32CMatches(response.signature(),
                      response.signature_crc32c().value())) {
-    return NewInternalError(
-        "The response crc32c did not match the expected checksum value",
-        SOURCE_LOCATION);
+    rpc_result = absl::InternalError(absl::StrFormat(
+        "at %s: the response crc32c did not match the expected checksum value",
+        SOURCE_LOCATION.ToString()));
+    return DecorateStatus(rpc_result);
   }
 
   if (use_data && !response.verified_data_crc32c()) {
-    return NewInternalError(
-        "The server did not verify the checksum values provided in the request",
-        SOURCE_LOCATION);
+    rpc_result = absl::InternalError(
+        absl::StrFormat("at %s: the server did not verify the checksum values "
+                        "provided in the request",
+                        SOURCE_LOCATION.ToString()));
+    return DecorateStatus(rpc_result);
   }
   if (!use_data && !response.verified_digest_crc32c()) {
-    return NewInternalError(
-        "The server did not verify the checksum values provided in the request",
-        SOURCE_LOCATION);
+    rpc_result = absl::InternalError(
+        absl::StrFormat("at %s: the server did not verify the checksum values "
+                        "provided in the request",
+                        SOURCE_LOCATION.ToString()));
+    return DecorateStatus(rpc_result);
   }
 
   return response;
@@ -210,20 +222,22 @@ absl::StatusOr<kms_v1::MacSignResponse> KmsClient::MacSign(
   absl::Status rpc_result =
       ToStatus(kms_stub_->MacSign(&ctx, request, &response));
   if (!rpc_result.ok()) {
-    SetErrorRv(rpc_result, CKR_DEVICE_ERROR);
-    return rpc_result;
+    return DecorateStatus(rpc_result);
   }
 
   if (!CRC32CMatches(response.mac(), response.mac_crc32c().value())) {
-    return NewInternalError(
-        "The response crc32c did not match the expected checksum value",
-        SOURCE_LOCATION);
+    rpc_result = absl::InternalError(absl::StrFormat(
+        "at %s: the response crc32c did not match the expected checksum value",
+        SOURCE_LOCATION.ToString()));
+    return DecorateStatus(rpc_result);
   }
 
   if (!response.verified_data_crc32c()) {
-    return NewInternalError(
-        "The server did not verify the checksum values provided in the request",
-        SOURCE_LOCATION);
+    rpc_result = absl::InternalError(
+        absl::StrFormat("at %s: the server did not verify the checksum values "
+                        "provided in the request",
+                        SOURCE_LOCATION.ToString()));
+    return DecorateStatus(rpc_result);
   }
 
   return response;
@@ -241,20 +255,22 @@ absl::StatusOr<kms_v1::MacVerifyResponse> KmsClient::MacVerify(
   absl::Status rpc_result =
       ToStatus(kms_stub_->MacVerify(&ctx, request, &response));
   if (!rpc_result.ok()) {
-    SetErrorRv(rpc_result, CKR_DEVICE_ERROR);
-    return rpc_result;
+    return DecorateStatus(rpc_result);
   }
 
   if (response.success() != response.verified_success_integrity()) {
-    return NewInternalError(
-        "The response crc32c did not match the expected checksum value",
-        SOURCE_LOCATION);
+    rpc_result = absl::InternalError(absl::StrFormat(
+        "at %s: the response crc32c did not match the expected checksum value",
+        SOURCE_LOCATION.ToString()));
+    return DecorateStatus(rpc_result);
   }
 
   if (!response.verified_data_crc32c() || !response.verified_mac_crc32c()) {
-    return NewInternalError(
-        "The server did not verify the checksum values provided in the request",
-        SOURCE_LOCATION);
+    rpc_result = absl::InternalError(
+        absl::StrFormat("at %s: the server did not verify the checksum values "
+                        "provided in the request",
+                        SOURCE_LOCATION.ToString()));
+    return DecorateStatus(rpc_result);
   }
 
   return response;
@@ -276,15 +292,15 @@ absl::StatusOr<kms_v1::RawDecryptResponse> KmsClient::RawDecrypt(
   absl::Status rpc_result =
       ToStatus(kms_stub_->RawDecrypt(&ctx, request, &response));
   if (!rpc_result.ok()) {
-    SetErrorRv(rpc_result, CKR_DEVICE_ERROR);
-    return rpc_result;
+    return DecorateStatus(rpc_result);
   }
 
   if (!CRC32CMatches(response.plaintext(),
                      response.plaintext_crc32c().value())) {
-    return NewInternalError(
-        "The response crc32c did not match the expected checksum value",
-        SOURCE_LOCATION);
+    rpc_result = absl::InternalError(absl::StrFormat(
+        "at %s: the response crc32c did not match the expected checksum value",
+        SOURCE_LOCATION.ToString()));
+    return DecorateStatus(rpc_result);
   }
 
   return response;
@@ -306,23 +322,25 @@ absl::StatusOr<kms_v1::RawEncryptResponse> KmsClient::RawEncrypt(
   absl::Status rpc_result =
       ToStatus(kms_stub_->RawEncrypt(&ctx, request, &response));
   if (!rpc_result.ok()) {
-    SetErrorRv(rpc_result, CKR_DEVICE_ERROR);
-    return rpc_result;
+    return DecorateStatus(rpc_result);
   }
 
   if (!CRC32CMatches(response.ciphertext(),
                      response.ciphertext_crc32c().value())) {
-    return NewInternalError(
-        "The response crc32c did not match the expected checksum value",
-        SOURCE_LOCATION);
+    rpc_result = absl::InternalError(absl::StrFormat(
+        "at %s: the response crc32c did not match the expected checksum value",
+        SOURCE_LOCATION.ToString()));
+    return DecorateStatus(rpc_result);
   }
 
   if (!response.verified_plaintext_crc32c() ||
       !response.verified_additional_authenticated_data_crc32c() ||
       !response.verified_initialization_vector_crc32c()) {
-    return NewInternalError(
-        "The server did not verify the checksum values provided in the request",
-        SOURCE_LOCATION);
+    rpc_result = absl::InternalError(
+        absl::StrFormat("at %s: the server did not verify the checksum values "
+                        "provided in the request",
+                        SOURCE_LOCATION.ToString()));
+    return DecorateStatus(rpc_result);
   }
 
   return response;
@@ -337,8 +355,7 @@ absl::StatusOr<kms_v1::CryptoKey> KmsClient::CreateCryptoKey(
   absl::Status rpc_result =
       ToStatus(kms_stub_->CreateCryptoKey(&ctx, request, &response));
   if (!rpc_result.ok()) {
-    SetErrorRv(rpc_result, CKR_DEVICE_ERROR);
-    return rpc_result;
+    return DecorateStatus(rpc_result);
   }
   return response;
 }
@@ -365,8 +382,7 @@ KmsClient::CreateCryptoKeyAndWaitForFirstVersion(
     absl::Status rpc_result =
         ToStatus(kms_stub_->GetCryptoKeyVersion(&ctx, get_ckv_req, &ckv));
     if (!rpc_result.ok()) {
-      SetErrorRv(rpc_result, CKR_DEVICE_ERROR);
-      return rpc_result;
+      return DecorateStatus(rpc_result);
     }
   }
 
@@ -386,8 +402,7 @@ KmsClient::CreateCryptoKeyVersionAndWait(
   absl::Status rpc_result =
       ToStatus(kms_stub_->CreateCryptoKeyVersion(&ctx, request, &response));
   if (!rpc_result.ok()) {
-    SetErrorRv(rpc_result, CKR_DEVICE_ERROR);
-    return rpc_result;
+    return DecorateStatus(rpc_result);
   }
   RETURN_IF_ERROR(WaitForGeneration(response, deadline));
   return response;
@@ -402,8 +417,7 @@ absl::StatusOr<kms_v1::CryptoKeyVersion> KmsClient::DestroyCryptoKeyVersion(
   absl::Status rpc_result =
       ToStatus(kms_stub_->DestroyCryptoKeyVersion(&ctx, request, &response));
   if (!rpc_result.ok()) {
-    SetErrorRv(rpc_result, CKR_DEVICE_ERROR);
-    return rpc_result;
+    return DecorateStatus(rpc_result);
   }
   return response;
 }
@@ -417,8 +431,7 @@ absl::StatusOr<kms_v1::CryptoKey> KmsClient::GetCryptoKey(
   absl::Status rpc_result =
       ToStatus(kms_stub_->GetCryptoKey(&ctx, request, &response));
   if (!rpc_result.ok()) {
-    SetErrorRv(rpc_result, CKR_DEVICE_ERROR);
-    return rpc_result;
+    return DecorateStatus(rpc_result);
   }
   return response;
 }
@@ -432,8 +445,7 @@ absl::StatusOr<kms_v1::PublicKey> KmsClient::GetPublicKey(
   absl::Status rpc_result =
       ToStatus(kms_stub_->GetPublicKey(&ctx, request, &response));
   if (!rpc_result.ok()) {
-    SetErrorRv(rpc_result, CKR_DEVICE_ERROR);
-    return rpc_result;
+    return DecorateStatus(rpc_result);
   }
   return response;
 }
@@ -451,8 +463,7 @@ CryptoKeysRange KmsClient::ListCryptoKeys(
         absl::Status rpc_result =
             ToStatus(kms_stub_->ListCryptoKeys(&ctx, request, &response));
         if (!rpc_result.ok()) {
-          SetErrorRv(rpc_result, CKR_DEVICE_ERROR);
-          return rpc_result;
+          return DecorateStatus(rpc_result);
         }
         return response;
       },
@@ -478,8 +489,7 @@ CryptoKeyVersionsRange KmsClient::ListCryptoKeyVersions(
         absl::Status rpc_result = ToStatus(
             kms_stub_->ListCryptoKeyVersions(&ctx, request, &response));
         if (!rpc_result.ok()) {
-          SetErrorRv(rpc_result, CKR_DEVICE_ERROR);
-          return rpc_result;
+          return DecorateStatus(rpc_result);
         }
         return response;
       },
@@ -503,8 +513,7 @@ KmsClient::GenerateRandomBytes(
   absl::Status rpc_result =
       ToStatus(kms_stub_->GenerateRandomBytes(&ctx, request, &response));
   if (!rpc_result.ok()) {
-    SetErrorRv(rpc_result, CKR_DEVICE_ERROR);
-    return rpc_result;
+    return DecorateStatus(rpc_result);
   }
   return response;
 }
@@ -528,8 +537,7 @@ absl::Status KmsClient::WaitForGeneration(kms_v1::CryptoKeyVersion& ckv,
     absl::Status rpc_result =
         ToStatus(kms_stub_->GetCryptoKeyVersion(&ctx, req, &ckv));
     if (!rpc_result.ok()) {
-      SetErrorRv(rpc_result, CKR_DEVICE_ERROR);
-      return rpc_result;
+      return DecorateStatus(rpc_result);
     }
   }
   return absl::OkStatus();
