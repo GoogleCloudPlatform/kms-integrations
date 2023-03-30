@@ -20,6 +20,7 @@ cc_library(
         "//kmscng:cng_headers",
         "//kmscng:provider",
         "//kmscng/util:errors",
+        "//kmscng/util:logging",
         "//kmscng/util:status_utils",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
@@ -39,6 +40,7 @@ cc_test(
         "//common/test:test_status_macros",
         "//kmscng:cng_headers",
         "//kmscng/test:matchers",
+        "@com_google_absl//absl/cleanup",
         "@com_google_absl//absl/strings:str_format",
         "@com_google_googletest//:gtest_main",
     ],
@@ -59,6 +61,7 @@ cc_library(
     deps = [
         ":bridge",
         "//kmscng:cng_headers",
+        "//kmscng/util:logging",
         "//kmscng/util:status_utils",
         "@com_google_absl//absl/status",
     ],

@@ -41,7 +41,7 @@ cc_library(
     target_compatible_with = ["@platforms//os:windows"],
     deps = [
         "//kmscng:cng_headers",
-	"@com_google_absl//absl/status",
+        "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings:str_format",
         "@cpdk//:bcrypt_provider",
     ],
@@ -55,7 +55,7 @@ cc_test(
     target_compatible_with = ["@platforms//os:windows"],
     deps = [
         ":register_provider",
-	"//common/test:test_status_macros",
+        "//common/test:test_status_macros",
         "//kmscng:cng_headers",
         "@com_google_absl//absl/strings:str_format",
         "@com_google_googletest//:gtest_main",

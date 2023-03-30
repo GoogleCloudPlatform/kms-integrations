@@ -14,8 +14,6 @@
 
 #include "kmsp11/util/string_utils.h"
 
-#include <fstream>
-
 #include "absl/strings/str_format.h"
 #include "absl/strings/str_join.h"
 #include "kmsp11/util/errors.h"
@@ -80,30 +78,6 @@ absl::StatusOr<std::string> ExtractLocationName(
         absl::StrCat("invalid KeyRing name: ", key_ring_name), SOURCE_LOCATION);
   }
   return absl::StrJoin(absl::Span<std::string>(parts.data(), 4), "/");
-}
-
-absl::StatusOr<std::string> ReadFileToString(const std::string& file_path) {
-  std::ifstream in(file_path.c_str());
-  if (in.fail()) {
-    return absl::FailedPreconditionError(
-        absl::StrCat("failed to read file ", file_path));
-  }
-  return std::string((std::istreambuf_iterator<char>(in)),
-                     (std::istreambuf_iterator<char>()));
-}
-
-bool IsZeroInitialized(absl::Span<const uint8_t> buffer) {
-  return OnlyContainsValue(buffer, '\0');
-}
-
-// Checks that buffer only contains the specified value.
-bool OnlyContainsValue(absl::Span<const uint8_t> buffer, uint8_t value) {
-  for (uint8_t v : buffer) {
-    if (v != value) {
-      return false;
-    }
-  }
-  return true;
 }
 
 }  // namespace cloud_kms::kmsp11

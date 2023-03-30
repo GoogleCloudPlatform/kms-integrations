@@ -197,6 +197,29 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "string_utils",
+    srcs = ["string_utils.cc"],
+    hdrs = ["string_utils.h"],
+    deps = [
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/types:span",
+    ],
+)
+
+cc_test(
+    name = "string_utils_test",
+    size = "small",
+    srcs = ["string_utils_test.cc"],
+    deps = [
+        ":string_utils",
+        "//common/test:test_status_macros",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
 cc_proto_library(
     name = "test_message_cc_proto",
     testonly = 1,

@@ -3,6 +3,7 @@ load("@rules_proto//proto:defs.bzl", "proto_library")
 
 package(default_visibility = [
     "//common:__subpackages__",
+    "//kmscng:__subpackages__",
     "//kmsp11:__subpackages__",
 ])
 
@@ -190,6 +191,7 @@ cc_library(
     hdrs = ["string_utils.h"],
     deps = [
         ":errors",
+        "//common:string_utils",
         "//kmsp11:cryptoki_headers",
         "//kmsp11:openssl",
         "@com_google_absl//absl/status",

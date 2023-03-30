@@ -14,8 +14,6 @@
 
 #include "kmsp11/util/string_utils.h"
 
-#include <fstream>
-
 #include "absl/strings/str_cat.h"
 #include "absl/types/span.h"
 #include "common/test/test_status_macros.h"
@@ -128,23 +126,6 @@ TEST(MarshalTest, MarshalUnsignedLongListEmpty) {
   EXPECT_THAT(s, SizeIs(0));
 }
 
-TEST(ReadFileToStringTest, FileContentMatches) {
-  // TODO: convert to std::filesystem when all build envs support it.
-  // This leaks temp files as-is.
-  std::string file_path = std::tmpnam(nullptr);
-  std::string content = "here is some content";
-  std::ofstream(file_path) << content;
-
-  EXPECT_THAT(ReadFileToString(file_path), IsOkAndHolds(content));
-}
-
-TEST(ReadFileToStringTest, NonExistentFileReturnsFailedPrecondition) {
-  std::string file_path = std::tmpnam(nullptr);
-  EXPECT_THAT(ReadFileToString(file_path),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("failed to read file")));
-}
-
 TEST(ExtractorTest, ExtractKeyIdSuccess) {
   EXPECT_THAT(ExtractKeyId("projects/foo/locations/global/keyRings/bar/"
                            "cryptoKeys/baz/cryptoKeyVersions/1"),
@@ -168,28 +149,6 @@ TEST(ExtractorTest, ExtractLocationNameFailure) {
       ExtractLocationName(
           "projects/foo/locations/global/keyRings/bar/cryptoKeys/baz"),
       StatusIs(absl::StatusCode::kInternal, HasSubstr("invalid KeyRing name")));
-}
-
-TEST(ZeroInitializationTest, ZeroInitializedSuccess) {
-  std::vector<uint8_t> data(16, '\0');
-  EXPECT_TRUE(IsZeroInitialized(data));
-}
-
-TEST(ZeroInitializationTest, NotZeroInitializedFails) {
-  std::vector<uint8_t> data(16, '\1');
-  EXPECT_FALSE(IsZeroInitialized(data));
-}
-
-TEST(ZeroInitializationTest, FirstByteNotZeroFails) {
-  std::vector<uint8_t> data(16, '\0');
-  data[0] = '\1';
-  EXPECT_FALSE(IsZeroInitialized(data));
-}
-
-TEST(ZeroInitializationTest, OnlyFirstByteZeroFails) {
-  std::vector<uint8_t> data(16, '\1');
-  data[0] = '\0';
-  EXPECT_FALSE(IsZeroInitialized(data));
 }
 
 }  // namespace

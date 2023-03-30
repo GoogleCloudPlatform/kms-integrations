@@ -24,6 +24,7 @@
 #include "absl/status/statusor.h"
 #include "absl/time/time.h"
 #include "absl/types/span.h"
+#include "common/string_utils.h"
 #include "kmsp11/openssl.h"
 
 namespace cloud_kms::kmsp11 {
@@ -81,17 +82,6 @@ absl::StatusOr<std::string> ExtractKeyId(std::string_view version_name);
 // For example, returns "projects/foo/locations/us" if provided an input of
 // "projects/foo/locations/us/keyRings/bar".
 absl::StatusOr<std::string> ExtractLocationName(std::string_view key_ring_name);
-
-// Reads the file from the provided filesystem path to a string. Returns
-// FailedPrecondition on error; for example if the file does not exist, or there
-// are insufficient permissions to read it.
-absl::StatusOr<std::string> ReadFileToString(const std::string& file_path);
-
-// Checks if the data buffer is zero-initialized.
-bool IsZeroInitialized(absl::Span<const uint8_t> buffer);
-
-// Checks that buffer only contains the specified value.
-bool OnlyContainsValue(absl::Span<const uint8_t> buffer, uint8_t value);
 
 }  // namespace cloud_kms::kmsp11
 

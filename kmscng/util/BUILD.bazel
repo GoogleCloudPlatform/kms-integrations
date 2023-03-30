@@ -32,6 +32,41 @@ cc_test(
 )
 
 cc_library(
+    name = "logging",
+    srcs = ["logging.cc"],
+    hdrs = ["logging.h"],
+    target_compatible_with = ["@platforms//os:windows"],
+    deps = [
+        ":errors",
+        ":status_utils",
+        "//common:platform",
+        "//common:status_utils",
+        "//kmscng:cng_headers",
+        "@com_github_grpc_grpc//:grpc",
+        "@com_google_absl//absl/base:log_severity",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/synchronization",
+    ],
+)
+
+cc_test(
+    name = "logging_test",
+    size = "small",
+    srcs = ["logging_test.cc"],
+    target_compatible_with = ["@platforms//os:windows"],
+    deps = [
+        ":logging",
+        "//common:string_utils",
+        "//fakekms/cpp:fakekms",
+        "//kmscng/test:matchers",
+        "@com_google_absl//absl/cleanup",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
     name = "status_utils",
     srcs = ["status_utils.cc"],
     hdrs = ["status_utils.h"],

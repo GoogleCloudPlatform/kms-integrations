@@ -22,6 +22,7 @@
 #include "common/status_macros.h"
 #include "kmscng/provider.h"
 #include "kmscng/util/errors.h"
+#include "kmscng/util/logging.h"
 #include "kmscng/util/status_utils.h"
 
 namespace cloud_kms::kmscng {
