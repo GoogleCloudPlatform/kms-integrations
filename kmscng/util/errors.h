@@ -17,10 +17,9 @@
 #ifndef KMSCNG_UTIL_ERRORS_H_
 #define KMSCNG_UTIL_ERRORS_H_
 
-#include <windows.h>
-
 #include "absl/status/status.h"
 #include "common/source_location.h"
+#include "kmscng/cng_headers.h"
 
 namespace cloud_kms::kmscng {
 
@@ -30,7 +29,7 @@ absl::Status NewError(absl::StatusCode code, std::string_view msg,
                       SECURITY_STATUS ss,
                       const SourceLocation& source_location);
 
-// Creates a new Internal error with a SECURITY_STATUS of .
+// Creates a new Internal error with a SECURITY_STATUS of NTE_INTERNAL_ERROR.
 inline absl::Status NewInternalError(std::string_view msg,
                                      const SourceLocation& source_location) {
   return NewError(absl::StatusCode::kInternal, msg, NTE_INTERNAL_ERROR,

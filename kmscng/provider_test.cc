@@ -18,15 +18,11 @@
 #include "gmock/gmock.h"
 #include "kmscng/cng_headers.h"
 #include "kmscng/test/matchers.h"
+#include "kmscng/util/string_utils.h"
 #include "kmscng/version.h"
 
 namespace cloud_kms::kmscng {
 namespace {
-
-std::string ToString(uint32_t value) {
-  uint32_t value_copy = value;
-  return std::string(reinterpret_cast<char*>(&value), sizeof(value));
-}
 
 TEST(ProviderTest, GetProviderPropertyUnsupportedProperty) {
   Provider provider;
@@ -39,14 +35,14 @@ TEST(ProviderTest, GetProviderPropertyImplTypeSuccess) {
   Provider provider;
 
   EXPECT_THAT(provider.GetProperty(NCRYPT_IMPL_TYPE_PROPERTY),
-              IsOkAndHolds(ToString(NCRYPT_IMPL_HARDWARE_FLAG)));
+              IsOkAndHolds(Uint32ToBytes(NCRYPT_IMPL_HARDWARE_FLAG)));
 }
 
 TEST(ProviderTest, GetProviderPropertyLibraryVersionSuccess) {
   Provider provider;
 
   EXPECT_THAT(provider.GetProperty(NCRYPT_VERSION_PROPERTY),
-              IsOkAndHolds(ToString(kLibraryVersionHex)));
+              IsOkAndHolds(Uint32ToBytes(kLibraryVersionHex)));
 }
 
 TEST(ProviderTest, GetProviderPropertyEndpointAddressSuccess) {

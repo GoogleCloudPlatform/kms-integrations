@@ -19,31 +19,41 @@
 #include "absl/container/flat_hash_set.h"
 #include "kmscng/cng_headers.h"
 #include "kmscng/util/errors.h"
+#include "kmscng/util/string_utils.h"
 #include "kmscng/version.h"
 
 namespace cloud_kms::kmscng {
 namespace {
+
+static_assert(std::numeric_limits<NCRYPT_PROV_HANDLE>::max ==
+                  std::numeric_limits<ULONG_PTR>::max,
+              "NCRYPT_PROV_HANDLE width mismatches pointer width.");
 
 absl::flat_hash_set<std::wstring> mutable_properties = {
     {kEndpointAddressProperty.data()},
     {kChannelCredentialsProperty.data()},
 };
 
-std::string ToString(uint32_t value) {
-  uint32_t value_copy = value;
-  return std::string(reinterpret_cast<char*>(&value_copy), sizeof(uint32_t));
-}
-
 absl::flat_hash_map<std::wstring, std::string> BuildInfo() {
   return {
-      {NCRYPT_IMPL_TYPE_PROPERTY, ToString(NCRYPT_IMPL_HARDWARE_FLAG)},
-      {NCRYPT_VERSION_PROPERTY, ToString(kLibraryVersionHex)},
+      {NCRYPT_IMPL_TYPE_PROPERTY, Uint32ToBytes(NCRYPT_IMPL_HARDWARE_FLAG)},
+      {NCRYPT_VERSION_PROPERTY, Uint32ToBytes(kLibraryVersionHex)},
       {std::wstring(kEndpointAddressProperty), "cloudkms.googleapis.com:443"},
       {std::wstring(kChannelCredentialsProperty), "default"},
   };
 }
 
 }  // namespace
+
+absl::StatusOr<Provider*> ValidateProviderHandle(
+    NCRYPT_PROV_HANDLE prov_handle) {
+  if (prov_handle == 0) {
+    return NewError(absl::StatusCode::kInvalidArgument,
+                    "The provider handle cannot be null", NTE_INVALID_HANDLE,
+                    SOURCE_LOCATION);
+  }
+  return reinterpret_cast<Provider*>(prov_handle);
+}
 
 Provider::Provider() : provider_info_(BuildInfo()) {}
 

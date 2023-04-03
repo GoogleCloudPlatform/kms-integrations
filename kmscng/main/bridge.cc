@@ -26,24 +26,6 @@
 #include "kmscng/util/status_utils.h"
 
 namespace cloud_kms::kmscng {
-namespace {
-
-static_assert(std::numeric_limits<NCRYPT_PROV_HANDLE>::max ==
-                  std::numeric_limits<ULONG_PTR>::max,
-              "NCRYPT_PROV_HANDLE width mismatches pointer width.");
-
-// Validates the input NCRYPT_PROV_HANDLE and returns a pointer to the Provider
-// object if the handle is invalid, an error otherwise.
-absl::StatusOr<Provider*> ValidateProviderHandle(NCRYPT_PROV_HANDLE hProvider) {
-  if (hProvider == 0) {
-    return NewError(absl::StatusCode::kInvalidArgument,
-                    "The provider handle cannot be null", NTE_INVALID_HANDLE,
-                    SOURCE_LOCATION);
-  }
-  return reinterpret_cast<Provider*>(hProvider);
-}
-
-}  // namespace
 
 // https://learn.microsoft.com/en-us/windows/win32/api/ncrypt/nf-ncrypt-ncryptopenstorageprovider
 absl::Status OpenProvider(__out NCRYPT_PROV_HANDLE* phProvider,

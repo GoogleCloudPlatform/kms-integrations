@@ -12,31 +12,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef KMSCNG_PROVIDER_H_
-#define KMSCNG_PROVIDER_H_
+#ifndef KMSCNG_OBJECT_H_
+#define KMSCNG_OBJECT_H_
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/status/statusor.h"
+#include "common/kms_client.h"
 #include "kmscng/cng_headers.h"
 
 namespace cloud_kms::kmscng {
 
-class Provider {
+class Object {
  public:
-  Provider();
+  static absl::StatusOr<Object*> Object::New(NCRYPT_PROV_HANDLE prov_handle,
+                                             std::string key_name);
 
   absl::StatusOr<std::string_view> GetProperty(std::wstring_view name);
-  absl::Status SetProperty(std::wstring_view name, std::string_view value);
 
  private:
-  absl::flat_hash_map<std::wstring, std::string> provider_info_;
-};
+  Object::Object(std::string kms_key_name, std::unique_ptr<KmsClient> client,
+                 absl::flat_hash_map<std::wstring, std::string> info);
 
-// Validates the input NCRYPT_PROV_HANDLE and returns a pointer to the Provider
-// object if the handle is valid, an error otherwise.
-absl::StatusOr<Provider*> ValidateProviderHandle(
-    NCRYPT_PROV_HANDLE prov_handle);
+  const std::string kms_key_name_;
+  std::unique_ptr<KmsClient> kms_client_;
+  kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm;
+  const absl::flat_hash_map<std::wstring, std::string> key_info_;
+};
 
 }  // namespace cloud_kms::kmscng
 
-#endif KMSCNG_PROVIDER_H_
+#endif KMSCNG_OBJECT_H_

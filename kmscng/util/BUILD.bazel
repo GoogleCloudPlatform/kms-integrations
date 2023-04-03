@@ -11,6 +11,7 @@ cc_library(
         ":status_utils",
         "//common:source_location",
         "//common:status_utils",
+        "//kmscng:cng_headers",
         "@com_github_google_glog//:glog",
     ],
 )
@@ -83,6 +84,25 @@ cc_test(
     target_compatible_with = ["@platforms//os:windows"],
     deps = [
         ":status_utils",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "string_utils",
+    srcs = ["string_utils.cc"],
+    hdrs = ["string_utils.h"],
+    target_compatible_with = ["@platforms//os:windows"],
+)
+
+cc_test(
+    name = "string_utils_test",
+    size = "small",
+    srcs = ["string_utils_test.cc"],
+    target_compatible_with = ["@platforms//os:windows"],
+    deps = [
+        ":string_utils",
+        "//kmscng/test:matchers",
         "@com_google_googletest//:gtest_main",
     ],
 )
