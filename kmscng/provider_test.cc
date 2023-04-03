@@ -28,6 +28,13 @@ std::string ToString(uint32_t value) {
   return std::string(reinterpret_cast<char*>(&value), sizeof(value));
 }
 
+TEST(ProviderTest, GetProviderPropertyUnsupportedProperty) {
+  Provider provider;
+
+  EXPECT_THAT(provider.GetProperty(NCRYPT_UI_POLICY_PROPERTY),
+              StatusSsIs(NTE_NOT_SUPPORTED));
+}
+
 TEST(ProviderTest, GetProviderPropertyImplTypeSuccess) {
   Provider provider;
 
@@ -40,6 +47,43 @@ TEST(ProviderTest, GetProviderPropertyLibraryVersionSuccess) {
 
   EXPECT_THAT(provider.GetProperty(NCRYPT_VERSION_PROPERTY),
               IsOkAndHolds(ToString(kLibraryVersionHex)));
+}
+
+TEST(ProviderTest, GetProviderPropertyEndpointAddressSuccess) {
+  Provider provider;
+
+  EXPECT_THAT(provider.GetProperty(kEndpointAddressProperty),
+              IsOkAndHolds("cloudkms.googleapis.com:443"));
+}
+
+TEST(ProviderTest, GetProviderPropertyChannelCredentialsSuccess) {
+  Provider provider;
+
+  EXPECT_THAT(provider.GetProperty(kChannelCredentialsProperty),
+              IsOkAndHolds("default"));
+}
+
+TEST(ProviderTest, SetProviderPropertyUnsupportedProperty) {
+  Provider provider;
+
+  EXPECT_THAT(provider.SetProperty(NCRYPT_UI_POLICY_PROPERTY, ""),
+              StatusSsIs(NTE_NOT_SUPPORTED));
+}
+
+TEST(ProviderTest, SetProviderPropertyImmutableProperty) {
+  Provider provider;
+
+  EXPECT_THAT(provider.SetProperty(NCRYPT_IMPL_TYPE_PROPERTY, ""),
+              StatusSsIs(NTE_INVALID_PARAMETER));
+}
+
+TEST(ProviderTest, SetProviderPropertySuccess) {
+  Provider provider;
+
+  std::string input = "insecure";
+  EXPECT_OK(provider.SetProperty(kChannelCredentialsProperty, input));
+  EXPECT_THAT(provider.GetProperty(kChannelCredentialsProperty),
+              IsOkAndHolds("insecure"));
 }
 
 }  // namespace

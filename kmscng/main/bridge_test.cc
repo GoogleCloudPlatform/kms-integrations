@@ -85,7 +85,7 @@ TEST(BridgeTest, GetProviderPropertySuccess) {
   EXPECT_OK(FreeProvider(provider_handle));
 }
 
-TEST(BridgeTest, GetProviderInvalidHandle) {
+TEST(BridgeTest, GetProviderPropertyInvalidHandle) {
   DWORD output_size;
   EXPECT_THAT(GetProviderProperty(0, NCRYPT_IMPL_TYPE_PROPERTY, nullptr,
                                   sizeof(DWORD), &output_size, 0),
@@ -153,6 +153,102 @@ TEST(BridgeTest, GetProviderPropertyInvalidFlag) {
   EXPECT_THAT(GetProviderProperty(provider_handle, NCRYPT_IMPL_TYPE_PROPERTY,
                                   nullptr, sizeof(DWORD), &output_size,
                                   NCRYPT_PERSIST_ONLY_FLAG),
+              StatusSsIs(NTE_BAD_FLAGS));
+
+  // Finalize to clean up memory and shut down logging.
+  EXPECT_OK(FreeProvider(provider_handle));
+}
+
+TEST(BridgeTest, SetProviderPropertySuccess) {
+  NCRYPT_PROV_HANDLE provider_handle;
+  EXPECT_OK(OpenProvider(&provider_handle, kProviderName.data(), 0));
+
+  std::string input = "insecure";
+  EXPECT_OK(SetProviderProperty(
+      provider_handle, const_cast<wchar_t*>(kChannelCredentialsProperty.data()),
+      reinterpret_cast<uint8_t*>(input.data()), input.size(), 0));
+
+  // Check that the provider property has been updated.
+  std::string output("0", input.size());
+  DWORD output_size = 0;
+  EXPECT_OK(GetProviderProperty(
+      provider_handle, const_cast<wchar_t*>(kChannelCredentialsProperty.data()),
+      reinterpret_cast<uint8_t*>(output.data()), input.size(), &output_size,
+      0));
+  EXPECT_EQ(output_size, output.size());
+  EXPECT_EQ(output, "insecure");
+
+  // Finalize to clean up memory and shut down logging.
+  EXPECT_OK(FreeProvider(provider_handle));
+}
+
+TEST(BridgeTest, SetProviderPropertyInvalidHandle) {
+  EXPECT_THAT(SetProviderProperty(0, NCRYPT_IMPL_TYPE_PROPERTY, nullptr,
+                                  sizeof(DWORD), 0),
+              StatusSsIs(NTE_INVALID_HANDLE));
+}
+
+TEST(BridgeTest, SetProviderPropertyNameNull) {
+  NCRYPT_PROV_HANDLE provider_handle;
+  EXPECT_OK(OpenProvider(&provider_handle, kProviderName.data(), 0));
+
+  EXPECT_THAT(
+      SetProviderProperty(provider_handle, nullptr, nullptr, sizeof(DWORD), 0),
+      StatusSsIs(NTE_INVALID_PARAMETER));
+
+  // Finalize to clean up memory and shut down logging.
+  EXPECT_OK(FreeProvider(provider_handle));
+}
+
+TEST(BridgeTest, SetProviderPropertyInputNull) {
+  NCRYPT_PROV_HANDLE provider_handle;
+  EXPECT_OK(OpenProvider(&provider_handle, kProviderName.data(), 0));
+
+  EXPECT_THAT(
+      SetProviderProperty(provider_handle, NCRYPT_IMPL_TYPE_PROPERTY, nullptr,
+                          sizeof(DWORD), NCRYPT_PERSIST_ONLY_FLAG),
+      StatusSsIs(NTE_INVALID_PARAMETER));
+
+  // Finalize to clean up memory and shut down logging.
+  EXPECT_OK(FreeProvider(provider_handle));
+}
+
+TEST(BridgeTest, SetProviderPropertyInvalidName) {
+  NCRYPT_PROV_HANDLE provider_handle;
+  EXPECT_OK(OpenProvider(&provider_handle, kProviderName.data(), 0));
+
+  DWORD input = 1337;
+  EXPECT_THAT(
+      SetProviderProperty(provider_handle, NCRYPT_UI_POLICY_PROPERTY,
+                          reinterpret_cast<uint8_t*>(&input), sizeof(DWORD), 0),
+      StatusSsIs(NTE_NOT_SUPPORTED));
+
+  // Finalize to clean up memory and shut down logging.
+  EXPECT_OK(FreeProvider(provider_handle));
+}
+
+TEST(BridgeTest, SetProviderPropertyImmutableProperty) {
+  NCRYPT_PROV_HANDLE provider_handle;
+  EXPECT_OK(OpenProvider(&provider_handle, kProviderName.data(), 0));
+
+  DWORD input = NCRYPT_IMPL_SOFTWARE_FLAG;
+  EXPECT_THAT(
+      SetProviderProperty(provider_handle, NCRYPT_IMPL_TYPE_PROPERTY,
+                          reinterpret_cast<uint8_t*>(&input), sizeof(input), 0),
+      StatusSsIs(NTE_INVALID_PARAMETER));
+
+  // Finalize to clean up memory and shut down logging.
+  EXPECT_OK(FreeProvider(provider_handle));
+}
+
+TEST(BridgeTest, SetProviderPropertyInvalidFlag) {
+  NCRYPT_PROV_HANDLE provider_handle;
+  EXPECT_OK(OpenProvider(&provider_handle, kProviderName.data(), 0));
+
+  DWORD input = NCRYPT_IMPL_SOFTWARE_FLAG;
+  EXPECT_THAT(SetProviderProperty(provider_handle, NCRYPT_IMPL_TYPE_PROPERTY,
+                                  reinterpret_cast<uint8_t*>(&input),
+                                  sizeof(DWORD), NCRYPT_PERSIST_ONLY_FLAG),
               StatusSsIs(NTE_BAD_FLAGS));
 
   // Finalize to clean up memory and shut down logging.

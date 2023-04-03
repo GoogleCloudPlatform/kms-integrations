@@ -125,4 +125,31 @@ absl::Status GetProviderProperty(__in NCRYPT_PROV_HANDLE hProvider,
   return absl::OkStatus();
 }
 
+// This function is called by NCryptSetProperty:
+// https://learn.microsoft.com/en-us/windows/win32/api/ncrypt/nf-ncrypt-ncryptsetproperty
+absl::Status SetProviderProperty(__in NCRYPT_PROV_HANDLE hProvider,
+                                 __in LPCWSTR pszProperty,
+                                 __in_bcount(cbInput) PBYTE pbInput,
+                                 __in DWORD cbInput, __in DWORD dwFlags) {
+  ASSIGN_OR_RETURN(Provider * prov, ValidateProviderHandle(hProvider));
+  if (!pszProperty) {
+    return NewError(absl::StatusCode::kInvalidArgument,
+                    "pszProperty cannot be null", NTE_INVALID_PARAMETER,
+                    SOURCE_LOCATION);
+  }
+  if (!pbInput) {
+    return NewError(absl::StatusCode::kInvalidArgument,
+                    "pbInput cannot be null", NTE_INVALID_PARAMETER,
+                    SOURCE_LOCATION);
+  }
+  if (dwFlags != 0 && dwFlags != NCRYPT_SILENT_FLAG) {
+    return NewError(absl::StatusCode::kInvalidArgument,
+                    "unsupported flag specified", NTE_BAD_FLAGS,
+                    SOURCE_LOCATION);
+  }
+
+  return prov->SetProperty(
+      pszProperty, std::string(reinterpret_cast<char*>(pbInput), cbInput));
+}
+
 }  // namespace cloud_kms::kmscng

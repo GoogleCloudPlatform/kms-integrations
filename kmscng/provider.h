@@ -26,9 +26,10 @@ class Provider {
   Provider();
 
   absl::StatusOr<std::string_view> GetProperty(std::wstring_view name);
+  absl::Status SetProperty(std::wstring_view name, std::string_view value);
 
  private:
-  const absl::flat_hash_map<std::wstring, std::string> provider_info_;
+  absl::flat_hash_map<std::wstring, std::string> provider_info_;
 };
 
 }  // namespace cloud_kms::kmscng

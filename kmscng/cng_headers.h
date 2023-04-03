@@ -33,6 +33,9 @@
 namespace cloud_kms::kmscng {
 
 constexpr std::wstring_view kProviderName = L"kmscng.dll";
+constexpr std::wstring_view kEndpointAddressProperty = L"KMSEndpointAddress";
+constexpr std::wstring_view kChannelCredentialsProperty =
+    L"KMSChannelCredentials";
 
 }  // namespace cloud_kms::kmscng
 

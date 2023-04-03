@@ -72,5 +72,32 @@ TEST_F(RegisteredProviderTest, GetProviderPropertySuccess) {
   EXPECT_SUCCESS(NCryptFreeObject(provider_handle));
 }
 
+TEST_F(RegisteredProviderTest, SetProviderPropertySuccess) {
+  NCRYPT_PROV_HANDLE provider_handle;
+  EXPECT_SUCCESS(
+      NCryptOpenStorageProvider(&provider_handle, kProviderName.data(), 0));
+
+  std::string input = "insecure";
+  NTSTATUS status = NCryptSetProperty(
+      provider_handle, const_cast<wchar_t*>(kChannelCredentialsProperty.data()),
+      reinterpret_cast<uint8_t*>(input.data()), input.size(), 0);
+  EXPECT_SUCCESS(status);
+  if (!NT_SUCCESS(status)) {
+    std::cerr << absl::StrFormat(
+        "NCryptSetProperty failed with error code 0x%08x\n", status);
+  }
+
+  std::string output("0", input.size());
+  DWORD output_size = 0;
+  EXPECT_SUCCESS(NCryptGetProperty(
+      provider_handle, const_cast<wchar_t*>(kChannelCredentialsProperty.data()),
+      reinterpret_cast<uint8_t*>(output.data()), input.size(), &output_size,
+      0));
+  EXPECT_EQ(output_size, output.size());
+  EXPECT_EQ(output, "insecure");
+
+  EXPECT_SUCCESS(NCryptFreeObject(provider_handle));
+}
+
 }  // namespace
 }  // namespace cloud_kms::kmscng

@@ -38,7 +38,8 @@ absl::Status RegisterTestProvider() {
 
   PCRYPT_INTERFACE_REG algorithm_classes[1] = {&algorithm_class};
   CRYPT_IMAGE_REG ksp_image = {
-      const_cast<PWSTR>(kProviderName.data()),  // File name of the KSP binary
+      const_cast<wchar_t*>(
+          kProviderName.data()),  // File name of the KSP binary
       1,                 // Number of algorithm classes the binary supports
       algorithm_classes  // List of all algorithm classes available
   };
