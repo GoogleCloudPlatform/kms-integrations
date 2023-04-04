@@ -93,6 +93,9 @@ cc_library(
     srcs = ["string_utils.cc"],
     hdrs = ["string_utils.h"],
     target_compatible_with = ["@platforms//os:windows"],
+    deps = [
+        "//kmscng:cng_headers",
+    ],
 )
 
 cc_test(

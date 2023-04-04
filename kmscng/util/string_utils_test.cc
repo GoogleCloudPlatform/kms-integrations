@@ -25,6 +25,12 @@ TEST(Uint32ToBytesTest, Success) {
   EXPECT_EQ(Uint32ToBytes(bytes), "ABCD");
 }
 
+TEST(ProvHandleToBytesTest, Success) {
+  NCRYPT_PROV_HANDLE handle = 1;
+  // Use string constructor to handle \x00.
+  EXPECT_EQ(ProvHandleToBytes(handle), std::string("\x1\0\0\0\0\0\0\0", 8));
+}
+
 TEST(WideStringTest, StringToWideSuccess) {
   std::string data = "1337";
   EXPECT_EQ(StringToWide(data), L"\x3133\x3337");

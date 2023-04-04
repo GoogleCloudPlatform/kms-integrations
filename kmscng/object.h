@@ -39,6 +39,11 @@ class Object {
   const absl::flat_hash_map<std::wstring, std::string> key_info_;
 };
 
+// Validates the NCRYPT_PROV_HANDLE and NCRYPT_KEY_HANDLE combination and
+// returns a pointer to the Object if the handles are valid, an error otherwise.
+absl::StatusOr<Object*> ValidateKeyHandle(NCRYPT_PROV_HANDLE prov_handle,
+                                          NCRYPT_KEY_HANDLE key_handle);
+
 }  // namespace cloud_kms::kmscng
 
 #endif KMSCNG_OBJECT_H_

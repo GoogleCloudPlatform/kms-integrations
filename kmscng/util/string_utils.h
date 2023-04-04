@@ -19,9 +19,13 @@
 
 #include <string>
 
+#include "kmscng/cng_headers.h"
+
 namespace cloud_kms::kmscng {
 
 std::string Uint32ToBytes(uint32_t value);
+
+std::string ProvHandleToBytes(NCRYPT_PROV_HANDLE handle);
 
 std::wstring StringToWide(const std::string& str);
 

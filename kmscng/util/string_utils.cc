@@ -25,6 +25,11 @@ std::string Uint32ToBytes(uint32_t value) {
   return std::string(reinterpret_cast<char*>(&value), sizeof(uint32_t));
 }
 
+std::string ProvHandleToBytes(NCRYPT_PROV_HANDLE handle) {
+  return std::string(reinterpret_cast<char*>(&handle),
+                     sizeof(NCRYPT_PROV_HANDLE));
+}
+
 std::wstring StringToWide(const std::string& str) {
   std::wstring_convert<std::codecvt_utf16<wchar_t>, wchar_t> converter;
 

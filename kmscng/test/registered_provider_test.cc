@@ -33,6 +33,25 @@
 namespace cloud_kms::kmscng {
 namespace {
 
+kms_v1::CryptoKeyVersion CreateTestCryptoKeyVersion(
+    kms_v1::KeyManagementService::Stub* client) {
+  kms_v1::KeyRing kr1;
+  kr1 = CreateKeyRingOrDie(client, kTestLocation, RandomId(), kr1);
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM);
+  ck = CreateCryptoKeyOrDie(client, kr1.name(), "ck", ck, true);
+
+  kms_v1::CryptoKeyVersion ckv;
+  ckv = CreateCryptoKeyVersionOrDie(client, ck.name(), ckv);
+  ckv = WaitForEnablement(client, ckv);
+  return ckv;
+}
+
 void SetUpFakeKmsProvider(NCRYPT_PROV_HANDLE provider_handle,
                           std::string listen_addr) {
   // Set custom properties to hit fake KMS.
@@ -117,21 +136,7 @@ TEST_F(RegisteredProviderTest, SetProviderPropertySuccess) {
 TEST_F(RegisteredProviderTest, OpenKeySuccess) {
   ASSERT_OK_AND_ASSIGN(auto fake_server, fakekms::Server::New());
   auto client = fake_server->NewClient();
-
-  kms_v1::KeyRing kr1;
-  kr1 = CreateKeyRingOrDie(client.get(), kTestLocation, RandomId(), kr1);
-
-  kms_v1::CryptoKey ck;
-  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
-  ck.mutable_version_template()->set_algorithm(
-      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
-  ck.mutable_version_template()->set_protection_level(
-      kms_v1::ProtectionLevel::HSM);
-  ck = CreateCryptoKeyOrDie(client.get(), kr1.name(), "ck", ck, true);
-
-  kms_v1::CryptoKeyVersion ckv;
-  ckv = CreateCryptoKeyVersionOrDie(client.get(), ck.name(), ckv);
-  ckv = WaitForEnablement(client.get(), ckv);
+  kms_v1::CryptoKeyVersion ckv = CreateTestCryptoKeyVersion(client.get());
 
   NCRYPT_PROV_HANDLE provider_handle;
   EXPECT_SUCCESS(
@@ -148,6 +153,37 @@ TEST_F(RegisteredProviderTest, OpenKeySuccess) {
         "NCryptOpenKey failed with error code 0x%08x\n", status);
   }
   EXPECT_NE(key_handle, 0);
+
+  EXPECT_SUCCESS(NCryptFreeObject(provider_handle));
+}
+
+TEST_F(RegisteredProviderTest, GetKeyPropertySuccess) {
+  ASSERT_OK_AND_ASSIGN(auto fake_server, fakekms::Server::New());
+  auto client = fake_server->NewClient();
+  kms_v1::CryptoKeyVersion ckv = CreateTestCryptoKeyVersion(client.get());
+
+  NCRYPT_PROV_HANDLE provider_handle;
+  EXPECT_SUCCESS(
+      NCryptOpenStorageProvider(&provider_handle, kProviderName.data(), 0));
+
+  SetUpFakeKmsProvider(provider_handle, fake_server->listen_addr());
+
+  NCRYPT_KEY_HANDLE key_handle;
+  EXPECT_SUCCESS(NCryptOpenKey(provider_handle, &key_handle,
+                               StringToWide(ckv.name()).data(), 0, 0));
+
+  DWORD output = 0;
+  DWORD output_size = 0;
+  NTSTATUS status = NCryptGetProperty(key_handle, NCRYPT_KEY_USAGE_PROPERTY,
+                                      reinterpret_cast<uint8_t*>(&output),
+                                      sizeof(output), &output_size, 0);
+  EXPECT_SUCCESS(status);
+  if (!NT_SUCCESS(status)) {
+    std::cerr << absl::StrFormat(
+        "NCryptGetProperty failed with error code 0x%08x\n", status);
+  }
+  EXPECT_EQ(output_size, sizeof(output));
+  EXPECT_EQ(output, NCRYPT_ALLOW_SIGNING_FLAG);
 
   EXPECT_SUCCESS(NCryptFreeObject(provider_handle));
 }

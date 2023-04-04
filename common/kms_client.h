@@ -50,6 +50,7 @@ struct CryptoKeyAndVersion {
 
 class KmsClient {
  public:
+  // TODO(b/277099517): replace default arguments with options struct.
   KmsClient(std::string_view endpoint_address,
             const std::shared_ptr<grpc::ChannelCredentials>& creds,
             absl::Duration rpc_timeout, const int version_major,

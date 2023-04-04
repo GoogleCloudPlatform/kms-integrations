@@ -88,6 +88,31 @@ absl::flat_hash_map<std::wstring, std::string> BuildInfo(
 
 }  // namespace
 
+absl::StatusOr<Object*> ValidateKeyHandle(NCRYPT_PROV_HANDLE prov_handle,
+                                          NCRYPT_KEY_HANDLE key_handle) {
+  if (prov_handle == 0) {
+    return NewError(absl::StatusCode::kInvalidArgument,
+                    "The provider handle cannot be null", NTE_INVALID_HANDLE,
+                    SOURCE_LOCATION);
+  }
+  if (key_handle == 0) {
+    return NewError(absl::StatusCode::kInvalidArgument,
+                    "The key handle cannot be null", NTE_INVALID_HANDLE,
+                    SOURCE_LOCATION);
+  }
+
+  Object* object = reinterpret_cast<Object*>(key_handle);
+  ASSIGN_OR_RETURN(std::string_view stored_prov_handle,
+                   object->GetProperty(NCRYPT_PROVIDER_HANDLE_PROPERTY));
+  if (stored_prov_handle != ProvHandleToBytes(prov_handle)) {
+    return NewError(absl::StatusCode::kInvalidArgument,
+                    "The key handle does not match the provider handle",
+                    NTE_INVALID_HANDLE, SOURCE_LOCATION);
+  }
+
+  return object;
+}
+
 Object::Object(std::string kms_key_name, std::unique_ptr<KmsClient> client,
                absl::flat_hash_map<std::wstring, std::string> info)
     : kms_key_name_(kms_key_name),

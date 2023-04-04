@@ -172,4 +172,52 @@ absl::Status OpenKey(__inout NCRYPT_PROV_HANDLE hProvider,
   return absl::OkStatus();
 }
 
+// This function is called by NCryptGetProperty:
+// https://learn.microsoft.com/en-us/windows/win32/api/ncrypt/nf-ncrypt-ncryptgetproperty
+absl::Status GetKeyProperty(__in NCRYPT_PROV_HANDLE hProvider,
+                            __in NCRYPT_KEY_HANDLE hKey,
+                            __in LPCWSTR pszProperty,
+                            __out_bcount_part_opt(cbOutput, *pcbResult)
+                                PBYTE pbOutput,
+                            __in DWORD cbOutput, __out DWORD* pcbResult,
+                            __in DWORD dwFlags) {
+  ASSIGN_OR_RETURN(Object * object, ValidateKeyHandle(hProvider, hKey));
+  if (!pszProperty) {
+    return NewError(absl::StatusCode::kInvalidArgument,
+                    "pszProperty cannot be null", NTE_INVALID_PARAMETER,
+                    SOURCE_LOCATION);
+  }
+  if (!pcbResult) {
+    return NewError(absl::StatusCode::kInvalidArgument,
+                    "pcbResult cannot be null", NTE_INVALID_PARAMETER,
+                    SOURCE_LOCATION);
+  }
+  if (dwFlags != 0 && dwFlags != NCRYPT_SILENT_FLAG) {
+    return NewError(absl::StatusCode::kInvalidArgument,
+                    "unsupported flag specified", NTE_BAD_FLAGS,
+                    SOURCE_LOCATION);
+  }
+
+  ASSIGN_OR_RETURN(std::string_view property_value,
+                   object->GetProperty(pszProperty));
+  *pcbResult = property_value.size();
+
+  // Return size required to hold the property value if output buffer is null.
+  if (!pbOutput) {
+    return absl::OkStatus();
+  }
+
+  // Check provided buffer size to ensure the property value fits.
+  if (cbOutput < property_value.size()) {
+    return NewError(absl::StatusCode::kOutOfRange,
+                    absl::StrFormat("cbOutput size=%u not large enough to fit "
+                                    "property value of size %u",
+                                    cbOutput, property_value.size()),
+                    NTE_BUFFER_TOO_SMALL, SOURCE_LOCATION);
+  }
+
+  property_value.copy(reinterpret_cast<char*>(pbOutput), property_value.size());
+  return absl::OkStatus();
+}
+
 }  // namespace cloud_kms::kmscng
