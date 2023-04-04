@@ -51,8 +51,9 @@ absl::StatusOr<AlgorithmDetails> GetDetails(
     kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm) {
   auto it = kAlgorithmDetails->find(algorithm);
   if (it == kAlgorithmDetails->end()) {
-    return NewInternalError(
-        absl::StrFormat("algorithm not found: %d", algorithm), SOURCE_LOCATION);
+    return NewError(absl::StatusCode::kInternal,
+                    absl::StrFormat("algorithm not found: %d", algorithm),
+                    NTE_NOT_SUPPORTED, SOURCE_LOCATION);
   }
   return *it;
 }

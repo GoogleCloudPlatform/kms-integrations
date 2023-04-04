@@ -18,10 +18,12 @@ cc_library(
     deps = [
         "//common:status_macros",
         "//kmscng:cng_headers",
+        "//kmscng:object",
         "//kmscng:provider",
         "//kmscng/util:errors",
         "//kmscng/util:logging",
         "//kmscng/util:status_utils",
+        "//kmscng/util:string_utils",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
@@ -37,6 +39,7 @@ cc_test(
     target_compatible_with = ["@platforms//os:windows"],
     deps = [
         ":bridge",
+        "//common/test:resource_helpers",
         "//common/test:test_status_macros",
         "//kmscng:cng_headers",
         "//kmscng/test:matchers",

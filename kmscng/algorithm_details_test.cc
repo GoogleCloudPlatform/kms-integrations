@@ -39,7 +39,7 @@ TEST(GetAlgorithmDetailsTest, AlgorithmNotFound) {
       GetDetails(kms_v1::CryptoKeyVersion::EXTERNAL_SYMMETRIC_ENCRYPTION);
   EXPECT_FALSE(details.ok());
   EXPECT_THAT(details.status(), StatusIs(absl::StatusCode::kInternal));
-  EXPECT_THAT(details.status(), StatusSsIs(NTE_INTERNAL_ERROR));
+  EXPECT_THAT(details.status(), StatusSsIs(NTE_NOT_SUPPORTED));
 }
 
 }  // namespace

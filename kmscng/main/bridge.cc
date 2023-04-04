@@ -20,10 +20,12 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/str_format.h"
 #include "common/status_macros.h"
+#include "kmscng/object.h"
 #include "kmscng/provider.h"
 #include "kmscng/util/errors.h"
 #include "kmscng/util/logging.h"
 #include "kmscng/util/status_utils.h"
+#include "kmscng/util/string_utils.h"
 
 namespace cloud_kms::kmscng {
 
@@ -132,6 +134,42 @@ absl::Status SetProviderProperty(__in NCRYPT_PROV_HANDLE hProvider,
 
   return prov->SetProperty(
       pszProperty, std::string(reinterpret_cast<char*>(pbInput), cbInput));
+}
+
+// https://learn.microsoft.com/en-us/windows/win32/api/ncrypt/nf-ncrypt-ncryptopenkey
+absl::Status OpenKey(__inout NCRYPT_PROV_HANDLE hProvider,
+                     __out NCRYPT_KEY_HANDLE* phKey, __in LPCWSTR pszKeyName,
+                     __in_opt DWORD dwLegacyKeySpec, __in DWORD dwFlags) {
+  if (hProvider == 0) {
+    return NewError(absl::StatusCode::kInvalidArgument,
+                    "The provider handle cannot be null", NTE_INVALID_HANDLE,
+                    SOURCE_LOCATION);
+  }
+  if (phKey == nullptr) {
+    return NewError(absl::StatusCode::kInvalidArgument,
+                    "the key handle cannot be null", NTE_INVALID_PARAMETER,
+                    SOURCE_LOCATION);
+  }
+  if (!pszKeyName) {
+    return NewError(absl::StatusCode::kInvalidArgument,
+                    "the key name cannot be null", NTE_INVALID_PARAMETER,
+                    SOURCE_LOCATION);
+  }
+  if (dwLegacyKeySpec != 0 && dwLegacyKeySpec != AT_SIGNATURE) {
+    return NewError(absl::StatusCode::kInvalidArgument,
+                    "unsupported legacy key spec specified",
+                    NTE_INVALID_PARAMETER, SOURCE_LOCATION);
+  }
+  if (dwFlags != 0 && dwFlags != NCRYPT_SILENT_FLAG) {
+    return NewError(absl::StatusCode::kInvalidArgument,
+                    "unsupported flag specified", NTE_BAD_FLAGS,
+                    SOURCE_LOCATION);
+  }
+
+  ASSIGN_OR_RETURN(Object * object,
+                   Object::New(hProvider, WideToString(pszKeyName)));
+  *phKey = reinterpret_cast<NCRYPT_KEY_HANDLE>(object);
+  return absl::OkStatus();
 }
 
 }  // namespace cloud_kms::kmscng

@@ -51,8 +51,11 @@ cc_test(
     target_compatible_with = ["@platforms//os:windows"],
     deps = [
         ":register_provider",
+        "//common/test:resource_helpers",
         "//common/test:test_status_macros",
         "//kmscng:cng_headers",
+        "//kmscng:provider",
+        "//kmscng/util:string_utils",
         "@com_google_absl//absl/strings:str_format",
         "@com_google_googletest//:gtest_main",
     ],

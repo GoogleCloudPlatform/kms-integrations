@@ -52,8 +52,24 @@ absl::StatusOr<kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm>
 GetKeyAlgorithm(const KmsClient& client, std::string key_name) {
   kms_v1::GetPublicKeyRequest pub_req;
   pub_req.set_name(key_name);
-  ASSIGN_OR_RETURN(kms_v1::PublicKey pub_resp, client.GetPublicKey(pub_req));
-  return pub_resp.algorithm();
+  auto pub_resp = client.GetPublicKey(pub_req);
+  if (!pub_resp.ok()) {
+    // Populate status with more descriptive SECURITY_STATUS if not found.
+    absl::Status resp_status = pub_resp.status();
+    if (pub_resp.status().code() == absl::StatusCode::kNotFound) {
+      SetErrorSs(resp_status, NTE_BAD_KEYSET);
+    }
+    return resp_status;
+  }
+
+  if (pub_resp->protection_level() != kms_v1::ProtectionLevel::HSM) {
+    return NewError(
+        absl::StatusCode::kFailedPrecondition,
+        "the key is not loadable due to unsupported protection level",
+        NTE_NOT_SUPPORTED, SOURCE_LOCATION);
+  }
+
+  return pub_resp->algorithm();
 }
 
 absl::flat_hash_map<std::wstring, std::string> BuildInfo(

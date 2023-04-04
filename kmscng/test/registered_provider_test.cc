@@ -15,10 +15,13 @@
 #include <cwchar>
 
 #include "absl/strings/str_format.h"
+#include "common/test/resource_helpers.h"
 #include "common/test/test_status_macros.h"
 #include "gmock/gmock.h"
 #include "kmscng/cng_headers.h"
+#include "kmscng/provider.h"
 #include "kmscng/test/register_provider.h"
+#include "kmscng/util/string_utils.h"
 
 #define ASSERT_SUCCESS(arg) ASSERT_EQ(arg, 0)
 #define EXPECT_SUCCESS(arg) EXPECT_EQ(arg, 0)
@@ -29,6 +32,18 @@
 
 namespace cloud_kms::kmscng {
 namespace {
+
+void SetUpFakeKmsProvider(NCRYPT_PROV_HANDLE provider_handle,
+                          std::string listen_addr) {
+  // Set custom properties to hit fake KMS.
+  ASSERT_SUCCESS(NCryptSetProperty(
+      provider_handle, kEndpointAddressProperty.data(),
+      reinterpret_cast<uint8_t*>(&listen_addr), listen_addr.size(), 0));
+  std::string creds_type = "insecure";
+  ASSERT_SUCCESS(NCryptSetProperty(
+      provider_handle, kChannelCredentialsProperty.data(),
+      reinterpret_cast<uint8_t*>(&creds_type), creds_type.size(), 0));
+}
 
 class RegisteredProviderTest : public testing::Test {
  protected:
@@ -79,7 +94,7 @@ TEST_F(RegisteredProviderTest, SetProviderPropertySuccess) {
 
   std::string input = "insecure";
   NTSTATUS status = NCryptSetProperty(
-      provider_handle, const_cast<wchar_t*>(kChannelCredentialsProperty.data()),
+      provider_handle, kChannelCredentialsProperty.data(),
       reinterpret_cast<uint8_t*>(input.data()), input.size(), 0);
   EXPECT_SUCCESS(status);
   if (!NT_SUCCESS(status)) {
@@ -89,12 +104,50 @@ TEST_F(RegisteredProviderTest, SetProviderPropertySuccess) {
 
   std::string output("0", input.size());
   DWORD output_size = 0;
-  EXPECT_SUCCESS(NCryptGetProperty(
-      provider_handle, const_cast<wchar_t*>(kChannelCredentialsProperty.data()),
-      reinterpret_cast<uint8_t*>(output.data()), input.size(), &output_size,
-      0));
+  EXPECT_SUCCESS(NCryptGetProperty(provider_handle,
+                                   kChannelCredentialsProperty.data(),
+                                   reinterpret_cast<uint8_t*>(output.data()),
+                                   input.size(), &output_size, 0));
   EXPECT_EQ(output_size, output.size());
   EXPECT_EQ(output, "insecure");
+
+  EXPECT_SUCCESS(NCryptFreeObject(provider_handle));
+}
+
+TEST_F(RegisteredProviderTest, OpenKeySuccess) {
+  ASSERT_OK_AND_ASSIGN(auto fake_server, fakekms::Server::New());
+  auto client = fake_server->NewClient();
+
+  kms_v1::KeyRing kr1;
+  kr1 = CreateKeyRingOrDie(client.get(), kTestLocation, RandomId(), kr1);
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM);
+  ck = CreateCryptoKeyOrDie(client.get(), kr1.name(), "ck", ck, true);
+
+  kms_v1::CryptoKeyVersion ckv;
+  ckv = CreateCryptoKeyVersionOrDie(client.get(), ck.name(), ckv);
+  ckv = WaitForEnablement(client.get(), ckv);
+
+  NCRYPT_PROV_HANDLE provider_handle;
+  EXPECT_SUCCESS(
+      NCryptOpenStorageProvider(&provider_handle, kProviderName.data(), 0));
+
+  SetUpFakeKmsProvider(provider_handle, fake_server->listen_addr());
+
+  NCRYPT_KEY_HANDLE key_handle;
+  NTSTATUS status = NCryptOpenKey(provider_handle, &key_handle,
+                                  StringToWide(ckv.name()).data(), 0, 0);
+  EXPECT_SUCCESS(status);
+  if (!NT_SUCCESS(status)) {
+    std::cerr << absl::StrFormat(
+        "NCryptOpenKey failed with error code 0x%08x\n", status);
+  }
+  EXPECT_NE(key_handle, 0);
 
   EXPECT_SUCCESS(NCryptFreeObject(provider_handle));
 }

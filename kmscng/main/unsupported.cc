@@ -27,12 +27,6 @@ absl::Status FreeBuffer(__deref PVOID pvInput) {
   return UnsupportedError(SOURCE_LOCATION);
 }
 
-absl::Status OpenKey(__inout NCRYPT_PROV_HANDLE hProvider,
-                     __out NCRYPT_KEY_HANDLE* phKey, __in LPCWSTR pszKeyName,
-                     __in_opt DWORD dwLegacyKeySpec, __in DWORD dwFlags) {
-  return UnsupportedError(SOURCE_LOCATION);
-}
-
 absl::Status CreatePersistedKey(__in NCRYPT_PROV_HANDLE hProvider,
                                 __out NCRYPT_KEY_HANDLE* phKey,
                                 __in LPCWSTR pszAlgId,
