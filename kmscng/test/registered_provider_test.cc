@@ -157,6 +157,40 @@ TEST_F(RegisteredProviderTest, OpenKeySuccess) {
   EXPECT_SUCCESS(NCryptFreeObject(provider_handle));
 }
 
+TEST_F(RegisteredProviderTest, FreeKeySuccess) {
+  ASSERT_OK_AND_ASSIGN(auto fake_server, fakekms::Server::New());
+  auto client = fake_server->NewClient();
+  kms_v1::CryptoKeyVersion ckv = CreateTestCryptoKeyVersion(client.get());
+
+  NCRYPT_PROV_HANDLE provider_handle;
+  EXPECT_SUCCESS(
+      NCryptOpenStorageProvider(&provider_handle, kProviderName.data(), 0));
+
+  // Set custom properties to hit fake KMS.
+  std::string property_value = fake_server->listen_addr();
+  EXPECT_SUCCESS(NCryptSetProperty(
+      provider_handle, kEndpointAddressProperty.data(),
+      reinterpret_cast<uint8_t*>(&property_value), property_value.size(), 0));
+  property_value = "insecure";
+  EXPECT_SUCCESS(NCryptSetProperty(
+      provider_handle, kChannelCredentialsProperty.data(),
+      reinterpret_cast<uint8_t*>(&property_value), property_value.size(), 0));
+
+  NCRYPT_KEY_HANDLE key_handle;
+  EXPECT_SUCCESS(NCryptOpenKey(provider_handle, &key_handle,
+                               StringToWide(ckv.name()).data(), 0, 0));
+
+  NTSTATUS status = NCryptFreeObject(key_handle);
+  EXPECT_SUCCESS(status);
+  if (!NT_SUCCESS(status)) {
+    std::cerr << absl::StrFormat(
+        "NCryptFreeKey failed with error code 0x%08x\n", status);
+  }
+  EXPECT_NE(key_handle, 0);
+
+  EXPECT_SUCCESS(NCryptFreeObject(provider_handle));
+}
+
 TEST_F(RegisteredProviderTest, GetKeyPropertySuccess) {
   ASSERT_OK_AND_ASSIGN(auto fake_server, fakekms::Server::New());
   auto client = fake_server->NewClient();

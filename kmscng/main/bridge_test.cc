@@ -54,7 +54,7 @@ TEST(BridgeTest, OpenProviderSuccess) {
   NCRYPT_PROV_HANDLE provider_handle;
   EXPECT_OK(OpenProvider(&provider_handle, kProviderName.data(), 0));
 
-  // Finalize to clean up memory.
+  // Clean up memory.
   EXPECT_OK(FreeProvider(provider_handle));
 }
 
@@ -92,7 +92,7 @@ TEST(BridgeTest, GetProviderPropertyGetSizeSuccess) {
                                 nullptr, sizeof(DWORD), &output_size, 0));
   EXPECT_EQ(output_size, sizeof(DWORD));
 
-  // Finalize to clean up memory.
+  // Clean up memory.
   EXPECT_OK(FreeProvider(provider_handle));
 }
 
@@ -108,7 +108,7 @@ TEST(BridgeTest, GetProviderPropertySuccess) {
   EXPECT_EQ(output_size, sizeof(output));
   EXPECT_EQ(output, NCRYPT_IMPL_HARDWARE_FLAG);
 
-  // Finalize to clean up memory.
+  // Clean up memory.
   EXPECT_OK(FreeProvider(provider_handle));
 }
 
@@ -128,7 +128,7 @@ TEST(BridgeTest, GetProviderPropertyNameNull) {
                                   sizeof(DWORD), &output_size, 0),
               StatusSsIs(NTE_INVALID_PARAMETER));
 
-  // Finalize to clean up memory.
+  // Clean up memory.
   EXPECT_OK(FreeProvider(provider_handle));
 }
 
@@ -141,7 +141,7 @@ TEST(BridgeTest, GetProviderPropertyInvalidName) {
                                   nullptr, sizeof(DWORD), &output_size, 0),
               StatusSsIs(NTE_NOT_SUPPORTED));
 
-  // Finalize to clean up memory.
+  // Clean up memory.
   EXPECT_OK(FreeProvider(provider_handle));
 }
 
@@ -153,7 +153,7 @@ TEST(BridgeTest, GetProviderPropertyOutputSizeBufferNull) {
                                   nullptr, sizeof(DWORD), nullptr, 0),
               StatusSsIs(NTE_INVALID_PARAMETER));
 
-  // Finalize to clean up memory.
+  // Clean up memory.
   EXPECT_OK(FreeProvider(provider_handle));
 }
 
@@ -167,7 +167,7 @@ TEST(BridgeTest, GetProviderPropertyOutputBufferTooShort) {
                                   &output, 1, &output_size, 0),
               StatusSsIs(NTE_BUFFER_TOO_SMALL));
 
-  // Finalize to clean up memory.
+  // Clean up memory.
   EXPECT_OK(FreeProvider(provider_handle));
 }
 
@@ -181,7 +181,7 @@ TEST(BridgeTest, GetProviderPropertyInvalidFlag) {
                                   NCRYPT_PERSIST_ONLY_FLAG),
               StatusSsIs(NTE_BAD_FLAGS));
 
-  // Finalize to clean up memory.
+  // Clean up memory.
   EXPECT_OK(FreeProvider(provider_handle));
 }
 
@@ -204,7 +204,7 @@ TEST(BridgeTest, SetProviderPropertySuccess) {
   EXPECT_EQ(output_size, output.size());
   EXPECT_EQ(output, "insecure");
 
-  // Finalize to clean up memory.
+  // Clean up memory.
   EXPECT_OK(FreeProvider(provider_handle));
 }
 
@@ -222,7 +222,7 @@ TEST(BridgeTest, SetProviderPropertyNameNull) {
       SetProviderProperty(provider_handle, nullptr, nullptr, sizeof(DWORD), 0),
       StatusSsIs(NTE_INVALID_PARAMETER));
 
-  // Finalize to clean up memory.
+  // Clean up memory.
   EXPECT_OK(FreeProvider(provider_handle));
 }
 
@@ -235,7 +235,7 @@ TEST(BridgeTest, SetProviderPropertyInputNull) {
                           sizeof(DWORD), NCRYPT_PERSIST_ONLY_FLAG),
       StatusSsIs(NTE_INVALID_PARAMETER));
 
-  // Finalize to clean up memory.
+  // Clean up memory.
   EXPECT_OK(FreeProvider(provider_handle));
 }
 
@@ -249,7 +249,7 @@ TEST(BridgeTest, SetProviderPropertyInvalidName) {
                           reinterpret_cast<uint8_t*>(&input), sizeof(DWORD), 0),
       StatusSsIs(NTE_NOT_SUPPORTED));
 
-  // Finalize to clean up memory.
+  // Clean up memory.
   EXPECT_OK(FreeProvider(provider_handle));
 }
 
@@ -263,7 +263,7 @@ TEST(BridgeTest, SetProviderPropertyImmutableProperty) {
                           reinterpret_cast<uint8_t*>(&input), sizeof(input), 0),
       StatusSsIs(NTE_INVALID_PARAMETER));
 
-  // Finalize to clean up memory and shut down logging.
+  // Clean up memory and shut down logging.
   EXPECT_OK(FreeProvider(provider_handle));
 }
 
@@ -277,7 +277,7 @@ TEST(BridgeTest, SetProviderPropertyInvalidFlag) {
                                   sizeof(DWORD), NCRYPT_PERSIST_ONLY_FLAG),
               StatusSsIs(NTE_BAD_FLAGS));
 
-  // Finalize to clean up memory.
+  // Clean up memory.
   EXPECT_OK(FreeProvider(provider_handle));
 }
 
@@ -293,11 +293,15 @@ TEST(BridgeTest, OpenKeySuccess) {
                                  fake_server->listen_addr()));
   EXPECT_OK(provider.SetProperty(kChannelCredentialsProperty, "insecure"));
 
+  NCRYPT_PROV_HANDLE provider_handle =
+      reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
   NCRYPT_KEY_HANDLE key_handle;
-
-  EXPECT_OK(OpenKey(reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider),
-                    &key_handle, StringToWide(ckv.name()).data(), 0, 0));
+  EXPECT_OK(OpenKey(provider_handle, &key_handle,
+                    StringToWide(ckv.name()).data(), 0, 0));
   EXPECT_NE(key_handle, 0);
+
+  // Clean up memory.
+  EXPECT_OK(FreeKey(provider_handle, key_handle));
 }
 
 TEST(BridgeTest, OpenKeyInvalidHandle) {
@@ -312,7 +316,7 @@ TEST(BridgeTest, OpenKeyInvalidOutputHandle) {
   EXPECT_THAT(OpenKey(provider_handle, nullptr, L"some_key_name", 0, 0),
               StatusSsIs(NTE_INVALID_PARAMETER));
 
-  // Finalize to clean up memory.
+  // Clean up memory.
   EXPECT_OK(FreeProvider(provider_handle));
 }
 
@@ -324,7 +328,7 @@ TEST(BridgeTest, OpenKeyInvalidName) {
   EXPECT_THAT(OpenKey(provider_handle, &key_handle, nullptr, 0, 0),
               StatusSsIs(NTE_INVALID_PARAMETER));
 
-  // Finalize to clean up memory.
+  // Clean up memory.
   EXPECT_OK(FreeProvider(provider_handle));
 }
 
@@ -337,7 +341,7 @@ TEST(BridgeTest, OpenKeyInvalidLegacyKeySpec) {
                       AT_KEYEXCHANGE, 0),
               StatusSsIs(NTE_INVALID_PARAMETER));
 
-  // Finalize to clean up memory.
+  // Clean up memory.
   EXPECT_OK(FreeProvider(provider_handle));
 }
 
@@ -350,7 +354,7 @@ TEST(BridgeTest, OpenKeyInvalidFlag) {
                       NCRYPT_PERSIST_ONLY_FLAG),
               StatusSsIs(NTE_BAD_FLAGS));
 
-  // Finalize to clean up memory.
+  // Clean up memory.
   EXPECT_OK(FreeProvider(provider_handle));
 }
 
@@ -389,7 +393,6 @@ TEST(BridgeTest, OpenKeyInvalidAlgorithm) {
   EXPECT_OK(provider.SetProperty(kChannelCredentialsProperty, "insecure"));
 
   NCRYPT_KEY_HANDLE key_handle;
-
   EXPECT_THAT(OpenKey(reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider),
                       &key_handle, StringToWide(ckv.name()).data(), 0, 0),
               StatusSsIs(NTE_NOT_SUPPORTED));
@@ -411,10 +414,74 @@ TEST(BridgeTest, OpenKeyInvalidProtectionLevel) {
   EXPECT_OK(provider.SetProperty(kChannelCredentialsProperty, "insecure"));
 
   NCRYPT_KEY_HANDLE key_handle;
-
   EXPECT_THAT(OpenKey(reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider),
                       &key_handle, StringToWide(ckv.name()).data(), 0, 0),
               StatusSsIs(NTE_NOT_SUPPORTED));
+}
+
+TEST(BridgeTest, FreeKeySuccess) {
+  ASSERT_OK_AND_ASSIGN(auto fake_server, fakekms::Server::New());
+  auto client = fake_server->NewClient();
+  kms_v1::CryptoKeyVersion ckv = NewCryptoKeyVersion(client.get());
+
+  Provider provider;
+  // Set custom properties to hit fake KMS.
+  EXPECT_OK(provider.SetProperty(kEndpointAddressProperty,
+                                 fake_server->listen_addr()));
+  EXPECT_OK(provider.SetProperty(kChannelCredentialsProperty, "insecure"));
+
+  NCRYPT_PROV_HANDLE provider_handle =
+      reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
+  NCRYPT_KEY_HANDLE key_handle;
+  EXPECT_OK(OpenKey(provider_handle, &key_handle,
+                    StringToWide(ckv.name()).data(), 0, 0));
+
+  // Clean up memory.
+  EXPECT_OK(FreeKey(provider_handle, key_handle));
+}
+
+TEST(BridgeTest, FreeKeyInvalidProviderHandle) {
+  EXPECT_THAT(FreeKey(0, 0), StatusSsIs(NTE_INVALID_HANDLE));
+}
+
+TEST(BridgeTest, FreeKeyInvalidKeyHandle) {
+  NCRYPT_PROV_HANDLE provider_handle;
+  EXPECT_OK(OpenProvider(&provider_handle, kProviderName.data(), 0));
+
+  EXPECT_THAT(FreeKey(provider_handle, 0), StatusSsIs(NTE_INVALID_HANDLE));
+
+  // Clean up memory.
+  EXPECT_OK(FreeProvider(provider_handle));
+}
+
+TEST(BridgeTest, FreeKeyInvalidHandleCombination) {
+  ASSERT_OK_AND_ASSIGN(auto fake_server, fakekms::Server::New());
+  auto client = fake_server->NewClient();
+  kms_v1::CryptoKeyVersion ckv = NewCryptoKeyVersion(client.get());
+
+  Provider provider;
+  // Set custom properties to hit fake KMS.
+  EXPECT_OK(provider.SetProperty(kEndpointAddressProperty,
+                                 fake_server->listen_addr()));
+  EXPECT_OK(provider.SetProperty(kChannelCredentialsProperty, "insecure"));
+
+  NCRYPT_PROV_HANDLE provider_handle =
+      reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
+  NCRYPT_KEY_HANDLE key_handle;
+  std::wstring key_name = StringToWide(ckv.name());
+  EXPECT_OK(OpenKey(provider_handle, &key_handle,
+                    const_cast<PWSTR>(key_name.data()), 0, 0));
+
+  // Get new provider handle, unrelated to the key opened previously.
+  NCRYPT_PROV_HANDLE other_provider_handle;
+  EXPECT_OK(OpenProvider(&other_provider_handle, kProviderName.data(), 0));
+
+  EXPECT_THAT(FreeKey(other_provider_handle, key_handle),
+              StatusSsIs(NTE_INVALID_HANDLE));
+
+  // Clean up memory.
+  EXPECT_OK(FreeKey(provider_handle, key_handle));
+  EXPECT_OK(FreeProvider(other_provider_handle));
 }
 
 TEST(BridgeTest, GetKeyPropertyGetSizeSuccess) {
@@ -439,6 +506,9 @@ TEST(BridgeTest, GetKeyPropertyGetSizeSuccess) {
                            NCRYPT_KEY_USAGE_PROPERTY, nullptr, sizeof(DWORD),
                            &output_size, 0));
   EXPECT_EQ(output_size, sizeof(DWORD));
+
+  // Clean up memory.
+  EXPECT_OK(FreeKey(provider_handle, key_handle));
 }
 
 TEST(BridgeTest, GetKeyPropertySuccess) {
@@ -465,6 +535,9 @@ TEST(BridgeTest, GetKeyPropertySuccess) {
       reinterpret_cast<uint8_t*>(&output), sizeof(output), &output_size, 0));
   EXPECT_EQ(output_size, sizeof(output));
   EXPECT_EQ(output, NCRYPT_ALLOW_SIGNING_FLAG);
+
+  // Clean up memory.
+  EXPECT_OK(FreeKey(provider_handle, key_handle));
 }
 
 TEST(BridgeTest, GetKeyPropertyInvalidProviderHandle) {
@@ -480,7 +553,7 @@ TEST(BridgeTest, GetKeyPropertyInvalidKeyHandle) {
       GetKeyProperty(provider_handle, 0, nullptr, nullptr, 0, nullptr, 0),
       StatusSsIs(NTE_INVALID_HANDLE));
 
-  // Finalize to clean up memory.
+  // Clean up memory.
   EXPECT_OK(FreeProvider(provider_handle));
 }
 
@@ -504,6 +577,9 @@ TEST(BridgeTest, GetKeyPropertyNameNull) {
   EXPECT_THAT(GetKeyProperty(provider_handle, key_handle, nullptr, nullptr, 0,
                              nullptr, 0),
               StatusSsIs(NTE_INVALID_PARAMETER));
+
+  // Clean up memory.
+  EXPECT_OK(FreeKey(provider_handle, key_handle));
 }
 
 TEST(BridgeTest, GetKeyPropertyOutputBufferNull) {
@@ -526,6 +602,9 @@ TEST(BridgeTest, GetKeyPropertyOutputBufferNull) {
   EXPECT_THAT(GetKeyProperty(provider_handle, key_handle,
                              NCRYPT_KEY_USAGE_PROPERTY, nullptr, 0, nullptr, 0),
               StatusSsIs(NTE_INVALID_PARAMETER));
+
+  // Clean up memory.
+  EXPECT_OK(FreeKey(provider_handle, key_handle));
 }
 
 TEST(BridgeTest, GetKeyPropertyInvalidFlag) {
@@ -551,6 +630,9 @@ TEST(BridgeTest, GetKeyPropertyInvalidFlag) {
                              NCRYPT_KEY_USAGE_PROPERTY, &output, sizeof(DWORD),
                              &output_size, NCRYPT_PERSIST_ONLY_FLAG),
               StatusSsIs(NTE_BAD_FLAGS));
+
+  // Clean up memory.
+  EXPECT_OK(FreeKey(provider_handle, key_handle));
 }
 
 TEST(BridgeTest, GetKeyPropertyInvalidName) {
@@ -576,6 +658,9 @@ TEST(BridgeTest, GetKeyPropertyInvalidName) {
       GetKeyProperty(provider_handle, key_handle, NCRYPT_UI_POLICY_PROPERTY,
                      &output, sizeof(DWORD), &output_size, 0),
       StatusSsIs(NTE_NOT_SUPPORTED));
+
+  // Clean up memory.
+  EXPECT_OK(FreeKey(provider_handle, key_handle));
 }
 
 TEST(BridgeTest, GetKeyPropertyOutputBufferTooShort) {
@@ -601,6 +686,9 @@ TEST(BridgeTest, GetKeyPropertyOutputBufferTooShort) {
       GetKeyProperty(provider_handle, key_handle, NCRYPT_KEY_USAGE_PROPERTY,
                      &output, 1, &output_size, 0),
       StatusSsIs(NTE_BUFFER_TOO_SMALL));
+
+  // Clean up memory.
+  EXPECT_OK(FreeKey(provider_handle, key_handle));
 }
 
 }  // namespace

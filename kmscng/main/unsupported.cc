@@ -18,11 +18,6 @@
 
 namespace cloud_kms::kmscng {
 
-absl::Status FreeKey(__in NCRYPT_PROV_HANDLE hProvider,
-                     __in NCRYPT_KEY_HANDLE hKey) {
-  return UnsupportedError(SOURCE_LOCATION);
-}
-
 absl::Status FreeBuffer(__deref PVOID pvInput) {
   return UnsupportedError(SOURCE_LOCATION);
 }

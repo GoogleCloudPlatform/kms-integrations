@@ -172,6 +172,15 @@ absl::Status OpenKey(__inout NCRYPT_PROV_HANDLE hProvider,
   return absl::OkStatus();
 }
 
+// This function is called by NCryptFreeObject:
+// https://learn.microsoft.com/en-us/windows/win32/api/ncrypt/nf-ncrypt-ncryptfreeobject
+absl::Status FreeKey(__in NCRYPT_PROV_HANDLE hProvider,
+                     __in NCRYPT_KEY_HANDLE hKey) {
+  ASSIGN_OR_RETURN(Object * obj, ValidateKeyHandle(hProvider, hKey));
+  delete obj;
+  return absl::OkStatus();
+}
+
 // This function is called by NCryptGetProperty:
 // https://learn.microsoft.com/en-us/windows/win32/api/ncrypt/nf-ncrypt-ncryptgetproperty
 absl::Status GetKeyProperty(__in NCRYPT_PROV_HANDLE hProvider,
