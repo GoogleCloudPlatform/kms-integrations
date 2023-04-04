@@ -14,7 +14,7 @@ http_archive(
 
 http_archive(
     name = "io_bazel_rules_go",  # v0.33.0 / 2022-06-06
-     # Patch HMAC and interoperable encryption into rules_go's copy of googleapis.
+    # Patch HMAC and interoperable encryption into rules_go's copy of googleapis.
     patch_args = [
         "-E",
         "-p1",
@@ -64,10 +64,10 @@ http_archive(
 )
 
 http_archive(
-    name = "com_google_absl",  # 20230125.0 // 2023-01-25
-    sha256 = "3ea49a7d97421b88a8c48a0de16c16048e17725c7ec0f1d3ea2683a2a75adc21",
-    strip_prefix = "abseil-cpp-20230125.0",
-    url = "https://github.com/abseil/abseil-cpp/archive/20230125.0.tar.gz",
+    name = "com_google_absl",  # 2023-04-03
+    sha256 = "ca1428b2593432f56c9a8db6d8e98ae926618d78a64b8bc2f6ebcc8fac49cada",
+    strip_prefix = "abseil-cpp-c4127a721f498ad417b4db603e643822305cb11e",
+    url = "https://github.com/abseil/abseil-cpp/archive/c4127a721f498ad417b4db603e643822305cb11e.tar.gz",
 )
 
 http_archive(
@@ -174,14 +174,18 @@ apple_support_dependencies()
 
 # rules_gapic also depends on rules_go, so it must come after our own dependency on rules_go.
 _rules_gapic_version = "0.13.0"
+
 _rules_gapic_sha256 = "1ebbd74b064697f4ff01d8f59764ba8431d52673f48f636be6b135b6da640b8e"
+
 http_archive(
     name = "rules_gapic",
     sha256 = _rules_gapic_sha256,
     strip_prefix = "rules_gapic-%s" % _rules_gapic_version,
     urls = ["https://github.com/googleapis/rules_gapic/archive/v%s.tar.gz" % _rules_gapic_version],
 )
+
 load("@rules_gapic//:repositories.bzl", "rules_gapic_repositories")
+
 rules_gapic_repositories()
 
 ## Java
@@ -195,12 +199,13 @@ load("@com_google_protobuf//:protobuf_deps.bzl", "PROTOBUF_MAVEN_ARTIFACTS")
 # dependencies through maven_install.
 # https://github.com/protocolbuffers/protobuf/issues/9132
 RULES_JVM_EXTERNAL_TAG = "4.2"
+
 RULES_JVM_EXTERNAL_SHA = "cd1a77b7b02e8e008439ca76fd34f5b07aecb8c752961f9640dea15e9e5ba1ca"
 
 http_archive(
     name = "rules_jvm_external",
-    strip_prefix = "rules_jvm_external-%s" % RULES_JVM_EXTERNAL_TAG,
     sha256 = RULES_JVM_EXTERNAL_SHA,
+    strip_prefix = "rules_jvm_external-%s" % RULES_JVM_EXTERNAL_TAG,
     url = "https://github.com/bazelbuild/rules_jvm_external/archive/%s.zip" % RULES_JVM_EXTERNAL_TAG,
 )
 

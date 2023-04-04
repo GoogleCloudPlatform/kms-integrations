@@ -40,9 +40,7 @@ absl::flat_hash_map<std::wstring, std::string> BuildInfo() {
 Provider::Provider() : provider_info_(BuildInfo()) {}
 
 absl::StatusOr<std::string_view> Provider::GetProperty(std::wstring_view name) {
-  auto it = provider_info_.find(
-      std::wstring(name)  // TODO(bdhess): figure out heterogeneous lookup
-  );
+  auto it = provider_info_.find(name);
   if (it == provider_info_.end()) {
     return NewError(absl::StatusCode::kInvalidArgument,
                     "unsupported property specified", NTE_NOT_SUPPORTED,
