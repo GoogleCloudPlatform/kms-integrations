@@ -19,7 +19,7 @@
 namespace cloud_kms::kmscng {
 
 absl::Status FreeBuffer(__deref PVOID pvInput) {
-  return UnsupportedError(SOURCE_LOCATION);
+  return NewUnsupportedError(SOURCE_LOCATION);
 }
 
 absl::Status CreatePersistedKey(__in NCRYPT_PROV_HANDLE hProvider,
@@ -28,7 +28,7 @@ absl::Status CreatePersistedKey(__in NCRYPT_PROV_HANDLE hProvider,
                                 __in_opt LPCWSTR pszKeyName,
                                 __in DWORD dwLegacyKeySpec,
                                 __in DWORD dwFlags) {
-  return UnsupportedError(SOURCE_LOCATION);
+  return NewUnsupportedError(SOURCE_LOCATION);
 }
 
 absl::Status SetKeyProperty(__in NCRYPT_PROV_HANDLE hProvider,
@@ -36,17 +36,17 @@ absl::Status SetKeyProperty(__in NCRYPT_PROV_HANDLE hProvider,
                             __in LPCWSTR pszProperty,
                             __in_bcount(cbInput) PBYTE pbInput,
                             __in DWORD cbInput, __in DWORD dwFlags) {
-  return UnsupportedError(SOURCE_LOCATION);
+  return NewUnsupportedError(SOURCE_LOCATION);
 }
 
 absl::Status FinalizeKey(__in NCRYPT_PROV_HANDLE hProvider,
                          __in NCRYPT_KEY_HANDLE hKey, __in DWORD dwFlags) {
-  return UnsupportedError(SOURCE_LOCATION);
+  return NewUnsupportedError(SOURCE_LOCATION);
 }
 
 absl::Status DeleteKey(__in NCRYPT_PROV_HANDLE hProvider,
                        __inout NCRYPT_KEY_HANDLE hKey, __in DWORD dwFlags) {
-  return UnsupportedError(SOURCE_LOCATION);
+  return NewUnsupportedError(SOURCE_LOCATION);
 }
 
 absl::Status Encrypt(__in NCRYPT_PROV_HANDLE hProvider,
@@ -56,7 +56,7 @@ absl::Status Encrypt(__in NCRYPT_PROV_HANDLE hProvider,
                      __out_bcount_part_opt(cbOutput, *pcbResult) PBYTE pbOutput,
                      __in DWORD cbOutput, __out DWORD* pcbResult,
                      __in DWORD dwFlags) {
-  return UnsupportedError(SOURCE_LOCATION);
+  return NewUnsupportedError(SOURCE_LOCATION);
 }
 
 absl::Status Decrypt(__in NCRYPT_PROV_HANDLE hProvider,
@@ -66,12 +66,12 @@ absl::Status Decrypt(__in NCRYPT_PROV_HANDLE hProvider,
                      __out_bcount_part_opt(cbOutput, *pcbResult) PBYTE pbOutput,
                      __in DWORD cbOutput, __out DWORD* pcbResult,
                      __in DWORD dwFlags) {
-  return UnsupportedError(SOURCE_LOCATION);
+  return NewUnsupportedError(SOURCE_LOCATION);
 }
 
 absl::Status IsAlgSupported(__in NCRYPT_PROV_HANDLE hProvider,
                             __in LPCWSTR pszAlgId, __in DWORD dwFlags) {
-  return UnsupportedError(SOURCE_LOCATION);
+  return NewUnsupportedError(SOURCE_LOCATION);
 }
 
 absl::Status EnumAlgorithms(__in NCRYPT_PROV_HANDLE hProvider,
@@ -80,14 +80,14 @@ absl::Status EnumAlgorithms(__in NCRYPT_PROV_HANDLE hProvider,
                             __deref_out_ecount(*pdwAlgCount)
                                 NCryptAlgorithmName** ppAlgList,
                             __in DWORD dwFlags) {
-  return UnsupportedError(SOURCE_LOCATION);
+  return NewUnsupportedError(SOURCE_LOCATION);
 }
 
 absl::Status EnumKeys(__in NCRYPT_PROV_HANDLE hProvider,
                       __in_opt LPCWSTR pszScope,
                       __deref_out NCryptKeyName** ppKeyName,
                       __inout PVOID* ppEnumState, __in DWORD dwFlags) {
-  return UnsupportedError(SOURCE_LOCATION);
+  return NewUnsupportedError(SOURCE_LOCATION);
 }
 
 absl::Status ImportKey(__in NCRYPT_PROV_HANDLE hProvider,
@@ -97,7 +97,7 @@ absl::Status ImportKey(__in NCRYPT_PROV_HANDLE hProvider,
                        __out NCRYPT_KEY_HANDLE* phKey,
                        __in_bcount(cbData) PBYTE pbData, __in DWORD cbData,
                        __in DWORD dwFlags) {
-  return UnsupportedError(SOURCE_LOCATION);
+  return NewUnsupportedError(SOURCE_LOCATION);
 }
 
 absl::Status ExportKey(
@@ -106,7 +106,7 @@ absl::Status ExportKey(
     __in_opt NCryptBufferDesc* pParameterList,
     __out_bcount_part_opt(cbOutput, *pcbResult) PBYTE pbOutput,
     __in DWORD cbOutput, __out DWORD* pcbResult, __in DWORD dwFlags) {
-  return UnsupportedError(SOURCE_LOCATION);
+  return NewUnsupportedError(SOURCE_LOCATION);
 }
 
 absl::Status SignHash(__in NCRYPT_PROV_HANDLE hProvider,
@@ -117,7 +117,7 @@ absl::Status SignHash(__in NCRYPT_PROV_HANDLE hProvider,
                           PBYTE pbSignature,
                       __in DWORD cbSignature, __out DWORD* pcbResult,
                       __in DWORD dwFlags) {
-  return UnsupportedError(SOURCE_LOCATION);
+  return NewUnsupportedError(SOURCE_LOCATION);
 }
 
 absl::Status VerifySignature(__in NCRYPT_PROV_HANDLE hProvider,
@@ -127,18 +127,18 @@ absl::Status VerifySignature(__in NCRYPT_PROV_HANDLE hProvider,
                              __in DWORD cbHashValue,
                              __in_bcount(cbSignature) PBYTE pbSignature,
                              __in DWORD cbSignature, __in DWORD dwFlags) {
-  return UnsupportedError(SOURCE_LOCATION);
+  return NewUnsupportedError(SOURCE_LOCATION);
 }
 
 absl::Status PromptUser(__in NCRYPT_PROV_HANDLE hProvider,
                         __in_opt NCRYPT_KEY_HANDLE hKey,
                         __in LPCWSTR pszOperation, __in DWORD dwFlags) {
-  return UnsupportedError(SOURCE_LOCATION);
+  return NewUnsupportedError(SOURCE_LOCATION);
 }
 
 absl::Status NotifyChangeKey(__in NCRYPT_PROV_HANDLE hProvider,
                              __inout HANDLE* phEvent, __in DWORD dwFlags) {
-  return UnsupportedError(SOURCE_LOCATION);
+  return NewUnsupportedError(SOURCE_LOCATION);
 }
 
 absl::Status SecretAgreement(__in NCRYPT_PROV_HANDLE hProvider,
@@ -146,7 +146,7 @@ absl::Status SecretAgreement(__in NCRYPT_PROV_HANDLE hProvider,
                              __in NCRYPT_KEY_HANDLE hPubKey,
                              __out NCRYPT_SECRET_HANDLE* phAgreedSecret,
                              __in DWORD dwFlags) {
-  return UnsupportedError(SOURCE_LOCATION);
+  return NewUnsupportedError(SOURCE_LOCATION);
 }
 
 absl::Status DeriveKey(__in NCRYPT_PROV_HANDLE hProvider,
@@ -157,12 +157,12 @@ absl::Status DeriveKey(__in NCRYPT_PROV_HANDLE hProvider,
                            PUCHAR pbDerivedKey,
                        __in DWORD cbDerivedKey, __out DWORD* pcbResult,
                        __in ULONG dwFlags) {
-  return UnsupportedError(SOURCE_LOCATION);
+  return NewUnsupportedError(SOURCE_LOCATION);
 }
 
 absl::Status FreeSecret(__in NCRYPT_PROV_HANDLE hProvider,
                         __in NCRYPT_SECRET_HANDLE hSharedSecret) {
-  return UnsupportedError(SOURCE_LOCATION);
+  return NewUnsupportedError(SOURCE_LOCATION);
 }
 
 }  // namespace cloud_kms::kmscng

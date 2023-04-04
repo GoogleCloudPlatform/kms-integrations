@@ -48,9 +48,8 @@ absl::flat_hash_map<std::wstring, std::string> BuildInfo() {
 absl::StatusOr<Provider*> ValidateProviderHandle(
     NCRYPT_PROV_HANDLE prov_handle) {
   if (prov_handle == 0) {
-    return NewError(absl::StatusCode::kInvalidArgument,
-                    "The provider handle cannot be null", NTE_INVALID_HANDLE,
-                    SOURCE_LOCATION);
+    return NewInvalidArgumentError("The provider handle cannot be null",
+                                   NTE_INVALID_HANDLE, SOURCE_LOCATION);
   }
   return reinterpret_cast<Provider*>(prov_handle);
 }
@@ -76,9 +75,8 @@ absl::Status Provider::SetProperty(std::wstring_view name,
                     SOURCE_LOCATION);
   }
   if (!mutable_properties.contains(name)) {
-    return NewError(absl::StatusCode::kInvalidArgument,
-                    "the specified property cannot be updated",
-                    NTE_INVALID_PARAMETER, SOURCE_LOCATION);
+    return NewInvalidArgumentError("the specified property cannot be updated",
+                                   NTE_INVALID_PARAMETER, SOURCE_LOCATION);
   }
 
   it->second = value;

@@ -26,6 +26,7 @@
 #define ASSERT_SUCCESS(arg) ASSERT_EQ(arg, 0)
 #define EXPECT_SUCCESS(arg) EXPECT_EQ(arg, 0)
 
+// TODO(aburaggina): drop this macro.
 #ifndef NT_SUCCESS
 #define NT_SUCCESS(Status) ((NTSTATUS)(Status) >= 0)
 #endif

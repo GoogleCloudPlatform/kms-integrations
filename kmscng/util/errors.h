@@ -38,9 +38,24 @@ inline absl::Status NewInternalError(std::string_view msg,
 
 // Creates a new error with status code unimplemented and SECURITY_STATUS of
 // NTE_NOT_SUPPORTED.
-inline absl::Status UnsupportedError(const SourceLocation& source_location) {
+inline absl::Status NewUnsupportedError(const SourceLocation& source_location) {
   return NewError(absl::StatusCode::kUnimplemented,
                   "the function is not supported", NTE_NOT_SUPPORTED,
+                  source_location);
+}
+
+// Creates a new InvalidArgument error with the provided SECURITY_STATUS.
+inline absl::Status NewInvalidArgumentError(
+    std::string_view msg, SECURITY_STATUS ss,
+    const SourceLocation& source_location) {
+  return NewError(absl::StatusCode::kInvalidArgument, msg, ss, source_location);
+}
+
+// Creates a new OutOfRange error with a SECURITY_STATUS of
+// NTE_BUFFER_TOO_SMALL.
+inline absl::Status NewOutOfRangeError(std::string_view msg,
+                                       const SourceLocation& source_location) {
+  return NewError(absl::StatusCode::kOutOfRange, msg, NTE_BUFFER_TOO_SMALL,
                   source_location);
 }
 

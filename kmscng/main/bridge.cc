@@ -33,21 +33,18 @@ namespace cloud_kms::kmscng {
 absl::Status OpenProvider(__out NCRYPT_PROV_HANDLE* phProvider,
                           __in LPCWSTR pszProviderName, __in DWORD dwFlags) {
   if (phProvider == nullptr) {
-    return NewError(absl::StatusCode::kInvalidArgument,
-                    "the provider handle cannot be null", NTE_INVALID_PARAMETER,
-                    SOURCE_LOCATION);
+    return NewInvalidArgumentError("the provider handle cannot be null",
+                                   NTE_INVALID_PARAMETER, SOURCE_LOCATION);
   }
   // Check that the user is actually trying to open our provider, and not a
   // default / different provider.
   if (!pszProviderName || std::wstring_view(pszProviderName) != kProviderName) {
-    return NewError(absl::StatusCode::kInvalidArgument,
-                    "unexpected provider name", NTE_INVALID_PARAMETER,
-                    SOURCE_LOCATION);
+    return NewInvalidArgumentError("unexpected provider name",
+                                   NTE_INVALID_PARAMETER, SOURCE_LOCATION);
   }
   if (dwFlags != 0 && dwFlags != NCRYPT_SILENT_FLAG) {
-    return NewError(absl::StatusCode::kInvalidArgument,
-                    "unsupported flag specified", NTE_BAD_FLAGS,
-                    SOURCE_LOCATION);
+    return NewInvalidArgumentError("unsupported flag specified", NTE_BAD_FLAGS,
+                                   SOURCE_LOCATION);
   }
 
   *phProvider = reinterpret_cast<NCRYPT_PROV_HANDLE>(new Provider());
@@ -72,19 +69,16 @@ absl::Status GetProviderProperty(__in NCRYPT_PROV_HANDLE hProvider,
                                  __in DWORD dwFlags) {
   ASSIGN_OR_RETURN(Provider * prov, ValidateProviderHandle(hProvider));
   if (!pszProperty) {
-    return NewError(absl::StatusCode::kInvalidArgument,
-                    "pszProperty cannot be null", NTE_INVALID_PARAMETER,
-                    SOURCE_LOCATION);
+    return NewInvalidArgumentError("pszProperty cannot be null",
+                                   NTE_INVALID_PARAMETER, SOURCE_LOCATION);
   }
   if (!pcbResult) {
-    return NewError(absl::StatusCode::kInvalidArgument,
-                    "pcbResult cannot be null", NTE_INVALID_PARAMETER,
-                    SOURCE_LOCATION);
+    return NewInvalidArgumentError("pcbResult cannot be null",
+                                   NTE_INVALID_PARAMETER, SOURCE_LOCATION);
   }
   if (dwFlags != 0 && dwFlags != NCRYPT_SILENT_FLAG) {
-    return NewError(absl::StatusCode::kInvalidArgument,
-                    "unsupported flag specified", NTE_BAD_FLAGS,
-                    SOURCE_LOCATION);
+    return NewInvalidArgumentError("unsupported flag specified", NTE_BAD_FLAGS,
+                                   SOURCE_LOCATION);
   }
 
   ASSIGN_OR_RETURN(std::string_view property_value,
@@ -98,11 +92,11 @@ absl::Status GetProviderProperty(__in NCRYPT_PROV_HANDLE hProvider,
 
   // Check provided buffer size to ensure the property value fits.
   if (cbOutput < property_value.size()) {
-    return NewError(absl::StatusCode::kOutOfRange,
-                    absl::StrFormat("cbOutput size=%u not large enough to fit "
-                                    "property value of size %u",
-                                    cbOutput, property_value.size()),
-                    NTE_BUFFER_TOO_SMALL, SOURCE_LOCATION);
+    return NewOutOfRangeError(
+        absl::StrFormat("cbOutput size=%u not large enough to fit "
+                        "property value of size %u",
+                        cbOutput, property_value.size()),
+        SOURCE_LOCATION);
   }
 
   property_value.copy(reinterpret_cast<char*>(pbOutput), property_value.size());
@@ -117,19 +111,16 @@ absl::Status SetProviderProperty(__in NCRYPT_PROV_HANDLE hProvider,
                                  __in DWORD cbInput, __in DWORD dwFlags) {
   ASSIGN_OR_RETURN(Provider * prov, ValidateProviderHandle(hProvider));
   if (!pszProperty) {
-    return NewError(absl::StatusCode::kInvalidArgument,
-                    "pszProperty cannot be null", NTE_INVALID_PARAMETER,
-                    SOURCE_LOCATION);
+    return NewInvalidArgumentError("pszProperty cannot be null",
+                                   NTE_INVALID_PARAMETER, SOURCE_LOCATION);
   }
   if (!pbInput) {
-    return NewError(absl::StatusCode::kInvalidArgument,
-                    "pbInput cannot be null", NTE_INVALID_PARAMETER,
-                    SOURCE_LOCATION);
+    return NewInvalidArgumentError("pbInput cannot be null",
+                                   NTE_INVALID_PARAMETER, SOURCE_LOCATION);
   }
   if (dwFlags != 0 && dwFlags != NCRYPT_SILENT_FLAG) {
-    return NewError(absl::StatusCode::kInvalidArgument,
-                    "unsupported flag specified", NTE_BAD_FLAGS,
-                    SOURCE_LOCATION);
+    return NewInvalidArgumentError("unsupported flag specified", NTE_BAD_FLAGS,
+                                   SOURCE_LOCATION);
   }
 
   return prov->SetProperty(
@@ -141,29 +132,24 @@ absl::Status OpenKey(__inout NCRYPT_PROV_HANDLE hProvider,
                      __out NCRYPT_KEY_HANDLE* phKey, __in LPCWSTR pszKeyName,
                      __in_opt DWORD dwLegacyKeySpec, __in DWORD dwFlags) {
   if (hProvider == 0) {
-    return NewError(absl::StatusCode::kInvalidArgument,
-                    "The provider handle cannot be null", NTE_INVALID_HANDLE,
-                    SOURCE_LOCATION);
+    return NewInvalidArgumentError("The provider handle cannot be null",
+                                   NTE_INVALID_HANDLE, SOURCE_LOCATION);
   }
   if (phKey == nullptr) {
-    return NewError(absl::StatusCode::kInvalidArgument,
-                    "the key handle cannot be null", NTE_INVALID_PARAMETER,
-                    SOURCE_LOCATION);
+    return NewInvalidArgumentError("the key handle cannot be null",
+                                   NTE_INVALID_PARAMETER, SOURCE_LOCATION);
   }
   if (!pszKeyName) {
-    return NewError(absl::StatusCode::kInvalidArgument,
-                    "the key name cannot be null", NTE_INVALID_PARAMETER,
-                    SOURCE_LOCATION);
+    return NewInvalidArgumentError("the key name cannot be null",
+                                   NTE_INVALID_PARAMETER, SOURCE_LOCATION);
   }
   if (dwLegacyKeySpec != 0 && dwLegacyKeySpec != AT_SIGNATURE) {
-    return NewError(absl::StatusCode::kInvalidArgument,
-                    "unsupported legacy key spec specified",
-                    NTE_INVALID_PARAMETER, SOURCE_LOCATION);
+    return NewInvalidArgumentError("unsupported legacy key spec specified",
+                                   NTE_INVALID_PARAMETER, SOURCE_LOCATION);
   }
   if (dwFlags != 0 && dwFlags != NCRYPT_SILENT_FLAG) {
-    return NewError(absl::StatusCode::kInvalidArgument,
-                    "unsupported flag specified", NTE_BAD_FLAGS,
-                    SOURCE_LOCATION);
+    return NewInvalidArgumentError("unsupported flag specified", NTE_BAD_FLAGS,
+                                   SOURCE_LOCATION);
   }
 
   ASSIGN_OR_RETURN(Object * object,
@@ -192,19 +178,16 @@ absl::Status GetKeyProperty(__in NCRYPT_PROV_HANDLE hProvider,
                             __in DWORD dwFlags) {
   ASSIGN_OR_RETURN(Object * object, ValidateKeyHandle(hProvider, hKey));
   if (!pszProperty) {
-    return NewError(absl::StatusCode::kInvalidArgument,
-                    "pszProperty cannot be null", NTE_INVALID_PARAMETER,
-                    SOURCE_LOCATION);
+    return NewInvalidArgumentError("pszProperty cannot be null",
+                                   NTE_INVALID_PARAMETER, SOURCE_LOCATION);
   }
   if (!pcbResult) {
-    return NewError(absl::StatusCode::kInvalidArgument,
-                    "pcbResult cannot be null", NTE_INVALID_PARAMETER,
-                    SOURCE_LOCATION);
+    return NewInvalidArgumentError("pcbResult cannot be null",
+                                   NTE_INVALID_PARAMETER, SOURCE_LOCATION);
   }
   if (dwFlags != 0 && dwFlags != NCRYPT_SILENT_FLAG) {
-    return NewError(absl::StatusCode::kInvalidArgument,
-                    "unsupported flag specified", NTE_BAD_FLAGS,
-                    SOURCE_LOCATION);
+    return NewInvalidArgumentError("unsupported flag specified", NTE_BAD_FLAGS,
+                                   SOURCE_LOCATION);
   }
 
   ASSIGN_OR_RETURN(std::string_view property_value,
@@ -218,11 +201,11 @@ absl::Status GetKeyProperty(__in NCRYPT_PROV_HANDLE hProvider,
 
   // Check provided buffer size to ensure the property value fits.
   if (cbOutput < property_value.size()) {
-    return NewError(absl::StatusCode::kOutOfRange,
-                    absl::StrFormat("cbOutput size=%u not large enough to fit "
-                                    "property value of size %u",
-                                    cbOutput, property_value.size()),
-                    NTE_BUFFER_TOO_SMALL, SOURCE_LOCATION);
+    return NewOutOfRangeError(
+        absl::StrFormat("cbOutput size=%u not large enough to fit "
+                        "property value of size %u",
+                        cbOutput, property_value.size()),
+        SOURCE_LOCATION);
   }
 
   property_value.copy(reinterpret_cast<char*>(pbOutput), property_value.size());
