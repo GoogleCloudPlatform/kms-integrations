@@ -1,5 +1,10 @@
 load("@bazel_skylib//lib:selects.bzl", "selects")
 
+package_group(
+    name = "internal",
+    packages = ["//..."],
+)
+
 config_setting(
     name = "freebsd",
     constraint_values = ["@platforms//os:freebsd"],

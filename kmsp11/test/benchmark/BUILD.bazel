@@ -1,7 +1,5 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_test")
 
-package(default_visibility = ["//kmsp11:__subpackages__"])
-
 go_test(
     name = "benchmark_test",
     srcs = ["benchmark_test.go"],

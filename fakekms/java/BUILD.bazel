@@ -1,12 +1,11 @@
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@rules_java//java:defs.bzl", "java_library", "java_test")
 
-package(default_visibility = ["//kmsp11:__subpackages__"])
-
 java_library(
     name = "FakeKms",
     srcs = ["FakeKms.java"],
     data = ["//fakekms/main:fakekms"],
+    visibility = ["//visibility:public"],
     deps = [
         "@bazel_tools//tools/java/runfiles",
     ] + selects.with_or({

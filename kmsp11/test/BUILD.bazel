@@ -1,11 +1,6 @@
-load("@rules_cc//cc:defs.bzl", "cc_library", "cc_proto_library", "cc_test")
-load("@rules_proto//proto:defs.bzl", "proto_library")
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 
-package(default_visibility = [
-    "//common:__subpackages__",
-    "//kmsp11:__subpackages__",
-    "//kmscng:__subpackages__",
-])
+package(default_visibility = ["//kmsp11:__subpackages__"])
 
 cc_library(
     name = "test",

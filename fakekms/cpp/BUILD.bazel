@@ -1,8 +1,6 @@
 load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 
-package(default_visibility = ["//common:__subpackages__", "//kmsp11:__subpackages__",
-    "//kmscng:__subpackages__"
-])
+package(default_visibility = ["//:internal"])
 
 cc_library(
     name = "fakekms",
