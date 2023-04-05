@@ -28,6 +28,17 @@
 #include "kmscng/util/string_utils.h"
 
 namespace cloud_kms::kmscng {
+namespace {
+
+absl::Status ValidateFlags(uint32_t flags) {
+  if (flags != 0 && flags != NCRYPT_SILENT_FLAG) {
+    return NewInvalidArgumentError("unsupported flag specified", NTE_BAD_FLAGS,
+                                   SOURCE_LOCATION);
+  }
+  return absl::OkStatus();
+}
+
+}  // namespace
 
 // https://learn.microsoft.com/en-us/windows/win32/api/ncrypt/nf-ncrypt-ncryptopenstorageprovider
 absl::Status OpenProvider(__out NCRYPT_PROV_HANDLE* phProvider,
@@ -42,10 +53,7 @@ absl::Status OpenProvider(__out NCRYPT_PROV_HANDLE* phProvider,
     return NewInvalidArgumentError("unexpected provider name",
                                    NTE_INVALID_PARAMETER, SOURCE_LOCATION);
   }
-  if (dwFlags != 0 && dwFlags != NCRYPT_SILENT_FLAG) {
-    return NewInvalidArgumentError("unsupported flag specified", NTE_BAD_FLAGS,
-                                   SOURCE_LOCATION);
-  }
+  RETURN_IF_ERROR(ValidateFlags(dwFlags));
 
   *phProvider = reinterpret_cast<NCRYPT_PROV_HANDLE>(new Provider());
   return absl::OkStatus();
@@ -76,10 +84,7 @@ absl::Status GetProviderProperty(__in NCRYPT_PROV_HANDLE hProvider,
     return NewInvalidArgumentError("pcbResult cannot be null",
                                    NTE_INVALID_PARAMETER, SOURCE_LOCATION);
   }
-  if (dwFlags != 0 && dwFlags != NCRYPT_SILENT_FLAG) {
-    return NewInvalidArgumentError("unsupported flag specified", NTE_BAD_FLAGS,
-                                   SOURCE_LOCATION);
-  }
+  RETURN_IF_ERROR(ValidateFlags(dwFlags));
 
   ASSIGN_OR_RETURN(std::string_view property_value,
                    prov->GetProperty(pszProperty));
@@ -118,10 +123,7 @@ absl::Status SetProviderProperty(__in NCRYPT_PROV_HANDLE hProvider,
     return NewInvalidArgumentError("pbInput cannot be null",
                                    NTE_INVALID_PARAMETER, SOURCE_LOCATION);
   }
-  if (dwFlags != 0 && dwFlags != NCRYPT_SILENT_FLAG) {
-    return NewInvalidArgumentError("unsupported flag specified", NTE_BAD_FLAGS,
-                                   SOURCE_LOCATION);
-  }
+  RETURN_IF_ERROR(ValidateFlags(dwFlags));
 
   return prov->SetProperty(
       pszProperty, std::string(reinterpret_cast<char*>(pbInput), cbInput));
@@ -147,10 +149,7 @@ absl::Status OpenKey(__inout NCRYPT_PROV_HANDLE hProvider,
     return NewInvalidArgumentError("unsupported legacy key spec specified",
                                    NTE_INVALID_PARAMETER, SOURCE_LOCATION);
   }
-  if (dwFlags != 0 && dwFlags != NCRYPT_SILENT_FLAG) {
-    return NewInvalidArgumentError("unsupported flag specified", NTE_BAD_FLAGS,
-                                   SOURCE_LOCATION);
-  }
+  RETURN_IF_ERROR(ValidateFlags(dwFlags));
 
   ASSIGN_OR_RETURN(Object * object,
                    Object::New(hProvider, WideToString(pszKeyName)));
@@ -185,10 +184,7 @@ absl::Status GetKeyProperty(__in NCRYPT_PROV_HANDLE hProvider,
     return NewInvalidArgumentError("pcbResult cannot be null",
                                    NTE_INVALID_PARAMETER, SOURCE_LOCATION);
   }
-  if (dwFlags != 0 && dwFlags != NCRYPT_SILENT_FLAG) {
-    return NewInvalidArgumentError("unsupported flag specified", NTE_BAD_FLAGS,
-                                   SOURCE_LOCATION);
-  }
+  RETURN_IF_ERROR(ValidateFlags(dwFlags));
 
   ASSIGN_OR_RETURN(std::string_view property_value,
                    object->GetProperty(pszProperty));

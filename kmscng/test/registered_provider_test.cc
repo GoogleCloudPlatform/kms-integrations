@@ -76,11 +76,9 @@ TEST_F(RegisteredProviderTest, OpenCloseProviderSuccess) {
   NCRYPT_PROV_HANDLE provider_handle;
   NTSTATUS status =
       NCryptOpenStorageProvider(&provider_handle, kProviderName.data(), 0);
-  EXPECT_SUCCESS(status);
-  if (!NT_SUCCESS(status)) {
-    std::cerr << absl::StrFormat(
-        "NCryptOpenStorageProvider failed with error code 0x%08x\n", status);
-  }
+
+  EXPECT_SUCCESS(status) << absl::StrFormat(
+      "NCryptOpenStorageProvider failed with error code 0x%08x\n", status);
   EXPECT_NE(provider_handle, 0);
 
   EXPECT_SUCCESS(NCryptFreeObject(provider_handle));
@@ -96,11 +94,9 @@ TEST_F(RegisteredProviderTest, GetProviderPropertySuccess) {
   NTSTATUS status = NCryptGetProperty(
       provider_handle, NCRYPT_IMPL_TYPE_PROPERTY,
       reinterpret_cast<uint8_t*>(&output), sizeof(output), &output_size, 0);
-  EXPECT_SUCCESS(status);
-  if (!NT_SUCCESS(status)) {
-    std::cerr << absl::StrFormat(
-        "NCryptGetProperty failed with error code 0x%08x\n", status);
-  }
+
+  EXPECT_SUCCESS(status) << absl::StrFormat(
+      "NCryptGetProperty failed with error code 0x%08x\n", status);
   EXPECT_EQ(output_size, sizeof(output));
   EXPECT_EQ(output, NCRYPT_IMPL_HARDWARE_FLAG);
 
@@ -116,11 +112,8 @@ TEST_F(RegisteredProviderTest, SetProviderPropertySuccess) {
   NTSTATUS status = NCryptSetProperty(
       provider_handle, kChannelCredentialsProperty.data(),
       reinterpret_cast<uint8_t*>(input.data()), input.size(), 0);
-  EXPECT_SUCCESS(status);
-  if (!NT_SUCCESS(status)) {
-    std::cerr << absl::StrFormat(
-        "NCryptSetProperty failed with error code 0x%08x\n", status);
-  }
+  EXPECT_SUCCESS(status) << absl::StrFormat(
+      "NCryptSetProperty failed with error code 0x%08x\n", status);
 
   std::string output("0", input.size());
   DWORD output_size = 0;
@@ -148,11 +141,8 @@ TEST_F(RegisteredProviderTest, OpenKeySuccess) {
   NCRYPT_KEY_HANDLE key_handle;
   NTSTATUS status = NCryptOpenKey(provider_handle, &key_handle,
                                   StringToWide(ckv.name()).data(), 0, 0);
-  EXPECT_SUCCESS(status);
-  if (!NT_SUCCESS(status)) {
-    std::cerr << absl::StrFormat(
-        "NCryptOpenKey failed with error code 0x%08x\n", status);
-  }
+  EXPECT_SUCCESS(status) << absl::StrFormat(
+      "NCryptOpenKey failed with error code 0x%08x\n", status);
   EXPECT_NE(key_handle, 0);
 
   EXPECT_SUCCESS(NCryptFreeObject(provider_handle));
@@ -182,11 +172,8 @@ TEST_F(RegisteredProviderTest, FreeKeySuccess) {
                                StringToWide(ckv.name()).data(), 0, 0));
 
   NTSTATUS status = NCryptFreeObject(key_handle);
-  EXPECT_SUCCESS(status);
-  if (!NT_SUCCESS(status)) {
-    std::cerr << absl::StrFormat(
-        "NCryptFreeKey failed with error code 0x%08x\n", status);
-  }
+  EXPECT_SUCCESS(status) << absl::StrFormat(
+      "NCryptFreeKey failed with error code 0x%08x\n", status);
   EXPECT_NE(key_handle, 0);
 
   EXPECT_SUCCESS(NCryptFreeObject(provider_handle));
@@ -212,11 +199,8 @@ TEST_F(RegisteredProviderTest, GetKeyPropertySuccess) {
   NTSTATUS status = NCryptGetProperty(key_handle, NCRYPT_KEY_USAGE_PROPERTY,
                                       reinterpret_cast<uint8_t*>(&output),
                                       sizeof(output), &output_size, 0);
-  EXPECT_SUCCESS(status);
-  if (!NT_SUCCESS(status)) {
-    std::cerr << absl::StrFormat(
-        "NCryptGetProperty failed with error code 0x%08x\n", status);
-  }
+  EXPECT_SUCCESS(status) << absl::StrFormat(
+      "NCryptGetProperty failed with error code 0x%08x\n", status);
   EXPECT_EQ(output_size, sizeof(output));
   EXPECT_EQ(output, NCRYPT_ALLOW_SIGNING_FLAG);
 

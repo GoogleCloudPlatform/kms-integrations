@@ -50,6 +50,12 @@ kms_v1::CryptoKeyVersion NewCryptoKeyVersion(
   return ckv;
 }
 
+void SetFakeKmsProviderProperties(Provider* provider, std::string listen_addr) {
+  // Set custom properties to hit fake KMS.
+  EXPECT_OK(provider->SetProperty(kEndpointAddressProperty, listen_addr));
+  EXPECT_OK(provider->SetProperty(kChannelCredentialsProperty, "insecure"));
+}
+
 TEST(BridgeTest, OpenProviderSuccess) {
   NCRYPT_PROV_HANDLE provider_handle;
   EXPECT_OK(OpenProvider(&provider_handle, kProviderName.data(), 0));
@@ -288,10 +294,7 @@ TEST(BridgeTest, OpenKeySuccess) {
   kms_v1::CryptoKeyVersion ckv = NewCryptoKeyVersion(client.get());
 
   Provider provider;
-  // Set custom properties to hit fake KMS.
-  EXPECT_OK(provider.SetProperty(kEndpointAddressProperty,
-                                 fake_server->listen_addr()));
-  EXPECT_OK(provider.SetProperty(kChannelCredentialsProperty, "insecure"));
+  SetFakeKmsProviderProperties(&provider, fake_server->listen_addr());
 
   NCRYPT_PROV_HANDLE provider_handle =
       reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
@@ -364,10 +367,7 @@ TEST(BridgeTest, OpenKeyNotFound) {
   kms_v1::CryptoKeyVersion ckv = NewCryptoKeyVersion(client.get());
 
   Provider provider;
-  // Set custom properties to hit fake KMS.
-  EXPECT_OK(provider.SetProperty(kEndpointAddressProperty,
-                                 fake_server->listen_addr()));
-  EXPECT_OK(provider.SetProperty(kChannelCredentialsProperty, "insecure"));
+  SetFakeKmsProviderProperties(&provider, fake_server->listen_addr());
 
   NCRYPT_KEY_HANDLE key_handle;
   std::string invalid_key_name = ckv.name();
@@ -387,10 +387,7 @@ TEST(BridgeTest, OpenKeyInvalidAlgorithm) {
                           kms_v1::ProtectionLevel::HSM);
 
   Provider provider;
-  // Set custom properties to hit fake KMS.
-  EXPECT_OK(provider.SetProperty(kEndpointAddressProperty,
-                                 fake_server->listen_addr()));
-  EXPECT_OK(provider.SetProperty(kChannelCredentialsProperty, "insecure"));
+  SetFakeKmsProviderProperties(&provider, fake_server->listen_addr());
 
   NCRYPT_KEY_HANDLE key_handle;
   EXPECT_THAT(OpenKey(reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider),
@@ -408,10 +405,7 @@ TEST(BridgeTest, OpenKeyInvalidProtectionLevel) {
                           kms_v1::ProtectionLevel::SOFTWARE);
 
   Provider provider;
-  // Set custom properties to hit fake KMS.
-  EXPECT_OK(provider.SetProperty(kEndpointAddressProperty,
-                                 fake_server->listen_addr()));
-  EXPECT_OK(provider.SetProperty(kChannelCredentialsProperty, "insecure"));
+  SetFakeKmsProviderProperties(&provider, fake_server->listen_addr());
 
   NCRYPT_KEY_HANDLE key_handle;
   EXPECT_THAT(OpenKey(reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider),
@@ -425,10 +419,7 @@ TEST(BridgeTest, FreeKeySuccess) {
   kms_v1::CryptoKeyVersion ckv = NewCryptoKeyVersion(client.get());
 
   Provider provider;
-  // Set custom properties to hit fake KMS.
-  EXPECT_OK(provider.SetProperty(kEndpointAddressProperty,
-                                 fake_server->listen_addr()));
-  EXPECT_OK(provider.SetProperty(kChannelCredentialsProperty, "insecure"));
+  SetFakeKmsProviderProperties(&provider, fake_server->listen_addr());
 
   NCRYPT_PROV_HANDLE provider_handle =
       reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
@@ -460,10 +451,7 @@ TEST(BridgeTest, FreeKeyInvalidHandleCombination) {
   kms_v1::CryptoKeyVersion ckv = NewCryptoKeyVersion(client.get());
 
   Provider provider;
-  // Set custom properties to hit fake KMS.
-  EXPECT_OK(provider.SetProperty(kEndpointAddressProperty,
-                                 fake_server->listen_addr()));
-  EXPECT_OK(provider.SetProperty(kChannelCredentialsProperty, "insecure"));
+  SetFakeKmsProviderProperties(&provider, fake_server->listen_addr());
 
   NCRYPT_PROV_HANDLE provider_handle =
       reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
@@ -490,10 +478,7 @@ TEST(BridgeTest, GetKeyPropertyGetSizeSuccess) {
   kms_v1::CryptoKeyVersion ckv = NewCryptoKeyVersion(client.get());
 
   Provider provider;
-  // Set custom properties to hit fake KMS.
-  EXPECT_OK(provider.SetProperty(kEndpointAddressProperty,
-                                 fake_server->listen_addr()));
-  EXPECT_OK(provider.SetProperty(kChannelCredentialsProperty, "insecure"));
+  SetFakeKmsProviderProperties(&provider, fake_server->listen_addr());
 
   NCRYPT_KEY_HANDLE key_handle;
   NCRYPT_PROV_HANDLE provider_handle =
@@ -517,10 +502,7 @@ TEST(BridgeTest, GetKeyPropertySuccess) {
   kms_v1::CryptoKeyVersion ckv = NewCryptoKeyVersion(client.get());
 
   Provider provider;
-  // Set custom properties to hit fake KMS.
-  EXPECT_OK(provider.SetProperty(kEndpointAddressProperty,
-                                 fake_server->listen_addr()));
-  EXPECT_OK(provider.SetProperty(kChannelCredentialsProperty, "insecure"));
+  SetFakeKmsProviderProperties(&provider, fake_server->listen_addr());
 
   NCRYPT_KEY_HANDLE key_handle;
   NCRYPT_PROV_HANDLE provider_handle =
@@ -563,10 +545,7 @@ TEST(BridgeTest, GetKeyPropertyNameNull) {
   kms_v1::CryptoKeyVersion ckv = NewCryptoKeyVersion(client.get());
 
   Provider provider;
-  // Set custom properties to hit fake KMS.
-  EXPECT_OK(provider.SetProperty(kEndpointAddressProperty,
-                                 fake_server->listen_addr()));
-  EXPECT_OK(provider.SetProperty(kChannelCredentialsProperty, "insecure"));
+  SetFakeKmsProviderProperties(&provider, fake_server->listen_addr());
 
   NCRYPT_KEY_HANDLE key_handle;
   NCRYPT_PROV_HANDLE provider_handle =
@@ -588,10 +567,7 @@ TEST(BridgeTest, GetKeyPropertyOutputBufferNull) {
   kms_v1::CryptoKeyVersion ckv = NewCryptoKeyVersion(client.get());
 
   Provider provider;
-  // Set custom properties to hit fake KMS.
-  EXPECT_OK(provider.SetProperty(kEndpointAddressProperty,
-                                 fake_server->listen_addr()));
-  EXPECT_OK(provider.SetProperty(kChannelCredentialsProperty, "insecure"));
+  SetFakeKmsProviderProperties(&provider, fake_server->listen_addr());
 
   NCRYPT_KEY_HANDLE key_handle;
   NCRYPT_PROV_HANDLE provider_handle =
@@ -613,10 +589,7 @@ TEST(BridgeTest, GetKeyPropertyInvalidFlag) {
   kms_v1::CryptoKeyVersion ckv = NewCryptoKeyVersion(client.get());
 
   Provider provider;
-  // Set custom properties to hit fake KMS.
-  EXPECT_OK(provider.SetProperty(kEndpointAddressProperty,
-                                 fake_server->listen_addr()));
-  EXPECT_OK(provider.SetProperty(kChannelCredentialsProperty, "insecure"));
+  SetFakeKmsProviderProperties(&provider, fake_server->listen_addr());
 
   NCRYPT_KEY_HANDLE key_handle;
   NCRYPT_PROV_HANDLE provider_handle =
@@ -641,10 +614,7 @@ TEST(BridgeTest, GetKeyPropertyInvalidName) {
   kms_v1::CryptoKeyVersion ckv = NewCryptoKeyVersion(client.get());
 
   Provider provider;
-  // Set custom properties to hit fake KMS.
-  EXPECT_OK(provider.SetProperty(kEndpointAddressProperty,
-                                 fake_server->listen_addr()));
-  EXPECT_OK(provider.SetProperty(kChannelCredentialsProperty, "insecure"));
+  SetFakeKmsProviderProperties(&provider, fake_server->listen_addr());
 
   NCRYPT_KEY_HANDLE key_handle;
   NCRYPT_PROV_HANDLE provider_handle =
@@ -669,10 +639,7 @@ TEST(BridgeTest, GetKeyPropertyOutputBufferTooShort) {
   kms_v1::CryptoKeyVersion ckv = NewCryptoKeyVersion(client.get());
 
   Provider provider;
-  // Set custom properties to hit fake KMS.
-  EXPECT_OK(provider.SetProperty(kEndpointAddressProperty,
-                                 fake_server->listen_addr()));
-  EXPECT_OK(provider.SetProperty(kChannelCredentialsProperty, "insecure"));
+  SetFakeKmsProviderProperties(&provider, fake_server->listen_addr());
 
   NCRYPT_KEY_HANDLE key_handle;
   NCRYPT_PROV_HANDLE provider_handle =
