@@ -48,6 +48,11 @@ cc_test(
     size = "small",
     srcs = ["registered_provider_test.cc"],
     linkopts = ["-DEFAULTLIB:ncrypt.lib"],
+    tags = [
+        # This test is manual because it relies on the output of the
+        # move_dll_to_system32 genrule, and for some reason that's flaky.
+        "manual",
+    ],
     target_compatible_with = ["@platforms//os:windows"],
     deps = [
         ":register_provider",
