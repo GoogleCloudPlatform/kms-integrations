@@ -234,6 +234,7 @@ _gax_java_version = "2.18.1"
 
 http_archive(
     name = "com_google_api_gax_java",
+    sha256 = "0d7baa60f068a7f29da90e3ad61ebf2f3d19e7cb69a64903ae235498331cdac0",
     strip_prefix = "gax-java-%s" % _gax_java_version,
     urls = ["https://github.com/googleapis/gax-java/archive/v%s.zip" % _gax_java_version],
 )
@@ -259,6 +260,7 @@ _gapic_generator_java_version = "2.8.2"
 
 http_archive(
     name = "gapic_generator_java",
+    sha256 = "93556f2040c38d5e51c6bb84cb66993ba1935d5a7dc82d1aaf4ce1093446c201",
     strip_prefix = "gapic-generator-java-%s" % _gapic_generator_java_version,
     urls = ["https://github.com/googleapis/gapic-generator-java/archive/v%s.zip" % _gapic_generator_java_version],
 )
