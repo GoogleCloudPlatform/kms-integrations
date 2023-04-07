@@ -41,7 +41,13 @@ export LLVM_DIST="clang+llvm-${LLVM_VERSION}-x86_64-linux-gnu-ubuntu-16.04"
 export LLVM_ROOT=/opt/${LLVM_DIST}
 sudo tar xf "${KOKORO_GFILE_DIR}/${LLVM_DIST}.tar.xz" -C /opt
 
-use_bazel.sh 4.2.1
+# Get Bazelisk
+sudo tar xf "${KOKORO_GFILE_DIR}/go1.20.3.linux-amd64.tar.gz" -C /opt
+export GOROOT=/opt/go
+export GOPATH=${KOKORO_ARTIFACTS_DIR}/gopath
+${GOROOT}/bin/go install github.com/bazelbuild/bazelisk@latest
+shopt -s expand_aliases
+alias bazelisk=${GOPATH}/bin/bazelisk
 
 # Configure user.bazelrc with remote build caching options
 cp .kokoro/remote_cache.bazelrc user.bazelrc
@@ -70,11 +76,14 @@ export CC=${LLVM_ROOT}/bin/clang
 export BAZEL_CXXOPTS=-stdlib=libc++
 export BAZEL_LINKLIBS=-nostdlib++:-L${LLVM_ROOT}/lib:-l%:libc++.a:-l%:libc++abi.a
 
+# Ensure Bazel version information is included in the build log
+bazelisk version
+
 export BAZEL_ARGS="-c opt --keep_going ${BAZEL_EXTRA_ARGS}"
 
-bazel test ${BAZEL_ARGS} ... :ci_only_tests
+bazelisk test ${BAZEL_ARGS} ... :ci_only_tests
 
-bazel run ${BAZEL_ARGS} //kmsp11/tools/buildsigner -- \
+bazelisk run ${BAZEL_ARGS} //kmsp11/tools/buildsigner -- \
   -signing_key=${BUILD_SIGNING_KEY} \
   < bazel-bin/kmsp11/main/libkmsp11.so \
   > ${RESULTS_DIR}/libkmsp11.so.sig

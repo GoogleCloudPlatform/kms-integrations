@@ -39,10 +39,14 @@ mkdir "${RESULTS_DIR}"
 # have been turned down.
 tar zxvf ${KOKORO_GFILE_DIR}/freebsd11-amd64-packages.tar.gz -C ${KOKORO_ARTIFACTS_DIR}
 pushd ${KOKORO_ARTIFACTS_DIR}/freebsd11-amd64-packages
-sudo pkg add openjdk8-8.275.01.1.txz  # Required by bazel-4.2.1
-sudo pkg add bazel-4.2.1.txz
+#  Required for BoringSSL FIPS builds.
 sudo pkg add cmake-3.19.2.txz
 sudo pkg add ninja-1.10.2,2.txz
+# Required for building Bazel from source
+sudo pkg add openjdk8-8.275.01.1.txz
+sudo pkg add bazel-4.2.1.txz
+sudo pkg add unzip-6.0_8.txz
+sudo pkg add zip-3.0_1.txz
 popd
 
 # Make Bazel use a JDK that isn't a million years old, which fixes weird
@@ -52,6 +56,15 @@ export JAVA_HOME=/usr/local/openjdk11
 # Configure user.bazelrc with remote build caching options
 cp .kokoro/remote_cache.bazelrc user.bazelrc
 echo "build --remote_default_exec_properties=cache-silo-key=freebsd" >> user.bazelrc
+
+# Build a more modern Bazel than what's on FreeBSD 11. :-(
+pushd build/bazel
+bazel --bazelrc=${PROJECT_ROOT}/user.bazelrc build :bazel > ${RESULTS_DIR}/bazel_build.log
+shopt -s expand_aliases
+alias local_bazel=`pwd`/bazel-bin/bazel
+popd
+# Fail loudly if it's the wrong version.
+local_bazel version | grep $(cat .bazelversion)
 
 # Ensure that build outputs and test logs are uploaded even on failure
 _upload_artifacts() {
@@ -72,11 +85,14 @@ _upload_artifacts() {
 }
 trap _upload_artifacts EXIT
 
+# Ensure Bazel version information is included in the build log
+local_bazel version
+
 export BAZEL_ARGS="-c opt --keep_going ${BAZEL_EXTRA_ARGS}"
 
-bazel test ${BAZEL_ARGS} ... :ci_only_tests
+local_bazel test ${BAZEL_ARGS} ... :ci_only_tests
 
-bazel run ${BAZEL_ARGS} //kmsp11/tools/buildsigner -- \
+local_bazel run ${BAZEL_ARGS} //kmsp11/tools/buildsigner -- \
   -signing_key=${BUILD_SIGNING_KEY} \
   < bazel-bin/kmsp11/main/libkmsp11.so \
   > ${RESULTS_DIR}/libkmsp11.so.sig

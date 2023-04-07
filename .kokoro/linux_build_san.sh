@@ -44,7 +44,13 @@ sudo tar xf "${KOKORO_GFILE_DIR}/${LLVM_DIST}.tar.xz" -C /opt
 echo "BAZEL_EXTRA_ARGS:"
 echo "${BAZEL_EXTRA_ARGS}"
 
-use_bazel.sh 4.2.1
+# Get Bazelisk
+sudo tar xf "${KOKORO_GFILE_DIR}/go1.20.3.linux-amd64.tar.gz" -C /opt
+export GOROOT=/opt/go
+export GOPATH=${KOKORO_ARTIFACTS_DIR}/gopath
+${GOROOT}/bin/go install github.com/bazelbuild/bazelisk@latest
+shopt -s expand_aliases
+alias bazelisk=${GOPATH}/bin/bazelisk
 
 # Configure user.bazelrc with remote build caching options
 cp .kokoro/remote_cache.bazelrc user.bazelrc
@@ -68,7 +74,10 @@ export BAZEL_CXXOPTS=-nostdinc++
 export BAZEL_LINKLIBS=-L${LLVM_ROOT}/lib:-lc++:-lc++abi:-Wl,-rpath=${LLVM_ROOT}/lib
 export SYMBOLIZER_PATH=${LLVM_ROOT}/bin/llvm-symbolizer
 
-bazel test ... \
+# Ensure Bazel version information is included in the build log
+bazelisk version
+
+bazelisk test ... \
   --keep_going \
   --test_env=ASAN_SYMBOLIZER_PATH=${SYMBOLIZER_PATH} \
   --test_env=TSAN_SYMBOLIZER_PATH=${SYMBOLIZER_PATH} \

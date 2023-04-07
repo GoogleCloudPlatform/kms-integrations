@@ -1,0 +1,9 @@
+genrule(
+    name = "local_bazel",
+    srcs = ["@bazel_dist//file"],
+    outs = ["bazel"],
+    cmd = "unzip $(location @bazel_dist//file);" +
+          "sudo ln -sf /usr/local/bin/bash /bin/bash;" +
+          "env EXTRA_BAZEL_ARGS='--tool_java_runtime_version=local_jdk' bash ./compile.sh;" +
+          "cp output/bazel $@",
+)

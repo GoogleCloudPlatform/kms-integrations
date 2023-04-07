@@ -13,6 +13,9 @@ build:macos --host_cxxopt=-std=c++17 --host_linkopt=-std=c++17
 build:windows --cxxopt=/std:c++17 --linkopt=/std:c++17
 build:windows --host_cxxopt=/std:c++17 --host_linkopt=/std:c++17
 
+# Java version
+build --java_language_version=11 --tool_java_language_version=11
+
 # FreeBSD-specific options
 # Link with libm, which is separated from libc on FreeBSD
 build:freebsd --linkopt=-lm
@@ -20,21 +23,18 @@ build:freebsd --linkopt=-lm
 build:freebsd --copt=-fPIC
 # Java Version
 # The Bazel remote_jdk11 target doesn't exist for FreeBSD, so we rely on a
-# locally installed JDK.
-build:freebsd --define=ABSOLUTE_JAVABASE=/usr/local/openjdk11
-build:freebsd --host_javabase=@bazel_tools//tools/jdk:absolute_javabase
-build:freebsd --javabase=@bazel_tools//tools/jdk:absolute_javabase
-build:freebsd --host_java_toolchain=@bazel_tools//tools/jdk:toolchain_vanilla
-build:freebsd --java_toolchain=@bazel_tools//tools/jdk:toolchain_vanilla
+# locally installed JDK specified with the JAVA_HOME environment variable.
+build:freebsd --extra_toolchains=@local_jdk//:all
+build:freebsd --java_runtime_version=local_jdk
+build:freebsd --tool_java_runtime_version=local_jdk
+# Strict Java dependency checking seems broken with Local JDK. :-(
+build:freebsd --experimental_strict_java_deps=warn
 
 # Linux-specific options
 # Position-independent code
 build:linux --copt=-fPIC
 # Java Version
-build:linux --host_javabase=@bazel_tools//tools/jdk:remote_jdk11
-build:linux --javabase=@bazel_tools//tools/jdk:remote_jdk11
-build:linux --host_java_toolchain=@bazel_tools//tools/jdk:toolchain_java11
-build:linux --java_toolchain=@bazel_tools//tools/jdk:toolchain_java11
+build:linux --java_runtime_version=remotejdk_11
 
 # macOS-specific options
 # Ensure compatibility with all macOS versions currently supported by Apple.
@@ -43,11 +43,9 @@ build:macos --copt=-mmacosx-version-min=10.15
 build:macos --copt=-DGRPC_BAZEL_BUILD
 # Workaround for build issue: https://github.com/bazelbuild/bazel/issues/4341#issuecomment-758361769
 build:macos --features=-supports_dynamic_linker
+build:macos --dynamic_mode=off
 # Java Version
-build:macos --host_javabase=@bazel_tools//tools/jdk:remote_jdk11
-build:macos --javabase=@bazel_tools//tools/jdk:remote_jdk11
-build:macos --host_java_toolchain=@bazel_tools//tools/jdk:toolchain_java11
-build:macos --java_toolchain=@bazel_tools//tools/jdk:toolchain_java11
+build:macos --java_runtime_version=remotejdk_11
 
 # Windows-specific options
 # Prevent glog symbols from being exported with `__declspec(dllexport)`
@@ -56,10 +54,7 @@ build:windows --cxxopt=/DGOOGLE_GLOG_DLL_DECL=
 # https://code.google.com/archive/p/google-glog/issues/33
 build:windows --cxxopt=/DGLOG_NO_ABBREVIATED_SEVERITIES
 # Java Version
-build:windows --host_javabase=@bazel_tools//tools/jdk:remote_jdk11
-build:windows --javabase=@bazel_tools//tools/jdk:remote_jdk11
-build:windows --host_java_toolchain=@bazel_tools//tools/jdk:toolchain_java11
-build:windows --java_toolchain=@bazel_tools//tools/jdk:toolchain_java11
+build:windows --java_runtime_version=remotejdk_11
 
 # x86 builds on amd64
 build:m32 --copt=-m32 --linkopt=-m32 --test_tag_filters=-no_m32

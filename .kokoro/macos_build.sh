@@ -42,8 +42,6 @@ go run ./.kokoro/unwrap_key.go \
   -wrapped_key_file=${KOKORO_GFILE_DIR}/oss-tools-ci-key.json.enc \
   > ${GOOGLE_APPLICATION_CREDENTIALS}
 
-export USE_BAZEL_VERSION=4.2.1
-
 # Configure user.bazelrc with remote build caching options
 cp .kokoro/remote_cache.bazelrc user.bazelrc
 echo "build --remote_default_exec_properties=cache-silo-key=macos" >> user.bazelrc
@@ -74,6 +72,9 @@ _finish() {
     "${PROJECT_ROOT}/bazel-testlogs" "${RESULTS_DIR}/testlogs"
 }
 trap _finish EXIT
+
+# Ensure Bazel version information is included in the build log
+bazelisk version
 
 export BAZEL_ARGS="-c opt --keep_going ${BAZEL_EXTRA_ARGS}"
 

@@ -71,10 +71,10 @@ http_archive(
 )
 
 http_archive(
-    name = "com_google_googletest",  # 2020-04-03
-    sha256 = "363089f62b375e6a73b7149015e7fe92e50d124ab4e95ba062774c496d96f2fc",
-    strip_prefix = "googletest-e3f0319d89f4cbf32993de595d984183b1a9fc57",
-    url = "https://github.com/google/googletest/archive/e3f0319d89f4cbf32993de595d984183b1a9fc57.zip",
+    name = "com_google_googletest",  # 2023-01-17
+    sha256 = "ad7fdba11ea011c1d925b3289cf4af2c66a352e18d4c7264392fead75e919363",
+    strip_prefix = "googletest-1.13.0",
+    url = "https://github.com/google/googletest/archive/v1.13.0.tar.gz",
 )
 
 http_archive(
@@ -323,3 +323,11 @@ gazelle_dependencies()
 load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
 
 protobuf_deps()
+
+# Locally built Bazel. Details at ./build/bazel/README.md
+# Adding a local_repository reference to that workspace ensures that this workspace
+# sees it as separate, and `bazel build ...` skips ./build/bazel.
+local_repository(
+    name = "local_bazel",
+    path = "./build/bazel",
+)

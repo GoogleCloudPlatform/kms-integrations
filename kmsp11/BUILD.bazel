@@ -102,7 +102,7 @@ genrule(
 cc_library(
     name = "cryptoki_raw_headers",
     hdrs = [":cryptoki_raw_header_files"],
-    include_prefix = "",
+    include_prefix = ".",  # https://github.com/bazelbuild/bazel/issues/17039
 )
 
 cc_library(

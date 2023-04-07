@@ -23,7 +23,12 @@ cd "%PROJECT_ROOT%"
 set RESULTS_DIR=%KOKORO_ARTIFACTS_DIR%\results
 mkdir "%RESULTS_DIR%"
 
-choco install -y bazel --version 4.2.1
+:: Get Bazelisk
+msiexec /i %KOKORO_GFILE_DIR%\go1.20.3.windows-amd64.msi /qn
+set GOROOT=C:\Program Files\go
+set GOPATH=%KOKORO_ARTIFACTS_DIR%\gopath
+"%GOROOT%\bin\go.exe" install github.com/bazelbuild/bazelisk@latest
+set PATH=%GOPATH%\bin;%PATH%
 
 :: Install Microsoft's CNG SDK, stored in GCS for convenience.
 :: Install all features, without displaying the GUI.
@@ -45,14 +50,14 @@ mkdir T:\buildtmp
 set TMP=T:\buildtmp
 
 :: Ensure Bazel version information is included in the build log
-bazel version
+bazelisk version
 
 set BAZEL_ARGS=-c opt --keep_going %BAZEL_EXTRA_ARGS%
 
-bazel test %BAZEL_ARGS% ... :ci_only_tests
+bazelisk test %BAZEL_ARGS% ... :ci_only_tests
 set RV=%ERRORLEVEL%
 
-bazel run %BAZEL_ARGS% //kmsp11/tools/buildsigner -- ^
+bazelisk run %BAZEL_ARGS% //kmsp11/tools/buildsigner -- ^
   -signing_key=%BUILD_SIGNING_KEY% ^
   < "%PROJECT_ROOT%\bazel-bin\kmsp11\main\libkmsp11.so" ^
   > "%RESULTS_DIR%\kmsp11.dll.sig"
