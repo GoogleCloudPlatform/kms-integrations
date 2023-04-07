@@ -16,8 +16,8 @@
 
 #include <string_view>
 
+#include "common/openssl.h"
 #include "common/status_macros.h"
-#include "kmsp11/openssl.h"
 #include "kmsp11/operation/crypter_interfaces.h"
 #include "kmsp11/operation/preconditions.h"
 #include "kmsp11/util/crypto_utils.h"

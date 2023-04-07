@@ -21,6 +21,7 @@
 
 #include "absl/time/time.h"
 #include "common/kms_v1.h"
+#include "common/openssl.h"
 #include "common/test/resource_helpers.h"
 #include "common/test/test_status_macros.h"
 #include "fakekms/cpp/fakekms.h"
@@ -28,7 +29,6 @@
 #include "google/cloud/kms/v1/service.grpc.pb.h"
 #include "google/cloud/kms/v1/service.pb.h"
 #include "kmsp11/object.h"
-#include "kmsp11/openssl.h"
 
 namespace cloud_kms::kmsp11 {
 

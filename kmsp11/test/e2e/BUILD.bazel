@@ -12,8 +12,8 @@ cc_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
+        "//common:openssl",
         "//kmsp11:cryptoki_headers",
-        "//kmsp11:openssl",
         "//kmsp11/test:resource_helpers",
         "//kmsp11/test:test_platform",
         "@com_github_google_glog//:glog",

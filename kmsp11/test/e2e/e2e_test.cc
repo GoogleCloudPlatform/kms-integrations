@@ -23,6 +23,7 @@
 #include "absl/flags/parse.h"
 #include "absl/strings/str_format.h"
 #include "common/kms_v1.h"
+#include "common/openssl.h"
 #include "common/test/test_status_macros.h"
 #include "glog/logging.h"
 #include "gmock/gmock.h"
@@ -30,7 +31,6 @@
 #include "gtest/gtest.h"
 #include "kmsp11/cryptoki.h"
 #include "kmsp11/kmsp11.h"
-#include "kmsp11/openssl.h"
 #include "kmsp11/test/resource_helpers.h"
 #include "kmsp11/test/test_platform.h"
 

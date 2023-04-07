@@ -24,8 +24,8 @@
 #include "absl/status/statusor.h"
 #include "absl/time/time.h"
 #include "absl/types/span.h"
+#include "common/openssl.h"
 #include "common/string_utils.h"
-#include "kmsp11/openssl.h"
 
 namespace cloud_kms::kmsp11 {
 

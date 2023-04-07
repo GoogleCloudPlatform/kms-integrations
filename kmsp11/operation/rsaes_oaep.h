@@ -17,7 +17,7 @@
 #ifndef KMSP11_OPERATION_RSAES_OAEP_H_
 #define KMSP11_OPERATION_RSAES_OAEP_H_
 
-#include "kmsp11/openssl.h"
+#include "common/openssl.h"
 #include "kmsp11/operation/crypter_interfaces.h"
 
 namespace cloud_kms::kmsp11 {

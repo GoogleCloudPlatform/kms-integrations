@@ -122,4 +122,13 @@ void X509_SIG_getm(X509_SIG* sig, X509_ALGOR** out_alg,
 #endif  // OPENSSL_VERSION_NUMBER
 #endif  // OPENSSL_IS_BORINGSSL
 
+namespace cloud_kms {
+
+static const bool kCryptoLibraryInitialized = [] {
+  CRYPTO_library_init();
+  return true;
+}();
+
+}  // namespace cloud_kms
+
 #endif  // COMMON_OPENSSL_H_

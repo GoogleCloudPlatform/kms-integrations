@@ -18,7 +18,7 @@
 #define KMSP11_CERT_AUTHORITY_H_
 
 #include "common/kms_client.h"
-#include "kmsp11/openssl.h"
+#include "common/openssl.h"
 #include "kmsp11/util/crypto_utils.h"
 
 namespace cloud_kms::kmsp11 {

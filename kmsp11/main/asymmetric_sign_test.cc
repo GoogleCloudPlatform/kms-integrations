@@ -15,13 +15,13 @@
 #include <fstream>
 
 #include "absl/cleanup/cleanup.h"
+#include "common/openssl.h"
 #include "common/test/test_status_macros.h"
 #include "fakekms/cpp/fakekms.h"
 #include "gmock/gmock.h"
 #include "kmsp11/config/config.h"
 #include "kmsp11/kmsp11.h"
 #include "kmsp11/main/bridge.h"
-#include "kmsp11/openssl.h"
 #include "kmsp11/test/common_setup.h"
 #include "kmsp11/test/matchers.h"
 #include "kmsp11/test/resource_helpers.h"

@@ -19,7 +19,7 @@
 
 #include <string_view>
 
-#include "kmsp11/openssl.h"
+#include "common/openssl.h"
 #include "kmsp11/operation/crypter_interfaces.h"
 #include "kmsp11/operation/kms_prehashed_signer.h"
 #include "kmsp11/util/string_utils.h"

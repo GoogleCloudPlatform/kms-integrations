@@ -17,9 +17,9 @@
 #include "absl/strings/escaping.h"
 #include "absl/strings/str_format.h"
 #include "absl/time/clock.h"
+#include "common/openssl.h"
 #include "fakekms/cpp/fakekms.h"
 #include "kmsp11/main/bridge.h"
-#include "kmsp11/openssl.h"
 #include "kmsp11/test/runfiles.h"
 #include "kmsp11/util/crypto_utils.h"
 

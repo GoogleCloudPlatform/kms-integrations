@@ -21,8 +21,8 @@
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/status/statusor.h"
+#include "common/openssl.h"
 #include "kmsp11/cryptoki.h"
-#include "kmsp11/openssl.h"
 #include "kmsp11/util/string_utils.h"
 
 namespace cloud_kms::kmsp11 {

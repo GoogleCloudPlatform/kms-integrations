@@ -7,15 +7,15 @@ cc_library(
     srcs = ["crypto_utils.cc"],
     hdrs = ["crypto_utils.h"],
     visibility = [
-        "//common:__subpackages__", # TODO(bdhess): remove
+        "//common:__subpackages__",  # TODO(bdhess): remove
         "//kmsp11:__subpackages__",
     ],
     deps = [
         ":errors",
         "//common:kms_v1",
+        "//common:openssl",
         "//common:status_macros",
         "//kmsp11:cryptoki_headers",
-        "//kmsp11:openssl",
         "@com_google_absl//absl/random",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/synchronization",
@@ -190,9 +190,9 @@ cc_library(
     hdrs = ["string_utils.h"],
     deps = [
         ":errors",
+        "//common:openssl",
         "//common:string_utils",
         "//kmsp11:cryptoki_headers",
-        "//kmsp11:openssl",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
