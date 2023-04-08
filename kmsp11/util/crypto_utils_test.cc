@@ -383,20 +383,17 @@ TEST(MarshalEcPointTest, PointMarshaled) {
                        MarshalEcPointToAsn1OctetStringDer(key.get()));
 
   // Deserialize the public key point to an ASN.1 octet string
-  bssl::UniquePtr<ASN1_OCTET_STRING> point_string_owner(
-      ASN1_OCTET_STRING_new());
-  ASN1_OCTET_STRING* point_string = point_string_owner.get();
   const uint8_t* point_data =
       reinterpret_cast<const uint8_t*>(point_der.data());
-  EXPECT_TRUE(
-      d2i_ASN1_OCTET_STRING(&point_string, &point_data, point_der.size()));
+  bssl::UniquePtr<ASN1_OCTET_STRING> point_string(
+      d2i_ASN1_OCTET_STRING(nullptr, &point_data, point_der.size()));
 
   // Deserialize the octet string's contents to an EC_POINT
   bssl::UniquePtr<EC_POINT> point(EC_POINT_new(group.get()));
   bssl::UniquePtr<BN_CTX> bn_ctx(BN_CTX_new());
   EXPECT_TRUE(EC_POINT_oct2point(
-      group.get(), point.get(), ASN1_STRING_get0_data(point_string),
-      ASN1_STRING_length(point_string), bn_ctx.get()));
+      group.get(), point.get(), ASN1_STRING_get0_data(point_string.get()),
+      ASN1_STRING_length(point_string.get()), bn_ctx.get()));
 
   // Ensure the retrieved point matches the original
   EXPECT_EQ(EC_POINT_cmp(group.get(), EC_KEY_get0_public_key(key.get()),

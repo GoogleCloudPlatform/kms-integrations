@@ -48,10 +48,11 @@ absl::Status SetRandomSerial(X509* x509) {
 
 // Adds the extension identified by nid with the specified value to the
 // list of extensions in the X509 ctx.
-absl::Status AddExtension(X509V3_CTX* ctx, int nid, const char* value) {
+absl::Status AddExtension(X509V3_CTX* ctx, X509* cert, int nid,
+                          const char* value) {
   bssl::UniquePtr<X509_EXTENSION> ext(X509V3_EXT_nconf_nid(
       /* conf */ nullptr, ctx, nid, const_cast<char*>(value)));
-  if (!ext || X509_add_ext(ctx->subject_cert, ext.get(), kLocationEnd) != 1) {
+  if (!ext || X509_add_ext(cert, ext.get(), kLocationEnd) != 1) {
     return NewInternalError(absl::StrFormat("error adding extension %d: %s",
                                             nid, SslErrorToString()),
                             SOURCE_LOCATION);
@@ -67,8 +68,8 @@ absl::StatusOr<std::unique_ptr<CertAuthority>> CertAuthority::New() {
   // Generate a new P-256 key for certificate signing.
   EVP_PKEY* signing_key = nullptr;
   if (!ctx || EVP_PKEY_keygen_init(ctx.get()) != 1 ||
-      EVP_PKEY_CTX_set_ec_paramgen_curve_nid(ctx.get(),
-                                             NID_X9_62_prime256v1) != 1 ||
+      EVP_PKEY_CTX_set_ec_paramgen_curve_nid(ctx.get(), NID_X9_62_prime256v1) !=
+          1 ||
       EVP_PKEY_keygen(ctx.get(), &signing_key) != 1 || !signing_key) {
     return NewInternalError(
         absl::StrCat("error generating signing key: ", SslErrorToString()),
@@ -145,13 +146,14 @@ absl::StatusOr<bssl::UniquePtr<X509>> CertAuthority::GenerateCert(
   bssl::UniquePtr<CONF> ext_conf(NCONF_new(nullptr));
   X509V3_set_nconf(&ctx, ext_conf.get());
 
-  RETURN_IF_ERROR(
-      AddExtension(&ctx, NID_basic_constraints, "critical,CA:false"));
+  RETURN_IF_ERROR(AddExtension(&ctx, cert.get(), NID_basic_constraints,
+                               "critical,CA:false"));
   RETURN_IF_ERROR(AddExtension(
-      &ctx, NID_certificate_policies,
+      &ctx, cert.get(), NID_certificate_policies,
       // any policy, from https://tools.ietf.org/html/rfc5280#section-4.2.1.4
       "2.5.29.32.0"));
-  RETURN_IF_ERROR(AddExtension(&ctx, NID_subject_key_identifier, "hash"));
+  RETURN_IF_ERROR(
+      AddExtension(&ctx, cert.get(), NID_subject_key_identifier, "hash"));
 
   // TODO(bdhess): Consider adding authority key identifier. It's somewhat
   // complicated by the fact that we don't actually generate a self-signed CA
@@ -160,12 +162,13 @@ absl::StatusOr<bssl::UniquePtr<X509>> CertAuthority::GenerateCert(
   ASSIGN_OR_RETURN(AlgorithmDetails algorithm, GetDetails(ckv.algorithm()));
   switch (algorithm.purpose) {
     case kms_v1::CryptoKey::ASYMMETRIC_SIGN:
-      RETURN_IF_ERROR(
-          AddExtension(&ctx, NID_key_usage, "critical,digitalSignature"));
+      RETURN_IF_ERROR(AddExtension(&ctx, cert.get(), NID_key_usage,
+                                   "critical,digitalSignature"));
       break;
     case kms_v1::CryptoKey::ASYMMETRIC_DECRYPT:
-      RETURN_IF_ERROR(AddExtension(
-          &ctx, NID_key_usage, "critical,keyEncipherment,dataEncipherment"));
+      RETURN_IF_ERROR(
+          AddExtension(&ctx, cert.get(), NID_key_usage,
+                       "critical,keyEncipherment,dataEncipherment"));
       break;
     default:
       return NewInternalError(
