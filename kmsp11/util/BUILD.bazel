@@ -28,6 +28,7 @@ cc_test(
     srcs = ["crypto_utils_test.cc"],
     deps = [
         ":crypto_utils",
+        "//common/test:runfiles",
         "//kmsp11/test",
         "@com_google_absl//absl/random",
         "@com_google_googletest//:gtest_main",

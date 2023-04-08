@@ -10,8 +10,19 @@ cc_library(
         ":matchers",
         ":proto_parser",
         ":resource_helpers",
-        ":runfiles",
         ":test_platform",
+    ],
+)
+
+cc_library(
+    name = "common_setup",
+    testonly = 1,
+    srcs = ["common_setup.cc"],
+    hdrs = ["common_setup.h"],
+    deps = [
+        ":resource_helpers",
+        "//fakekms/cpp:fakekms",
+        "//kmsp11/util:crypto_utils",
     ],
 )
 
@@ -69,9 +80,9 @@ cc_library(
     srcs = ["resource_helpers.cc"],
     hdrs = ["resource_helpers.h"],
     deps = [
-        ":runfiles",
         "//common:kms_v1",
         "//common/test:resource_helpers",
+        "//common/test:runfiles",
         "//common/test:test_status_macros",
         "//fakekms/cpp:fakekms",
         "//kmsp11:object",
@@ -79,38 +90,6 @@ cc_library(
         "//kmsp11/util:crypto_utils",
         "@com_google_absl//absl/strings",
     ],
-)
-
-cc_library(
-    name = "runfiles",
-    testonly = 1,
-    srcs = ["runfiles.cc"],
-    hdrs = ["runfiles.h"],
-    data = [":testdata"],
-    deps = [
-        "@bazel_tools//tools/cpp/runfiles",
-        "@com_github_google_glog//:glog",
-        "@com_google_absl//absl/status:statusor",
-        "@com_google_absl//absl/strings",
-        "@com_google_googletest//:gtest",
-    ],
-)
-
-cc_library(
-    name = "common_setup",
-    testonly = 1,
-    srcs = ["common_setup.cc"],
-    hdrs = ["common_setup.h"],
-    deps = [
-        ":resource_helpers",
-        "//fakekms/cpp:fakekms",
-        "//kmsp11/util:crypto_utils",
-    ],
-)
-
-filegroup(
-    name = "testdata",
-    srcs = glob(["testdata/*"]),
 )
 
 cc_library(

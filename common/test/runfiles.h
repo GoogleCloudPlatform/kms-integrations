@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-#ifndef KMSP11_TEST_RUNFILES_H_
-#define KMSP11_TEST_RUNFILES_H_
+#ifndef COMMON_TEST_RUNFILES_H_
+#define COMMON_TEST_RUNFILES_H_
 
 #include <string>
 
 #include "absl/status/statusor.h"
 
-namespace cloud_kms::kmsp11 {
+namespace cloud_kms {
 
 // Resolves the absolute location of the provided runfile.
 std::string RunfileLocation(std::string_view filename);
@@ -29,6 +29,6 @@ std::string RunfileLocation(std::string_view filename);
 // Loads the testdata file with the provided filename into a string.
 absl::StatusOr<std::string> LoadTestRunfile(std::string_view filename);
 
-}  // namespace cloud_kms::kmsp11
+}  // namespace cloud_kms
 
-#endif  // KMSP11_TEST_RUNFILES_H_
+#endif  // COMMON_TEST_RUNFILES_H_

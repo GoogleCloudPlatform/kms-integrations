@@ -43,6 +43,25 @@ cc_library(
     ],
 )
 
+filegroup(
+    name = "testdata",
+    srcs = glob(["testdata/*"]),
+)
+
+cc_library(
+    name = "runfiles",
+    srcs = ["runfiles.cc"],
+    hdrs = ["runfiles.h"],
+    data = [":testdata"],
+    deps = [
+        "@bazel_tools//tools/cpp/runfiles",
+        "@com_github_google_glog//:glog",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_googletest//:gtest",
+    ],
+)
+
 cc_library(
     name = "test_status_macros",
     hdrs = ["test_status_macros.h"],

@@ -79,6 +79,7 @@ cc_test(
     srcs = ["cert_authority_test.cc"],
     deps = [
         ":cert_authority",
+        "//common/test:runfiles",
         "//kmsp11/test",
         "@com_google_googletest//:gtest_main",
     ],
@@ -147,6 +148,7 @@ cc_test(
     deps = [
         ":cert_authority",
         ":object",
+        "//common/test:runfiles",
         "//kmsp11/test",
         "//kmsp11/util:crypto_utils",
         "@com_google_googletest//:gtest_main",
@@ -200,6 +202,7 @@ cc_test(
     srcs = ["object_store_test.cc"],
     deps = [
         ":object_store",
+        "//common/test:runfiles",
         "//kmsp11/test",
         "@com_google_googletest//:gtest_main",
     ],

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "kmsp11/test/runfiles.h"
+#include "common/test/runfiles.h"
 
 #include <fstream>
 
@@ -21,7 +21,7 @@
 #include "gtest/gtest.h"
 #include "tools/cpp/runfiles/runfiles.h"
 
-namespace cloud_kms::kmsp11 {
+namespace cloud_kms {
 namespace {
 
 using ::bazel::tools::cpp::runfiles::Runfiles;
@@ -44,7 +44,7 @@ std::string RunfileLocation(std::string_view filename) {
 
 absl::StatusOr<std::string> LoadTestRunfile(std::string_view filename) {
   std::string location = RunfileLocation(
-      absl::StrCat("com_google_kmstools/kmsp11/test/testdata/", filename));
+      absl::StrCat("com_google_kmstools/common/test/testdata/", filename));
   std::ifstream runfile(location, std::ifstream::in | std::ifstream::binary);
   std::string result((std::istreambuf_iterator<char>(runfile)),
                      (std::istreambuf_iterator<char>()));
@@ -54,4 +54,4 @@ absl::StatusOr<std::string> LoadTestRunfile(std::string_view filename) {
   return result;
 }
 
-}  // namespace cloud_kms::kmsp11
+}  // namespace cloud_kms
