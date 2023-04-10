@@ -24,40 +24,43 @@ set RESULTS_DIR=%KOKORO_ARTIFACTS_DIR%\results
 mkdir "%RESULTS_DIR%"
 
 :: Get Bazelisk
-msiexec /i %KOKORO_GFILE_DIR%\go1.20.3.windows-amd64.msi /qn
-set GOROOT=C:\Program Files\go
 set GOPATH=%KOKORO_ARTIFACTS_DIR%\gopath
-"%GOROOT%\bin\go.exe" install github.com/bazelbuild/bazelisk@latest
+go install github.com/bazelbuild/bazelisk@latest
 set PATH=%GOPATH%\bin;%PATH%
+
+:: Unwrap our wrapped service account key
+set GOOGLE_APPLICATION_CREDENTIALS=%KOKORO_ARTIFACTS_DIR%/oss-tools-ci-key.json
+go run ./.kokoro/unwrap_key.go ^
+  -wrapping_key_file=%KOKORO_KEYSTORE_DIR%/75220_token-wrapping-key ^
+  -wrapped_key_file=%KOKORO_GFILE_DIR%/oss-tools-ci-key.json.enc ^
+  > %GOOGLE_APPLICATION_CREDENTIALS%
 
 :: Install Microsoft's CNG SDK, stored in GCS for convenience.
 :: Install all features, without displaying the GUI.
 %KOKORO_GFILE_DIR%\cpdksetup.exe /features + /quiet
 
-:: Configure user.bazelrc with remote build caching options
+:: Configure user.bazelrc with remote build caching options and Google creds
 copy .kokoro\remote_cache.bazelrc user.bazelrc
 echo build --remote_default_exec_properties=cache-silo-key=windows >> user.bazelrc
+echo test --test_env=GOOGLE_APPLICATION_CREDENTIALS >> user.bazelrc
 
 :: https://docs.bazel.build/versions/master/windows.html#build-c-with-msvc
-set BAZEL_VC=C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\
+set BAZEL_VC=C:\VS\VC\
 
 :: Force msys2 environment instead of Cygwin
-set PATH=C:\tools\msys64\usr\bin;%PATH%
-set BAZEL_SH=C:\tools\msys64\usr\bin\bash.exe
-
-:: Use our scratch drive for temp space
-mkdir T:\buildtmp
-set TMP=T:\buildtmp
+set PATH=C:\msys64\usr\bin;%PATH%
+set BAZEL_SH=C:\msys64\usr\bin\bash.exe
+set BAZEL_ARGS=-c opt --keep_going %BAZEL_EXTRA_ARGS%
+:: https://bazel.build/configure/windows#long-path-issues
+set BAZEL_STARTUP_ARGS=--output_user_root c:\bzltmp
 
 :: Ensure Bazel version information is included in the build log
-bazelisk version
+bazelisk %BAZEL_STARTUP_ARGS% version
 
-set BAZEL_ARGS=-c opt --keep_going %BAZEL_EXTRA_ARGS%
-
-bazelisk test %BAZEL_ARGS% ... :ci_only_tests
+bazelisk %BAZEL_STARTUP_ARGS% test %BAZEL_ARGS% ... :ci_only_tests
 set RV=%ERRORLEVEL%
 
-bazelisk run %BAZEL_ARGS% //kmsp11/tools/buildsigner -- ^
+bazelisk %BAZEL_STARTUP_ARGS% run %BAZEL_ARGS% //kmsp11/tools/buildsigner -- ^
   -signing_key=%BUILD_SIGNING_KEY% ^
   < "%PROJECT_ROOT%\bazel-bin\kmsp11\main\libkmsp11.so" ^
   > "%RESULTS_DIR%\kmsp11.dll.sig"

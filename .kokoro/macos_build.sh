@@ -36,7 +36,7 @@ export RESULTS_DIR="${KOKORO_ARTIFACTS_DIR}/results"
 mkdir "${RESULTS_DIR}"
 
 # Unwrap our wrapped service account key
-export GOOGLE_APPLICATION_CREDENTIALS=${PROJECT_ROOT}/oss-tools-ci-key.json
+export GOOGLE_APPLICATION_CREDENTIALS=${KOKORO_ARTIFACTS_DIR}/oss-tools-ci-key.json
 go run ./.kokoro/unwrap_key.go \
   -wrapping_key_file=${KOKORO_KEYSTORE_DIR}/75220_token-wrapping-key \
   -wrapped_key_file=${KOKORO_GFILE_DIR}/oss-tools-ci-key.json.enc \
