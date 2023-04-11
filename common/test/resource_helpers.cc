@@ -27,9 +27,6 @@ namespace cloud_kms {
 // been moved to common.
 using ::cloud_kms::kmsp11::RandBytes;
 
-const std::string_view kTestLocation =
-    "projects/kmsp11-test/locations/us-central1";
-
 kms_v1::KeyRing CreateKeyRingOrDie(kms_v1::KeyManagementService::Stub* kms_stub,
                                    std::string_view location_name,
                                    std::string_view key_ring_id,

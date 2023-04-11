@@ -70,8 +70,8 @@ TEST(BridgeTest, OpenProviderInvalidHandle) {
 }
 
 TEST(BridgeTest, OpenProviderUnexpectedName) {
-  NCRYPT_PROV_HANDLE* provider_handle;
-  EXPECT_THAT(OpenProvider(provider_handle, MS_KEY_STORAGE_PROVIDER, 0),
+  NCRYPT_PROV_HANDLE provider_handle;
+  EXPECT_THAT(OpenProvider(&provider_handle, MS_KEY_STORAGE_PROVIDER, 0),
               StatusSsIs(NTE_INVALID_PARAMETER));
 }
 

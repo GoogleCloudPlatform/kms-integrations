@@ -24,14 +24,14 @@ namespace cloud_kms::kmscng {
 
 class Object {
  public:
-  static absl::StatusOr<Object*> Object::New(NCRYPT_PROV_HANDLE prov_handle,
-                                             std::string key_name);
+  static absl::StatusOr<Object*> New(NCRYPT_PROV_HANDLE prov_handle,
+                                     std::string key_name);
 
   absl::StatusOr<std::string_view> GetProperty(std::wstring_view name);
 
  private:
-  Object::Object(std::string kms_key_name, std::unique_ptr<KmsClient> client,
-                 absl::flat_hash_map<std::wstring, std::string> info);
+  Object(std::string kms_key_name, std::unique_ptr<KmsClient> client,
+         absl::flat_hash_map<std::wstring, std::string> info);
 
   const std::string kms_key_name_;
   std::unique_ptr<KmsClient> kms_client_;

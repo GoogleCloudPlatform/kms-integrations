@@ -27,7 +27,7 @@ namespace cloud_kms::kmscng {
 
 absl::Status RegisterTestProvider() {
   NTSTATUS status = 0;
-  PWSTR algorithms[1] = {NCRYPT_KEY_STORAGE_ALGORITHM};
+  PWSTR algorithms[1] = {const_cast<wchar_t*>(NCRYPT_KEY_STORAGE_ALGORITHM)};
 
   CRYPT_INTERFACE_REG algorithm_class = {
       NCRYPT_KEY_STORAGE_INTERFACE,  // Ncrypt key storage interface

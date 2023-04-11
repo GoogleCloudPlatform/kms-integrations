@@ -30,7 +30,8 @@
 namespace cloud_kms {
 
 // A location name where test resources should be created.
-ABSL_CONST_INIT extern const std::string_view kTestLocation;
+constexpr std::string_view kTestLocation =
+    "projects/kmsp11-test/locations/us-central1";
 
 // Creates a KeyRing with the provided attributes, or CHECK-fails.
 kms_v1::KeyRing CreateKeyRingOrDie(kms_v1::KeyManagementService::Stub* kms_stub,
