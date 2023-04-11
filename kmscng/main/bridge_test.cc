@@ -20,6 +20,8 @@
 #include "common/test/test_status_macros.h"
 #include "gmock/gmock.h"
 #include "kmscng/cng_headers.h"
+#include "kmscng/object.h"
+#include "kmscng/operation/sign_utils.h"
 #include "kmscng/provider.h"
 #include "kmscng/test/matchers.h"
 #include "kmscng/util/string_utils.h"
@@ -27,6 +29,10 @@
 
 namespace cloud_kms::kmscng {
 namespace {
+
+// TODO(b/270419822): drop these once crypto_utils has been migrated to common.
+using cloud_kms::kmsp11::EcdsaVerifyP1363;
+using cloud_kms::kmsp11::ParseX509PublicKeyDer;
 
 // TODO(b/277099517): replace default arguments with options struct.
 kms_v1::CryptoKeyVersion NewCryptoKeyVersion(
@@ -654,6 +660,173 @@ TEST(BridgeTest, GetKeyPropertyOutputBufferTooShort) {
       GetKeyProperty(provider_handle, key_handle, NCRYPT_KEY_USAGE_PROPERTY,
                      &output, 1, &output_size, 0),
       StatusSsIs(NTE_BUFFER_TOO_SMALL));
+
+  // Clean up memory.
+  EXPECT_OK(FreeKey(provider_handle, key_handle));
+}
+
+TEST(BridgeTest, SignHashGetSignatureSizeSuccess) {
+  ASSERT_OK_AND_ASSIGN(auto fake_server, fakekms::Server::New());
+  auto client = fake_server->NewClient();
+  kms_v1::CryptoKeyVersion ckv = NewCryptoKeyVersion(client.get());
+
+  Provider provider;
+  SetFakeKmsProviderProperties(&provider, fake_server->listen_addr());
+
+  NCRYPT_KEY_HANDLE key_handle;
+  NCRYPT_PROV_HANDLE provider_handle =
+      reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
+  EXPECT_OK(OpenKey(provider_handle, &key_handle,
+                    StringToWide(ckv.name()).data(), 0, 0));
+
+  std::vector<uint8_t> digest(32, '\1');
+  DWORD output_size = 0;
+  EXPECT_OK(SignHash(provider_handle, key_handle, nullptr, digest.data(),
+                     digest.size(), nullptr, 0, &output_size, 0));
+  EXPECT_EQ(output_size, 64);
+
+  // Clean up memory.
+  EXPECT_OK(FreeKey(provider_handle, key_handle));
+}
+
+TEST(BridgeTest, SignHashSuccess) {
+  ASSERT_OK_AND_ASSIGN(auto fake_server, fakekms::Server::New());
+  auto client = fake_server->NewClient();
+  kms_v1::CryptoKeyVersion ckv = NewCryptoKeyVersion(client.get());
+
+  Provider provider;
+  SetFakeKmsProviderProperties(&provider, fake_server->listen_addr());
+
+  NCRYPT_KEY_HANDLE key_handle;
+  NCRYPT_PROV_HANDLE provider_handle =
+      reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
+  EXPECT_OK(OpenKey(provider_handle, &key_handle,
+                    StringToWide(ckv.name()).data(), 0, 0));
+
+  std::vector<uint8_t> digest(32, '\1');
+  std::vector<uint8_t> signature(64);
+  DWORD output_size = 0;
+  EXPECT_OK(SignHash(provider_handle, key_handle, nullptr, digest.data(),
+                     digest.size(), signature.data(), signature.size(),
+                     &output_size, 0));
+
+  ASSERT_OK_AND_ASSIGN(Object * object,
+                       ValidateKeyHandle(provider_handle, key_handle));
+  EXPECT_OK(EcdsaVerifyP1363(
+      object->ec_public_key(), EVP_sha256(),
+      absl::MakeConstSpan(digest.data(), digest.size()),
+      absl::MakeConstSpan(signature.data(), signature.size())));
+
+  // Clean up memory.
+  EXPECT_OK(FreeKey(provider_handle, key_handle));
+}
+
+TEST(BridgeTest, SignHashInvalidProviderHandle) {
+  EXPECT_THAT(SignHash(0, 0, nullptr, nullptr, 0, nullptr, 0, nullptr, 0),
+              StatusSsIs(NTE_INVALID_HANDLE));
+}
+
+TEST(BridgeTest, SignHashInvalidKeyHandle) {
+  NCRYPT_PROV_HANDLE provider_handle;
+  EXPECT_OK(OpenProvider(&provider_handle, kProviderName.data(), 0));
+
+  EXPECT_THAT(
+      SignHash(provider_handle, 0, nullptr, nullptr, 0, nullptr, 0, nullptr, 0),
+      StatusSsIs(NTE_INVALID_HANDLE));
+
+  // Clean up memory.
+  EXPECT_OK(FreeProvider(provider_handle));
+}
+
+TEST(BridgeTest, SignHashPaddingInfoNotNull) {
+  ASSERT_OK_AND_ASSIGN(auto fake_server, fakekms::Server::New());
+  auto client = fake_server->NewClient();
+  kms_v1::CryptoKeyVersion ckv = NewCryptoKeyVersion(client.get());
+
+  Provider provider;
+  SetFakeKmsProviderProperties(&provider, fake_server->listen_addr());
+
+  NCRYPT_KEY_HANDLE key_handle;
+  NCRYPT_PROV_HANDLE provider_handle =
+      reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
+  EXPECT_OK(OpenKey(provider_handle, &key_handle,
+                    StringToWide(ckv.name()).data(), 0, 0));
+
+  DWORD padding_info = 1337;
+  EXPECT_THAT(SignHash(provider_handle, key_handle, &padding_info, nullptr, 0,
+                       nullptr, 0, nullptr, 0),
+              StatusSsIs(NTE_INVALID_PARAMETER));
+
+  // Clean up memory.
+  EXPECT_OK(FreeKey(provider_handle, key_handle));
+}
+
+TEST(BridgeTest, SignHashInputDigestNull) {
+  ASSERT_OK_AND_ASSIGN(auto fake_server, fakekms::Server::New());
+  auto client = fake_server->NewClient();
+  kms_v1::CryptoKeyVersion ckv = NewCryptoKeyVersion(client.get());
+
+  Provider provider;
+  SetFakeKmsProviderProperties(&provider, fake_server->listen_addr());
+
+  NCRYPT_KEY_HANDLE key_handle;
+  NCRYPT_PROV_HANDLE provider_handle =
+      reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
+  EXPECT_OK(OpenKey(provider_handle, &key_handle,
+                    StringToWide(ckv.name()).data(), 0, 0));
+
+  EXPECT_THAT(SignHash(provider_handle, key_handle, nullptr, nullptr, 0,
+                       nullptr, 0, nullptr, 0),
+              StatusSsIs(NTE_INVALID_PARAMETER));
+
+  // Clean up memory.
+  EXPECT_OK(FreeKey(provider_handle, key_handle));
+}
+
+TEST(BridgeTest, SignHashOutputLengthBufferNull) {
+  ASSERT_OK_AND_ASSIGN(auto fake_server, fakekms::Server::New());
+  auto client = fake_server->NewClient();
+  kms_v1::CryptoKeyVersion ckv = NewCryptoKeyVersion(client.get());
+
+  Provider provider;
+  SetFakeKmsProviderProperties(&provider, fake_server->listen_addr());
+
+  NCRYPT_KEY_HANDLE key_handle;
+  NCRYPT_PROV_HANDLE provider_handle =
+      reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
+  EXPECT_OK(OpenKey(provider_handle, &key_handle,
+                    StringToWide(ckv.name()).data(), 0, 0));
+
+  std::vector<uint8_t> digest(32, '\1');
+  EXPECT_THAT(SignHash(provider_handle, key_handle, nullptr, digest.data(),
+                       digest.size(), nullptr, 0, nullptr, 0),
+              StatusSsIs(NTE_INVALID_PARAMETER));
+
+  // Clean up memory.
+  EXPECT_OK(FreeKey(provider_handle, key_handle));
+}
+
+TEST(BridgeTest, SignHashInvalidFlag) {
+  ASSERT_OK_AND_ASSIGN(auto fake_server, fakekms::Server::New());
+  auto client = fake_server->NewClient();
+  kms_v1::CryptoKeyVersion ckv = NewCryptoKeyVersion(client.get());
+
+  Provider provider;
+  SetFakeKmsProviderProperties(&provider, fake_server->listen_addr());
+
+  NCRYPT_KEY_HANDLE key_handle;
+  NCRYPT_PROV_HANDLE provider_handle =
+      reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
+  EXPECT_OK(OpenKey(provider_handle, &key_handle,
+                    StringToWide(ckv.name()).data(), 0, 0));
+
+  uint8_t output;
+  DWORD output_size;
+  std::vector<uint8_t> digest(32, '\1');
+  EXPECT_THAT(SignHash(provider_handle, key_handle, nullptr, digest.data(),
+                       digest.size(), &output, 0, &output_size,
+                       NCRYPT_PERSIST_ONLY_FLAG),
+              StatusSsIs(NTE_BAD_FLAGS));
 
   // Clean up memory.
   EXPECT_OK(FreeKey(provider_handle, key_handle));

@@ -19,6 +19,7 @@
 #include "common/test/test_status_macros.h"
 #include "gmock/gmock.h"
 #include "kmscng/cng_headers.h"
+#include "kmscng/object.h"
 #include "kmscng/provider.h"
 #include "kmscng/test/register_provider.h"
 #include "kmscng/util/string_utils.h"
@@ -199,6 +200,38 @@ TEST_F(RegisteredProviderTest, GetKeyPropertySuccess) {
   EXPECT_EQ(output_size, sizeof(output));
   EXPECT_EQ(output, NCRYPT_ALLOW_SIGNING_FLAG);
 
+  EXPECT_SUCCESS(NCryptFreeObject(key_handle));
+  EXPECT_SUCCESS(NCryptFreeObject(provider_handle));
+}
+
+TEST_F(RegisteredProviderTest, SignHashSuccess) {
+  ASSERT_OK_AND_ASSIGN(auto fake_server, fakekms::Server::New());
+  auto client = fake_server->NewClient();
+  kms_v1::CryptoKeyVersion ckv = CreateTestCryptoKeyVersion(client.get());
+
+  NCRYPT_PROV_HANDLE provider_handle;
+  EXPECT_SUCCESS(
+      NCryptOpenStorageProvider(&provider_handle, kProviderName.data(), 0));
+
+  SetUpFakeKmsProvider(provider_handle, fake_server->listen_addr());
+
+  NCRYPT_KEY_HANDLE key_handle;
+  EXPECT_SUCCESS(NCryptOpenKey(provider_handle, &key_handle,
+                               StringToWide(ckv.name()).data(), 0, 0));
+
+  std::vector<uint8_t> digest(32, '\1');
+  std::vector<uint8_t> signature(64, '\0');
+  std::vector<uint8_t> empty_sig = signature;
+  DWORD output_size = 0;
+  NTSTATUS status =
+      NCryptSignHash(key_handle, nullptr, digest.data(), digest.size(),
+                     signature.data(), signature.size(), &output_size, 0);
+  EXPECT_SUCCESS(status) << absl::StrFormat(
+      "NCryptSignHash failed with error code 0x%08x\n", status);
+  EXPECT_EQ(output_size, signature.size());
+  EXPECT_NE(signature, empty_sig);
+
+  EXPECT_SUCCESS(NCryptFreeObject(key_handle));
   EXPECT_SUCCESS(NCryptFreeObject(provider_handle));
 }
 

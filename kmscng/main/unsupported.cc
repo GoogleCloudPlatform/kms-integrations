@@ -109,17 +109,6 @@ absl::Status ExportKey(
   return NewUnsupportedError(SOURCE_LOCATION);
 }
 
-absl::Status SignHash(__in NCRYPT_PROV_HANDLE hProvider,
-                      __in NCRYPT_KEY_HANDLE hKey, __in_opt VOID* pPaddingInfo,
-                      __in_bcount(cbHashValue) PBYTE pbHashValue,
-                      __in DWORD cbHashValue,
-                      __out_bcount_part_opt(cbSignature, *pcbResult)
-                          PBYTE pbSignature,
-                      __in DWORD cbSignature, __out DWORD* pcbResult,
-                      __in DWORD dwFlags) {
-  return NewUnsupportedError(SOURCE_LOCATION);
-}
-
 absl::Status VerifySignature(__in NCRYPT_PROV_HANDLE hProvider,
                              __in NCRYPT_KEY_HANDLE hKey,
                              __in_opt VOID* pPaddingInfo,

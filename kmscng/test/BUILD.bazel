@@ -59,6 +59,7 @@ cc_test(
         "//common/test:resource_helpers",
         "//common/test:test_status_macros",
         "//kmscng:cng_headers",
+        "//kmscng:object",
         "//kmscng:provider",
         "//kmscng/util:string_utils",
         "@com_google_absl//absl/strings:str_format",

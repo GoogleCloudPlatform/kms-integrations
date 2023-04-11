@@ -21,6 +21,7 @@
 #include "absl/strings/str_format.h"
 #include "common/status_macros.h"
 #include "kmscng/object.h"
+#include "kmscng/operation/sign_utils.h"
 #include "kmscng/provider.h"
 #include "kmscng/util/errors.h"
 #include "kmscng/util/logging.h"
@@ -205,6 +206,56 @@ absl::Status GetKeyProperty(__in NCRYPT_PROV_HANDLE hProvider,
   }
 
   property_value.copy(reinterpret_cast<char*>(pbOutput), property_value.size());
+  return absl::OkStatus();
+}
+
+absl::Status SignHash(__in NCRYPT_PROV_HANDLE hProvider,
+                      __in NCRYPT_KEY_HANDLE hKey, __in_opt VOID* pPaddingInfo,
+                      __in_bcount(cbHashValue) PBYTE pbHashValue,
+                      __in DWORD cbHashValue,
+                      __out_bcount_part_opt(cbSignature, *pcbResult)
+                          PBYTE pbSignature,
+                      __in DWORD cbSignature, __out DWORD* pcbResult,
+                      __in DWORD dwFlags) {
+  ASSIGN_OR_RETURN(Object * object, ValidateKeyHandle(hProvider, hKey));
+  // We won't need padding info until we support PKCS#1 or PSS algorithms.
+  if (pPaddingInfo != nullptr) {
+    return NewInvalidArgumentError("unsupported pPaddingInfo",
+                                   NTE_INVALID_PARAMETER, SOURCE_LOCATION);
+  }
+  if (!pbHashValue) {
+    return NewInvalidArgumentError("pbHashValue cannot be null",
+                                   NTE_INVALID_PARAMETER, SOURCE_LOCATION);
+  }
+  if (!pcbResult) {
+    return NewInvalidArgumentError("pcbResult cannot be null",
+                                   NTE_INVALID_PARAMETER, SOURCE_LOCATION);
+  }
+  RETURN_IF_ERROR(ValidateFlags(dwFlags));
+
+  // Check key properties against the expected AlgorithmDetails.
+  RETURN_IF_ERROR(ValidateKeyPreconditions(object));
+
+  ASSIGN_OR_RETURN(size_t signature_length, SignatureLength(object));
+  *pcbResult = static_cast<uint32_t>(signature_length);
+
+  // Return size required to hold the signature if output buffer is null.
+  if (!pbSignature) {
+    return absl::OkStatus();
+  }
+
+  // Check provided buffer size to ensure the property value fits.
+  if (cbSignature < *pcbResult) {
+    return NewOutOfRangeError(
+        absl::StrFormat("cbSignature size=%u not large enough to fit "
+                        "property value of size %u",
+                        cbSignature, *pcbResult),
+        SOURCE_LOCATION);
+  }
+
+  RETURN_IF_ERROR(
+      SignDigest(object, absl::Span<const uint8_t>(pbHashValue, cbHashValue),
+                 absl::Span<uint8_t>(pbSignature, cbSignature)));
   return absl::OkStatus();
 }
 
