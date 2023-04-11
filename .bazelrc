@@ -2,6 +2,9 @@
 build --announce_rc
 # Enable build:{linux,mac,windows} directives in the rc file
 build --enable_platform_specific_config
+# Silence warnings from third party libaries
+# https://github.com/bazelbuild/bazel/commit/08936aecb96f2937c61bdedfebcf1c5a41a0786d
+build --features=external-include-paths
 
 # C++ Version
 build:freebsd --cxxopt=-std=c++17 --linkopt=-std=c++17
