@@ -14,20 +14,25 @@
  * limitations under the License.
  */
 
-#ifndef KMSCNG_TEST_REGISTER_PROVIDER_H_
-#define KMSCNG_TEST_REGISTER_PROVIDER_H_
+#ifndef KMSCNG_OPERATION_SIGN_UTILS_H_
+#define KMSCNG_OPERATION_SIGN_UTILS_H_
+
+#include <string_view>
 
 #include "absl/status/status.h"
-#include "kmscng/cng_headers.h"
+#include "absl/types/span.h"
+#include "kmscng/object.h"
+#include "kmscng/util/string_utils.h"
 
 namespace cloud_kms::kmscng {
 
-// Register custom provider for use in tests.
-absl::Status RegisterTestProvider();
+absl::Status ValidateKeyPreconditions(Object* object);
 
-// Unregister custom provider after use in tests.
-absl::Status UnregisterTestProvider();
+absl::StatusOr<size_t> SignatureLength(Object* object);
+
+absl::Status SignDigest(Object* object, absl::Span<const uint8_t> digest,
+                        absl::Span<uint8_t> signature);
 
 }  // namespace cloud_kms::kmscng
 
-#endif  // KMSCNG_TEST_REGISTER_PROVIDER_H_
+#endif  // KMSCNG_OPERATION_SIGN_UTILS_H_

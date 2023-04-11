@@ -26,9 +26,14 @@
 #include "kmscng/util/status_utils.h"
 #include "kmscng/util/string_utils.h"
 #include "kmscng/version.h"
+#include "kmsp11/util/crypto_utils.h"
 
 namespace cloud_kms::kmscng {
 namespace {
+
+// TODO(b/270419822): drop these once crypto_utils has been migrated to common.
+using cloud_kms::kmsp11::MarshalX509PublicKeyDer;
+using cloud_kms::kmsp11::ParseX509PublicKeyPem;
 
 absl::StatusOr<std::unique_ptr<KmsClient>> NewKmsClient(
     NCRYPT_PROV_HANDLE prov_handle) {
@@ -48,8 +53,8 @@ absl::StatusOr<std::unique_ptr<KmsClient>> NewKmsClient(
       [](absl::Status& status) { SetErrorSs(status, NTE_INTERNAL_ERROR); });
 }
 
-absl::StatusOr<kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm>
-GetKeyAlgorithm(const KmsClient& client, std::string key_name) {
+absl::StatusOr<kms_v1::PublicKey> GetPublicKey(const KmsClient& client,
+                                               std::string key_name) {
   kms_v1::GetPublicKeyRequest pub_req;
   pub_req.set_name(key_name);
   auto pub_resp = client.GetPublicKey(pub_req);
@@ -69,7 +74,7 @@ GetKeyAlgorithm(const KmsClient& client, std::string key_name) {
         NTE_NOT_SUPPORTED, SOURCE_LOCATION);
   }
 
-  return pub_resp->algorithm();
+  return *pub_resp;
 }
 
 absl::flat_hash_map<std::wstring, std::string> BuildInfo(
@@ -112,21 +117,34 @@ absl::StatusOr<Object*> ValidateKeyHandle(NCRYPT_PROV_HANDLE prov_handle,
 }
 
 Object::Object(std::string kms_key_name, std::unique_ptr<KmsClient> client,
+               kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm,
+               bssl::UniquePtr<EVP_PKEY> public_key,
                absl::flat_hash_map<std::wstring, std::string> info)
     : kms_key_name_(kms_key_name),
       kms_client_(std::move(client)),
+      algorithm_(algorithm),
+      public_key_(std::move(public_key)),
       key_info_(info) {}
 
 absl::StatusOr<Object*> Object::New(NCRYPT_PROV_HANDLE prov_handle,
                                     std::string key_name) {
   ASSIGN_OR_RETURN(std::unique_ptr<KmsClient> client,
                    NewKmsClient(prov_handle));
-  ASSIGN_OR_RETURN(auto algorithm, GetKeyAlgorithm(*client, key_name));
-  ASSIGN_OR_RETURN(AlgorithmDetails alg_details, GetDetails(algorithm));
+  ASSIGN_OR_RETURN(auto public_key, GetPublicKey(*client, key_name));
+  absl::StatusOr<bssl::UniquePtr<EVP_PKEY>> pub =
+      ParseX509PublicKeyPem(public_key.pem());
+  if (!pub.ok()) {
+    absl::Status result = pub.status();
+    SetErrorSs(result, NTE_INTERNAL_ERROR);
+    return result;
+  }
+  ASSIGN_OR_RETURN(AlgorithmDetails alg_details,
+                   GetDetails(public_key.algorithm()));
   auto info = BuildInfo(prov_handle, key_name, alg_details);
 
   // using `new` to invoke a private constructor
-  return new Object(key_name, std::move(client), info);
+  return new Object(key_name, std::move(client), public_key.algorithm(),
+                    *std::move(pub), info);
 }
 
 absl::StatusOr<std::string_view> Object::GetProperty(std::wstring_view name) {

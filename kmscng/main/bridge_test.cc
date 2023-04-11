@@ -23,6 +23,7 @@
 #include "kmscng/provider.h"
 #include "kmscng/test/matchers.h"
 #include "kmscng/util/string_utils.h"
+#include "kmsp11/util/crypto_utils.h"
 
 namespace cloud_kms::kmscng {
 namespace {

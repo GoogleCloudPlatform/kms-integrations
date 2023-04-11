@@ -7,8 +7,9 @@ cc_library(
     srcs = ["crypto_utils.cc"],
     hdrs = ["crypto_utils.h"],
     visibility = [
-        "//common:__subpackages__",  # TODO(bdhess): remove
-        "//kmsp11:__subpackages__",
+        "//common:__subpackages__",  # TODO(b/270419822): remove
+        "//kmscng:__subpackages__",  # TODO(b/270419822): remove
+	"//kmsp11:__subpackages__",
     ],
     deps = [
         ":errors",

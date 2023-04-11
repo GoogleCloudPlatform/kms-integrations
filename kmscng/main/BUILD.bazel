@@ -44,6 +44,7 @@ cc_test(
         "//common/test:test_status_macros",
         "//kmscng:cng_headers",
         "//kmscng/test:matchers",
+        "//kmsp11/util:crypto_utils",
         "@com_google_absl//absl/cleanup",
         "@com_google_absl//absl/strings:str_format",
         "@com_google_googletest//:gtest_main",

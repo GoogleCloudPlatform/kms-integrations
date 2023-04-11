@@ -30,6 +30,12 @@
 
 #include <string_view>
 
+// Take care of macro conflicts between wincrypt.h and BoringSSL.
+#undef X509_NAME
+#undef X509_EXTENSIONS
+#undef PKCS7_ISSUER_AND_SERIAL
+#undef PKCS7_SIGNER_INFO
+
 namespace cloud_kms::kmscng {
 
 constexpr std::wstring_view kProviderName = L"kmscng.dll";

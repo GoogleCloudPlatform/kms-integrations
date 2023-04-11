@@ -18,6 +18,7 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/status/statusor.h"
 #include "common/kms_client.h"
+#include "common/openssl.h"
 #include "kmscng/cng_headers.h"
 
 namespace cloud_kms::kmscng {
@@ -28,14 +29,25 @@ class Object {
                                      std::string key_name);
 
   absl::StatusOr<std::string_view> GetProperty(std::wstring_view name);
+  const std::string kms_key_name() const { return kms_key_name_; }
+  KmsClient* kms_client() { return kms_client_.get(); }
+  const kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm() const {
+    return algorithm_;
+  }
+  EC_KEY* ec_public_key() const {
+    return EVP_PKEY_get0_EC_KEY(public_key_.get());
+  }
 
  private:
   Object(std::string kms_key_name, std::unique_ptr<KmsClient> client,
+         kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm,
+         bssl::UniquePtr<EVP_PKEY> public_key,
          absl::flat_hash_map<std::wstring, std::string> info);
 
   const std::string kms_key_name_;
   std::unique_ptr<KmsClient> kms_client_;
-  kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm;
+  bssl::UniquePtr<EVP_PKEY> public_key_;
+  const kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm_;
   const absl::flat_hash_map<std::wstring, std::string> key_info_;
 };
 
