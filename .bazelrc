@@ -41,7 +41,7 @@ build:linux --java_runtime_version=remotejdk_11
 
 # macOS-specific options
 # Ensure compatibility with all macOS versions currently supported by Apple.
-build:macos --copt=-mmacosx-version-min=10.15
+build:macos --copt=-mmacosx-version-min=11.3
 # Workaround for build issue: https://github.com/bazelbuild/bazel/issues/4341#issuecomment-572050759
 build:macos --copt=-DGRPC_BAZEL_BUILD
 # Workaround for build issue: https://github.com/bazelbuild/bazel/issues/4341#issuecomment-758361769
