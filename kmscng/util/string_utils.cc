@@ -31,13 +31,15 @@ std::string ProvHandleToBytes(NCRYPT_PROV_HANDLE handle) {
 }
 
 std::wstring StringToWide(const std::string& str) {
-  std::wstring_convert<std::codecvt_utf16<wchar_t>, wchar_t> converter;
+  std::wstring_convert<std::codecvt<wchar_t, char, std::mbstate_t>, wchar_t>
+      converter;
 
   return converter.from_bytes(str);
 }
 
 std::string WideToString(const std::wstring& wstr) {
-  std::wstring_convert<std::codecvt_utf16<wchar_t>, wchar_t> converter;
+  std::wstring_convert<std::codecvt<wchar_t, char, std::mbstate_t>, wchar_t>
+      converter;
 
   return converter.to_bytes(wstr);
 }

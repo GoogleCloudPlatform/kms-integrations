@@ -33,8 +33,9 @@ namespace {
 
 absl::Status ValidateFlags(uint32_t flags) {
   if (flags != 0 && flags != NCRYPT_SILENT_FLAG) {
-    return NewInvalidArgumentError("unsupported flag specified", NTE_BAD_FLAGS,
-                                   SOURCE_LOCATION);
+    return NewInvalidArgumentError(
+        absl::StrFormat("unsupported flag specified: %u", flags), NTE_BAD_FLAGS,
+        SOURCE_LOCATION);
   }
   return absl::OkStatus();
 }
@@ -146,11 +147,19 @@ absl::Status OpenKey(__inout NCRYPT_PROV_HANDLE hProvider,
     return NewInvalidArgumentError("the key name cannot be null",
                                    NTE_INVALID_PARAMETER, SOURCE_LOCATION);
   }
-  if (dwLegacyKeySpec != 0 && dwLegacyKeySpec != AT_SIGNATURE) {
-    return NewInvalidArgumentError("unsupported legacy key spec specified",
-                                   NTE_INVALID_PARAMETER, SOURCE_LOCATION);
+  if (dwLegacyKeySpec != AT_KEYEXCHANGE && dwLegacyKeySpec != AT_SIGNATURE) {
+    return NewInvalidArgumentError(
+        absl::StrFormat("unsupported legacy key spec specified: %u",
+                        dwLegacyKeySpec),
+        NTE_INVALID_PARAMETER, SOURCE_LOCATION);
   }
-  RETURN_IF_ERROR(ValidateFlags(dwFlags));
+  dwFlags = dwFlags & ~NCRYPT_SILENT_FLAG;
+  dwFlags = dwFlags & ~NCRYPT_MACHINE_KEY_FLAG;
+  if (dwFlags != 0) {
+    return NewInvalidArgumentError(
+        absl::StrFormat("unsupported flag specified: %u", dwFlags),
+        NTE_BAD_FLAGS, SOURCE_LOCATION);
+  }
 
   ASSIGN_OR_RETURN(Object * object,
                    Object::New(hProvider, WideToString(pszKeyName)));

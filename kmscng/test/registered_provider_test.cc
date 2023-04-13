@@ -135,8 +135,9 @@ TEST_F(RegisteredProviderTest, OpenKeySuccess) {
   SetUpFakeKmsProvider(provider_handle, fake_server->listen_addr());
 
   NCRYPT_KEY_HANDLE key_handle;
-  NTSTATUS status = NCryptOpenKey(provider_handle, &key_handle,
-                                  StringToWide(ckv.name()).data(), 0, 0);
+  NTSTATUS status =
+      NCryptOpenKey(provider_handle, &key_handle,
+                    StringToWide(ckv.name()).data(), AT_SIGNATURE, 0);
   EXPECT_SUCCESS(status) << absl::StrFormat(
       "NCryptOpenKey failed with error code 0x%08x\n", status);
   EXPECT_NE(key_handle, 0);
@@ -165,7 +166,8 @@ TEST_F(RegisteredProviderTest, FreeKeySuccess) {
 
   NCRYPT_KEY_HANDLE key_handle;
   EXPECT_SUCCESS(NCryptOpenKey(provider_handle, &key_handle,
-                               StringToWide(ckv.name()).data(), 0, 0));
+                               StringToWide(ckv.name()).data(), AT_SIGNATURE,
+                               0));
 
   NTSTATUS status = NCryptFreeObject(key_handle);
   EXPECT_SUCCESS(status) << absl::StrFormat(
@@ -188,7 +190,8 @@ TEST_F(RegisteredProviderTest, GetKeyPropertySuccess) {
 
   NCRYPT_KEY_HANDLE key_handle;
   EXPECT_SUCCESS(NCryptOpenKey(provider_handle, &key_handle,
-                               StringToWide(ckv.name()).data(), 0, 0));
+                               StringToWide(ckv.name()).data(), AT_SIGNATURE,
+                               0));
 
   DWORD output = 0;
   DWORD output_size = 0;
@@ -217,7 +220,8 @@ TEST_F(RegisteredProviderTest, SignHashSuccess) {
 
   NCRYPT_KEY_HANDLE key_handle;
   EXPECT_SUCCESS(NCryptOpenKey(provider_handle, &key_handle,
-                               StringToWide(ckv.name()).data(), 0, 0));
+                               StringToWide(ckv.name()).data(), AT_SIGNATURE,
+                               0));
 
   std::vector<uint8_t> digest(32, '\1');
   std::vector<uint8_t> signature(64, '\0');

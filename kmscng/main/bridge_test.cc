@@ -307,7 +307,7 @@ TEST(BridgeTest, OpenKeySuccess) {
       reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
   NCRYPT_KEY_HANDLE key_handle;
   EXPECT_OK(OpenKey(provider_handle, &key_handle,
-                    StringToWide(ckv.name()).data(), 0, 0));
+                    StringToWide(ckv.name()).data(), AT_SIGNATURE, 0));
   EXPECT_NE(key_handle, 0);
 
   // Clean up memory.
@@ -347,8 +347,7 @@ TEST(BridgeTest, OpenKeyInvalidLegacyKeySpec) {
   EXPECT_OK(OpenProvider(&provider_handle, kProviderName.data(), 0));
 
   NCRYPT_KEY_HANDLE key_handle;
-  EXPECT_THAT(OpenKey(provider_handle, &key_handle, L"some_key_name",
-                      AT_KEYEXCHANGE, 0),
+  EXPECT_THAT(OpenKey(provider_handle, &key_handle, L"some_key_name", 0, 0),
               StatusSsIs(NTE_INVALID_PARAMETER));
 
   // Clean up memory.
@@ -360,8 +359,8 @@ TEST(BridgeTest, OpenKeyInvalidFlag) {
   EXPECT_OK(OpenProvider(&provider_handle, kProviderName.data(), 0));
 
   NCRYPT_KEY_HANDLE key_handle;
-  EXPECT_THAT(OpenKey(provider_handle, &key_handle, L"some_key_name", 0,
-                      NCRYPT_PERSIST_ONLY_FLAG),
+  EXPECT_THAT(OpenKey(provider_handle, &key_handle, L"some_key_name",
+                      AT_SIGNATURE, NCRYPT_PERSIST_ONLY_FLAG),
               StatusSsIs(NTE_BAD_FLAGS));
 
   // Clean up memory.
@@ -379,9 +378,10 @@ TEST(BridgeTest, OpenKeyNotFound) {
   NCRYPT_KEY_HANDLE key_handle;
   std::string invalid_key_name = ckv.name();
   invalid_key_name[invalid_key_name.length() - 1] = '2';
-  EXPECT_THAT(OpenKey(reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider),
-                      &key_handle, StringToWide(invalid_key_name).data(), 0, 0),
-              StatusSsIs(NTE_BAD_KEYSET));
+  EXPECT_THAT(
+      OpenKey(reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider), &key_handle,
+              StringToWide(invalid_key_name).data(), AT_SIGNATURE, 0),
+      StatusSsIs(NTE_BAD_KEYSET));
 }
 
 TEST(BridgeTest, OpenKeyInvalidAlgorithm) {
@@ -397,9 +397,10 @@ TEST(BridgeTest, OpenKeyInvalidAlgorithm) {
   SetFakeKmsProviderProperties(&provider, fake_server->listen_addr());
 
   NCRYPT_KEY_HANDLE key_handle;
-  EXPECT_THAT(OpenKey(reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider),
-                      &key_handle, StringToWide(ckv.name()).data(), 0, 0),
-              StatusSsIs(NTE_NOT_SUPPORTED));
+  EXPECT_THAT(
+      OpenKey(reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider), &key_handle,
+              StringToWide(ckv.name()).data(), AT_SIGNATURE, 0),
+      StatusSsIs(NTE_NOT_SUPPORTED));
 }
 
 TEST(BridgeTest, OpenKeyInvalidProtectionLevel) {
@@ -415,9 +416,10 @@ TEST(BridgeTest, OpenKeyInvalidProtectionLevel) {
   SetFakeKmsProviderProperties(&provider, fake_server->listen_addr());
 
   NCRYPT_KEY_HANDLE key_handle;
-  EXPECT_THAT(OpenKey(reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider),
-                      &key_handle, StringToWide(ckv.name()).data(), 0, 0),
-              StatusSsIs(NTE_NOT_SUPPORTED));
+  EXPECT_THAT(
+      OpenKey(reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider), &key_handle,
+              StringToWide(ckv.name()).data(), AT_SIGNATURE, 0),
+      StatusSsIs(NTE_NOT_SUPPORTED));
 }
 
 TEST(BridgeTest, FreeKeySuccess) {
@@ -432,7 +434,7 @@ TEST(BridgeTest, FreeKeySuccess) {
       reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
   NCRYPT_KEY_HANDLE key_handle;
   EXPECT_OK(OpenKey(provider_handle, &key_handle,
-                    StringToWide(ckv.name()).data(), 0, 0));
+                    StringToWide(ckv.name()).data(), AT_SIGNATURE, 0));
 
   // Clean up memory.
   EXPECT_OK(FreeKey(provider_handle, key_handle));
@@ -465,7 +467,7 @@ TEST(BridgeTest, FreeKeyInvalidHandleCombination) {
   NCRYPT_KEY_HANDLE key_handle;
   std::wstring key_name = StringToWide(ckv.name());
   EXPECT_OK(OpenKey(provider_handle, &key_handle,
-                    const_cast<PWSTR>(key_name.data()), 0, 0));
+                    const_cast<PWSTR>(key_name.data()), AT_SIGNATURE, 0));
 
   // Get new provider handle, unrelated to the key opened previously.
   NCRYPT_PROV_HANDLE other_provider_handle;
@@ -491,7 +493,7 @@ TEST(BridgeTest, GetKeyPropertyGetSizeSuccess) {
   NCRYPT_PROV_HANDLE provider_handle =
       reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
   EXPECT_OK(OpenKey(provider_handle, &key_handle,
-                    StringToWide(ckv.name()).data(), 0, 0));
+                    StringToWide(ckv.name()).data(), AT_SIGNATURE, 0));
 
   DWORD output_size = 0;
   EXPECT_OK(GetKeyProperty(provider_handle, key_handle,
@@ -503,7 +505,7 @@ TEST(BridgeTest, GetKeyPropertyGetSizeSuccess) {
   EXPECT_OK(FreeKey(provider_handle, key_handle));
 }
 
-TEST(BridgeTest, GetKeyPropertySuccess) {
+TEST(BridgeTest, GetKeyDwordPropertySuccess) {
   ASSERT_OK_AND_ASSIGN(auto fake_server, fakekms::Server::New());
   auto client = fake_server->NewClient();
   kms_v1::CryptoKeyVersion ckv = NewCryptoKeyVersion(client.get());
@@ -515,7 +517,7 @@ TEST(BridgeTest, GetKeyPropertySuccess) {
   NCRYPT_PROV_HANDLE provider_handle =
       reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
   EXPECT_OK(OpenKey(provider_handle, &key_handle,
-                    StringToWide(ckv.name()).data(), 0, 0));
+                    StringToWide(ckv.name()).data(), AT_SIGNATURE, 0));
 
   DWORD output = 0;
   DWORD output_size = 0;
@@ -524,6 +526,38 @@ TEST(BridgeTest, GetKeyPropertySuccess) {
       reinterpret_cast<uint8_t*>(&output), sizeof(output), &output_size, 0));
   EXPECT_EQ(output_size, sizeof(output));
   EXPECT_EQ(output, NCRYPT_ALLOW_SIGNING_FLAG);
+
+  // Clean up memory.
+  EXPECT_OK(FreeKey(provider_handle, key_handle));
+}
+
+TEST(BridgeTest, GetKeyWstringPropertySuccess) {
+  ASSERT_OK_AND_ASSIGN(auto fake_server, fakekms::Server::New());
+  auto client = fake_server->NewClient();
+  kms_v1::CryptoKeyVersion ckv = NewCryptoKeyVersion(client.get());
+
+  Provider provider;
+  SetFakeKmsProviderProperties(&provider, fake_server->listen_addr());
+
+  NCRYPT_KEY_HANDLE key_handle;
+  NCRYPT_PROV_HANDLE provider_handle =
+      reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
+  EXPECT_OK(OpenKey(provider_handle, &key_handle,
+                    StringToWide(ckv.name()).data(), AT_SIGNATURE, 0));
+
+  DWORD output_size = 0;
+  // Get property size.
+  EXPECT_OK(GetKeyProperty(provider_handle, key_handle,
+                           NCRYPT_ALGORITHM_PROPERTY, nullptr, 0, &output_size,
+                           0));
+
+  std::vector<uint8_t> output(output_size);
+  EXPECT_OK(GetKeyProperty(provider_handle, key_handle,
+                           NCRYPT_ALGORITHM_PROPERTY, output.data(),
+                           output.size(), &output_size, 0));
+  EXPECT_EQ(output_size, output.size());
+  EXPECT_EQ(std::wstring(output.begin(), output.end()),
+            BCRYPT_ECDSA_P256_ALGORITHM);
 
   // Clean up memory.
   EXPECT_OK(FreeKey(provider_handle, key_handle));
@@ -558,7 +592,7 @@ TEST(BridgeTest, GetKeyPropertyNameNull) {
   NCRYPT_PROV_HANDLE provider_handle =
       reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
   EXPECT_OK(OpenKey(provider_handle, &key_handle,
-                    StringToWide(ckv.name()).data(), 0, 0));
+                    StringToWide(ckv.name()).data(), AT_SIGNATURE, 0));
 
   EXPECT_THAT(GetKeyProperty(provider_handle, key_handle, nullptr, nullptr, 0,
                              nullptr, 0),
@@ -580,7 +614,7 @@ TEST(BridgeTest, GetKeyPropertyOutputBufferNull) {
   NCRYPT_PROV_HANDLE provider_handle =
       reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
   EXPECT_OK(OpenKey(provider_handle, &key_handle,
-                    StringToWide(ckv.name()).data(), 0, 0));
+                    StringToWide(ckv.name()).data(), AT_SIGNATURE, 0));
 
   EXPECT_THAT(GetKeyProperty(provider_handle, key_handle,
                              NCRYPT_KEY_USAGE_PROPERTY, nullptr, 0, nullptr, 0),
@@ -602,7 +636,7 @@ TEST(BridgeTest, GetKeyPropertyInvalidFlag) {
   NCRYPT_PROV_HANDLE provider_handle =
       reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
   EXPECT_OK(OpenKey(provider_handle, &key_handle,
-                    StringToWide(ckv.name()).data(), 0, 0));
+                    StringToWide(ckv.name()).data(), AT_SIGNATURE, 0));
 
   uint8_t output;
   DWORD output_size;
@@ -627,7 +661,7 @@ TEST(BridgeTest, GetKeyPropertyInvalidName) {
   NCRYPT_PROV_HANDLE provider_handle =
       reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
   EXPECT_OK(OpenKey(provider_handle, &key_handle,
-                    StringToWide(ckv.name()).data(), 0, 0));
+                    StringToWide(ckv.name()).data(), AT_SIGNATURE, 0));
 
   uint8_t output;
   DWORD output_size;
@@ -652,7 +686,7 @@ TEST(BridgeTest, GetKeyPropertyOutputBufferTooShort) {
   NCRYPT_PROV_HANDLE provider_handle =
       reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
   EXPECT_OK(OpenKey(provider_handle, &key_handle,
-                    StringToWide(ckv.name()).data(), 0, 0));
+                    StringToWide(ckv.name()).data(), AT_SIGNATURE, 0));
 
   uint8_t output;
   DWORD output_size;
@@ -677,7 +711,7 @@ TEST(BridgeTest, SignHashGetSignatureSizeSuccess) {
   NCRYPT_PROV_HANDLE provider_handle =
       reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
   EXPECT_OK(OpenKey(provider_handle, &key_handle,
-                    StringToWide(ckv.name()).data(), 0, 0));
+                    StringToWide(ckv.name()).data(), AT_SIGNATURE, 0));
 
   std::vector<uint8_t> digest(32, '\1');
   DWORD output_size = 0;
@@ -701,7 +735,7 @@ TEST(BridgeTest, SignHashSuccess) {
   NCRYPT_PROV_HANDLE provider_handle =
       reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
   EXPECT_OK(OpenKey(provider_handle, &key_handle,
-                    StringToWide(ckv.name()).data(), 0, 0));
+                    StringToWide(ckv.name()).data(), AT_SIGNATURE, 0));
 
   std::vector<uint8_t> digest(32, '\1');
   std::vector<uint8_t> signature(64);
@@ -750,7 +784,7 @@ TEST(BridgeTest, SignHashPaddingInfoNotNull) {
   NCRYPT_PROV_HANDLE provider_handle =
       reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
   EXPECT_OK(OpenKey(provider_handle, &key_handle,
-                    StringToWide(ckv.name()).data(), 0, 0));
+                    StringToWide(ckv.name()).data(), AT_SIGNATURE, 0));
 
   DWORD padding_info = 1337;
   EXPECT_THAT(SignHash(provider_handle, key_handle, &padding_info, nullptr, 0,
@@ -773,7 +807,7 @@ TEST(BridgeTest, SignHashInputDigestNull) {
   NCRYPT_PROV_HANDLE provider_handle =
       reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
   EXPECT_OK(OpenKey(provider_handle, &key_handle,
-                    StringToWide(ckv.name()).data(), 0, 0));
+                    StringToWide(ckv.name()).data(), AT_SIGNATURE, 0));
 
   EXPECT_THAT(SignHash(provider_handle, key_handle, nullptr, nullptr, 0,
                        nullptr, 0, nullptr, 0),
@@ -795,7 +829,7 @@ TEST(BridgeTest, SignHashOutputLengthBufferNull) {
   NCRYPT_PROV_HANDLE provider_handle =
       reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
   EXPECT_OK(OpenKey(provider_handle, &key_handle,
-                    StringToWide(ckv.name()).data(), 0, 0));
+                    StringToWide(ckv.name()).data(), AT_SIGNATURE, 0));
 
   std::vector<uint8_t> digest(32, '\1');
   EXPECT_THAT(SignHash(provider_handle, key_handle, nullptr, digest.data(),
@@ -818,7 +852,7 @@ TEST(BridgeTest, SignHashInvalidFlag) {
   NCRYPT_PROV_HANDLE provider_handle =
       reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
   EXPECT_OK(OpenKey(provider_handle, &key_handle,
-                    StringToWide(ckv.name()).data(), 0, 0));
+                    StringToWide(ckv.name()).data(), AT_SIGNATURE, 0));
 
   uint8_t output;
   DWORD output_size;

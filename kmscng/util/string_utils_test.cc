@@ -32,18 +32,43 @@ TEST(ProvHandleToBytesTest, Success) {
 }
 
 TEST(WideStringTest, StringToWideSuccess) {
-  std::string data = "1337";
-  EXPECT_EQ(StringToWide(data), L"\x3133\x3337");
+  EXPECT_EQ(StringToWide("1337"), L"1337");
 }
 
 TEST(WideStringTest, WideToStringSuccess) {
-  std::wstring data = L"\x3133\x3337";
-  EXPECT_EQ(WideToString(data), "1337");
+  EXPECT_EQ(WideToString(L"1337"), "1337");
+}
+
+TEST(WideStringTest, StringToWideExtendedCharacterSuccess) {
+  EXPECT_EQ(StringToWide("鍵"), L"鍵");
+}
+
+TEST(WideStringTest, WideToStringExtendedCharacterSuccess) {
+  EXPECT_EQ(WideToString(L"鍵"), "鍵");
+}
+
+TEST(WideStringTest, StringToWideWithZeroByteSuccess) {
+  // '?' corresponds to '\x003F'
+  EXPECT_EQ(StringToWide("?"), L"?");
+}
+
+TEST(WideStringTest, WideToStringWithZeroByteSuccess) {
+  // '?' corresponds to '\x003F'
+  EXPECT_EQ(WideToString(L"?"), "?");
+}
+
+TEST(WideStringTest, StringToWideEmptySuccess) {
+  EXPECT_EQ(StringToWide(""), L"");
+}
+
+TEST(WideStringTest, WideToStringEmptySuccess) {
+  EXPECT_EQ(WideToString(L""), "");
 }
 
 TEST(WideStringTest, StringToWideAndBackSuccess) {
-  std::string data = "1337";
-  EXPECT_EQ(WideToString(StringToWide(data)), "1337");
+  EXPECT_EQ(WideToString(StringToWide("1337")), "1337");
+  EXPECT_EQ(WideToString(StringToWide("鍵")), "鍵");
+  EXPECT_EQ(WideToString(StringToWide("?")), "?");
 }
 
 }  // namespace
