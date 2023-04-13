@@ -21,6 +21,8 @@ def _cpdk_impl(repo_ctx):
         "CPDK_LOCATION",
         default = "C:\\Program Files (x86)\\Windows Kits\\10\\Cryptographic Provider Development Kit",
     )
+    if not repo_ctx.path(location).exists:
+        fail("Could not find Cryptographic Provider Development Kit at %s", location)
     repo_ctx.symlink(location + "\\Include\\bcrypt_provider.h", "bcrypt_provider.h")
     repo_ctx.symlink(location + "\\Include\\ncrypt_provider.h", "ncrypt_provider.h")
     repo_ctx.symlink(location + "\\Lib\\x64", "lib")
