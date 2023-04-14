@@ -239,5 +239,19 @@ TEST_F(RegisteredProviderTest, SignHashSuccess) {
   EXPECT_SUCCESS(NCryptFreeObject(provider_handle));
 }
 
+TEST_F(RegisteredProviderTest, IsAlgSupportedSuccess) {
+  NCRYPT_PROV_HANDLE provider_handle;
+  EXPECT_SUCCESS(
+      NCryptOpenStorageProvider(&provider_handle, kProviderName.data(), 0));
+
+  NTSTATUS status =
+      NCryptIsAlgSupported(provider_handle, BCRYPT_ECDSA_P256_ALGORITHM, 0);
+
+  EXPECT_SUCCESS(status) << absl::StrFormat(
+      "NCryptIsAlgSupported failed with error code 0x%08x\n", status);
+
+  EXPECT_SUCCESS(NCryptFreeObject(provider_handle));
+}
+
 }  // namespace
 }  // namespace cloud_kms::kmscng

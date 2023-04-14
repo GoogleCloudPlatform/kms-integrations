@@ -20,6 +20,7 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/str_format.h"
 #include "common/status_macros.h"
+#include "kmscng/algorithm_details.h"
 #include "kmscng/object.h"
 #include "kmscng/operation/sign_utils.h"
 #include "kmscng/provider.h"
@@ -218,6 +219,7 @@ absl::Status GetKeyProperty(__in NCRYPT_PROV_HANDLE hProvider,
   return absl::OkStatus();
 }
 
+// https://learn.microsoft.com/en-us/windows/win32/api/ncrypt/nf-ncrypt-ncryptsignhash
 absl::Status SignHash(__in NCRYPT_PROV_HANDLE hProvider,
                       __in NCRYPT_KEY_HANDLE hKey, __in_opt VOID* pPaddingInfo,
                       __in_bcount(cbHashValue) PBYTE pbHashValue,
@@ -266,6 +268,19 @@ absl::Status SignHash(__in NCRYPT_PROV_HANDLE hProvider,
       SignDigest(object, absl::Span<const uint8_t>(pbHashValue, cbHashValue),
                  absl::Span<uint8_t>(pbSignature, cbSignature)));
   return absl::OkStatus();
+}
+
+// https://learn.microsoft.com/en-us/windows/win32/api/ncrypt/nf-ncrypt-ncryptisalgsupported
+absl::Status IsAlgSupported(__in NCRYPT_PROV_HANDLE hProvider,
+                            __in LPCWSTR pszAlgId, __in DWORD dwFlags) {
+  ASSIGN_OR_RETURN(Provider * prov, ValidateProviderHandle(hProvider));
+  if (!pszAlgId) {
+    return NewInvalidArgumentError("pszAlgId cannot be null",
+                                   NTE_INVALID_PARAMETER, SOURCE_LOCATION);
+  }
+  RETURN_IF_ERROR(ValidateFlags(dwFlags));
+
+  return IsSupportedAlgorithmIdentifier(pszAlgId);
 }
 
 }  // namespace cloud_kms::kmscng

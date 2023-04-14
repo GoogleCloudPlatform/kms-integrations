@@ -69,11 +69,6 @@ absl::Status Decrypt(__in NCRYPT_PROV_HANDLE hProvider,
   return NewUnsupportedError(SOURCE_LOCATION);
 }
 
-absl::Status IsAlgSupported(__in NCRYPT_PROV_HANDLE hProvider,
-                            __in LPCWSTR pszAlgId, __in DWORD dwFlags) {
-  return NewUnsupportedError(SOURCE_LOCATION);
-}
-
 absl::Status EnumAlgorithms(__in NCRYPT_PROV_HANDLE hProvider,
                             __in DWORD dwAlgOperations,
                             __out DWORD* pdwAlgCount,

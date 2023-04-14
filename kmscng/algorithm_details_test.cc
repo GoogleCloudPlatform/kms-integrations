@@ -42,5 +42,14 @@ TEST(GetAlgorithmDetailsTest, AlgorithmNotFound) {
   EXPECT_THAT(details.status(), StatusSsIs(NTE_NOT_SUPPORTED));
 }
 
+TEST(IsSupportedAlgorithmIdentifierTest, Success) {
+  EXPECT_OK(IsSupportedAlgorithmIdentifier(BCRYPT_ECDSA_P256_ALGORITHM));
+}
+
+TEST(IsSupportedAlgorithmIdentifierTest, AlgorithmNotFound) {
+  EXPECT_THAT(IsSupportedAlgorithmIdentifier(BCRYPT_MD5_ALGORITHM),
+              StatusSsIs(NTE_NOT_SUPPORTED));
+}
+
 }  // namespace
 }  // namespace cloud_kms::kmscng

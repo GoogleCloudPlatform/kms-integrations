@@ -15,10 +15,16 @@
 #include "kmscng/algorithm_details.h"
 
 #include "absl/container/btree_set.h"
+#include "absl/container/flat_hash_set.h"
 #include "absl/strings/str_format.h"
 #include "kmscng/util/errors.h"
+#include "kmscng/util/string_utils.h"
 
 namespace cloud_kms::kmscng {
+
+absl::flat_hash_set<std::wstring> algorithm_identifiers = {
+    {BCRYPT_ECDSA_P256_ALGORITHM},
+};
 
 struct AlgorithmCmp {
   using is_transparent = void;
@@ -56,6 +62,16 @@ absl::StatusOr<AlgorithmDetails> GetDetails(
                     NTE_NOT_SUPPORTED, SOURCE_LOCATION);
   }
   return *it;
+}
+
+absl::Status IsSupportedAlgorithmIdentifier(std::wstring_view algorithm) {
+  if (!algorithm_identifiers.contains(algorithm)) {
+    return NewError(absl::StatusCode::kUnimplemented,
+                    absl::StrFormat("unsupported algorithm: %s",
+                                    WideToString(algorithm.data())),
+                    NTE_NOT_SUPPORTED, SOURCE_LOCATION);
+  }
+  return absl::OkStatus();
 }
 
 }  // namespace cloud_kms::kmscng

@@ -38,6 +38,8 @@ struct AlgorithmDetails {
 absl::StatusOr<AlgorithmDetails> GetDetails(
     kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm);
 
+absl::Status IsSupportedAlgorithmIdentifier(std::wstring_view algorithm);
+
 }  // namespace cloud_kms::kmscng
 
 #endif  // KMSCNG_ALGORITHM_DETAILS_H_

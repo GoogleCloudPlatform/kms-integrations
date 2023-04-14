@@ -866,5 +866,56 @@ TEST(BridgeTest, SignHashInvalidFlag) {
   EXPECT_OK(FreeKey(provider_handle, key_handle));
 }
 
+TEST(BridgeTest, IsAlgSupportedSuccess) {
+  NCRYPT_PROV_HANDLE provider_handle;
+  EXPECT_OK(OpenProvider(&provider_handle, kProviderName.data(), 0));
+
+  EXPECT_OK(IsAlgSupported(provider_handle, BCRYPT_ECDSA_P256_ALGORITHM, 0));
+
+  // Clean up memory.
+  EXPECT_OK(FreeProvider(provider_handle));
+}
+
+TEST(BridgeTest, IsAlgSupportedInvalidHandle) {
+  EXPECT_THAT(IsAlgSupported(0, nullptr, 0), StatusSsIs(NTE_INVALID_HANDLE));
+}
+
+TEST(BridgeTest, IsAlgSupportedNameNull) {
+  NCRYPT_PROV_HANDLE provider_handle;
+  EXPECT_OK(OpenProvider(&provider_handle, kProviderName.data(), 0));
+
+  DWORD output_size;
+  EXPECT_THAT(IsAlgSupported(provider_handle, nullptr, 0),
+              StatusSsIs(NTE_INVALID_PARAMETER));
+
+  // Clean up memory.
+  EXPECT_OK(FreeProvider(provider_handle));
+}
+
+TEST(BridgeTest, IsAlgSupportedInvalidFlag) {
+  NCRYPT_PROV_HANDLE provider_handle;
+  EXPECT_OK(OpenProvider(&provider_handle, kProviderName.data(), 0));
+
+  DWORD output_size = 0;
+  EXPECT_THAT(IsAlgSupported(provider_handle, BCRYPT_ECDSA_P256_ALGORITHM,
+                             NCRYPT_PERSIST_ONLY_FLAG),
+              StatusSsIs(NTE_BAD_FLAGS));
+
+  // Clean up memory.
+  EXPECT_OK(FreeProvider(provider_handle));
+}
+
+TEST(BridgeTest, IsAlgSupportedAlgorithmUnsupported) {
+  NCRYPT_PROV_HANDLE provider_handle;
+  EXPECT_OK(OpenProvider(&provider_handle, kProviderName.data(), 0));
+
+  DWORD output_size = 0;
+  EXPECT_THAT(IsAlgSupported(provider_handle, BCRYPT_MD5_ALGORITHM, 0),
+              StatusSsIs(NTE_NOT_SUPPORTED));
+
+  // Clean up memory.
+  EXPECT_OK(FreeProvider(provider_handle));
+}
+
 }  // namespace
 }  // namespace cloud_kms::kmscng

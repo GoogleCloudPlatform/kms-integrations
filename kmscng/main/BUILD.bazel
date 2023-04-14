@@ -17,6 +17,7 @@ cc_library(
     target_compatible_with = ["@platforms//os:windows"],
     deps = [
         "//common:status_macros",
+        "//kmscng:algorithm_details",
         "//kmscng:cng_headers",
         "//kmscng:object",
         "//kmscng:provider",
