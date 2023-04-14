@@ -26,10 +26,7 @@ cc_test(
 
 cc_library(
     name = "kms_client",
-    srcs = [
-        "kms_client.cc",
-        "kms_client_service_config.h",
-    ],
+    srcs = ["kms_client.cc"],
     hdrs = ["kms_client.h"],
     deps = [
         ":backoff",
@@ -40,6 +37,7 @@ cc_library(
         ":source_location",
         ":status_macros",
         ":status_utils",
+        "@cloudkms_grpc_service_config",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/crc:crc32c",
         "@com_google_absl//absl/status:statusor",

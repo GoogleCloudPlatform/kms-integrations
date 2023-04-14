@@ -35,6 +35,10 @@ load("//kmscng:cpdk.bzl", "cpdk")
 
 cpdk(name = "cpdk")
 
+load("//:build/cloudkms_grpc_service_config.bzl", "cloudkms_grpc_service_config")
+
+cloudkms_grpc_service_config(name = "cloudkms_grpc_service_config")
+
 http_archive(
     name = "com_github_gflags_gflags",  # 2020-03-18
     sha256 = "68e26a487038a842da3ef2ddd1f886dad656e9efaf1a3d49e87d1d3a9fa3a8eb",

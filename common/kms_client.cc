@@ -17,8 +17,8 @@
 #include "absl/crc/crc32c.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
+#include "cloudkms_grpc_service_config.h"
 #include "common/backoff.h"
-#include "common/kms_client_service_config.h"
 #include "common/openssl.h"
 #include "common/platform.h"
 #include "common/source_location.h"
@@ -117,7 +117,7 @@ KmsClient::KmsClient(std::string_view endpoint_address,
   grpc::ChannelArguments args;
   args.SetUserAgentPrefix(
       ComputeUserAgentPrefix(user_agent, version_major, version_minor));
-  args.SetServiceConfigJSON(std::string(kDefaultKmsServiceConfig));
+  args.SetServiceConfigJSON(std::string(kDefaultCloudKmsGrpcServiceConfig));
 
   std::shared_ptr<grpc::Channel> channel =
       grpc::CreateCustomChannel(std::string(endpoint_address), creds, args);
