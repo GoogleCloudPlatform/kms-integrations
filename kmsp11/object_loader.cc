@@ -22,6 +22,10 @@
 namespace cloud_kms::kmsp11 {
 namespace {
 
+std::string EnumNameOrValue(std::string name, int value) {
+  return name.empty() ? std::to_string(value) : name;
+}
+
 bool IsLoadable(const kms_v1::CryptoKey& key) {
   switch (key.purpose()) {
     case kms_v1::CryptoKey::ASYMMETRIC_DECRYPT:
@@ -32,7 +36,9 @@ bool IsLoadable(const kms_v1::CryptoKey& key) {
     default:
       LOG(INFO) << "INFO: key " << key.name()
                 << " is not loadable due to unsupported purpose "
-                << key.purpose();
+                << EnumNameOrValue(
+                       kms_v1::CryptoKey::CryptoKeyPurpose_Name(key.purpose()),
+                       key.purpose());
       return false;
   }
 
@@ -40,7 +46,9 @@ bool IsLoadable(const kms_v1::CryptoKey& key) {
       kms_v1::ProtectionLevel::HSM) {
     LOG(INFO) << "INFO: key " << key.name()
               << " is not loadable due to unsupported protection level "
-              << key.version_template().protection_level();
+              << EnumNameOrValue(kms_v1::ProtectionLevel_Name(
+                                     key.version_template().protection_level()),
+                                 key.version_template().protection_level());
     return false;
   }
 
@@ -50,14 +58,21 @@ bool IsLoadable(const kms_v1::CryptoKey& key) {
 bool IsLoadable(const kms_v1::CryptoKeyVersion& ckv) {
   if (ckv.state() != kms_v1::CryptoKeyVersion::ENABLED) {
     LOG(INFO) << "INFO: version " << ckv.name()
-              << " is not loadable due to unsupported state " << ckv.state();
+              << " is not loadable due to unsupported state "
+              << EnumNameOrValue(
+                     kms_v1::CryptoKeyVersion::CryptoKeyVersionState_Name(
+                         ckv.state()),
+                     ckv.state());
     return false;
   }
 
   if (!GetDetails(ckv.algorithm()).ok()) {
     LOG(INFO) << "INFO: version " << ckv.name()
               << " is not loadable due to unsupported algorithm "
-              << ckv.algorithm();
+              << EnumNameOrValue(
+                     kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm_Name(
+                         ckv.algorithm()),
+                     ckv.algorithm());
     return false;
   }
 
