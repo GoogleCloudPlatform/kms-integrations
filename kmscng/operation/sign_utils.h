@@ -26,10 +26,19 @@
 
 namespace cloud_kms::kmscng {
 
+// Checks the object properties against the expected properties defined in the
+// relevant AlgorithmDetails struct.
 absl::Status ValidateKeyPreconditions(Object* object);
 
+// Serializes the public key in a BCRYPT_ECCPUBLIC_BLOB format:
+// https://learn.microsoft.com/en-us/windows/win32/api/bcrypt/ns-bcrypt-bcrypt_ecckey_blob#remarks
+absl::StatusOr<std::vector<uint8_t>> SerializePublicKey(Object* object);
+
+// Returns the expected signature length based on the key type.
 absl::StatusOr<size_t> SignatureLength(Object* object);
 
+// Signs the precomputed `digest` using Cloud KMS, and copies it into the
+// provided `signature` buffer.
 absl::Status SignDigest(Object* object, absl::Span<const uint8_t> digest,
                         absl::Span<uint8_t> signature);
 

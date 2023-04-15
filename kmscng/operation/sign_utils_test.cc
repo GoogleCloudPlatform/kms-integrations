@@ -70,6 +70,15 @@ TEST_F(SignUtilsTest, ValidateKeyPreconditionsSuccess) {
   EXPECT_OK(ValidateKeyPreconditions(object_));
 }
 
+TEST_F(SignUtilsTest, SerializePublicKeySuccess) {
+  ASSERT_OK_AND_ASSIGN(std::vector<uint8_t> output,
+                       SerializePublicKey(object_));
+  BCRYPT_ECCKEY_BLOB* header =
+      reinterpret_cast<BCRYPT_ECCKEY_BLOB*>(output.data());
+  EXPECT_EQ(header->dwMagic, BCRYPT_ECDSA_PUBLIC_P256_MAGIC);
+  EXPECT_EQ(header->cbKey, 32);
+}
+
 TEST_F(SignUtilsTest, ExpectedSignatureLengthSuccess) {
   // Expected EC_SIGN_P256_SHA256 signature length == 64.
   EXPECT_THAT(SignatureLength(object_), IsOkAndHolds(64));

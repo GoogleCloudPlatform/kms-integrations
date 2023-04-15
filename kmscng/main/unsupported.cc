@@ -95,15 +95,6 @@ absl::Status ImportKey(__in NCRYPT_PROV_HANDLE hProvider,
   return NewUnsupportedError(SOURCE_LOCATION);
 }
 
-absl::Status ExportKey(
-    __in NCRYPT_PROV_HANDLE hProvider, __in NCRYPT_KEY_HANDLE hKey,
-    __in_opt NCRYPT_KEY_HANDLE hExportKey, __in LPCWSTR pszBlobType,
-    __in_opt NCryptBufferDesc* pParameterList,
-    __out_bcount_part_opt(cbOutput, *pcbResult) PBYTE pbOutput,
-    __in DWORD cbOutput, __out DWORD* pcbResult, __in DWORD dwFlags) {
-  return NewUnsupportedError(SOURCE_LOCATION);
-}
-
 absl::Status VerifySignature(__in NCRYPT_PROV_HANDLE hProvider,
                              __in NCRYPT_KEY_HANDLE hKey,
                              __in_opt VOID* pPaddingInfo,

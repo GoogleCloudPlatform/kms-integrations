@@ -177,6 +177,46 @@ TEST_F(RegisteredProviderTest, FreeKeySuccess) {
   EXPECT_SUCCESS(NCryptFreeObject(provider_handle));
 }
 
+TEST_F(RegisteredProviderTest, ExportKeySuccess) {
+  ASSERT_OK_AND_ASSIGN(auto fake_server, fakekms::Server::New());
+  auto client = fake_server->NewClient();
+  kms_v1::CryptoKeyVersion ckv = CreateTestCryptoKeyVersion(client.get());
+
+  NCRYPT_PROV_HANDLE provider_handle;
+  EXPECT_SUCCESS(
+      NCryptOpenStorageProvider(&provider_handle, kProviderName.data(), 0));
+
+  SetUpFakeKmsProvider(provider_handle, fake_server->listen_addr());
+
+  NCRYPT_KEY_HANDLE key_handle;
+  EXPECT_SUCCESS(NCryptOpenKey(provider_handle, &key_handle,
+                               StringToWide(ckv.name()).data(), AT_SIGNATURE,
+                               0));
+
+  NTSTATUS status;
+  DWORD output_size = 0;
+  // Get size.
+  status = NCryptExportKey(key_handle, 0, BCRYPT_ECCPUBLIC_BLOB, nullptr,
+                           nullptr, 0, &output_size, 0);
+  EXPECT_SUCCESS(status) << absl::StrFormat(
+      "NCryptExportKey failed with error code 0x%08x\n", status);
+  EXPECT_EQ(output_size, sizeof(BCRYPT_ECCKEY_BLOB) + 64);
+
+  std::vector<uint8_t> output(output_size);
+  status = NCryptExportKey(key_handle, 0, BCRYPT_ECCPUBLIC_BLOB, nullptr,
+                           output.data(), output.size(), &output_size, 0);
+  EXPECT_SUCCESS(status) << absl::StrFormat(
+      "NCryptExportKey failed with error code 0x%08x\n", status);
+
+  BCRYPT_ECCKEY_BLOB* header =
+      reinterpret_cast<BCRYPT_ECCKEY_BLOB*>(output.data());
+  EXPECT_EQ(header->dwMagic, BCRYPT_ECDSA_PUBLIC_P256_MAGIC);
+  EXPECT_EQ(header->cbKey, 32);
+
+  EXPECT_SUCCESS(NCryptFreeObject(key_handle));
+  EXPECT_SUCCESS(NCryptFreeObject(provider_handle));
+}
+
 TEST_F(RegisteredProviderTest, GetKeyPropertySuccess) {
   ASSERT_OK_AND_ASSIGN(auto fake_server, fakekms::Server::New());
   auto client = fake_server->NewClient();

@@ -32,6 +32,7 @@ namespace {
 using cloud_kms::kmsp11::EcdsaSigAsn1ToP1363;
 using cloud_kms::kmsp11::EcdsaSigLengthP1363;
 using cloud_kms::kmsp11::ParseX509PublicKeyDer;
+using cloud_kms::kmsp11::SslErrorToString;
 
 absl::Status IsValidSigningAlgorithm(
     kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm) {
@@ -79,8 +80,9 @@ absl::Status CopySignature(Object* object, std::string_view src,
         SOURCE_LOCATION);
   }
   ASSIGN_OR_RETURN(int curve, CurveIdForAlgorithm(object->algorithm()));
+  bssl::UniquePtr<EC_GROUP> group(EC_GROUP_new_by_curve_name(curve));
   absl::StatusOr<std::vector<uint8_t>> ec_sig =
-      EcdsaSigAsn1ToP1363(src, EC_GROUP_new_by_curve_name(curve));
+      EcdsaSigAsn1ToP1363(src, group.get());
   if (!ec_sig.ok()) {
     absl::Status result = ec_sig.status();
     SetErrorSs(result, NTE_INTERNAL_ERROR);
@@ -132,11 +134,43 @@ absl::Status ValidateKeyPreconditions(Object* object) {
   return absl::OkStatus();
 }
 
+absl::StatusOr<std::vector<uint8_t>> SerializePublicKey(Object* object) {
+  ASSIGN_OR_RETURN(int curve, CurveIdForAlgorithm(object->algorithm()));
+  size_t header_size = sizeof(BCRYPT_ECCKEY_BLOB);
+  bssl::UniquePtr<EC_GROUP> group(EC_GROUP_new_by_curve_name(curve));
+  size_t uncompressed_length =
+      2 * BN_num_bytes(EC_GROUP_get0_order(group.get()));  // == 32 for P-256
+
+  std::vector<uint8_t> result(header_size + uncompressed_length);
+  // The uncompressed public key includes a 0x04 prefix byte to indicate that
+  // the key is in uncompressed format, but the BCRYPT_ECCPUBLIC_BLOB struct
+  // should only include the X and Y coordinates, so we write starting from
+  // header_size - 1 (since we override the other struct fields below anyways).
+  uint8_t* pub_minus_one = result.data() + header_size - 1;
+  size_t bytes_written = EC_POINT_point2oct(
+      group.get(), EC_KEY_get0_public_key(object->ec_public_key()),
+      POINT_CONVERSION_UNCOMPRESSED, pub_minus_one, uncompressed_length + 1,
+      nullptr);
+  if (bytes_written != uncompressed_length + 1) {
+    return NewInternalError(
+        absl::StrFormat(
+            "Error serializing public key: %d bytes written, wanted %d. %s",
+            bytes_written, uncompressed_length, SslErrorToString()),
+        SOURCE_LOCATION);
+  }
+  BCRYPT_ECCKEY_BLOB* header =
+      reinterpret_cast<BCRYPT_ECCKEY_BLOB*>(result.data());
+  header->dwMagic = BCRYPT_ECDSA_PUBLIC_P256_MAGIC;
+  header->cbKey = uncompressed_length / 2;
+  return result;
+}
+
 absl::StatusOr<size_t> SignatureLength(Object* object) {
   ASSIGN_OR_RETURN(int curve, CurveIdForAlgorithm(object->algorithm()));
+  bssl::UniquePtr<EC_GROUP> group(EC_GROUP_new_by_curve_name(curve));
   switch (object->algorithm()) {
     case kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256:
-      return EcdsaSigLengthP1363(EC_GROUP_new_by_curve_name(curve));
+      return EcdsaSigLengthP1363(group.get());
     default:
       return NewInternalError(
           absl::StrFormat("cannot get signature length for algorithm: %d",

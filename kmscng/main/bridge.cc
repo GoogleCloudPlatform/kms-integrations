@@ -177,6 +177,53 @@ absl::Status FreeKey(__in NCRYPT_PROV_HANDLE hProvider,
   return absl::OkStatus();
 }
 
+// https://learn.microsoft.com/en-us/windows/win32/api/ncrypt/nf-ncrypt-ncryptexportkey
+absl::Status ExportKey(
+    __in NCRYPT_PROV_HANDLE hProvider, __in NCRYPT_KEY_HANDLE hKey,
+    __in_opt NCRYPT_KEY_HANDLE hExportKey, __in LPCWSTR pszBlobType,
+    __in_opt NCryptBufferDesc* pParameterList,
+    __out_bcount_part_opt(cbOutput, *pcbResult) PBYTE pbOutput,
+    __in DWORD cbOutput, __out DWORD* pcbResult, __in DWORD dwFlags) {
+  ASSIGN_OR_RETURN(Object * object, ValidateKeyHandle(hProvider, hKey));
+  if (hExportKey) {
+    return NewInvalidArgumentError("hExportKey is not supported",
+                                   NTE_INVALID_PARAMETER, SOURCE_LOCATION);
+  }
+  constexpr std::wstring_view kEccPublicKeyType(BCRYPT_ECCPUBLIC_BLOB);
+  if (pszBlobType != kEccPublicKeyType) {
+    return NewInvalidArgumentError(
+        absl::StrFormat("blob type not supported: %s",
+                        WideToString(pszBlobType)),
+        NTE_BAD_TYPE, SOURCE_LOCATION);
+  }
+  if (!pcbResult) {
+    return NewInvalidArgumentError("pcbResult cannot be null",
+                                   NTE_INVALID_PARAMETER, SOURCE_LOCATION);
+  }
+  RETURN_IF_ERROR(ValidateFlags(dwFlags));
+
+  ASSIGN_OR_RETURN(std::vector<uint8_t> serialized_pub_key,
+                   SerializePublicKey(object));
+  *pcbResult = serialized_pub_key.size();
+
+  // Return size required to hold the property value if output buffer is null.
+  if (!pbOutput) {
+    return absl::OkStatus();
+  }
+
+  // Check provided buffer size to ensure the property value fits.
+  if (cbOutput < serialized_pub_key.size()) {
+    return NewOutOfRangeError(
+        absl::StrFormat("cbOutput size=%u not large enough to fit "
+                        "property value of size %u",
+                        cbOutput, serialized_pub_key.size()),
+        SOURCE_LOCATION);
+  }
+
+  std::copy(serialized_pub_key.begin(), serialized_pub_key.end(), pbOutput);
+  return absl::OkStatus();
+}
+
 // This function is called by NCryptGetProperty:
 // https://learn.microsoft.com/en-us/windows/win32/api/ncrypt/nf-ncrypt-ncryptgetproperty
 absl::Status GetKeyProperty(__in NCRYPT_PROV_HANDLE hProvider,

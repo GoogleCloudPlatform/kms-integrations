@@ -481,6 +481,193 @@ TEST(BridgeTest, FreeKeyInvalidHandleCombination) {
   EXPECT_OK(FreeProvider(other_provider_handle));
 }
 
+TEST(BridgeTest, ExportKeyGetSizeSuccess) {
+  ASSERT_OK_AND_ASSIGN(auto fake_server, fakekms::Server::New());
+  auto client = fake_server->NewClient();
+  kms_v1::CryptoKeyVersion ckv = NewCryptoKeyVersion(client.get());
+
+  Provider provider;
+  SetFakeKmsProviderProperties(&provider, fake_server->listen_addr());
+
+  NCRYPT_KEY_HANDLE key_handle;
+  NCRYPT_PROV_HANDLE provider_handle =
+      reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
+  EXPECT_OK(OpenKey(provider_handle, &key_handle,
+                    StringToWide(ckv.name()).data(), AT_SIGNATURE, 0));
+
+  DWORD output_size = 0;
+  EXPECT_OK(ExportKey(provider_handle, key_handle, 0, BCRYPT_ECCPUBLIC_BLOB,
+                      nullptr, nullptr, 0, &output_size, 0));
+  EXPECT_EQ(output_size, sizeof(BCRYPT_ECCKEY_BLOB) + 64);
+
+  // Clean up memory.
+  EXPECT_OK(FreeKey(provider_handle, key_handle));
+}
+
+TEST(BridgeTest, ExportKeySuccess) {
+  ASSERT_OK_AND_ASSIGN(auto fake_server, fakekms::Server::New());
+  auto client = fake_server->NewClient();
+  kms_v1::CryptoKeyVersion ckv = NewCryptoKeyVersion(client.get());
+
+  Provider provider;
+  SetFakeKmsProviderProperties(&provider, fake_server->listen_addr());
+
+  NCRYPT_KEY_HANDLE key_handle;
+  NCRYPT_PROV_HANDLE provider_handle =
+      reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
+  EXPECT_OK(OpenKey(provider_handle, &key_handle,
+                    StringToWide(ckv.name()).data(), AT_SIGNATURE, 0));
+
+  DWORD output_size = 0;
+  // Get output size.
+  EXPECT_OK(ExportKey(provider_handle, key_handle, 0, BCRYPT_ECCPUBLIC_BLOB,
+                      nullptr, nullptr, 0, &output_size, 0));
+
+  std::vector<uint8_t> output(output_size);
+  EXPECT_OK(ExportKey(provider_handle, key_handle, 0, BCRYPT_ECCPUBLIC_BLOB,
+                      nullptr, output.data(), output.size(), &output_size, 0));
+  EXPECT_EQ(output_size, output.size());
+  BCRYPT_ECCKEY_BLOB* header =
+      reinterpret_cast<BCRYPT_ECCKEY_BLOB*>(output.data());
+  EXPECT_EQ(header->dwMagic, BCRYPT_ECDSA_PUBLIC_P256_MAGIC);
+  EXPECT_EQ(header->cbKey, 32);
+
+  // Clean up memory.
+  EXPECT_OK(FreeKey(provider_handle, key_handle));
+}
+
+TEST(BridgeTest, ExportKeyInvalidProviderHandle) {
+  EXPECT_THAT(ExportKey(0, 0, 0, nullptr, nullptr, nullptr, 0, nullptr, 0),
+              StatusSsIs(NTE_INVALID_HANDLE));
+}
+
+TEST(BridgeTest, ExportKeyInvalidKeyHandle) {
+  NCRYPT_PROV_HANDLE provider_handle;
+  EXPECT_OK(OpenProvider(&provider_handle, kProviderName.data(), 0));
+
+  EXPECT_THAT(ExportKey(provider_handle, 0, 0, nullptr, nullptr, nullptr, 0,
+                        nullptr, 0),
+              StatusSsIs(NTE_INVALID_HANDLE));
+
+  // Clean up memory.
+  EXPECT_OK(FreeProvider(provider_handle));
+}
+
+TEST(BridgeTest, ExportKeyUnsupportedExportKeyHandle) {
+  ASSERT_OK_AND_ASSIGN(auto fake_server, fakekms::Server::New());
+  auto client = fake_server->NewClient();
+  kms_v1::CryptoKeyVersion ckv = NewCryptoKeyVersion(client.get());
+
+  Provider provider;
+  SetFakeKmsProviderProperties(&provider, fake_server->listen_addr());
+
+  NCRYPT_KEY_HANDLE key_handle;
+  NCRYPT_PROV_HANDLE provider_handle =
+      reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
+  EXPECT_OK(OpenKey(provider_handle, &key_handle,
+                    StringToWide(ckv.name()).data(), AT_SIGNATURE, 0));
+
+  EXPECT_THAT(ExportKey(provider_handle, key_handle, 1337, nullptr, nullptr,
+                        nullptr, 0, nullptr, 0),
+              StatusSsIs(NTE_INVALID_PARAMETER));
+
+  // Clean up memory.
+  EXPECT_OK(FreeKey(provider_handle, key_handle));
+}
+
+TEST(BridgeTest, ExportKeyInvalidBlobType) {
+  ASSERT_OK_AND_ASSIGN(auto fake_server, fakekms::Server::New());
+  auto client = fake_server->NewClient();
+  kms_v1::CryptoKeyVersion ckv = NewCryptoKeyVersion(client.get());
+
+  Provider provider;
+  SetFakeKmsProviderProperties(&provider, fake_server->listen_addr());
+
+  NCRYPT_KEY_HANDLE key_handle;
+  NCRYPT_PROV_HANDLE provider_handle =
+      reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
+  EXPECT_OK(OpenKey(provider_handle, &key_handle,
+                    StringToWide(ckv.name()).data(), AT_SIGNATURE, 0));
+
+  EXPECT_THAT(ExportKey(provider_handle, key_handle, 0, BCRYPT_PRIVATE_KEY_BLOB,
+                        nullptr, nullptr, 0, nullptr, 0),
+              StatusSsIs(NTE_BAD_TYPE));
+
+  // Clean up memory.
+  EXPECT_OK(FreeKey(provider_handle, key_handle));
+}
+
+TEST(BridgeTest, ExportKeyOutputBufferNull) {
+  ASSERT_OK_AND_ASSIGN(auto fake_server, fakekms::Server::New());
+  auto client = fake_server->NewClient();
+  kms_v1::CryptoKeyVersion ckv = NewCryptoKeyVersion(client.get());
+
+  Provider provider;
+  SetFakeKmsProviderProperties(&provider, fake_server->listen_addr());
+
+  NCRYPT_KEY_HANDLE key_handle;
+  NCRYPT_PROV_HANDLE provider_handle =
+      reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
+  EXPECT_OK(OpenKey(provider_handle, &key_handle,
+                    StringToWide(ckv.name()).data(), AT_SIGNATURE, 0));
+
+  EXPECT_THAT(ExportKey(provider_handle, key_handle, 0, BCRYPT_ECCPUBLIC_BLOB,
+                        nullptr, nullptr, 0, nullptr, 0),
+              StatusSsIs(NTE_INVALID_PARAMETER));
+
+  // Clean up memory.
+  EXPECT_OK(FreeKey(provider_handle, key_handle));
+}
+
+TEST(BridgeTest, ExportKeyInvalidFlag) {
+  ASSERT_OK_AND_ASSIGN(auto fake_server, fakekms::Server::New());
+  auto client = fake_server->NewClient();
+  kms_v1::CryptoKeyVersion ckv = NewCryptoKeyVersion(client.get());
+
+  Provider provider;
+  SetFakeKmsProviderProperties(&provider, fake_server->listen_addr());
+
+  NCRYPT_KEY_HANDLE key_handle;
+  NCRYPT_PROV_HANDLE provider_handle =
+      reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
+  EXPECT_OK(OpenKey(provider_handle, &key_handle,
+                    StringToWide(ckv.name()).data(), AT_SIGNATURE, 0));
+
+  DWORD output_size;
+  EXPECT_THAT(
+      ExportKey(provider_handle, key_handle, 0, BCRYPT_ECCPUBLIC_BLOB, nullptr,
+                nullptr, 0, &output_size, NCRYPT_PERSIST_ONLY_FLAG),
+      StatusSsIs(NTE_BAD_FLAGS));
+
+  // Clean up memory.
+  EXPECT_OK(FreeKey(provider_handle, key_handle));
+}
+
+TEST(BridgeTest, ExportKeyOutputBufferTooShort) {
+  ASSERT_OK_AND_ASSIGN(auto fake_server, fakekms::Server::New());
+  auto client = fake_server->NewClient();
+  kms_v1::CryptoKeyVersion ckv = NewCryptoKeyVersion(client.get());
+
+  Provider provider;
+  SetFakeKmsProviderProperties(&provider, fake_server->listen_addr());
+
+  NCRYPT_KEY_HANDLE key_handle;
+  NCRYPT_PROV_HANDLE provider_handle =
+      reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
+  EXPECT_OK(OpenKey(provider_handle, &key_handle,
+                    StringToWide(ckv.name()).data(), AT_SIGNATURE, 0));
+
+  uint8_t output;
+  DWORD output_size;
+  EXPECT_THAT(
+      ExportKey(provider_handle, key_handle, 0, BCRYPT_ECCPUBLIC_BLOB, nullptr,
+                &output, 1, &output_size, NCRYPT_PERSIST_ONLY_FLAG),
+      StatusSsIs(NTE_BAD_FLAGS));
+
+  // Clean up memory.
+  EXPECT_OK(FreeKey(provider_handle, key_handle));
+}
+
 TEST(BridgeTest, GetKeyPropertyGetSizeSuccess) {
   ASSERT_OK_AND_ASSIGN(auto fake_server, fakekms::Server::New());
   auto client = fake_server->NewClient();
