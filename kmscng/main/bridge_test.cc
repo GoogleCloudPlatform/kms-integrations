@@ -1104,5 +1104,104 @@ TEST(BridgeTest, IsAlgSupportedAlgorithmUnsupported) {
   EXPECT_OK(FreeProvider(provider_handle));
 }
 
+TEST(BridgeTest, EnumAlgorithmsSuccess) {
+  NCRYPT_PROV_HANDLE provider_handle;
+  EXPECT_OK(OpenProvider(&provider_handle, kProviderName.data(), 0));
+
+  NCryptAlgorithmName* alg;
+  DWORD output_size = 0;
+  EXPECT_OK(EnumAlgorithms(provider_handle, NCRYPT_SIGNATURE_OPERATION,
+                           &output_size, &alg, 0));
+  // TODO(b/278902908): Rework this testing logic once we add support for more
+  // algorithms. Currently, only one algorithm is available.
+  EXPECT_EQ(output_size, 1);
+  EXPECT_EQ(alg->pszName, BCRYPT_ECDSA_P256_ALGORITHM);
+  EXPECT_EQ(alg->dwClass, NCRYPT_SIGNATURE_INTERFACE);
+  EXPECT_EQ(alg->dwAlgOperations, NCRYPT_SIGNATURE_OPERATION);
+  EXPECT_EQ(alg->dwFlags, 0);
+
+  // Clean up memory.
+  EXPECT_OK(FreeProvider(provider_handle));
+  EXPECT_OK(FreeBuffer(alg));
+}
+
+TEST(BridgeTest, EnumAlgorithmsInvalidHandle) {
+  EXPECT_THAT(EnumAlgorithms(0, 0, nullptr, nullptr, 0),
+              StatusSsIs(NTE_INVALID_HANDLE));
+}
+
+TEST(BridgeTest, EnumAlgorithmsInvalidAlgOperation) {
+  NCRYPT_PROV_HANDLE provider_handle;
+  EXPECT_OK(OpenProvider(&provider_handle, kProviderName.data(), 0));
+
+  EXPECT_THAT(EnumAlgorithms(provider_handle, NCRYPT_SECRET_AGREEMENT_OPERATION,
+                             nullptr, nullptr, 0),
+              StatusSsIs(NTE_INVALID_PARAMETER));
+
+  // Clean up memory.
+  EXPECT_OK(FreeProvider(provider_handle));
+}
+
+TEST(BridgeTest, EnumAlgorithmsOutputSizeBufferNull) {
+  NCRYPT_PROV_HANDLE provider_handle;
+  EXPECT_OK(OpenProvider(&provider_handle, kProviderName.data(), 0));
+
+  EXPECT_THAT(EnumAlgorithms(provider_handle, NCRYPT_SIGNATURE_OPERATION,
+                             nullptr, nullptr, 0),
+              StatusSsIs(NTE_INVALID_PARAMETER));
+
+  // Clean up memory.
+  EXPECT_OK(FreeProvider(provider_handle));
+}
+
+TEST(BridgeTest, EnumAlgorithmsOutputBufferNull) {
+  NCRYPT_PROV_HANDLE provider_handle;
+  EXPECT_OK(OpenProvider(&provider_handle, kProviderName.data(), 0));
+
+  DWORD output_size = 0;
+  EXPECT_THAT(EnumAlgorithms(provider_handle, NCRYPT_SIGNATURE_OPERATION,
+                             &output_size, nullptr, 0),
+              StatusSsIs(NTE_INVALID_PARAMETER));
+
+  // Clean up memory.
+  EXPECT_OK(FreeProvider(provider_handle));
+}
+
+TEST(BridgeTest, EnumAlgorithmsInvalidFlag) {
+  NCRYPT_PROV_HANDLE provider_handle;
+  EXPECT_OK(OpenProvider(&provider_handle, kProviderName.data(), 0));
+
+  DWORD output_size = 0;
+  NCryptAlgorithmName alg;
+  NCryptAlgorithmName* alg_pointer;
+  EXPECT_THAT(
+      EnumAlgorithms(provider_handle, NCRYPT_SIGNATURE_OPERATION, &output_size,
+                     &alg_pointer, NCRYPT_PERSIST_ONLY_FLAG),
+      StatusSsIs(NTE_BAD_FLAGS));
+
+  // Clean up memory.
+  EXPECT_OK(FreeProvider(provider_handle));
+}
+
+TEST(BridgeTest, FreeBufferSuccess) {
+  NCRYPT_PROV_HANDLE provider_handle;
+  EXPECT_OK(OpenProvider(&provider_handle, kProviderName.data(), 0));
+
+  NCryptAlgorithmName alg;
+  NCryptAlgorithmName* alg_pointer = &alg;
+  DWORD output_size = 0;
+  EXPECT_OK(EnumAlgorithms(provider_handle, NCRYPT_SIGNATURE_OPERATION,
+                           &output_size, &alg_pointer, 0));
+
+  EXPECT_OK(FreeBuffer(alg_pointer));
+
+  // Clean up memory.
+  EXPECT_OK(FreeProvider(provider_handle));
+}
+
+TEST(BridgeTest, FreeBufferInvalidBuffer) {
+  EXPECT_THAT(FreeBuffer(nullptr), StatusSsIs(NTE_INVALID_PARAMETER));
+}
+
 }  // namespace
 }  // namespace cloud_kms::kmscng

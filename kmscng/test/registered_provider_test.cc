@@ -293,5 +293,46 @@ TEST_F(RegisteredProviderTest, IsAlgSupportedSuccess) {
   EXPECT_SUCCESS(NCryptFreeObject(provider_handle));
 }
 
+TEST_F(RegisteredProviderTest, EnumAlgorithmsSuccess) {
+  NCRYPT_PROV_HANDLE provider_handle;
+  EXPECT_SUCCESS(
+      NCryptOpenStorageProvider(&provider_handle, kProviderName.data(), 0));
+
+  NCryptAlgorithmName* alg;
+  DWORD output_size = 0;
+  NTSTATUS status = NCryptEnumAlgorithms(
+      provider_handle, NCRYPT_SIGNATURE_OPERATION, &output_size, &alg, 0);
+  EXPECT_SUCCESS(status) << absl::StrFormat(
+      "NCryptEnumAlgorithms failed with error code 0x%08x\n", status);
+
+  // TODO(b/278902908): Rework this testing logic once we add support for more
+  // algorithms. Currently, only one algorithm is available.
+  EXPECT_EQ(output_size, 1);
+  EXPECT_EQ(std::wstring(alg->pszName), BCRYPT_ECDSA_P256_ALGORITHM);
+  EXPECT_EQ(alg->dwClass, NCRYPT_SIGNATURE_INTERFACE);
+  EXPECT_EQ(alg->dwAlgOperations, NCRYPT_SIGNATURE_OPERATION);
+  EXPECT_EQ(alg->dwFlags, 0);
+
+  EXPECT_SUCCESS(NCryptFreeObject(provider_handle));
+  EXPECT_SUCCESS(NCryptFreeBuffer(alg));
+}
+
+TEST_F(RegisteredProviderTest, FreeBufferSuccess) {
+  NCRYPT_PROV_HANDLE provider_handle;
+  EXPECT_SUCCESS(
+      NCryptOpenStorageProvider(&provider_handle, kProviderName.data(), 0));
+
+  NCryptAlgorithmName* alg;
+  DWORD output_size = 0;
+  EXPECT_SUCCESS(NCryptEnumAlgorithms(
+      provider_handle, NCRYPT_SIGNATURE_OPERATION, &output_size, &alg, 0));
+
+  NTSTATUS status = NCryptFreeBuffer(alg);
+  EXPECT_SUCCESS(status) << absl::StrFormat(
+      "NCryptFreeBuffer failed with error code 0x%08x\n", status);
+
+  EXPECT_SUCCESS(NCryptFreeObject(provider_handle));
+}
+
 }  // namespace
 }  // namespace cloud_kms::kmscng

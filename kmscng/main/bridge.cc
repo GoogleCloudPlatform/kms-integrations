@@ -330,4 +330,44 @@ absl::Status IsAlgSupported(__in NCRYPT_PROV_HANDLE hProvider,
   return IsSupportedAlgorithmIdentifier(pszAlgId);
 }
 
+// https://learn.microsoft.com/en-us/windows/win32/api/ncrypt/nf-ncrypt-ncryptenumalgorithms
+absl::Status EnumAlgorithms(__in NCRYPT_PROV_HANDLE hProvider,
+                            __in DWORD dwAlgOperations,
+                            __out DWORD* pdwAlgCount,
+                            __deref_out_ecount(*pdwAlgCount)
+                                NCryptAlgorithmName** ppAlgList,
+                            __in DWORD dwFlags) {
+  ASSIGN_OR_RETURN(Provider * prov, ValidateProviderHandle(hProvider));
+  dwAlgOperations = dwAlgOperations & ~NCRYPT_SIGNATURE_OPERATION;
+  if (dwAlgOperations) {
+    return NewInvalidArgumentError("invalid dwAlgOperations specified",
+                                   NTE_INVALID_PARAMETER, SOURCE_LOCATION);
+  }
+  if (!pdwAlgCount) {
+    return NewInvalidArgumentError("pcbResult cannot be null",
+                                   NTE_INVALID_PARAMETER, SOURCE_LOCATION);
+  }
+  if (!ppAlgList) {
+    return NewInvalidArgumentError("ppAlgList cannot be null",
+                                   NTE_INVALID_PARAMETER, SOURCE_LOCATION);
+  }
+  RETURN_IF_ERROR(ValidateFlags(dwFlags));
+
+  *ppAlgList = new NCryptAlgorithmName[kAlgorithmNames.size()];
+  std::copy_n(kAlgorithmNames.data(), kAlgorithmNames.size(), *ppAlgList);
+  *pdwAlgCount = kAlgorithmNames.size();
+
+  return absl::OkStatus();
+}
+
+// https://learn.microsoft.com/en-us/windows/win32/api/ncrypt/nf-ncrypt-ncryptfreebuffer
+absl::Status FreeBuffer(__deref PVOID pvInput) {
+  if (!pvInput) {
+    return NewInvalidArgumentError("pvInput cannot be null",
+                                   NTE_INVALID_PARAMETER, SOURCE_LOCATION);
+  }
+  delete pvInput;
+  return absl::OkStatus();
+}
+
 }  // namespace cloud_kms::kmscng

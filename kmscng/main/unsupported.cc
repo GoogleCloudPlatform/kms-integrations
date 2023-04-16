@@ -18,10 +18,6 @@
 
 namespace cloud_kms::kmscng {
 
-absl::Status FreeBuffer(__deref PVOID pvInput) {
-  return NewUnsupportedError(SOURCE_LOCATION);
-}
-
 absl::Status CreatePersistedKey(__in NCRYPT_PROV_HANDLE hProvider,
                                 __out NCRYPT_KEY_HANDLE* phKey,
                                 __in LPCWSTR pszAlgId,
@@ -66,15 +62,6 @@ absl::Status Decrypt(__in NCRYPT_PROV_HANDLE hProvider,
                      __out_bcount_part_opt(cbOutput, *pcbResult) PBYTE pbOutput,
                      __in DWORD cbOutput, __out DWORD* pcbResult,
                      __in DWORD dwFlags) {
-  return NewUnsupportedError(SOURCE_LOCATION);
-}
-
-absl::Status EnumAlgorithms(__in NCRYPT_PROV_HANDLE hProvider,
-                            __in DWORD dwAlgOperations,
-                            __out DWORD* pdwAlgCount,
-                            __deref_out_ecount(*pdwAlgCount)
-                                NCryptAlgorithmName** ppAlgList,
-                            __in DWORD dwFlags) {
   return NewUnsupportedError(SOURCE_LOCATION);
 }
 
