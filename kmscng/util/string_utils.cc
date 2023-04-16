@@ -44,4 +44,9 @@ std::string WideToString(const std::wstring& wstr) {
   return converter.to_bytes(wstr);
 }
 
+std::string WideToBytes(std::wstring_view data) {
+  return std::string(reinterpret_cast<const char*>(data.data()),
+                     (data.size() + 1 /* null terminator*/) * sizeof(wchar_t));
+}
+
 }  // namespace cloud_kms::kmscng

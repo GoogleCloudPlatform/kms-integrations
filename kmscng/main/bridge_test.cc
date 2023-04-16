@@ -740,10 +740,11 @@ TEST(BridgeTest, GetKeyWstringPropertySuccess) {
 
   std::vector<uint8_t> output(output_size);
   EXPECT_OK(GetKeyProperty(provider_handle, key_handle,
-                           NCRYPT_ALGORITHM_PROPERTY, output.data(),
+                           NCRYPT_ALGORITHM_PROPERTY,
+                           reinterpret_cast<uint8_t*>(output.data()),
                            output.size(), &output_size, 0));
   EXPECT_EQ(output_size, output.size());
-  EXPECT_EQ(std::wstring(output.begin(), output.end()),
+  EXPECT_EQ(std::wstring_view(reinterpret_cast<wchar_t*>(output.data())),
             BCRYPT_ECDSA_P256_ALGORITHM);
 
   // Clean up memory.

@@ -106,7 +106,7 @@ absl::Status ValidateKeyPreconditions(Object* object) {
   ASSIGN_OR_RETURN(AlgorithmDetails details, GetDetails(object->algorithm()));
   ASSIGN_OR_RETURN(auto algorithm_group,
                    object->GetProperty(NCRYPT_ALGORITHM_GROUP_PROPERTY));
-  if (algorithm_group != WideToString(details.algorithm_group)) {
+  if (algorithm_group != WideToBytes(details.algorithm_group)) {
     return NewInternalError(
         absl::StrFormat("invalid algorithm_group property, expected %s",
                         WideToString(details.algorithm_group)),
@@ -115,7 +115,7 @@ absl::Status ValidateKeyPreconditions(Object* object) {
 
   ASSIGN_OR_RETURN(auto algorithm_property,
                    object->GetProperty(NCRYPT_ALGORITHM_PROPERTY));
-  if (algorithm_property != WideToString(details.algorithm_property)) {
+  if (algorithm_property != WideToBytes(details.algorithm_property)) {
     return NewInternalError(
         absl::StrFormat("invalid algorithm_property, expected %s",
                         WideToString(details.algorithm_property)),

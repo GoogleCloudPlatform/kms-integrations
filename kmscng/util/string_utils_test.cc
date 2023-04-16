@@ -71,5 +71,13 @@ TEST(WideStringTest, StringToWideAndBackSuccess) {
   EXPECT_EQ(WideToString(StringToWide("?")), "?");
 }
 
+TEST(WideToBytesTest, WideToBytesSuccess) {
+  char expected_output[] = {'E', '\0', 'C', '\0', 'D',  '\0', 'S', '\0',
+                            'A', '\0', '_', '\0', 'P',  '\0', '2', '\0',
+                            '5', '\0', '6', '\0', '\0', '\0'};
+  EXPECT_EQ(WideToBytes(BCRYPT_ECDSA_P256_ALGORITHM),
+            std::string(expected_output, 22));
+}
+
 }  // namespace
 }  // namespace cloud_kms::kmscng

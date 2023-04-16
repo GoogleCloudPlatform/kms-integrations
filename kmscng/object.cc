@@ -16,6 +16,7 @@
 
 #include <cwchar>
 
+#include "absl/strings/str_format.h"
 #include "common/kms_client.h"
 #include "common/kms_v1.h"
 #include "common/status_macros.h"
@@ -81,8 +82,8 @@ absl::flat_hash_map<std::wstring, std::string> BuildInfo(
     NCRYPT_PROV_HANDLE prov_handle, std::string key_name,
     AlgorithmDetails details) {
   return {
-      {NCRYPT_ALGORITHM_GROUP_PROPERTY, WideToString(details.algorithm_group)},
-      {NCRYPT_ALGORITHM_PROPERTY, WideToString(details.algorithm_property)},
+      {NCRYPT_ALGORITHM_GROUP_PROPERTY, WideToBytes(details.algorithm_group)},
+      {NCRYPT_ALGORITHM_PROPERTY, WideToBytes(details.algorithm_property)},
       {NCRYPT_KEY_USAGE_PROPERTY, Uint32ToBytes(details.key_usage)},
       {NCRYPT_NAME_PROPERTY, key_name},
       {NCRYPT_PROVIDER_HANDLE_PROPERTY,
@@ -151,9 +152,11 @@ absl::StatusOr<std::string_view> Object::GetProperty(std::wstring_view name) {
   auto it = key_info_.find(name);
   if (it == key_info_.end()) {
     return NewError(absl::StatusCode::kNotFound,
-                    "unsupported property specified", NTE_NOT_SUPPORTED,
-                    SOURCE_LOCATION);
+                    absl::StrFormat("unsupported property specified: %s",
+                                    WideToString(name.data())),
+                    NTE_NOT_SUPPORTED, SOURCE_LOCATION);
   }
+
   return it->second;
 }
 

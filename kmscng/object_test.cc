@@ -66,12 +66,12 @@ class ObjectTest : public testing::Test {
 
 TEST_F(ObjectTest, GetObjectPropertyAlgGroupSuccess) {
   EXPECT_THAT(object_->GetProperty(NCRYPT_ALGORITHM_GROUP_PROPERTY),
-              IsOkAndHolds(WideToString(NCRYPT_ECDSA_ALGORITHM_GROUP)));
+              IsOkAndHolds(WideToBytes(NCRYPT_ECDSA_ALGORITHM_GROUP)));
 }
 
 TEST_F(ObjectTest, GetObjectPropertyAlgorithmSuccess) {
   EXPECT_THAT(object_->GetProperty(NCRYPT_ALGORITHM_PROPERTY),
-              IsOkAndHolds(WideToString(BCRYPT_ECDSA_P256_ALGORITHM)));
+              IsOkAndHolds(WideToBytes(BCRYPT_ECDSA_P256_ALGORITHM)));
 }
 
 TEST_F(ObjectTest, GetObjectPropertyKeyUsageSuccess) {

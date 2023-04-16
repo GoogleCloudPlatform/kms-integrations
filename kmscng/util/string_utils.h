@@ -29,7 +29,12 @@ std::string ProvHandleToBytes(NCRYPT_PROV_HANDLE handle);
 
 std::wstring StringToWide(const std::string& str);
 
+// Converts the wide string to a regular string (UCS-2 or UTF-16 to UTF-8).
 std::string WideToString(const std::wstring& wstr);
+
+// Converts the wide string to bytes (i.e. exactly two bytes for every character
+// without converting to UTF-8).
+std::string WideToBytes(std::wstring_view data);
 
 }  // namespace cloud_kms::kmscng
 
