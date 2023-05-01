@@ -14,20 +14,19 @@
  * limitations under the License.
  */
 
-#ifndef KMSCNG_TEST_REGISTER_PROVIDER_H_
-#define KMSCNG_TEST_REGISTER_PROVIDER_H_
+#ifndef KMSCNG_UTIL_REGISTRATION_H_
+#define KMSCNG_UTIL_REGISTRATION_H_
 
 #include "absl/status/status.h"
-#include "kmscng/cng_headers.h"
 
 namespace cloud_kms::kmscng {
 
 // Register custom provider for use in tests.
-absl::Status RegisterTestProvider();
+absl::Status RegisterProvider();
 
 // Unregister custom provider after use in tests.
-absl::Status UnregisterTestProvider();
+absl::Status UnregisterProvider();
 
 }  // namespace cloud_kms::kmscng
 
-#endif  // KMSCNG_TEST_REGISTER_PROVIDER_H_
+#endif  // KMSCNG_UTIL_REGISTRATION_H_

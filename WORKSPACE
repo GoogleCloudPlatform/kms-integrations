@@ -35,6 +35,10 @@ load("//kmscng:cpdk.bzl", "cpdk")
 
 cpdk(name = "cpdk")
 
+load("//kmscng:wix.bzl", "wix")
+
+wix(name = "wix")
+
 load("//:build/cloudkms_grpc_service_config.bzl", "cloudkms_grpc_service_config")
 
 cloudkms_grpc_service_config(name = "cloudkms_grpc_service_config")

@@ -39,6 +39,9 @@ go run ./.kokoro/unwrap_key.go ^
 :: Install all features, without displaying the GUI.
 %KOKORO_GFILE_DIR%\cpdksetup.exe /features + /quiet
 
+:: "Install" Wix toolset.
+unzip "%KOKORO_GFILE_DIR%\wix3.11.zip" -d "%ProgramFiles(x86)%"
+
 :: Configure user.bazelrc with remote build caching options and Google creds
 copy .kokoro\remote_cache.bazelrc user.bazelrc
 echo build --remote_default_exec_properties=cache-silo-key=windows >> user.bazelrc
@@ -72,6 +75,13 @@ if exist "%PROJECT_ROOT%\bazel-bin\kmsp11\main\libkmsp11.so" copy ^
 if exist "%PROJECT_ROOT%\bazel-bin\kmsp11\test\e2e\e2e_test.exe" copy ^
     "%PROJECT_ROOT%\bazel-bin\kmsp11\test\e2e\e2e_test.exe" ^
     "%RESULTS_DIR%\e2e_test.exe"
+
+if exist "%PROJECT_ROOT%\bazel-bin\kmscng\main\kmscng.dll" copy ^
+    "%PROJECT_ROOT%\bazel-bin\kmscng\main\kmscng.dll" ^
+    "%RESULTS_DIR%\kmscng.dll"
+if exist "%PROJECT_ROOT%\bazel-bin\kmscng\main\kmscng.msi" copy ^
+    "%PROJECT_ROOT%\bazel-bin\kmscng\main\kmscng.msi" ^
+    "%RESULTS_DIR%\kmscng.msi"
 
 copy "%PROJECT_ROOT%\LICENSE" "%RESULTS_DIR%\LICENSE"
 copy "%PROJECT_ROOT%\NOTICE" "%RESULTS_DIR%\LICENSE"

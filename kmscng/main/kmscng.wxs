@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product Id="*"
+           Language="1033"
+           Codepage="1252"
+           Manufacturer="Google LLC"
+           Name="Cloud KMS Provider for Microsoft CNG"
+           UpgradeCode="{AB7C91D4-D9B6-4E79-A332-6839067BF60D}"
+           Version="0.7.0">
+
+  <Package InstallScope="perMachine"
+           InstallerVersion="200"
+           Compressed="yes"
+           Platform="x64" />
+
+    <MajorUpgrade DowngradeErrorMessage="A later version of [ProductName] is already installed." />
+
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- Define custom installation folder in Program Files, and system32 for later reference -->
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="System64Folder" />
+      <Directory Id="ProgramFiles64Folder">
+         <Directory Id="INSTALLFOLDER" Name="Cloud KMS CNG Provider" />
+      </Directory>
+    </Directory>
+
+    <!-- Create installation folder with DLL and copy it to system32 -->
+    <DirectoryRef Id="INSTALLFOLDER">
+      <Component Id="ProviderDLL" Guid="D9942A6F-A99D-474F-AC6D-8165A215E73B" Win64="yes">
+              <File Id="ProviderDLL" KeyPath="yes" Source="kmscng.dll"></File>
+              <CopyFile Id="DLLCopy" FileId="ProviderDLL" DestinationDirectory="System64Folder" />
+              <RemoveFile Id="RemoveDLLOnUninstall" Directory="INSTALLFOLDER"
+                          Name="kmscng.dll" On="uninstall" />
+      </Component>
+    </DirectoryRef>
+
+    <Binary Id="RegisterProviderExe" SourceFile="register_provider.exe" />
+
+    <!-- Register provider when installing, this needs elevated permissions -->
+    <CustomAction Id="RegisterProviderAction"
+              Execute="deferred"
+              Impersonate="no"
+              Return="asyncNoWait"
+              BinaryKey="RegisterProviderExe"
+              ExeCommand="&quot;[INSTALLDIR]register_provider.exe&quot; -i" />
+
+    <!-- Unregister provider when uninstalling -->
+    <CustomAction Id="UnregisterProviderAction"
+              Execute="deferred"
+              Impersonate="no"
+              Return="asyncNoWait"
+              BinaryKey="RegisterProviderExe"
+              ExeCommand="&quot;[INSTALLDIR]register_provider.exe&quot; -u" />
+
+    <Feature Id="KMSProviderFeature" Title="Cloud KMS Provider" Level="1">
+      <ComponentRef Id="ProviderDLL" />
+    </Feature>
+
+    <InstallExecuteSequence>
+      <!-- Run register_provider.exe with '-u' during uninstallation only -->
+      <Custom Action="UnregisterProviderAction" After="InstallInitialize">(REMOVE~="ALL") OR (REINSTALL~="ALL")</Custom>
+      <!-- Run register_provider.exe after everything has been installed -->
+      <Custom Action="RegisterProviderAction" Before="InstallFinalize">(NOT Installed) OR (REMOVE~="ALL")</Custom>
+    </InstallExecuteSequence>
+
+  </Product>
+</Wix>
+

@@ -64,6 +64,18 @@ cc_test(
 )
 
 cc_library(
+    name = "registration",
+    srcs = ["registration.cc"],
+    hdrs = ["registration.h"],
+    target_compatible_with = ["@platforms//os:windows"],
+    deps = [
+        "//kmscng:cng_headers",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/strings:str_format",
+    ],
+)
+
+cc_library(
     name = "status_utils",
     srcs = ["status_utils.cc"],
     hdrs = ["status_utils.h"],

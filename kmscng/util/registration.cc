@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "kmscng/test/register_provider.h"
+#include "kmscng/util/registration.h"
 
 #include <iostream>
 
@@ -25,7 +25,7 @@
 
 namespace cloud_kms::kmscng {
 
-absl::Status RegisterTestProvider() {
+absl::Status RegisterProvider() {
   NTSTATUS status = 0;
   PWSTR algorithms[1] = {const_cast<wchar_t*>(NCRYPT_KEY_STORAGE_ALGORITHM)};
 
@@ -93,7 +93,7 @@ absl::Status RegisterTestProvider() {
   return absl::OkStatus();
 }
 
-absl::Status UnregisterTestProvider() {
+absl::Status UnregisterProvider() {
   NTSTATUS status = 0;
 
   // Tell CNG that this provider no longer supports the algorithm.

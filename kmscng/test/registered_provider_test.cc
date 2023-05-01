@@ -21,7 +21,7 @@
 #include "kmscng/cng_headers.h"
 #include "kmscng/object.h"
 #include "kmscng/provider.h"
-#include "kmscng/test/register_provider.h"
+#include "kmscng/util/registration.h"
 #include "kmscng/util/string_utils.h"
 
 #define ASSERT_SUCCESS(arg) ASSERT_EQ(arg, 0)
@@ -63,9 +63,9 @@ void SetUpFakeKmsProvider(NCRYPT_PROV_HANDLE provider_handle,
 
 class RegisteredProviderTest : public testing::Test {
  protected:
-  static void SetUpTestSuite() { ASSERT_OK(RegisterTestProvider()); }
+  static void SetUpTestSuite() { ASSERT_OK(RegisterProvider()); }
 
-  static void TearDownTestSuite() { ASSERT_OK(UnregisterTestProvider()); }
+  static void TearDownTestSuite() { ASSERT_OK(UnregisterProvider()); }
 };
 
 TEST_F(RegisteredProviderTest, OpenCloseProviderSuccess) {
