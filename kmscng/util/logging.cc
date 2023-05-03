@@ -14,8 +14,6 @@
 
 #include "kmscng/util/logging.h"
 
-#include "absl/base/log_severity.h"
-#include "absl/log/log.h"
 #include "absl/strings/str_format.h"
 #include "absl/synchronization/mutex.h"
 #include "common/platform.h"

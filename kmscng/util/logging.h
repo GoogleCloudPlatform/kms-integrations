@@ -19,10 +19,14 @@
 
 #include <string_view>
 
+#include "absl/base/log_severity.h"
+#include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "kmscng/cng_headers.h"
 
 namespace cloud_kms::kmscng {
+
+const char* const kVerboseLoggingEnvVariable = "KMS_CNG_VERBOSE";
 
 SECURITY_STATUS LogAndResolve(std::string_view function_name,
                               const absl::Status& status);

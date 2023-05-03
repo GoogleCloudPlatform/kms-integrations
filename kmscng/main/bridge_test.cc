@@ -17,6 +17,7 @@
 #include "absl/cleanup/cleanup.h"
 #include "common/kms_v1.h"
 #include "common/test/resource_helpers.h"
+#include "common/test/test_platform.h"
 #include "common/test/test_status_macros.h"
 #include "gmock/gmock.h"
 #include "kmscng/cng_headers.h"
@@ -24,6 +25,7 @@
 #include "kmscng/operation/sign_utils.h"
 #include "kmscng/provider.h"
 #include "kmscng/test/matchers.h"
+#include "kmscng/util/logging.h"
 #include "kmscng/util/string_utils.h"
 #include "kmsp11/util/crypto_utils.h"
 
@@ -33,6 +35,11 @@ namespace {
 // TODO(b/270419822): drop these once crypto_utils has been migrated to common.
 using cloud_kms::kmsp11::EcdsaVerifyP1363;
 using cloud_kms::kmsp11::ParseX509PublicKeyDer;
+
+using ::testing::IsEmpty;
+using ::testing::Not;
+using ::testing::internal::CaptureStderr;
+using ::testing::internal::GetCapturedStderr;
 
 // TODO(b/277099517): replace default arguments with options struct.
 kms_v1::CryptoKeyVersion NewCryptoKeyVersion(
@@ -61,6 +68,32 @@ void SetFakeKmsProviderProperties(Provider* provider, std::string listen_addr) {
   // Set custom properties to hit fake KMS.
   EXPECT_OK(provider->SetProperty(kEndpointAddressProperty, listen_addr));
   EXPECT_OK(provider->SetProperty(kChannelCredentialsProperty, "insecure"));
+}
+
+TEST(BridgeTest, BridgeVerboseLoggingEnabled) {
+  SetEnvVariable(kVerboseLoggingEnvVariable, "1");
+  absl::Cleanup c = [] { ClearEnvVariable(kVerboseLoggingEnvVariable); };
+  CaptureStderr();
+
+  NCRYPT_PROV_HANDLE provider_handle;
+  EXPECT_OK(OpenProvider(&provider_handle, kProviderName.data(), 0));
+
+  EXPECT_THAT(GetCapturedStderr(), Not(IsEmpty()));
+
+  // Clean up memory.
+  EXPECT_OK(FreeProvider(provider_handle));
+}
+
+TEST(BridgeTest, BridgeVerboseLoggingDisabled) {
+  CaptureStderr();
+
+  NCRYPT_PROV_HANDLE provider_handle;
+  EXPECT_OK(OpenProvider(&provider_handle, kProviderName.data(), 0));
+
+  EXPECT_THAT(GetCapturedStderr(), IsEmpty());
+
+  // Clean up memory.
+  EXPECT_OK(FreeProvider(provider_handle));
 }
 
 TEST(BridgeTest, OpenProviderSuccess) {

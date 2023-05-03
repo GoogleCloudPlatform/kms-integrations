@@ -46,6 +46,11 @@ absl::Status ValidateFlags(uint32_t flags) {
 // https://learn.microsoft.com/en-us/windows/win32/api/ncrypt/nf-ncrypt-ncryptopenstorageprovider
 absl::Status OpenProvider(__out NCRYPT_PROV_HANDLE* phProvider,
                           __in LPCWSTR pszProviderName, __in DWORD dwFlags) {
+  LOG_IF(INFO, std::getenv(kVerboseLoggingEnvVariable))
+      << "OpenProvider invoked\n"
+      << "Provider name: " << WideToString(std::wstring(pszProviderName))
+      << "\n"
+      << "Flags: " << dwFlags << "\n\n";
   if (phProvider == nullptr) {
     return NewInvalidArgumentError("the provider handle cannot be null",
                                    NTE_INVALID_PARAMETER, SOURCE_LOCATION);
@@ -65,6 +70,9 @@ absl::Status OpenProvider(__out NCRYPT_PROV_HANDLE* phProvider,
 // This function is called by NCryptFreeObject:
 // https://learn.microsoft.com/en-us/windows/win32/api/ncrypt/nf-ncrypt-ncryptfreeobject
 absl::Status FreeProvider(__in NCRYPT_PROV_HANDLE hProvider) {
+  LOG_IF(INFO, std::getenv(kVerboseLoggingEnvVariable))
+      << "FreeProvider invoked\n"
+      << "Provider: " << hProvider << "\n\n";
   ASSIGN_OR_RETURN(Provider * prov, ValidateProviderHandle(hProvider));
   delete prov;
   return absl::OkStatus();
@@ -78,6 +86,14 @@ absl::Status GetProviderProperty(__in NCRYPT_PROV_HANDLE hProvider,
                                      PBYTE pbOutput,
                                  __in DWORD cbOutput, __out DWORD* pcbResult,
                                  __in DWORD dwFlags) {
+  LOG_IF(INFO, std::getenv(kVerboseLoggingEnvVariable))
+      << "GetProviderProperty invoked\n"
+      << "Provider: " << hProvider << "\n"
+      << "Property name: " << WideToString(std::wstring(pszProperty)) << "\n"
+      << "Output: " << uintptr_t(pbOutput) << "\n"
+      << "Output size: " << cbOutput << "\n"
+      << "Output result size: " << uintptr_t(pcbResult) << "\n"
+      << "Flags: " << dwFlags << "\n\n";
   ASSIGN_OR_RETURN(Provider * prov, ValidateProviderHandle(hProvider));
   if (!pszProperty) {
     return NewInvalidArgumentError("pszProperty cannot be null",
@@ -117,6 +133,13 @@ absl::Status SetProviderProperty(__in NCRYPT_PROV_HANDLE hProvider,
                                  __in LPCWSTR pszProperty,
                                  __in_bcount(cbInput) PBYTE pbInput,
                                  __in DWORD cbInput, __in DWORD dwFlags) {
+  LOG_IF(INFO, std::getenv(kVerboseLoggingEnvVariable))
+      << "SetProviderProperty invoked\n"
+      << "Provider: " << hProvider << "\n"
+      << "Property name: " << WideToString(std::wstring(pszProperty)) << "\n"
+      << "Input: " << uintptr_t(pbInput) << "\n"
+      << "Input size: " << cbInput << "\n"
+      << "Flags: " << dwFlags << "\n\n";
   ASSIGN_OR_RETURN(Provider * prov, ValidateProviderHandle(hProvider));
   if (!pszProperty) {
     return NewInvalidArgumentError("pszProperty cannot be null",
@@ -136,6 +159,12 @@ absl::Status SetProviderProperty(__in NCRYPT_PROV_HANDLE hProvider,
 absl::Status OpenKey(__inout NCRYPT_PROV_HANDLE hProvider,
                      __out NCRYPT_KEY_HANDLE* phKey, __in LPCWSTR pszKeyName,
                      __in_opt DWORD dwLegacyKeySpec, __in DWORD dwFlags) {
+  LOG_IF(INFO, std::getenv(kVerboseLoggingEnvVariable))
+      << "OpenKey invoked\n"
+      << "Provider: " << hProvider << "\n"
+      << "Key name: " << WideToString(std::wstring(pszKeyName)) << "\n"
+      << "LegacyKeySpec: " << dwLegacyKeySpec << "\n"
+      << "Flags: " << dwFlags << "\n\n";
   if (hProvider == 0) {
     return NewInvalidArgumentError("The provider handle cannot be null",
                                    NTE_INVALID_HANDLE, SOURCE_LOCATION);
@@ -172,6 +201,10 @@ absl::Status OpenKey(__inout NCRYPT_PROV_HANDLE hProvider,
 // https://learn.microsoft.com/en-us/windows/win32/api/ncrypt/nf-ncrypt-ncryptfreeobject
 absl::Status FreeKey(__in NCRYPT_PROV_HANDLE hProvider,
                      __in NCRYPT_KEY_HANDLE hKey) {
+  LOG_IF(INFO, std::getenv(kVerboseLoggingEnvVariable))
+      << "FreeKey invoked\n"
+      << "Provider: " << hProvider << "\n"
+      << "Key: " << hKey << "\n\n";
   ASSIGN_OR_RETURN(Object * obj, ValidateKeyHandle(hProvider, hKey));
   delete obj;
   return absl::OkStatus();
@@ -184,6 +217,17 @@ absl::Status ExportKey(
     __in_opt NCryptBufferDesc* pParameterList,
     __out_bcount_part_opt(cbOutput, *pcbResult) PBYTE pbOutput,
     __in DWORD cbOutput, __out DWORD* pcbResult, __in DWORD dwFlags) {
+  LOG_IF(INFO, std::getenv(kVerboseLoggingEnvVariable))
+      << "ExportKey invoked\n"
+      << "Provider: " << hProvider << "\n"
+      << "Key: " << hKey << "\n"
+      << "Export Key: " << hExportKey << "\n"
+      << "Blob type: " << WideToString(std::wstring(pszBlobType)) << "\n"
+      << "Parameter list: " << uintptr_t(pParameterList) << "\n"
+      << "Output: " << uintptr_t(pbOutput) << "\n"
+      << "Output size: " << cbOutput << "\n"
+      << "Output result size: " << uintptr_t(pcbResult) << "\n"
+      << "Flags: " << dwFlags << "\n\n";
   ASSIGN_OR_RETURN(Object * object, ValidateKeyHandle(hProvider, hKey));
   if (hExportKey) {
     return NewInvalidArgumentError("hExportKey is not supported",
@@ -233,6 +277,15 @@ absl::Status GetKeyProperty(__in NCRYPT_PROV_HANDLE hProvider,
                                 PBYTE pbOutput,
                             __in DWORD cbOutput, __out DWORD* pcbResult,
                             __in DWORD dwFlags) {
+  LOG_IF(INFO, std::getenv(kVerboseLoggingEnvVariable))
+      << "GetKeyProperty invoked\n"
+      << "Provider: " << hProvider << "\n"
+      << "Key: " << hKey << "\n"
+      << "Property name: " << WideToString(std::wstring(pszProperty)) << "\n"
+      << "Output: " << uintptr_t(pbOutput) << "\n"
+      << "Output size: " << cbOutput << "\n"
+      << "Output result size: " << uintptr_t(pcbResult) << "\n"
+      << "Flags: " << dwFlags << "\n\n";
   ASSIGN_OR_RETURN(Object * object, ValidateKeyHandle(hProvider, hKey));
   if (!pszProperty) {
     return NewInvalidArgumentError("pszProperty cannot be null",
@@ -275,6 +328,17 @@ absl::Status SignHash(__in NCRYPT_PROV_HANDLE hProvider,
                           PBYTE pbSignature,
                       __in DWORD cbSignature, __out DWORD* pcbResult,
                       __in DWORD dwFlags) {
+  LOG_IF(INFO, std::getenv(kVerboseLoggingEnvVariable))
+      << "SignHash invoked\n"
+      << "Provider: " << hProvider << "\n"
+      << "Key: " << hKey << "\n"
+      << "Padding info: " << uintptr_t(pPaddingInfo) << "\n"
+      << "Hash value: " << uintptr_t(pbHashValue) << "\n"
+      << "Hash value size: " << cbHashValue << "\n"
+      << "Signature: " << uintptr_t(pbSignature) << "\n"
+      << "Signature size: " << cbSignature << "\n"
+      << "Signature result size: " << uintptr_t(pcbResult) << "\n"
+      << "Flags: " << dwFlags << "\n\n";
   ASSIGN_OR_RETURN(Object * object, ValidateKeyHandle(hProvider, hKey));
   // We won't need padding info until we support PKCS#1 or PSS algorithms.
   if (pPaddingInfo != nullptr) {
@@ -320,6 +384,11 @@ absl::Status SignHash(__in NCRYPT_PROV_HANDLE hProvider,
 // https://learn.microsoft.com/en-us/windows/win32/api/ncrypt/nf-ncrypt-ncryptisalgsupported
 absl::Status IsAlgSupported(__in NCRYPT_PROV_HANDLE hProvider,
                             __in LPCWSTR pszAlgId, __in DWORD dwFlags) {
+  LOG_IF(INFO, std::getenv(kVerboseLoggingEnvVariable))
+      << "IsAlgSupported invoked\n"
+      << "Provider: " << hProvider << "\n"
+      << "Alg Id: " << WideToString(std::wstring(pszAlgId)) << "\n"
+      << "Flags: " << dwFlags << "\n\n";
   ASSIGN_OR_RETURN(Provider * prov, ValidateProviderHandle(hProvider));
   if (!pszAlgId) {
     return NewInvalidArgumentError("pszAlgId cannot be null",
@@ -337,6 +406,11 @@ absl::Status EnumAlgorithms(__in NCRYPT_PROV_HANDLE hProvider,
                             __deref_out_ecount(*pdwAlgCount)
                                 NCryptAlgorithmName** ppAlgList,
                             __in DWORD dwFlags) {
+  LOG_IF(INFO, std::getenv(kVerboseLoggingEnvVariable))
+      << "EnumAlgorithms invoked\n"
+      << "Provider: " << hProvider << "\n"
+      << "Alg Operations: " << dwAlgOperations << "\n"
+      << "Flags: " << dwFlags << "\n\n";
   ASSIGN_OR_RETURN(Provider * prov, ValidateProviderHandle(hProvider));
   dwAlgOperations = dwAlgOperations & ~NCRYPT_SIGNATURE_OPERATION;
   if (dwAlgOperations) {
@@ -362,6 +436,8 @@ absl::Status EnumAlgorithms(__in NCRYPT_PROV_HANDLE hProvider,
 
 // https://learn.microsoft.com/en-us/windows/win32/api/ncrypt/nf-ncrypt-ncryptfreebuffer
 absl::Status FreeBuffer(__deref PVOID pvInput) {
+  LOG_IF(INFO, std::getenv(kVerboseLoggingEnvVariable))
+      << "FreeBuffer invoked\n\n";
   if (!pvInput) {
     return NewInvalidArgumentError("pvInput cannot be null",
                                    NTE_INVALID_PARAMETER, SOURCE_LOCATION);
