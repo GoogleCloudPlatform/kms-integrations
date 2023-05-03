@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
+     xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
   <Product Id="*"
            Language="1033"
            Codepage="1252"
@@ -17,11 +18,28 @@
 
     <MediaTemplate EmbedCab="yes" />
 
+    <!-- Check installation prerequisites -->
+    <!-- C++ 2019 -->
+    <Property Id="CPPRUNTIME2019X64" Secure="yes">
+        <?foreach CPPRUNTIMEVERSIONPREFIX in 21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37?>
+	    <RegistrySearch
+                Id="CPPv$(var.CPPRUNTIMEVERSIONPREFIX)x64"
+                Root="HKCR"
+                Key="Installer\Dependencies\VC,redist.x64,amd64,14.$(var.CPPRUNTIMEVERSIONPREFIX),bundle"
+                Type="raw" />
+        <?endforeach ?>
+    </Property>
+    <Condition Message="Microsoft Visual C++ 2019 (x64) Redistributable missing">
+        <![CDATA[((REMOVE="ALL")) OR Installed OR CPPRUNTIME2019X64]]>
+    </Condition>
+
     <!-- Define custom installation folder in Program Files, and system32 for later reference -->
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="System64Folder" />
       <Directory Id="ProgramFiles64Folder">
-         <Directory Id="INSTALLFOLDER" Name="Cloud KMS CNG Provider" />
+        <Directory Id="GoogleFolder" Name="Google">
+          <Directory Id="INSTALLFOLDER" Name="Cloud KMS CNG Provider" />
+        </Directory>
       </Directory>
     </Directory>
 
@@ -37,31 +55,35 @@
 
     <Binary Id="RegisterProviderExe" SourceFile="register_provider.exe" />
 
-    <!-- Register provider when installing, this needs elevated permissions -->
-    <CustomAction Id="RegisterProviderAction"
+    <!-- Silently register provider -->
+    <Property Id="QtExecDeferredRegister" Value="&quot;register_provider.exe&quot; -i"/>
+    <CustomAction Id="QtExecDeferredRegister"
               Execute="deferred"
               Impersonate="no"
-              Return="asyncNoWait"
-              BinaryKey="RegisterProviderExe"
-              ExeCommand="&quot;[INSTALLDIR]register_provider.exe&quot; -i" />
+              Return="asyncWait"
+              BinaryKey="WixCA"
+              DllEntry="WixQuietExec" />
 
-    <!-- Unregister provider when uninstalling -->
-    <CustomAction Id="UnregisterProviderAction"
+    <!-- Silently unregister provider -->
+    <Property Id="QtExecDeferredUnregister" Value="&quot;register_provider.exe&quot; -u"/>
+    <CustomAction Id="QtExecDeferredUnregister"
               Execute="deferred"
               Impersonate="no"
-              Return="asyncNoWait"
-              BinaryKey="RegisterProviderExe"
-              ExeCommand="&quot;[INSTALLDIR]register_provider.exe&quot; -u" />
+              Return="asyncWait"
+              BinaryKey="WixCA"
+              DllEntry="WixQuietExec" />
 
     <Feature Id="KMSProviderFeature" Title="Cloud KMS Provider" Level="1">
       <ComponentRef Id="ProviderDLL" />
     </Feature>
 
     <InstallExecuteSequence>
-      <!-- Run register_provider.exe with '-u' during uninstallation only -->
-      <Custom Action="UnregisterProviderAction" After="InstallInitialize">(REMOVE~="ALL") OR (REINSTALL~="ALL")</Custom>
-      <!-- Run register_provider.exe after everything has been installed -->
-      <Custom Action="RegisterProviderAction" Before="InstallFinalize">(NOT Installed) OR (REMOVE~="ALL")</Custom>
+      <!-- Run register_provider.exe with '-u' during repair or uninstallation -->
+      <Custom Action="QtExecDeferredUnregister"
+              After="InstallInitialize">(REMOVE~="ALL") OR (REINSTALL~="ALL")</Custom>
+      <!-- Run register_provider.exe with '-i' during repair or installation -->
+      <Custom Action="QtExecDeferredRegister"
+              Before="InstallFinalize">(NOT Installed) OR (REMOVE~="ALL")</Custom>
     </InstallExecuteSequence>
 
   </Product>

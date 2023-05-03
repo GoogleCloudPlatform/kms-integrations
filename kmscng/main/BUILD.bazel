@@ -107,7 +107,7 @@ genrule(
         ":register_provider",
     ],
     outs = ["kmscng.wixobj"],
-    cmd = "$(location @wix//:candle) $(location kmscng.wxs) && cp kmscng.wixobj $@",
+    cmd = "$(location @wix//:candle) $(location kmscng.wxs) -ext WixUtilExtension && cp kmscng.wixobj $@",
     target_compatible_with = ["@platforms//os:windows"],
     tools = [
         "@wix//:candle",
@@ -118,7 +118,7 @@ genrule(
     name = "installer",
     srcs = ["kmscng.wixobj"],
     outs = ["kmscng.msi"],
-    cmd = "$(location @wix//:light) $(location kmscng.wixobj) && cp kmscng.msi $@",
+    cmd = "$(location @wix//:light) $(location kmscng.wixobj) -ext WixUtilExtension && cp kmscng.msi $@",
     target_compatible_with = ["@platforms//os:windows"],
     tools = [
         "@wix//:light",
