@@ -103,6 +103,7 @@ genrule(
 genrule(
     name = "wixobj",
     srcs = [
+        ":kmscng.dll",
         "kmscng.wxs",
         ":register_provider",
     ],
@@ -123,4 +124,5 @@ genrule(
     tools = [
         "@wix//:light",
     ],
+    visibility = ["//visibility:public"],
 )

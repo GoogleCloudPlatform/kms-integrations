@@ -35,9 +35,18 @@ load("//kmscng:cpdk.bzl", "cpdk")
 
 cpdk(name = "cpdk")
 
-load("//kmscng:wix.bzl", "wix")
+http_archive(
+    name = "wix",
+    build_file_content = """
+package(default_visibility = ["//visibility:public"])
 
-wix(name = "wix")
+filegroup(name = "all", srcs = glob(["**/*"]))
+alias(name = "candle", actual = "candle.exe")
+alias(name = "light", actual = "light.exe")
+    """,
+    sha256 = "2c1888d5d1dba377fc7fa14444cf556963747ff9a0a289a3599cf09da03b9e2e",
+    url = "https://github.com/wixtoolset/wix3/releases/download/wix3112rtm/wix311-binaries.zip",
+)
 
 load("//:build/cloudkms_grpc_service_config.bzl", "cloudkms_grpc_service_config")
 

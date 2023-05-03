@@ -39,9 +39,6 @@ go run ./.kokoro/unwrap_key.go ^
 :: Install all features, without displaying the GUI.
 %KOKORO_GFILE_DIR%\cpdksetup.exe /features + /quiet
 
-:: "Install" Wix toolset.
-unzip "%KOKORO_GFILE_DIR%\wix3.11.zip" -d "%ProgramFiles(x86)%"
-
 :: Configure user.bazelrc with remote build caching options and Google creds
 copy .kokoro\remote_cache.bazelrc user.bazelrc
 echo build --remote_default_exec_properties=cache-silo-key=windows >> user.bazelrc
