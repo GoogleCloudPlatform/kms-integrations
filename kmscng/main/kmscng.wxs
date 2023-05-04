@@ -1,91 +1,41 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
-     xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
-  <Product Id="*"
-           Language="1033"
-           Codepage="1252"
-           Manufacturer="Google LLC"
-           Name="Cloud KMS Provider for Microsoft CNG"
-           UpgradeCode="{AB7C91D4-D9B6-4E79-A332-6839067BF60D}"
-           Version="0.7.0">
-
-  <Package InstallScope="perMachine"
-           InstallerVersion="200"
-           Compressed="yes"
-           Platform="x64" />
-
-    <MajorUpgrade DowngradeErrorMessage="A later version of [ProductName] is already installed." />
-
-    <MediaTemplate EmbedCab="yes" />
-
-    <!-- Check installation prerequisites -->
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product Id="*" Language="1033" Codepage="1252" UpgradeCode="{AB7C91D4-D9B6-4E79-A332-6839067BF60D}" Manufacturer="Google LLC" Name="Cloud KMS Provider for Microsoft CNG" Version="0.7.0">
+    <Package InstallScope="perMachine" InstallerVersion="200" Compressed="yes" Platform="x64"/>
+    <MajorUpgrade DowngradeErrorMessage="A later version of [ProductName] is already installed."/>
+    <MediaTemplate EmbedCab="yes"/>
+    <!-- Check installation prerequisites. -->
     <!-- C++ 2019 -->
     <Property Id="CPPRUNTIME2019X64" Secure="yes">
-        <?foreach CPPRUNTIMEVERSIONPREFIX in 21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37?>
-	    <RegistrySearch
-                Id="CPPv$(var.CPPRUNTIMEVERSIONPREFIX)x64"
-                Root="HKCR"
-                Key="Installer\Dependencies\VC,redist.x64,amd64,14.$(var.CPPRUNTIMEVERSIONPREFIX),bundle"
-                Type="raw" />
-        <?endforeach ?>
+      <?foreach CPPRUNTIMEVERSIONPREFIX in 21;22;23;24;25;26;27;28;29;30;31;32;33;34;35;36;37?>
+      <RegistrySearch Id="CPPv$(var.CPPRUNTIMEVERSIONPREFIX)x64" Type="raw" Root="HKCR" Key="Installer\Dependencies\VC,redist.x64,amd64,14.$(var.CPPRUNTIMEVERSIONPREFIX),bundle"/>
+      <?endforeach?>
     </Property>
-    <Condition Message="Microsoft Visual C++ 2019 (x64) Redistributable missing">
-        <![CDATA[((REMOVE="ALL")) OR Installed OR CPPRUNTIME2019X64]]>
-    </Condition>
-
-    <!-- Define custom installation folder in Program Files, and system32 for later reference -->
+    <Condition Message="Microsoft Visual C++ 2019 (x64) Redistributable missing">REMOVE OR Installed OR CPPRUNTIME2019X64</Condition>
+    <!-- Add files to the filesystem. -->
+    <!--
+      Install the DLL to C:\Windows\System32. This causes a compiler error:
+          warning LGHT1076 : ICE09: Component: ProviderComponent is a non-permanent system component
+      We ignore this, as we want to clean up the DLL from system32 when the user uninstalls.
+    -->
     <Directory Id="TARGETDIR" Name="SourceDir">
-      <Directory Id="System64Folder" />
-      <Directory Id="ProgramFiles64Folder">
-        <Directory Id="GoogleFolder" Name="Google">
-          <Directory Id="INSTALLFOLDER" Name="Cloud KMS CNG Provider" />
-        </Directory>
-      </Directory>
+      <Directory Id="System64Folder"/>
     </Directory>
-
-    <!-- Create installation folder with DLL and copy it to system32 -->
-    <DirectoryRef Id="INSTALLFOLDER">
-      <Component Id="ProviderDLL" Guid="D9942A6F-A99D-474F-AC6D-8165A215E73B" Win64="yes">
-              <File Id="ProviderDLL" KeyPath="yes" Source="kmscng.dll"></File>
-              <CopyFile Id="DLLCopy" FileId="ProviderDLL" DestinationDirectory="System64Folder" />
-              <RemoveFile Id="RemoveDLLOnUninstall" Directory="INSTALLFOLDER"
-                          Name="kmscng.dll" On="uninstall" />
+    <DirectoryRef Id="System64Folder">
+      <Component Id="ProviderComponent" Guid="*" Win64="yes">
+        <File Id="ProviderFile" KeyPath="yes" Source="kmscng.dll"/>
       </Component>
     </DirectoryRef>
-
-    <Binary Id="RegisterProviderExe" SourceFile="register_provider.exe" />
-
-    <!-- Silently register provider -->
-    <Property Id="QtExecDeferredRegister" Value="&quot;register_provider.exe&quot; -i"/>
-    <CustomAction Id="QtExecDeferredRegister"
-              Execute="deferred"
-              Impersonate="no"
-              Return="asyncWait"
-              BinaryKey="WixCA"
-              DllEntry="WixQuietExec" />
-
-    <!-- Silently unregister provider -->
-    <Property Id="QtExecDeferredUnregister" Value="&quot;register_provider.exe&quot; -u"/>
-    <CustomAction Id="QtExecDeferredUnregister"
-              Execute="deferred"
-              Impersonate="no"
-              Return="asyncWait"
-              BinaryKey="WixCA"
-              DllEntry="WixQuietExec" />
-
-    <Feature Id="KMSProviderFeature" Title="Cloud KMS Provider" Level="1">
-      <ComponentRef Id="ProviderDLL" />
+    <Feature Id="ProviderFeature" Title="Cloud KMS Provider" Level="1">
+      <ComponentRef Id="ProviderComponent"/>
     </Feature>
-
+    <!-- Register / unregister the provider. -->
+    <Binary Id="InstallActions" SourceFile="install_actions.dll"/>
+    <CustomAction Id="RegisterProviderAction" Execute="deferred" Impersonate="no" BinaryKey="InstallActions" DllEntry="RegisterProvider"/>
+    <CustomAction Id="UnregisterProviderAction" Execute="deferred" Impersonate="no" BinaryKey="InstallActions" DllEntry="UnregisterProvider"/>
     <InstallExecuteSequence>
-      <!-- Run register_provider.exe with '-u' during repair or uninstallation -->
-      <Custom Action="QtExecDeferredUnregister"
-              After="InstallInitialize">(REMOVE~="ALL") OR (REINSTALL~="ALL")</Custom>
-      <!-- Run register_provider.exe with '-i' during repair or installation -->
-      <Custom Action="QtExecDeferredRegister"
-              Before="InstallFinalize">(NOT Installed) OR (REMOVE~="ALL")</Custom>
+      <Custom Action="RegisterProviderAction" Before="InstallFinalize">(NOT Installed) AND (NOT REMOVE)</Custom>
+      <Custom Action="UnregisterProviderAction" Before="RemoveFiles">REMOVE AND (NOT UPGRADINGPRODUCTCODE)</Custom>
     </InstallExecuteSequence>
-
   </Product>
 </Wix>
-

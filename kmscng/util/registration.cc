@@ -52,10 +52,10 @@ absl::Status RegisterProvider() {
   };
 
   // Register our custom CNG provider
-  status = BCryptRegisterProvider(
-      kProviderName.data(),
-      0,  // Flags: fail if provider is already registered
-      &ksp_provider);
+  status =
+      BCryptRegisterProvider(kProviderName.data(),
+                             CRYPT_OVERWRITE,  // overwrite an existing entry
+                             &ksp_provider);
   if (!NT_SUCCESS(status)) {
     return absl::InternalError(absl::StrFormat(
         "BCryptRegisterProvider failed with error code 0x%08x\n", status));

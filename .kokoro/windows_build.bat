@@ -57,7 +57,8 @@ set BAZEL_STARTUP_ARGS=--output_user_root c:\bzltmp
 :: Ensure Bazel version information is included in the build log
 bazelisk %BAZEL_STARTUP_ARGS% version
 
-bazelisk %BAZEL_STARTUP_ARGS% test %BAZEL_ARGS% ... :ci_only_tests
+bazelisk %BAZEL_STARTUP_ARGS% test %BAZEL_ARGS% ^
+    ... :ci_only_tests :windows_ci_only_tests
 set RV=%ERRORLEVEL%
 
 bazelisk %BAZEL_STARTUP_ARGS% run %BAZEL_ARGS% //kmsp11/tools/buildsigner -- ^

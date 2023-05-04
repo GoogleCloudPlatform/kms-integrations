@@ -1,5 +1,5 @@
-load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 package(default_visibility = [
     "//common:__subpackages__",
@@ -100,29 +100,59 @@ genrule(
     target_compatible_with = ["@platforms//os:windows"],
 )
 
-genrule(
-    name = "wixobj",
-    srcs = [
-        ":kmscng.dll",
-        "kmscng.wxs",
-        ":register_provider",
-    ],
-    outs = ["kmscng.wixobj"],
-    cmd = "$(location @wix//:candle) $(location kmscng.wxs) -ext WixUtilExtension && cp kmscng.wixobj $@",
+cc_binary(
+    name = "install_actions.dll",
+    srcs = ["install_actions.cc"],
+    linkshared = True,
     target_compatible_with = ["@platforms//os:windows"],
-    tools = [
-        "@wix//:candle",
+    win_def_file = "instalL_actions.def",
+    deps = [
+        "//kmscng/util:registration",
+        "@com_google_absl//absl/status",
     ],
 )
 
 genrule(
     name = "installer",
-    srcs = ["kmscng.wixobj"],
+    srcs = [
+        ":kmscng.dll",
+        "kmscng.wxs",
+        ":install_actions.dll",
+    ],
     outs = ["kmscng.msi"],
-    cmd = "$(location @wix//:light) $(location kmscng.wixobj) -ext WixUtilExtension && cp kmscng.msi $@",
+    cmd = "cp $(location :kmscng.dll) . && " +
+          "cp $(location :install_actions.dll) . && " +
+          "$(location @wix//:candle) $(location kmscng.wxs) && " +
+          "$(location @wix//:light) kmscng.wixobj && " +
+          "cp kmscng.msi $@",
     target_compatible_with = ["@platforms//os:windows"],
     tools = [
+        "@wix//:candle",
         "@wix//:light",
     ],
     visibility = ["//visibility:public"],
+)
+
+go_library(
+    name = "install_testlib",
+    testonly = 1,
+    srcs = ["install_testlib.go"],
+    data = [":kmscng.msi"],
+    importpath = "installtestlib",
+    target_compatible_with = ["@platforms//os:windows"],
+    deps = [
+        "@io_bazel_rules_go//go/tools/bazel:go_default_library",
+        "@org_golang_x_text//encoding/unicode:go_default_library",
+    ],
+)
+
+go_test(
+    name = "install_test",
+    srcs = ["install_test.go"],
+    tags = [
+        "exclusive",  # only one test that does Windows installers at a time
+        "manual",  # don't run on dev workstations; included in //:ci_only_tests
+    ],
+    target_compatible_with = ["@platforms//os:windows"],
+    deps = [":install_testlib"],
 )
