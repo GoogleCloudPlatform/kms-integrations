@@ -38,7 +38,8 @@
 
 namespace cloud_kms::kmscng {
 
-constexpr std::wstring_view kProviderName = L"kmscng.dll";
+constexpr std::wstring_view kProviderName = L"Google Cloud KMS Provider";
+constexpr std::wstring_view kProviderDllName = L"kmscng.dll";
 constexpr std::wstring_view kEndpointAddressProperty = L"KMSEndpointAddress";
 constexpr std::wstring_view kChannelCredentialsProperty =
     L"KMSChannelCredentials";
