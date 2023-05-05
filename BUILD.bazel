@@ -66,5 +66,6 @@ test_suite(
     tags = ["manual"],
     tests = [
         "//kmscng/main:install_test",
+        "//kmscng/test:signtool_test",
     ],
 )

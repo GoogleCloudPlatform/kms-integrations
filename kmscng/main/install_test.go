@@ -28,8 +28,8 @@ import (
 )
 
 const (
-	providerName = "Google Cloud KMS Provider"
 	libraryFile  = "C:\\Windows\\System32\\kmscng.dll"
+	providerName = "Google Cloud KMS Provider"
 	registryKey  = "HKLM\\System\\CurrentControlSet\\Control\\Cryptography\\Providers\\" +
 		providerName + "\\UM\\00010001"
 
