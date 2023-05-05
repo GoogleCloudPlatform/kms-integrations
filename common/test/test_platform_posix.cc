@@ -17,10 +17,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "kmsp11/test/test_platform.h"
-#include "kmsp11/util/errors.h"
+#include "absl/strings/str_format.h"
+#include "common/test/test_platform.h"
 
-namespace cloud_kms::kmsp11 {
+namespace cloud_kms {
 
 void SetEnvVariable(const char* name, const char* value) {
   setenv(name, value, 1);
@@ -30,13 +30,10 @@ void ClearEnvVariable(const char* name) { unsetenv(name); }
 
 absl::Status SetMode(const char* filename, int mode) {
   if (chmod(filename, mode) != 0) {
-    return NewError(
-        absl::StatusCode::kPermissionDenied,
-        absl::StrFormat("unable to change mode of file %s: error %d", filename,
-                        errno),
-        CKR_GENERAL_ERROR, SOURCE_LOCATION);
+    return absl::PermissionDeniedError(absl::StrFormat(
+        "unable to change mode of file %s: error %d", filename, errno));
   }
   return absl::OkStatus();
 }
 
-}  // namespace cloud_kms::kmsp11
+}  // namespace cloud_kms

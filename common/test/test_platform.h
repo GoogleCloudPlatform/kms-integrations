@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-#ifndef KMSP11_TEST_TEST_PLATFORM_H_
-#define KMSP11_TEST_TEST_PLATFORM_H_
+#ifndef COMMON_TEST_TEST_PLATFORM_H_
+#define COMMON_TEST_TEST_PLATFORM_H_
 
 #include <string>
 
 #include "absl/status/status.h"
 
-namespace cloud_kms::kmsp11 {
+namespace cloud_kms {
 
 // Set the named environment variable to the provided value, replacing any
 // existing value.
@@ -45,6 +45,6 @@ inline void ClearEnvVariable(const std::string& name) {
 // Unimplemented on Windows.
 absl::Status SetMode(const char* filename, int mode);
 
-}  // namespace cloud_kms::kmsp11
+}  // namespace cloud_kms
 
-#endif  // KMSP11_TEST_TEST_PLATFORM_H_
+#endif  // COMMON_TEST_TEST_PLATFORM_H_

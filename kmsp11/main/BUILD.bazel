@@ -39,6 +39,7 @@ cc_test(
     srcs = ["bridge_test.cc"],
     deps = [
         ":bridge",
+        "//common/test:test_platform",
         "//fakekms/cpp:fakekms",
         "//kmsp11/test",
         "//kmsp11/util:crypto_utils",
@@ -53,6 +54,7 @@ cc_test(
     srcs = ["asymmetric_crypt_test.cc"],
     deps = [
         ":bridge",
+        "//common/test:test_platform",
         "//fakekms/cpp:fakekms",
         "//kmsp11/test",
         "//kmsp11/util:crypto_utils",
@@ -67,6 +69,7 @@ cc_test(
     srcs = ["asymmetric_sign_test.cc"],
     deps = [
         ":bridge",
+        "//common/test:test_platform",
         "//fakekms/cpp:fakekms",
         "//kmsp11/test",
         "//kmsp11/util:crypto_utils",
@@ -81,6 +84,7 @@ cc_test(
     srcs = ["symmetric_crypt_test.cc"],
     deps = [
         ":bridge",
+        "//common/test:test_platform",
         "//fakekms/cpp:fakekms",
         "//kmsp11/test",
         "//kmsp11/util:crypto_utils",
@@ -152,6 +156,7 @@ cc_test(
     ],
     deps = [
         ":bridge",
+        "//common/test:test_platform",
         "//fakekms/cpp:fakekms",
         "//kmsp11/test",
         "@com_google_absl//absl/cleanup",

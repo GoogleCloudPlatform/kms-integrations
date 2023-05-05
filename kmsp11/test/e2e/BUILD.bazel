@@ -13,9 +13,9 @@ cc_library(
     }),
     deps = [
         "//common:openssl",
+        "//common/test:test_platform",
         "//kmsp11:cryptoki_headers",
         "//kmsp11/test:resource_helpers",
-        "//kmsp11/test:test_platform",
         "@com_github_google_glog//:glog",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",

@@ -10,7 +10,6 @@ cc_library(
         ":matchers",
         ":proto_parser",
         ":resource_helpers",
-        ":test_platform",
     ],
 )
 
@@ -89,19 +88,5 @@ cc_library(
         "//kmsp11/main:bridge",
         "//kmsp11/util:crypto_utils",
         "@com_google_absl//absl/strings",
-    ],
-)
-
-cc_library(
-    name = "test_platform",
-    testonly = 1,
-    srcs = select({
-        "//:windows": ["test_platform_win.cc"],
-        "//conditions:default": ["test_platform_posix.cc"],
-    }),
-    hdrs = ["test_platform.h"],
-    deps = [
-        "//kmsp11/util:errors",
-        "@com_google_absl//absl/status",
     ],
 )

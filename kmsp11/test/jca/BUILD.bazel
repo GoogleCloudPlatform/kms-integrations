@@ -35,7 +35,7 @@ cc_binary(
     srcs = ["env.cc"],
     linkshared = 1,
     deps = [
-        "//kmsp11/test:test_platform",
+        "//common/test:test_platform",
         "@bazel_tools//tools/jdk:jni",
     ],
 )

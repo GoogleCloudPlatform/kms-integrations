@@ -16,10 +16,9 @@
 #include <Windows.h>
 #include <process.h>
 
-#include "kmsp11/test/test_platform.h"
-#include "kmsp11/util/errors.h"
+#include "common/test/test_platform.h"
 
-namespace cloud_kms::kmsp11 {
+namespace cloud_kms {
 
 void SetEnvVariable(const char* name, const char* value) {
   _putenv_s(name, value);
@@ -28,9 +27,7 @@ void SetEnvVariable(const char* name, const char* value) {
 void ClearEnvVariable(const char* name) { _putenv_s(name, ""); }
 
 absl::Status SetMode(const char* filename, int mode) {
-  return NewError(absl::StatusCode::kUnimplemented,
-                  "SetMode is not implemented on Windows", CKR_GENERAL_ERROR,
-                  SOURCE_LOCATION);
+  return absl::UnimplementedError("SetMode is not implemented on Windows");
 }
 
-}  // namespace cloud_kms::kmsp11
+}  // namespace cloud_kms
