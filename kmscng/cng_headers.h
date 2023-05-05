@@ -44,6 +44,9 @@ constexpr std::wstring_view kEndpointAddressProperty = L"KMSEndpointAddress";
 constexpr std::wstring_view kChannelCredentialsProperty =
     L"KMSChannelCredentials";
 
+constexpr char kEndpointAddressEnvVariable[] = "KMS_ENDPOINT_ADDRESS";
+constexpr char kChannelCredentialsEnvVariable[] = "KMS_CHANNEL_CREDENTIALS";
+
 }  // namespace cloud_kms::kmscng
 
 #endif  // KMSCNG_CNG_HEADERS_H_

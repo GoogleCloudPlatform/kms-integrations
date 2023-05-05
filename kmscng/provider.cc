@@ -35,11 +35,20 @@ absl::flat_hash_set<std::wstring> mutable_properties = {
 };
 
 absl::flat_hash_map<std::wstring, std::string> BuildInfo() {
+  const char* env_endpoint_address = std::getenv(kEndpointAddressEnvVariable);
+  std::string endpoint_address = env_endpoint_address
+                                     ? env_endpoint_address
+                                     : "cloudkms.googleapis.com:443";
+  const char* env_channel_credentials =
+      std::getenv(kChannelCredentialsEnvVariable);
+  std::string channel_credentials =
+      env_channel_credentials ? env_channel_credentials : "default";
+
   return {
       {NCRYPT_IMPL_TYPE_PROPERTY, Uint32ToBytes(NCRYPT_IMPL_HARDWARE_FLAG)},
       {NCRYPT_VERSION_PROPERTY, Uint32ToBytes(kLibraryVersionHex)},
-      {std::wstring(kEndpointAddressProperty), "cloudkms.googleapis.com:443"},
-      {std::wstring(kChannelCredentialsProperty), "default"},
+      {std::wstring(kEndpointAddressProperty), endpoint_address},
+      {std::wstring(kChannelCredentialsProperty), channel_credentials},
   };
 }
 

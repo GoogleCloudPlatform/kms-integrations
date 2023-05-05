@@ -14,6 +14,8 @@
 
 #include "kmscng/provider.h"
 
+#include "absl/cleanup/cleanup.h"
+#include "common/test/test_platform.h"
 #include "common/test/test_status_macros.h"
 #include "gmock/gmock.h"
 #include "kmscng/cng_headers.h"
@@ -57,6 +59,26 @@ TEST(ProviderTest, GetProviderPropertyChannelCredentialsSuccess) {
 
   EXPECT_THAT(provider.GetProperty(kChannelCredentialsProperty),
               IsOkAndHolds("default"));
+}
+
+TEST(ProviderTest, SetEndpointAddressInEnvVariable) {
+  std::string address = "invalid.address";
+  SetEnvVariable(kEndpointAddressEnvVariable, address);
+  absl::Cleanup c = [] { ClearEnvVariable(kEndpointAddressEnvVariable); };
+
+  Provider provider;
+  EXPECT_THAT(provider.GetProperty(kEndpointAddressProperty),
+              IsOkAndHolds(address));
+}
+
+TEST(ProviderTest, SetChannelCredentialsInEnvVariable) {
+  std::string credentials = "unknown";
+  SetEnvVariable(kChannelCredentialsEnvVariable, credentials);
+  absl::Cleanup c = [] { ClearEnvVariable(kChannelCredentialsEnvVariable); };
+
+  Provider provider;
+  EXPECT_THAT(provider.GetProperty(kChannelCredentialsProperty),
+              IsOkAndHolds(credentials));
 }
 
 TEST(ProviderTest, SetProviderPropertyUnsupportedProperty) {
