@@ -277,8 +277,8 @@ _gapic_generator_java_version = "2.8.2"
 
 http_archive(
     name = "gapic_generator_java",
-    sha256 = "93556f2040c38d5e51c6bb84cb66993ba1935d5a7dc82d1aaf4ce1093446c201",
-    strip_prefix = "gapic-generator-java-%s" % _gapic_generator_java_version,
+    sha256 = "d2ddccbbfa8397b002a81b549c1f5daa31292113f97cbb34781a46298e1393d9",
+    strip_prefix = "sdk-platform-java-%s" % _gapic_generator_java_version,
     urls = ["https://github.com/googleapis/gapic-generator-java/archive/v%s.zip" % _gapic_generator_java_version],
 )
 
