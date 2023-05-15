@@ -35,11 +35,8 @@ class BuildStateTest : public testing::Test {
     kms_stub_ = fake_server_->NewClient();
     key_ring_ = CreateKeyRingOrDie(kms_stub_.get(), kTestLocation, RandomId(),
                                    key_ring_);
-
-    client_ = std::make_unique<KmsClient>(
-        fake_server_->listen_addr(), grpc::InsecureChannelCredentials(),
-        absl::Seconds(1),
-        /*version_major=*/1, /*version_minor=*/1);
+    client_ = std::make_unique<KmsClient>(KmsClient::Options{
+      .endpoint_address = fake_server_->listen_addr(), .rpc_timeout = absl::Seconds(1)});
   }
 
   kms_v1::CryptoKeyVersion AddKeyAndInitialVersion(

@@ -43,24 +43,25 @@ absl::StatusOr<CK_INFO> NewCkInfo() {
 }
 
 std::unique_ptr<KmsClient> NewKmsClient(const LibraryConfig& config) {
-  std::string endpoint_address = config.kms_endpoint().empty()
-                                     ? kDefaultKmsEndpoint
-                                     : config.kms_endpoint();
+  KmsClient::Options options;
+  options.endpoint_address = config.kms_endpoint().empty()
+                                 ? kDefaultKmsEndpoint
+                                 : config.kms_endpoint();
+  options.creds = config.use_insecure_grpc_channel_credentials()
+                      ? grpc::InsecureChannelCredentials()
+                      : grpc::GoogleDefaultCredentials();
+  options.rpc_timeout = config.rpc_timeout_secs() == 0
+                            ? kDefaultRpcTimeout
+                            : absl::Seconds(config.rpc_timeout_secs());
+  options.version_major = kLibraryVersion.major;
+  options.version_minor = kLibraryVersion.minor;
+  options.error_decorator = [](absl::Status& status) {
+    SetErrorRv(status, CKR_DEVICE_ERROR);
+  };
+  options.rpc_feature_flags = config.experimental_rpc_feature_flags();
+  options.user_project_override = config.user_project_override();
 
-  std::shared_ptr<grpc::ChannelCredentials> creds =
-      config.use_insecure_grpc_channel_credentials()
-          ? grpc::InsecureChannelCredentials()
-          : grpc::GoogleDefaultCredentials();
-
-  absl::Duration rpc_timeout = config.rpc_timeout_secs() == 0
-                                   ? kDefaultRpcTimeout
-                                   : absl::Seconds(config.rpc_timeout_secs());
-
-  return std::make_unique<KmsClient>(
-      endpoint_address, creds, rpc_timeout, kLibraryVersion.major,
-      kLibraryVersion.minor, UserAgent::kPkcs11,
-      [](absl::Status& status) { SetErrorRv(status, CKR_DEVICE_ERROR); },
-      config.experimental_rpc_feature_flags(), config.user_project_override());
+  return std::make_unique<KmsClient>(options);
 }
 
 }  // namespace

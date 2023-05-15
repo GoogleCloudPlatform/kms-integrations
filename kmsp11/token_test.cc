@@ -43,10 +43,10 @@ class TokenTest : public testing::Test {
                                    key_ring_);
 
     config_.set_key_ring(key_ring_.name());
-    client_ = std::make_unique<KmsClient>(
-        fake_server_->listen_addr(), grpc::InsecureChannelCredentials(),
-        absl::Seconds(1),
-        /*version_major=*/1, /*version_minor=*/1);
+    client_ = std::make_unique<KmsClient>(KmsClient::Options{
+        .endpoint_address = fake_server_->listen_addr(),
+        .rpc_timeout = absl::Seconds(1),
+    });
   }
 
   std::unique_ptr<fakekms::Server> fake_server_;

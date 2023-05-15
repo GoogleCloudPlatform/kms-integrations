@@ -22,6 +22,7 @@
 #include "fakekms/cpp/fakekms.h"
 #include "fakekms/cpp/fault_helpers.h"
 #include "gmock/gmock.h"
+#include "kms_client.h"
 #include "kmsp11/util/crypto_utils.h"
 
 namespace cloud_kms {
@@ -39,9 +40,8 @@ using ::cloud_kms::kmsp11::ParseX509PublicKeyPem;
 std::unique_ptr<KmsClient> NewClient(
     std::string_view listen_addr,
     absl::Duration rpc_timeout = absl::Milliseconds(500)) {
-  return std::make_unique<KmsClient>(
-      listen_addr, grpc::InsecureChannelCredentials(), rpc_timeout,
-      /*version_major=*/1, /*version_minor=*/1);
+  return std::make_unique<KmsClient>(KmsClient::Options{
+      .endpoint_address = std::string(listen_addr), .rpc_timeout = rpc_timeout});
 }
 
 TEST(KmsClientTest, ListCryptoKeysSuccess) {

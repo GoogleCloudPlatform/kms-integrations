@@ -50,14 +50,21 @@ struct CryptoKeyAndVersion {
 
 class KmsClient {
  public:
-  // TODO(b/277099517): replace default arguments with options struct.
-  KmsClient(std::string_view endpoint_address,
-            const std::shared_ptr<grpc::ChannelCredentials>& creds,
-            absl::Duration rpc_timeout, const int version_major,
-            const int version_minor, UserAgent user_agent = UserAgent::kPkcs11,
-            std::optional<ErrorDecorator> error_decorator = std::nullopt,
-            std::string_view rpc_feature_flags = "",
-            std::string_view user_project_override = "");
+  // Configuration Options for Constructing a new KmsClient.
+  struct Options {
+    std::string endpoint_address = "";
+    std::shared_ptr<grpc::ChannelCredentials> creds =
+        grpc::InsecureChannelCredentials();
+    absl::Duration rpc_timeout = absl::Milliseconds(0);
+    int version_major = 1;
+    int version_minor = 1;
+    UserAgent user_agent = UserAgent::kPkcs11;
+    std::optional<ErrorDecorator> error_decorator = std::nullopt;
+    std::string rpc_feature_flags = "";
+    std::string user_project_override = "";
+  };
+
+  KmsClient(const Options& options);
 
   kms_v1::KeyManagementService::Stub* kms_stub() { return kms_stub_.get(); }
 

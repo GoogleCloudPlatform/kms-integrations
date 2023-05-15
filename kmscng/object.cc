@@ -39,19 +39,23 @@ using cloud_kms::kmsp11::ParseX509PublicKeyPem;
 absl::StatusOr<std::unique_ptr<KmsClient>> NewKmsClient(
     NCRYPT_PROV_HANDLE prov_handle) {
   ASSIGN_OR_RETURN(Provider * prov, ValidateProviderHandle(prov_handle));
-  ASSIGN_OR_RETURN(std::string_view endpoint_address,
+  KmsClient::Options options;
+  ASSIGN_OR_RETURN(options.endpoint_address,
                    prov->GetProperty(kEndpointAddressProperty));
   ASSIGN_OR_RETURN(std::string_view creds_type,
                    prov->GetProperty(kChannelCredentialsProperty));
-  std::shared_ptr<grpc::ChannelCredentials> creds =
-      (creds_type == "insecure") ? grpc::InsecureChannelCredentials()
-                                 : grpc::GoogleDefaultCredentials();
-  absl::Duration rpc_timeout = absl::Seconds(30);
+  options.creds = (creds_type == "insecure")
+                      ? grpc::InsecureChannelCredentials()
+                      : grpc::GoogleDefaultCredentials();
+  options.rpc_timeout = absl::Seconds(30);
+  options.version_major = kLibraryVersionMajor;
+  options.version_minor = kLibraryVersionMinor;
+  options.user_agent = UserAgent::kCng;
+  options.error_decorator = [](absl::Status& status) {
+    SetErrorSs(status, NTE_INTERNAL_ERROR);
+  };
 
-  return std::make_unique<KmsClient>(
-      endpoint_address, creds, rpc_timeout, kLibraryVersionMajor,
-      kLibraryVersionMinor, UserAgent::kCng,
-      [](absl::Status& status) { SetErrorSs(status, NTE_INTERNAL_ERROR); });
+  return std::make_unique<KmsClient>(options);
 }
 
 absl::StatusOr<kms_v1::PublicKey> GetPublicKey(const KmsClient& client,

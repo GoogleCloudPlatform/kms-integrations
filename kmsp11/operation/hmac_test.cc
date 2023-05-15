@@ -52,10 +52,10 @@ class HmacTest : public testing::Test {
  protected:
   void SetUp() override {
     ASSERT_OK_AND_ASSIGN(fake_server_, fakekms::Server::New());
-    client_ = std::make_unique<KmsClient>(
-        fake_server_->listen_addr(), grpc::InsecureChannelCredentials(),
-        absl::Seconds(1),
-        /*version_major=*/1, /*version_minor=*/1);
+    client_ = std::make_unique<KmsClient>(KmsClient::Options{
+        .endpoint_address = fake_server_->listen_addr(),
+        .rpc_timeout = absl::Seconds(1),
+    });
 
     auto fake_client = fake_server_->NewClient();
 
@@ -97,8 +97,7 @@ TEST_F(HmacTest, SignSuccess) {
   kms_v1::MacSignRequest req;
   req.set_name(kms_key_name_);
   req.set_data(data);
-  ASSERT_OK_AND_ASSIGN(kms_v1::MacSignResponse resp,
-                   client_->MacSign(req));
+  ASSERT_OK_AND_ASSIGN(kms_v1::MacSignResponse resp, client_->MacSign(req));
 
   std::vector<uint8_t> resp_bytes(resp.mac().begin(), resp.mac().end());
   EXPECT_EQ(resp_bytes, sig);
@@ -171,8 +170,7 @@ TEST_F(HmacTest, SignMultiPartSuccess) {
   kms_v1::MacSignRequest req;
   req.set_name(kms_key_name_);
   req.set_data(data);
-  ASSERT_OK_AND_ASSIGN(kms_v1::MacSignResponse resp,
-                   client_->MacSign(req));
+  ASSERT_OK_AND_ASSIGN(kms_v1::MacSignResponse resp, client_->MacSign(req));
 
   std::vector<uint8_t> resp_bytes(resp.mac().begin(), resp.mac().end());
   EXPECT_EQ(resp_bytes, sig);

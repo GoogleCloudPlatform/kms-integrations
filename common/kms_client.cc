@@ -103,24 +103,18 @@ absl::Status KmsClient::DecorateStatus(absl::Status& status) const {
   return status;
 }
 
-KmsClient::KmsClient(std::string_view endpoint_address,
-                     const std::shared_ptr<grpc::ChannelCredentials>& creds,
-                     absl::Duration rpc_timeout, const int version_major,
-                     const int version_minor, UserAgent user_agent,
-                     std::optional<ErrorDecorator> error_decorator,
-                     std::string_view user_project_override,
-                     std::string_view rpc_feature_flags)
-    : rpc_timeout_(rpc_timeout),
-      rpc_feature_flags_(rpc_feature_flags),
-      user_project_override_(user_project_override),
-      error_decorator_(error_decorator) {
+KmsClient::KmsClient(const Options& options)
+    : rpc_timeout_(options.rpc_timeout),
+      rpc_feature_flags_(options.rpc_feature_flags),
+      user_project_override_(options.user_project_override),
+      error_decorator_(options.error_decorator) {
   grpc::ChannelArguments args;
-  args.SetUserAgentPrefix(
-      ComputeUserAgentPrefix(user_agent, version_major, version_minor));
+  args.SetUserAgentPrefix(ComputeUserAgentPrefix(
+      options.user_agent, options.version_major, options.version_minor));
   args.SetServiceConfigJSON(std::string(kDefaultCloudKmsGrpcServiceConfig));
 
-  std::shared_ptr<grpc::Channel> channel =
-      grpc::CreateCustomChannel(std::string(endpoint_address), creds, args);
+  std::shared_ptr<grpc::Channel> channel = grpc::CreateCustomChannel(
+      std::string(options.endpoint_address), options.creds, args);
 
   kms_stub_ = kms_v1::KeyManagementService::NewStub(channel);
 }
