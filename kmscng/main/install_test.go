@@ -32,7 +32,33 @@ const (
 	libraryFile  = "C:\\Windows\\System32\\kmscng.dll"
 	registryKey  = "HKLM\\System\\CurrentControlSet\\Control\\Cryptography\\Providers\\" +
 		providerName + "\\UM\\00010001"
+
+	fileRenamesKey    = "HKLM\\System\\CurrentControlSet\\Control\\Session Manager\\FileRenameOperations"
+	pendingRenamesKey = "HKLM\\System\\CurrentControlSet\\Control\\Session Manager\\PendingFileRenameOperations"
 )
+
+func dllExists(t *testing.T, ctx context.Context) bool {
+	t.Helper()
+
+	// TODO(b/283099145): remove this logic and replace with a fix once we understand why this is flaky.
+	if out, err := exec.CommandContext(ctx, "reg", "query", fileRenamesKey).CombinedOutput(); err != nil {
+		t.Logf("reg query %s failed with error=%v", fileRenamesKey, err)
+	} else {
+		t.Logf("req query %s output:\n%s", fileRenamesKey, string(out))
+	}
+	if out, err := exec.CommandContext(ctx, "reg", "query", pendingRenamesKey).CombinedOutput(); err != nil {
+		t.Logf("reg query %s failed with error=%v", pendingRenamesKey, err)
+	} else {
+		t.Logf("req query %s output:\n%s", pendingRenamesKey, string(out))
+	}
+
+	if _, err := os.Stat(libraryFile); err == nil {
+		return true
+	} else if !errors.Is(err, fs.ErrNotExist) {
+		t.Fatalf("os.Stat(libraryFile) err=%v, want nil or fs.ErrNotExist", err)
+	}
+	return false
+}
 
 func regExists(t *testing.T, ctx context.Context) bool {
 	t.Helper()
@@ -55,8 +81,8 @@ func TestInstallUninstall(t *testing.T) {
 	if !regExists(t, ctx) {
 		t.Errorf("registry key %q is missing", registryKey)
 	}
-	if _, err := os.Stat(libraryFile); err != nil {
-		t.Errorf("os.Stat(libraryFile) err=%v, want nil", err)
+	if !dllExists(t, ctx) {
+		t.Errorf("library file %q is missing", libraryFile)
 	}
 
 	installtestlib.MustUninstall(t, ctx)
@@ -64,8 +90,8 @@ func TestInstallUninstall(t *testing.T) {
 	if regExists(t, ctx) {
 		t.Errorf("registry key %q unexpectedly exists", registryKey)
 	}
-	if _, err := os.Stat(libraryFile); !errors.Is(err, fs.ErrNotExist) {
-		t.Errorf("os.Stat(libraryFile) err=%v, want fs.ErrNotExist", err)
+	if dllExists(t, ctx) {
+		t.Errorf("library file %q unexpectedly exists", libraryFile)
 	}
 }
 
@@ -81,8 +107,8 @@ func TestInstallUninstallInstall(t *testing.T) {
 	if !regExists(t, ctx) {
 		t.Errorf("registry key %q is missing", registryKey)
 	}
-	if _, err := os.Stat(libraryFile); err != nil {
-		t.Errorf("os.Stat(libraryFile) err=%v, want nil", err)
+	if !dllExists(t, ctx) {
+		t.Errorf("library file %q is missing", libraryFile)
 	}
 }
 
@@ -115,7 +141,7 @@ func TestUninstallRemovesDllWhenRegistryEntryIsMissing(t *testing.T) {
 
 	installtestlib.MustUninstall(t, ctx)
 
-	if _, err := os.Stat(libraryFile); !errors.Is(err, fs.ErrNotExist) {
-		t.Errorf("os.Stat(libraryFile) err=%v, want fs.ErrNotExist", err)
+	if dllExists(t, ctx) {
+		t.Errorf("library file %q unexpectedly exists", libraryFile)
 	}
 }
