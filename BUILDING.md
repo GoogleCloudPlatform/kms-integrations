@@ -1,11 +1,13 @@
 # Building
 
-The project is built using the [Bazel](https://bazel.build) build tool, version 4,
-release 4.2.1 or later. As of this 2022-02-04, the project is compatible with
-Bazel 5.x.
+The project is built using the [Bazel](https://bazel.build) build tool, version 6,
+release 6.1.1 or later. Bazelisk is the recommended way to install Bazel on
+Ubuntu, Windows, and macOS. It automatically downloads and installs the
+appropriate version of Bazel, based on the .bazelversion file in this project.
+See https://bazel.build/install/bazelisk for additional information.
 
-All targets can be built and tested by invoking `bazel test ...` at the
-command line.
+All targets can be built and tested by invoking `bazelisk test ...` at the
+command line (or `bazel test ...` if you are not using `bazelisk`).
 
 The project's dependencies will be downloaded and built automatically during the
 build process.
@@ -31,7 +33,7 @@ The project is built and tested by Google on the following platforms.
 
 ### macOS
 
-* Operating System: macOS 10.15+
+* Operating System: macOS 11+
 * Architecture: amd64
 * Compiler: Apple Clang (Xcode 12)
 
@@ -39,7 +41,7 @@ The project is built and tested by Google on the following platforms.
 
 * Operating System: Windows 8.1+ or Windows Server 2012 R2+
 * Architecture: amd64
-* Compiler: MSVC 2019
+* Compiler: MSVC 2022
 
 ## Configuration Options
 
