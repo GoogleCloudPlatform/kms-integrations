@@ -224,3 +224,27 @@ proto_library(
     testonly = 1,
     srcs = ["test_message.proto"],
 )
+
+cc_library(
+    name = "file_log_sink",
+    srcs = ["file_log_sink.cc"],
+    hdrs = ["file_log_sink.h"],
+    deps = [
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_test(
+    name = "file_log_sink_test",
+    size = "small",
+    srcs = ["file_log_sink_test.cc"],
+    deps = [
+        ":file_log_sink",
+        "//common/test:matchers",
+        "//common/test:test_status_macros",
+        "@com_google_absl//absl/log",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
