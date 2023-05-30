@@ -41,15 +41,15 @@ func dllExists(t *testing.T, ctx context.Context) bool {
 	t.Helper()
 
 	// TODO(b/283099145): remove this logic and replace with a fix once we understand why this is flaky.
-	if out, err := exec.CommandContext(ctx, "reg", "query", fileRenamesKey).CombinedOutput(); err != nil {
-		t.Logf("reg query %s failed with error=%v", fileRenamesKey, err)
+	if out, err := exec.CommandContext(ctx, "reg", "query", fileRenamesKey, "/s").CombinedOutput(); err != nil {
+		t.Logf("reg query %s /s failed with error=%v", fileRenamesKey, err)
 	} else {
-		t.Logf("req query %s output:\n%s", fileRenamesKey, string(out))
+		t.Logf("req query %s /s output:\n%s", fileRenamesKey, string(out))
 	}
-	if out, err := exec.CommandContext(ctx, "reg", "query", pendingRenamesKey).CombinedOutput(); err != nil {
-		t.Logf("reg query %s failed with error=%v", pendingRenamesKey, err)
+	if out, err := exec.CommandContext(ctx, "reg", "query", pendingRenamesKey, "/s").CombinedOutput(); err != nil {
+		t.Logf("reg query %s /s failed with error=%v", pendingRenamesKey, err)
 	} else {
-		t.Logf("req query %s output:\n%s", pendingRenamesKey, string(out))
+		t.Logf("req query %s /s output:\n%s", pendingRenamesKey, string(out))
 	}
 
 	if _, err := os.Stat(libraryFile); err == nil {
