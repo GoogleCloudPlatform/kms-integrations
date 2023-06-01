@@ -48,6 +48,14 @@ func MustUninstall(t *testing.T, ctx context.Context) {
 	}
 }
 
+// MustNotUninstall causes a fatal error if kmscng.msi is uninstalled unexpectedly.
+func MustNotUninstall(t *testing.T, ctx context.Context) {
+	t.Helper()
+	if log, err := RunInstaller(ctx, "/x", msiRunfile); err == nil {
+		t.Fatalf("uninstall succeeded unexpectedly: %v\ndetailed log:\n%s", err, log)
+	}
+}
+
 // RunInstaller runs msiexec with the provided cmd (like "/i" or `/x") followed
 // by the runfile path to an msi installer.
 func RunInstaller(ctx context.Context, cmd, msiRunfile string) (detailedLog string, err error) {

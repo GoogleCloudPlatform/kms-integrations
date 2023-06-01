@@ -112,6 +112,36 @@ func TestInstallUninstallInstall(t *testing.T) {
 	}
 }
 
+func TestDoubleInstall(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	installtestlib.MustInstall(t, ctx)
+	installtestlib.MustInstall(t, ctx)
+	defer installtestlib.MustUninstall(t, ctx)
+
+	if !regExists(t, ctx) {
+		t.Errorf("registry key %q is missing", registryKey)
+	}
+	if !dllExists(t, ctx) {
+		t.Errorf("library file %q is missing", libraryFile)
+	}
+}
+
+func TestUninstallWithoutInstall(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	installtestlib.MustNotUninstall(t, ctx)
+
+	if regExists(t, ctx) {
+		t.Errorf("registry key %q unexpectedly exists", registryKey)
+	}
+	if dllExists(t, ctx) {
+		t.Errorf("library file %q unexpectedly exists", libraryFile)
+	}
+}
+
 func TestUninstallRemovesRegistryEntryWhenDllIsMissing(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

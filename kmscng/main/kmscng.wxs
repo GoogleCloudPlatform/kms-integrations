@@ -12,6 +12,9 @@
       <?endforeach?>
     </Property>
     <Condition Message="Microsoft Visual C++ 2019 (x64) Redistributable missing">REMOVE OR Installed OR CPPRUNTIME2019X64</Condition>
+    <!-- Disable change/repair in Add/Remove programs. -->
+    <Property Id="ARPNOREPAIR" Value="yes" Secure="yes" /> 
+    <Property Id="ARPNOMODIFY" Value="yes" Secure="yes" />
     <!-- Add files to the filesystem. -->
     <!--
       Install the DLL to C:\Windows\System32. This causes a compiler error:
