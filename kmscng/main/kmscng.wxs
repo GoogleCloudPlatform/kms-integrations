@@ -38,7 +38,7 @@
     <CustomAction Id="UnregisterProviderAction" Execute="deferred" Impersonate="no" BinaryKey="InstallActions" DllEntry="UnregisterProvider"/>
     <InstallExecuteSequence>
       <Custom Action="RegisterProviderAction" Before="InstallFinalize">(NOT Installed) AND (NOT REMOVE)</Custom>
-      <Custom Action="UnregisterProviderAction" Before="RemoveFiles">REMOVE AND (NOT UPGRADINGPRODUCTCODE)</Custom>
+      <Custom Action="UnregisterProviderAction" Before="RemoveFiles">REMOVE</Custom>
     </InstallExecuteSequence>
   </Product>
 </Wix>

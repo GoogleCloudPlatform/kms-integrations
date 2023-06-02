@@ -135,6 +135,40 @@ genrule(
     visibility = ["//visibility:public"],
 )
 
+genrule(
+    name = "installer_v0",
+    testonly = 1,
+    srcs = ["kmscng_upgrade_test.wxs"],
+    outs = ["kmscng_v0.msi"],
+    cmd = "cp $(location :kmscng_upgrade_test.wxs) kmscng_v0.wxs && " +
+          "echo 0.0.0 > kmscng_version.txt && " +
+          "$(location @wix//:candle) -dVersion=0.0.0 kmscng_v0.wxs && " +
+          "$(location @wix//:light) kmscng_v0.wixobj && " +
+          "cp kmscng_v0.msi $@",
+    target_compatible_with = ["@platforms//os:windows"],
+    tools = [
+        "@wix//:candle",
+        "@wix//:light",
+    ],
+)
+
+genrule(
+    name = "installer_v255",
+    testonly = 1,
+    srcs = ["kmscng_upgrade_test.wxs"],
+    outs = ["kmscng_v255.msi"],
+    cmd = "cp $(location :kmscng_upgrade_test.wxs) kmscng_v255.wxs && " +
+          "echo 255.255.65535 > kmscng_version.txt && " +
+          "$(location @wix//:candle) -dVersion=255.255.65535 kmscng_v255.wxs && " +
+          "$(location @wix//:light) kmscng_v255.wixobj && " +
+          "cp kmscng_v255.msi $@",
+    target_compatible_with = ["@platforms//os:windows"],
+    tools = [
+        "@wix//:candle",
+        "@wix//:light",
+    ],
+)
+
 go_library(
     name = "install_testlib",
     testonly = 1,
@@ -151,6 +185,10 @@ go_library(
 go_test(
     name = "install_test",
     srcs = ["install_test.go"],
+    data = [
+        ":kmscng_v0.msi",
+        ":kmscng_v255.msi",
+    ],
     tags = [
         "exclusive",  # only one test that does Windows installers at a time
         "manual",  # don't run on dev workstations; included in //:ci_only_tests

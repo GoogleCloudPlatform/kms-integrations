@@ -35,9 +35,13 @@ const (
 
 	fileRenamesKey    = "HKLM\\System\\CurrentControlSet\\Control\\Session Manager\\FileRenameOperations"
 	pendingRenamesKey = "HKLM\\System\\CurrentControlSet\\Control\\Session Manager\\PendingFileRenameOperations"
+
+	minVersionRunfile = "kmscng/main/kmscng_v0.msi"
+	maxVersionRunfile = "kmscng/main/kmscng_v255.msi"
+	versionTestFile   = "C:\\Windows\\System32\\kmscng_version.txt"
 )
 
-func dllExists(t *testing.T, ctx context.Context) bool {
+func fileExists(t *testing.T, ctx context.Context, filename string) bool {
 	t.Helper()
 
 	// TODO(b/283099145): remove this logic and replace with a fix once we understand why this is flaky.
@@ -52,10 +56,10 @@ func dllExists(t *testing.T, ctx context.Context) bool {
 		t.Logf("req query %s /s output:\n%s", pendingRenamesKey, string(out))
 	}
 
-	if _, err := os.Stat(libraryFile); err == nil {
+	if _, err := os.Stat(filename); err == nil {
 		return true
 	} else if !errors.Is(err, fs.ErrNotExist) {
-		t.Fatalf("os.Stat(libraryFile) err=%v, want nil or fs.ErrNotExist", err)
+		t.Fatalf("os.Stat(%q) err=%v, want nil or fs.ErrNotExist", filename, err)
 	}
 	return false
 }
@@ -81,7 +85,7 @@ func TestInstallUninstall(t *testing.T) {
 	if !regExists(t, ctx) {
 		t.Errorf("registry key %q is missing", registryKey)
 	}
-	if !dllExists(t, ctx) {
+	if !fileExists(t, ctx, libraryFile) {
 		t.Errorf("library file %q is missing", libraryFile)
 	}
 
@@ -90,7 +94,7 @@ func TestInstallUninstall(t *testing.T) {
 	if regExists(t, ctx) {
 		t.Errorf("registry key %q unexpectedly exists", registryKey)
 	}
-	if dllExists(t, ctx) {
+	if fileExists(t, ctx, libraryFile) {
 		t.Errorf("library file %q unexpectedly exists", libraryFile)
 	}
 }
@@ -107,7 +111,7 @@ func TestInstallUninstallInstall(t *testing.T) {
 	if !regExists(t, ctx) {
 		t.Errorf("registry key %q is missing", registryKey)
 	}
-	if !dllExists(t, ctx) {
+	if !fileExists(t, ctx, libraryFile) {
 		t.Errorf("library file %q is missing", libraryFile)
 	}
 }
@@ -171,7 +175,68 @@ func TestUninstallRemovesDllWhenRegistryEntryIsMissing(t *testing.T) {
 
 	installtestlib.MustUninstall(t, ctx)
 
-	if dllExists(t, ctx) {
+	if fileExists(t, ctx, libraryFile) {
 		t.Errorf("library file %q unexpectedly exists", libraryFile)
+	}
+}
+
+func TestUpgradeFromOlderVersion(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Install an older version.
+	if log, err := installtestlib.RunInstaller(ctx, "/i", minVersionRunfile); err != nil {
+		t.Fatalf("error installing: %v\ndetailed log:\n%s", err, log)
+	}
+	if !fileExists(t, ctx, versionTestFile) {
+		t.Errorf("file %q is missing", versionTestFile)
+	}
+
+	// Update to the current version, and remove when we're done.
+	installtestlib.MustInstall(t, ctx)
+	defer installtestlib.MustUninstall(t, ctx)
+
+	// Artifacts from the current version should exist.
+	if !regExists(t, ctx) {
+		t.Errorf("registry key %q is missing", registryKey)
+	}
+	if !fileExists(t, ctx, libraryFile) {
+		t.Errorf("library file %q is missing", libraryFile)
+	}
+
+	// Artifacts from the previous version should be missing.
+	if fileExists(t, ctx, versionTestFile) {
+		t.Errorf("file %q is unexpectedly present", versionTestFile)
+	}
+}
+
+func TestUpgradeToNewerVersion(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Install the current version.
+	installtestlib.MustInstall(t, ctx)
+	// Upgrade to a newer version.
+	if log, err := installtestlib.RunInstaller(ctx, "/i", maxVersionRunfile); err != nil {
+		t.Fatalf("error upgrading: %v\ndetailed log:\n%s", err, log)
+	}
+	// Uninstall when we're done.
+	defer func() {
+		if log, err := installtestlib.RunInstaller(ctx, "/x", maxVersionRunfile); err != nil {
+			t.Fatalf("error uninstalling: %v\ndetailed log:\n%s", err, log)
+		}
+	}()
+
+	// Artifacts from the current version should not exist.
+	if regExists(t, ctx) {
+		t.Errorf("registry key %q is unexpectedly present", registryKey)
+	}
+	if fileExists(t, ctx, libraryFile) {
+		t.Errorf("library file %q is unexpectedly present", libraryFile)
+	}
+
+	// Artifacts from the newer version should exist.
+	if !fileExists(t, ctx, versionTestFile) {
+		t.Errorf("file %q is missing", versionTestFile)
 	}
 }
