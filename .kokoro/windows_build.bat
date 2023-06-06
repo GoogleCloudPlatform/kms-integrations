@@ -82,7 +82,6 @@ if exist "%PROJECT_ROOT%\bazel-bin\kmscng\main\kmscng.msi" copy ^
     "%RESULTS_DIR%\kmscng.msi"
 
 copy "%PROJECT_ROOT%\LICENSE" "%RESULTS_DIR%\LICENSE"
-copy "%PROJECT_ROOT%\NOTICE" "%RESULTS_DIR%\LICENSE"
 
 python "%PROJECT_ROOT%\.kokoro\copy_test_outputs.py" ^
     "%PROJECT_ROOT%\bazel-testlogs" "%RESULTS_DIR%\testlogs"
