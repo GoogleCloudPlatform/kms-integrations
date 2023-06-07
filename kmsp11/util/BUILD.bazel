@@ -9,7 +9,7 @@ cc_library(
     visibility = [
         "//common:__subpackages__",  # TODO(b/270419822): remove
         "//kmscng:__subpackages__",  # TODO(b/270419822): remove
-	"//kmsp11:__subpackages__",
+        "//kmsp11:__subpackages__",
     ],
     deps = [
         ":errors",
@@ -117,6 +117,10 @@ cc_library(
         "//common:status_utils",
         "@com_github_google_glog//:glog",
         "@com_github_grpc_grpc//:grpc",
+        "@com_google_absl//absl/log:initialize",
+        "@com_google_absl//absl/log:log_entry",
+        "@com_google_absl//absl/log:log_sink",
+        "@com_google_absl//absl/log:log_sink_registry",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/synchronization",
@@ -134,6 +138,7 @@ cc_test(
         "//fakekms/cpp:fakekms",
         "//kmsp11/test",
         "@com_google_absl//absl/cleanup",
+        "@com_google_absl//absl/log:absl_log",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -209,7 +214,7 @@ cc_test(
     srcs = ["string_utils_test.cc"],
     deps = [
         ":string_utils",
-        "//kmsp11/test",
+        "//common/test:test_status_macros",
         "@com_google_googletest//:gtest_main",
     ],
 )

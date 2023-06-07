@@ -17,6 +17,7 @@
 #include <filesystem>
 
 #include "absl/cleanup/cleanup.h"
+#include "absl/log/absl_log.h"
 #include "common/platform.h"
 #include "common/test/test_status_macros.h"
 #include "glog/logging.h"
@@ -243,6 +244,21 @@ TEST_F(LogDirectoryTest, GrpcErrorsAreLoggedToGlogDestination) {
       ReadFileToString(files[0].path().string()),
       IsOkAndHolds(AllOf(HasSubstr(error_message), HasSubstr(info_message),
                          HasSubstr(debug_message))));
+  EXPECT_THAT(GetCapturedStderr(), IsEmpty());
+}
+
+TEST_F(LogDirectoryTest, AbseilErrorsAreLoggedToGlogDestination) {
+  std::string message = "Here is my test message";
+  CaptureStderr();
+
+  ASSERT_OK(InitializeLogging(log_directory_, ""));
+  ABSL_LOG(WARNING) << message;
+  ShutdownLogging();
+
+  std::vector<std::filesystem::directory_entry> files = LogDirectoryEntries();
+  ASSERT_THAT(files, SizeIs(1));
+  EXPECT_THAT(ReadFileToString(files[0].path().string()),
+              IsOkAndHolds((HasSubstr(message))));
   EXPECT_THAT(GetCapturedStderr(), IsEmpty());
 }
 

@@ -16,12 +16,12 @@
 #include <Windows.h>
 
 #include "absl/cleanup/cleanup.h"
+#include "absl/log/absl_check.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_format.h"
 #include "common/platform.h"
 #include "common/source_location.h"
 #include "common/status_macros.h"
-#include "glog/logging.h"
 
 namespace cloud_kms {
 namespace {
@@ -50,7 +50,9 @@ absl::StatusOr<SystemVersionInfo> GetSystemVersionInfo() {
         absl::StrFormat("at %s: error %d opening key '%s'.",
                         SOURCE_LOCATION.ToString(), open_status, kKey));
   }
-  absl::Cleanup c = [&] { DCHECK_EQ(RegCloseKey(key_handle), ERROR_SUCCESS); };
+  absl::Cleanup c = [&] {
+    ABSL_DCHECK_EQ(RegCloseKey(key_handle), ERROR_SUCCESS);
+  };
 
   auto read_string =
       [&](const LPCSTR value_name) -> absl::StatusOr<std::string> {

@@ -26,7 +26,6 @@
 #include "absl/strings/str_format.h"
 #include "common/platform.h"
 #include "common/source_location.h"
-#include "glog/logging.h"
 
 namespace cloud_kms {
 

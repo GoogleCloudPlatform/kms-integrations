@@ -17,13 +17,13 @@
 #ifndef COMMON_TEST_TEST_STATUS_MACROS_H_
 #define COMMON_TEST_TEST_STATUS_MACROS_H_
 
+#include "absl/log/absl_check.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_format.h"
 #include "common/status_macros.h"
 #include "common/status_utils.h"
 #include "common/test/matchers.h"
-#include "glog/logging.h"
 #include "gmock/gmock.h"
 
 // Macros for testing the results of functions that return a status.
@@ -34,7 +34,7 @@
 #define CHECK_OK(expr)                                     \
   do {                                                     \
     ::absl::Status __status = ::cloud_kms::ToStatus(expr); \
-    CHECK(__status.ok()) << __status << " is not OK";      \
+    ABSL_CHECK(__status.ok()) << __status << " is not OK"; \
   } while (0);
 
 // Implementation for ASSERT_OK_AND_ASSIGN, declared below.

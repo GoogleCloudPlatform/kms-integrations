@@ -117,6 +117,7 @@ cc_test(
     target_compatible_with = ["@platforms//os:windows"],
     deps = [
         ":string_utils",
+        "//common/test:test_status_macros",
         "//kmscng/test:matchers",
         "@com_google_googletest//:gtest_main",
     ],

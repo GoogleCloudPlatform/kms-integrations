@@ -8,7 +8,7 @@ cc_library(
     srcs = ["backoff.cc"],
     hdrs = ["backoff.h"],
     deps = [
-        "@com_github_google_glog//:glog",
+        "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/time",
     ],
 )
@@ -110,6 +110,7 @@ cc_library(
         ":source_location",
         ":status_macros",
         "@com_google_absl//absl/cleanup",
+        "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings:str_format",
@@ -183,7 +184,6 @@ cc_library(
     hdrs = ["status_utils.h"],
     deps = [
         ":status_details_cc_proto",
-        "@com_github_google_glog//:glog",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",

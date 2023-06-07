@@ -14,6 +14,10 @@
 
 #include "kmsp11/util/logging.h"
 
+#include "absl/base/log_severity.h"
+#include "absl/log/initialize.h"
+#include "absl/log/log_sink.h"
+#include "absl/log/log_sink_registry.h"
 #include "absl/synchronization/mutex.h"
 #include "common/platform.h"
 #include "common/status_utils.h"
@@ -53,6 +57,40 @@ void GrpcLog(gpr_log_func_args* args) {
       << args->message;
 }
 
+// A sink to translate Abseil log messages into Glog log messages.
+class GlogSink : public absl::LogSink {
+ public:
+  virtual void Send(const absl::LogEntry& entry) override {
+    int severity;
+    switch (entry.log_severity()) {
+      case absl::LogSeverity::kError:
+        severity = google::GLOG_ERROR;
+        break;
+      case absl::LogSeverity::kWarning:
+        severity = google::GLOG_WARNING;
+        break;
+      default:
+        severity = google::GLOG_INFO;
+        break;
+    }
+
+    google::LogMessage(entry.source_filename().data(), entry.source_line(),
+                       severity)
+            .stream()
+        << entry.text_message();
+  }
+};
+
+// Redirection from gRPC and Abseil logs to Glog should happen once in the
+// lifetime of the program.
+static const bool kOneTimeInitialized = [] {
+  gpr_set_log_function(&GrpcLog);
+  absl::AddLogSink(new GlogSink());  // "leak" OK - we need this sink for the
+                                     // duration of the program.
+  absl::InitializeLog();
+  return true;
+}();
+
 }  // namespace
 
 absl::Status InitializeLogging(std::string_view output_directory,
@@ -71,7 +109,6 @@ absl::Status InitializeLogging(std::string_view output_directory,
           google::GLOG_FATAL}) {
       google::SetLogDestination(severity, "");
     }
-
   } else {
     // FATAL logs crash the program; emit these to standard error as well.
     google::SetStderrLogging(google::GLOG_FATAL);
@@ -80,8 +117,8 @@ absl::Status InitializeLogging(std::string_view output_directory,
         google::GLOG_INFO,
         absl::StrCat(output_directory, "/libkmsp11.log-").c_str());
 
-    // Disable discrete log files for all levels but INFO -- they all still get
-    // logged to the INFO logfile.
+    // Disable discrete log files for all levels but INFO -- they all still
+    // get logged to the INFO logfile.
     for (google::LogSeverity severity :
          {google::GLOG_WARNING, google::GLOG_ERROR, google::GLOG_FATAL}) {
       google::SetLogDestination(severity, "");
@@ -94,7 +131,6 @@ absl::Status InitializeLogging(std::string_view output_directory,
   }
 
   google::InitGoogleLogging("libkmsp11");
-  gpr_set_log_function(&GrpcLog);
   logging_initialized = true;
   return absl::OkStatus();
 }

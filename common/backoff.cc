@@ -14,25 +14,26 @@
 
 #include "common/backoff.h"
 
-#include "glog/logging.h"
+#include "absl/log/absl_log.h"
 
 namespace cloud_kms {
 
 absl::Duration ComputeBackoff(absl::Duration min_delay,
                               absl::Duration max_delay, int previous_retries) {
   if (min_delay < absl::Nanoseconds(1)) {
-    LOG_FIRST_N(WARNING, 100) << "ComputeBackoff increasing min_delay from "
-                              << min_delay << " to 1ns.";
+    ABSL_LOG_FIRST_N(WARNING, 100)
+        << "ComputeBackoff increasing min_delay from " << min_delay
+        << " to 1ns.";
     min_delay = absl::Nanoseconds(1);
   }
   if (max_delay < min_delay) {
-    LOG_FIRST_N(WARNING, 100)
+    ABSL_LOG_FIRST_N(WARNING, 100)
         << "ComputeBackoff increasing max_delay of " << max_delay
         << " to match min_delay of " << min_delay << ".";
     max_delay = min_delay;
   }
   if (previous_retries < 0) {
-    LOG_FIRST_N(WARNING, 100)
+    ABSL_LOG_FIRST_N(WARNING, 100)
         << "ComputeBackoff increasing previous_retries from "
         << previous_retries << " to 0.";
     previous_retries = 0;
