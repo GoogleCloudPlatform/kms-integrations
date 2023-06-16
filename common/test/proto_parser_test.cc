@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "kmsp11/test/proto_parser.h"
+#include "common/test/proto_parser.h"
 
+#include "common/test/matchers.h"
 #include "common/test_message.pb.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest-spi.h"
-#include "kmsp11/test/matchers.h"
 
-namespace cloud_kms::kmsp11 {
+namespace cloud_kms {
 namespace {
 
 TEST(ParseProtoTest, ParseTestMessage) {
@@ -27,10 +27,10 @@ TEST(ParseProtoTest, ParseTestMessage) {
   msg.set_string_value("foo bar baz");
   msg.set_int32_value(1337);
 
-  TestMessage expected = ParseTestProto(R"(
+  TestMessage expected = ParseTestProto(R"pb(
     string_value: "foo bar baz"
     int32_value: 1337
-  )");
+  )pb");
 
   EXPECT_THAT(msg, EqualsProto(expected));
 }
@@ -43,4 +43,4 @@ TEST(ParseProtoTest, ParseMalformedMessage) {
 }
 
 }  // namespace
-}  // namespace cloud_kms::kmsp11
+}  // namespace cloud_kms

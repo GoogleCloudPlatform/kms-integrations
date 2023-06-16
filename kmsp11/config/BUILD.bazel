@@ -21,6 +21,7 @@ cc_test(
     srcs = ["config_test.cc"],
     deps = [
         ":config",
+        "//common/test:proto_parser",
         "//common/test:test_platform",
         "//kmsp11/test",
         "@com_google_absl//absl/cleanup",
@@ -58,6 +59,7 @@ cc_test(
     deps = [
         ":protoyaml",
         ":protoyaml_test_cc_proto",
+        "//common/test:proto_parser",
         "//kmsp11/test",
         "@com_google_googletest//:gtest_main",
     ],

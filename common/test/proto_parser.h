@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-#ifndef KMSP11_TEST_PROTO_PARSER_H_
-#define KMSP11_TEST_PROTO_PARSER_H_
+#ifndef COMMON_TEST_PROTO_PARSER_H_
+#define COMMON_TEST_PROTO_PARSER_H_
 
 #include "google/protobuf/text_format.h"
 #include "gtest/gtest.h"
 
-namespace cloud_kms::kmsp11 {
+namespace cloud_kms {
 
 // A helper for parsing a text format protobuf message, and converting it on
 // demand to a desired type. Conversion EXPECT fails if the provided string
@@ -45,6 +45,6 @@ inline ParseProtoHelper ParseTestProto(std::string text) {
   return ParseProtoHelper(text);
 }
 
-}  // namespace cloud_kms::kmsp11
+}  // namespace cloud_kms
 
-#endif  // KMSP11_TEST_PROTO_PARSER_H_
+#endif  // COMMON_TEST_PROTO_PARSER_H_

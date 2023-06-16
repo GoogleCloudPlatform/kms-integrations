@@ -14,10 +14,10 @@
 
 #include "kmsp11/config/protoyaml.h"
 
+#include "common/test/proto_parser.h"
 #include "common/test/test_status_macros.h"
 #include "gmock/gmock.h"
 #include "kmsp11/config/protoyaml_test.pb.h"
-#include "kmsp11/test/proto_parser.h"
 
 namespace cloud_kms::kmsp11 {
 namespace {

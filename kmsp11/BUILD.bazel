@@ -244,6 +244,7 @@ cc_test(
     srcs = ["provider_test.cc"],
     deps = [
         ":provider",
+        "//common/test:proto_parser",
         "//fakekms/cpp:fakekms",
         "//kmsp11/test",
         "@com_google_googletest//:gtest_main",
