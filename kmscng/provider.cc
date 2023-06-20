@@ -17,8 +17,10 @@
 #include <cwchar>
 
 #include "absl/container/flat_hash_set.h"
+#include "common/status_macros.h"
 #include "kmscng/cng_headers.h"
 #include "kmscng/util/errors.h"
+#include "kmscng/util/status_utils.h"
 #include "kmscng/util/string_utils.h"
 #include "kmscng/version.h"
 
@@ -53,6 +55,28 @@ absl::flat_hash_map<std::wstring, std::string> BuildInfo() {
 }
 
 }  // namespace
+
+absl::StatusOr<std::unique_ptr<KmsClient>> NewKmsClient(
+    NCRYPT_PROV_HANDLE prov_handle) {
+  ASSIGN_OR_RETURN(Provider * prov, ValidateProviderHandle(prov_handle));
+  KmsClient::Options options;
+  ASSIGN_OR_RETURN(options.endpoint_address,
+                   prov->GetProperty(kEndpointAddressProperty));
+  ASSIGN_OR_RETURN(std::string_view creds_type,
+                   prov->GetProperty(kChannelCredentialsProperty));
+  options.creds = (creds_type == "insecure")
+                      ? grpc::InsecureChannelCredentials()
+                      : grpc::GoogleDefaultCredentials();
+  options.rpc_timeout = absl::Seconds(30);
+  options.version_major = kLibraryVersionMajor;
+  options.version_minor = kLibraryVersionMinor;
+  options.user_agent = UserAgent::kCng;
+  options.error_decorator = [](absl::Status& status) {
+    SetErrorSs(status, NTE_INTERNAL_ERROR);
+  };
+
+  return std::make_unique<KmsClient>(options);
+}
 
 absl::StatusOr<Provider*> ValidateProviderHandle(
     NCRYPT_PROV_HANDLE prov_handle) {

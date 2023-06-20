@@ -17,6 +17,7 @@
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/status/statusor.h"
+#include "common/kms_client.h"
 #include "kmscng/cng_headers.h"
 
 namespace cloud_kms::kmscng {
@@ -37,6 +38,11 @@ class Provider {
  private:
   absl::flat_hash_map<std::wstring, std::string> provider_info_;
 };
+
+// Initializes a new KmsClient while checking the provider properties for
+// configuration options.
+absl::StatusOr<std::unique_ptr<KmsClient>> NewKmsClient(
+    NCRYPT_PROV_HANDLE prov_handle);
 
 // Validates the input NCRYPT_PROV_HANDLE and returns a pointer to the Provider
 // object if the handle is valid, an error otherwise.
