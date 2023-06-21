@@ -714,6 +714,32 @@ TEST(KmsClientTest, GetCryptoKeySuccess) {
   EXPECT_THAT(got_ck, EqualsProto(ck));
 }
 
+TEST(KmsClientTest, GetCryptoKeyVersionSuccess) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake,
+                       fakekms::Server::New());
+  std::unique_ptr<KmsClient> client = NewClient(fake->listen_addr());
+
+  kms_v1::KeyRing kr;
+  kr = CreateKeyRingOrDie(client->kms_stub(), kTestLocation, RandomId(), kr);
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::ENCRYPT_DECRYPT);
+  ck =
+      CreateCryptoKeyOrDie(client->kms_stub(), kr.name(), RandomId(), ck, true);
+
+  kms_v1::CreateCryptoKeyVersionRequest req;
+  req.set_parent(ck.name());
+  ASSERT_OK_AND_ASSIGN(kms_v1::CryptoKeyVersion ckv,
+                       client->CreateCryptoKeyVersionAndWait(req));
+
+  kms_v1::GetCryptoKeyVersionRequest req_ckv;
+  req_ckv.set_name(ckv.name());
+  ASSERT_OK_AND_ASSIGN(kms_v1::CryptoKeyVersion got_ckv,
+                       client->GetCryptoKeyVersion(req_ckv));
+
+  EXPECT_THAT(got_ckv, EqualsProto(ckv));
+}
+
 TEST(KmsClientTest, ClientRetriesTransparentlyOnUnavailable) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake,
                        fakekms::Server::New());

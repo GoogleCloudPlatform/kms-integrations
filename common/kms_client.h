@@ -101,6 +101,9 @@ class KmsClient {
   absl::StatusOr<kms_v1::CryptoKey> GetCryptoKey(
       const kms_v1::GetCryptoKeyRequest& request) const;
 
+  absl::StatusOr<kms_v1::CryptoKeyVersion> GetCryptoKeyVersion(
+      const kms_v1::GetCryptoKeyVersionRequest& request) const;
+
   absl::StatusOr<kms_v1::PublicKey> GetPublicKey(
       const kms_v1::GetPublicKeyRequest& request) const;
 

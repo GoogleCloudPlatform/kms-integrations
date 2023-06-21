@@ -430,6 +430,20 @@ absl::StatusOr<kms_v1::CryptoKey> KmsClient::GetCryptoKey(
   return response;
 }
 
+absl::StatusOr<kms_v1::CryptoKeyVersion> KmsClient::GetCryptoKeyVersion(
+    const kms_v1::GetCryptoKeyVersionRequest& request) const {
+  grpc::ClientContext ctx;
+  AddContextSettings(&ctx, "name", request.name());
+
+  kms_v1::CryptoKeyVersion response;
+  absl::Status rpc_result =
+      ToStatus(kms_stub_->GetCryptoKeyVersion(&ctx, request, &response));
+  if (!rpc_result.ok()) {
+    return DecorateStatus(rpc_result);
+  }
+  return response;
+}
+
 absl::StatusOr<kms_v1::PublicKey> KmsClient::GetPublicKey(
     const kms_v1::GetPublicKeyRequest& request) const {
   grpc::ClientContext ctx;
