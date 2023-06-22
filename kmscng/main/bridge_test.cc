@@ -14,6 +14,8 @@
 
 #include "kmscng/main/bridge.h"
 
+#include <fstream>
+
 #include "absl/cleanup/cleanup.h"
 #include "common/kms_v1.h"
 #include "common/test/resource_helpers.h"
@@ -22,6 +24,7 @@
 #include "gmock/gmock.h"
 #include "kmscng/cng_headers.h"
 #include "kmscng/object.h"
+#include "kmscng/object_loader.h"
 #include "kmscng/operation/sign_utils.h"
 #include "kmscng/provider.h"
 #include "kmscng/test/matchers.h"
@@ -68,6 +71,16 @@ void SetFakeKmsProviderProperties(Provider* provider, std::string listen_addr) {
   // Set custom properties to hit fake KMS.
   EXPECT_OK(provider->SetProperty(kEndpointAddressProperty, listen_addr));
   EXPECT_OK(provider->SetProperty(kChannelCredentialsProperty, "insecure"));
+}
+
+std::string WriteConfigFileWithOneCKV(kms_v1::CryptoKeyVersion* ckv) {
+  std::string config_file = std::tmpnam(nullptr);
+  std::ofstream(config_file) << absl::StrFormat(R"(
+resources:
+  - crypto_key_version: "%s"
+)",
+                                                ckv->name());
+  return config_file;
 }
 
 TEST(BridgeTest, BridgeVerboseLoggingEnabled) {
@@ -942,6 +955,165 @@ TEST(BridgeTest, SignHashGetSignatureSizeSuccess) {
 
   // Clean up memory.
   EXPECT_OK(FreeKey(provider_handle, key_handle));
+}
+
+TEST(BridgeTest, EnumKeysSuccess) {
+  ASSERT_OK_AND_ASSIGN(auto fake_server, fakekms::Server::New());
+  auto client = fake_server->NewClient();
+
+  kms_v1::CryptoKeyVersion ckv = NewCryptoKeyVersion(client.get());
+  std::string config_file = WriteConfigFileWithOneCKV(&ckv);
+  absl::Cleanup config_close = [config_file] {
+    std::remove(config_file.c_str());
+  };
+
+  Provider provider;
+  SetFakeKmsProviderProperties(&provider, fake_server->listen_addr());
+  NCRYPT_PROV_HANDLE provider_handle =
+      reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
+
+  NCryptKeyName* output;
+  PVOID enum_state = nullptr;
+  EXPECT_OK(
+      EnumKeys(provider_handle, nullptr, &output, &enum_state, 0, config_file));
+
+  auto enum_result = reinterpret_cast<EnumState*>(enum_state);
+  EXPECT_EQ(enum_result->current, 1);
+  EXPECT_EQ(std::wstring(output->pszName), StringToWide(ckv.name()).data());
+  EXPECT_EQ(std::wstring(output->pszAlgid), BCRYPT_ECDSA_P256_ALGORITHM);
+  EXPECT_EQ(output->dwLegacyKeySpec, AT_SIGNATURE);
+  EXPECT_EQ(output->dwFlags, NCRYPT_MACHINE_KEY_FLAG);
+
+  // Clean up memory.
+  EXPECT_OK(FreeBuffer(output));
+  EXPECT_OK(FreeBuffer(enum_state));
+}
+
+TEST(BridgeTest, EnumMultipleKeysSuccess) {
+  ASSERT_OK_AND_ASSIGN(auto fake_server, fakekms::Server::New());
+  auto client = fake_server->NewClient();
+
+  kms_v1::CryptoKeyVersion ckv = NewCryptoKeyVersion(client.get());
+  std::string config_file = WriteConfigFileWithOneCKV(&ckv);
+  std::ofstream(config_file, std::ofstream::out | std::ofstream::app)
+      << "  - crypto_key_version: \"" << ckv.name() << "\"" << std::endl;
+  absl::Cleanup config_close = [config_file] {
+    std::remove(config_file.c_str());
+  };
+
+  Provider provider;
+  SetFakeKmsProviderProperties(&provider, fake_server->listen_addr());
+  NCRYPT_PROV_HANDLE provider_handle =
+      reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
+
+  NCryptKeyName* output;
+  PVOID enum_state = nullptr;
+  EXPECT_OK(
+      EnumKeys(provider_handle, nullptr, &output, &enum_state, 0, config_file));
+  EXPECT_OK(
+      EnumKeys(provider_handle, nullptr, &output, &enum_state, 0, config_file));
+
+  auto enum_result = reinterpret_cast<EnumState*>(enum_state);
+  EXPECT_EQ(enum_result->current, 2);
+  EXPECT_EQ(std::wstring(output->pszName), StringToWide(ckv.name()).data());
+  EXPECT_EQ(std::wstring(output->pszAlgid), BCRYPT_ECDSA_P256_ALGORITHM);
+  EXPECT_EQ(output->dwLegacyKeySpec, AT_SIGNATURE);
+  EXPECT_EQ(output->dwFlags, NCRYPT_MACHINE_KEY_FLAG);
+
+  // Clean up memory.
+  EXPECT_OK(FreeBuffer(output));
+  EXPECT_OK(FreeBuffer(enum_state));
+}
+
+TEST(BridgeTest, EnumAllKeysNoMoreItems) {
+  ASSERT_OK_AND_ASSIGN(auto fake_server, fakekms::Server::New());
+  auto client = fake_server->NewClient();
+
+  kms_v1::CryptoKeyVersion ckv = NewCryptoKeyVersion(client.get());
+  std::string config_file = WriteConfigFileWithOneCKV(&ckv);
+  std::ofstream(config_file, std::ofstream::out | std::ofstream::app)
+      << "  - crypto_key_version: \"" << ckv.name() << "\"" << std::endl;
+  absl::Cleanup config_close = [config_file] {
+    std::remove(config_file.c_str());
+  };
+
+  Provider provider;
+  SetFakeKmsProviderProperties(&provider, fake_server->listen_addr());
+  NCRYPT_PROV_HANDLE provider_handle =
+      reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
+
+  NCryptKeyName* output;
+  PVOID enum_state = nullptr;
+  EXPECT_OK(
+      EnumKeys(provider_handle, nullptr, &output, &enum_state, 0, config_file));
+  EXPECT_OK(
+      EnumKeys(provider_handle, nullptr, &output, &enum_state, 0, config_file));
+  EXPECT_THAT(
+      EnumKeys(provider_handle, nullptr, &output, &enum_state, 0, config_file),
+      StatusSsIs(NTE_NO_MORE_ITEMS));
+
+  // Clean up memory.
+  EXPECT_OK(FreeBuffer(output));
+  EXPECT_OK(FreeBuffer(enum_state));
+}
+
+TEST(BridgeTest, EnumKeysInvalidHandle) {
+  EXPECT_THAT(EnumKeys(0, nullptr, nullptr, nullptr, 0),
+              StatusSsIs(NTE_INVALID_HANDLE));
+}
+
+TEST(BridgeTest, EnumKeysInvalidPszScope) {
+  NCRYPT_PROV_HANDLE provider_handle;
+  EXPECT_OK(OpenProvider(&provider_handle, kProviderName.data(), 0));
+
+  EXPECT_THAT(
+      EnumKeys(provider_handle, kProviderName.data(), nullptr, nullptr, 0),
+      StatusSsIs(NTE_INVALID_PARAMETER));
+
+  // Clean up memory.
+  EXPECT_OK(FreeProvider(provider_handle));
+}
+
+TEST(BridgeTest, EnumKeysOutputBufferNull) {
+  NCRYPT_PROV_HANDLE provider_handle;
+  EXPECT_OK(OpenProvider(&provider_handle, kProviderName.data(), 0));
+
+  EXPECT_THAT(EnumKeys(provider_handle, nullptr, nullptr, nullptr, 0),
+              StatusSsIs(NTE_INVALID_PARAMETER));
+
+  // Clean up memory.
+  EXPECT_OK(FreeProvider(provider_handle));
+}
+
+TEST(BridgeTest, EnumKeysInvalidOutputEnumState) {
+  NCRYPT_PROV_HANDLE provider_handle;
+  EXPECT_OK(OpenProvider(&provider_handle, kProviderName.data(), 0));
+
+  NCryptKeyName* output;
+  EnumState invalid_enum_state = {
+      .key_details = std::vector<HeapAllocatedKeyDetails>(),
+      .current = 7337,
+  };
+  EnumState* enum_ptr = &invalid_enum_state;
+  EXPECT_THAT(EnumKeys(provider_handle, nullptr, &output,
+                       reinterpret_cast<PVOID*>(&enum_ptr), 0),
+              StatusSsIs(NTE_INVALID_PARAMETER));
+
+  // Clean up memory.
+  EXPECT_OK(FreeProvider(provider_handle));
+}
+
+TEST(BridgeTest, EnumKeysInvalidFlag) {
+  NCRYPT_PROV_HANDLE provider_handle;
+  EXPECT_OK(OpenProvider(&provider_handle, kProviderName.data(), 0));
+
+  NCryptKeyName* output;
+  EXPECT_THAT(EnumKeys(provider_handle, nullptr, &output, nullptr,
+                       NCRYPT_PERSIST_ONLY_FLAG),
+              StatusSsIs(NTE_BAD_FLAGS));
+
+  // Clean up memory.
+  EXPECT_OK(FreeProvider(provider_handle));
 }
 
 TEST(BridgeTest, SignHashSuccess) {

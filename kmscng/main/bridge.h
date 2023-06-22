@@ -101,7 +101,8 @@ absl::Status EnumAlgorithms(__in NCRYPT_PROV_HANDLE hProvider,
 absl::Status EnumKeys(__in NCRYPT_PROV_HANDLE hProvider,
                       __in_opt LPCWSTR pszScope,
                       __deref_out NCryptKeyName** ppKeyName,
-                      __inout PVOID* ppEnumState, __in DWORD dwFlags);
+                      __inout PVOID* ppEnumState, __in DWORD dwFlags,
+                      __in_opt std::string test_config_path = "");
 
 absl::Status ImportKey(__in NCRYPT_PROV_HANDLE hProvider,
                        __in_opt NCRYPT_KEY_HANDLE hImportKey,

@@ -78,15 +78,6 @@ absl::Status Decrypt(__in NCRYPT_PROV_HANDLE hProvider,
   return NewUnsupportedError(SOURCE_LOCATION);
 }
 
-absl::Status EnumKeys(__in NCRYPT_PROV_HANDLE hProvider,
-                      __in_opt LPCWSTR pszScope,
-                      __deref_out NCryptKeyName** ppKeyName,
-                      __inout PVOID* ppEnumState, __in DWORD dwFlags) {
-  LOG_IF(INFO, std::getenv(kVerboseLoggingEnvVariable))
-      << "** unsupported ** EnumKeys invoked ** unsupported ** \n\n";
-  return NewUnsupportedError(SOURCE_LOCATION);
-}
-
 absl::Status ImportKey(__in NCRYPT_PROV_HANDLE hProvider,
                        __in_opt NCRYPT_KEY_HANDLE hImportKey,
                        __in LPCWSTR pszBlobType,

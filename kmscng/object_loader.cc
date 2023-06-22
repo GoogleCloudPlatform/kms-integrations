@@ -92,7 +92,7 @@ absl::StatusOr<std::vector<HeapAllocatedKeyDetails>> BuildCkvList(
         StringToWide(resource_config.crypto_key_version()),  // pszName
         alg_details.algorithm_property,                      // pszAlgid
         AT_SIGNATURE,                                        // dwLegacyKeySpec
-        0                                                    // dwFlags
+        NCRYPT_MACHINE_KEY_FLAG                              // dwFlags
     });
   }
 

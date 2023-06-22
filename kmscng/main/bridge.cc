@@ -21,7 +21,10 @@
 #include "absl/strings/str_format.h"
 #include "common/status_macros.h"
 #include "kmscng/algorithm_details.h"
+#include "kmscng/config/config.h"
+#include "kmscng/config/config.pb.h"
 #include "kmscng/object.h"
+#include "kmscng/object_loader.h"
 #include "kmscng/operation/sign_utils.h"
 #include "kmscng/provider.h"
 #include "kmscng/util/errors.h"
@@ -321,6 +324,76 @@ absl::Status GetKeyProperty(__in NCRYPT_PROV_HANDLE hProvider,
   return absl::OkStatus();
 }
 
+// https://learn.microsoft.com/en-us/windows/win32/api/ncrypt/nf-ncrypt-ncryptenumkeys
+absl::Status EnumKeys(__in NCRYPT_PROV_HANDLE hProvider,
+                      __in_opt LPCWSTR pszScope,
+                      __deref_out NCryptKeyName** ppKeyName,
+                      __inout PVOID* ppEnumState, __in DWORD dwFlags,
+                      __in_opt std::string test_config_path) {
+  LOG_IF(INFO, std::getenv(kVerboseLoggingEnvVariable))
+      << "EnumKeys invoked\n"
+      << "Provider: " << hProvider << "\n"
+      << "Flags: " << dwFlags << "\n\n";
+  ASSIGN_OR_RETURN(Provider * prov, ValidateProviderHandle(hProvider));
+  if (pszScope) {
+    return NewInvalidArgumentError("pszScope should be null",
+                                   NTE_INVALID_PARAMETER, SOURCE_LOCATION);
+  }
+  if (!ppKeyName) {
+    return NewInvalidArgumentError("ppKeyName cannot be null",
+                                   NTE_INVALID_PARAMETER, SOURCE_LOCATION);
+  }
+  dwFlags = dwFlags & ~NCRYPT_SILENT_FLAG;
+  dwFlags = dwFlags & ~NCRYPT_MACHINE_KEY_FLAG;
+  if (dwFlags != 0) {
+    return NewInvalidArgumentError(
+        absl::StrFormat("unsupported flag specified: %u", dwFlags),
+        NTE_BAD_FLAGS, SOURCE_LOCATION);
+  }
+
+  EnumState* enum_state;
+  ProviderConfig config;
+  // Generate CKV list if this is the first call to EnumKeys.
+  if (!*ppEnumState) {
+    // If test_config_path exists, load config from there. This is only used
+    // for internal testing.
+    if (!test_config_path.empty()) {
+      ASSIGN_OR_RETURN(config, LoadConfigFromFile(test_config_path));
+    } else {
+      // Load config from well-known system path.
+      ASSIGN_OR_RETURN(config,
+                       LoadConfigFromFile("C:\\Windows\\KMSCNG\\config.yaml"));
+    }
+    // Load CKV list from config file.
+    ASSIGN_OR_RETURN(std::vector<HeapAllocatedKeyDetails> ckv_list,
+                     BuildCkvList(hProvider, config));
+    *ppEnumState = new EnumState{
+        .key_details = ckv_list,
+        .current = 0,
+    };
+    enum_state = reinterpret_cast<EnumState*>(*ppEnumState);
+  } else {
+    // Check ppEnumState value to make sure it's a valid vector index.
+    enum_state = reinterpret_cast<EnumState*>(*ppEnumState);
+    if (enum_state->current > enum_state->key_details.size()) {
+      return NewInvalidArgumentError(
+          absl::StrFormat("unrecognized ppEnumState value: %u",
+                          enum_state->current),
+          NTE_INVALID_PARAMETER, SOURCE_LOCATION);
+    }
+  }
+  if (enum_state->current == enum_state->key_details.size()) {
+    return NewInvalidArgumentError(
+        absl::StrFormat("end of enumeration reached: %u", enum_state->current),
+        NTE_NO_MORE_ITEMS, SOURCE_LOCATION);
+  }
+  *ppKeyName =
+      enum_state->key_details[enum_state->current].NewNCryptKeyName().release();
+  enum_state->current += 1;
+
+  return absl::OkStatus();
+}
+
 // https://learn.microsoft.com/en-us/windows/win32/api/ncrypt/nf-ncrypt-ncryptsignhash
 absl::Status SignHash(__in NCRYPT_PROV_HANDLE hProvider,
                       __in NCRYPT_KEY_HANDLE hKey, __in_opt VOID* pPaddingInfo,
@@ -420,7 +493,7 @@ absl::Status EnumAlgorithms(__in NCRYPT_PROV_HANDLE hProvider,
                                    NTE_INVALID_PARAMETER, SOURCE_LOCATION);
   }
   if (!pdwAlgCount) {
-    return NewInvalidArgumentError("pcbResult cannot be null",
+    return NewInvalidArgumentError("pdwAlgCount cannot be null",
                                    NTE_INVALID_PARAMETER, SOURCE_LOCATION);
   }
   if (!ppAlgList) {

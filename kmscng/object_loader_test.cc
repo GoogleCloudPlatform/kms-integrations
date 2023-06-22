@@ -97,7 +97,7 @@ TEST_F(BuildCkvListTest, OutputContainsVersion) {
   EXPECT_EQ(ckv_list[0].key_name, StringToWide(ckv.name()));
   EXPECT_EQ(ckv_list[0].algorithm_identifier, BCRYPT_ECDSA_P256_ALGORITHM);
   EXPECT_EQ(ckv_list[0].legacy_spec, AT_SIGNATURE);
-  EXPECT_EQ(ckv_list[0].flags, 0);
+  EXPECT_EQ(ckv_list[0].flags, NCRYPT_MACHINE_KEY_FLAG);
 }
 
 TEST_F(BuildCkvListTest, OutputContainsMultipleVersions) {

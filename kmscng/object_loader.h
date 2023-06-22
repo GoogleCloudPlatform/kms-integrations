@@ -28,6 +28,19 @@ struct HeapAllocatedKeyDetails {
   std::wstring algorithm_identifier;
   uint32_t legacy_spec;
   uint32_t flags;
+
+  std::unique_ptr<NCryptKeyName> NewNCryptKeyName() {
+    return std::make_unique<NCryptKeyName>(
+        NCryptKeyName{.pszName = key_name.data(),
+                      .pszAlgid = algorithm_identifier.data(),
+                      .dwLegacyKeySpec = legacy_spec,
+                      .dwFlags = flags});
+  }
+};
+
+struct EnumState {
+  std::vector<HeapAllocatedKeyDetails> key_details;
+  size_t current;
 };
 
 absl::StatusOr<std::vector<HeapAllocatedKeyDetails>> BuildCkvList(
