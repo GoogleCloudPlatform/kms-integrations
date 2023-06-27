@@ -88,9 +88,16 @@ absl::StatusOr<Object*> ValidateKeyHandle(NCRYPT_PROV_HANDLE prov_handle,
   }
 
   Object* object = reinterpret_cast<Object*>(key_handle);
-  ASSIGN_OR_RETURN(std::string_view stored_prov_handle,
-                   object->GetProperty(NCRYPT_PROVIDER_HANDLE_PROPERTY));
-  if (stored_prov_handle != ProvHandleToBytes(prov_handle)) {
+  absl::StatusOr<std::string_view> stored_prov_handle =
+      object->GetProperty(NCRYPT_PROVIDER_HANDLE_PROPERTY);
+  // If FreeKey() is called after FreeProvider(), silently ignore the error and
+  // return nullptr, which is handled appropriately by FreeKey().
+  // TODO(b/288298206): figure out why this can happen during the SignTool flow.
+  if (!stored_prov_handle.status().ok() &&
+      stored_prov_handle.status().code() == absl::StatusCode::kNotFound) {
+    return nullptr;
+  }
+  if (*stored_prov_handle != ProvHandleToBytes(prov_handle)) {
     return NewInvalidArgumentError(
         "The key handle does not match the provider handle", NTE_INVALID_HANDLE,
         SOURCE_LOCATION);

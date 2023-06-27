@@ -206,7 +206,9 @@ absl::Status FreeKey(__in NCRYPT_PROV_HANDLE hProvider,
       << "Provider: " << hProvider << "\n"
       << "Key: " << hKey << "\n\n";
   ASSIGN_OR_RETURN(Object * obj, ValidateKeyHandle(hProvider, hKey));
-  delete obj;
+  if (obj) {
+    delete obj;
+  }
   return absl::OkStatus();
 }
 
