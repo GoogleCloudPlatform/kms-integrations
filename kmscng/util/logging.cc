@@ -14,6 +14,8 @@
 
 #include "kmscng/util/logging.h"
 
+#include "absl/log/globals.h"
+#include "absl/log/initialize.h"
 #include "absl/strings/str_format.h"
 #include "absl/synchronization/mutex.h"
 #include "common/platform.h"
@@ -49,9 +51,8 @@ void GrpcLog(gpr_log_func_args* args) {
 }
 
 static const bool logging_initialized = []() {
-  // TODO(b/270423338): if we add disk file logging and LogSinks, we should
-  // initialize the logging library with absl::InitializeLog(), otherwise the
-  // library only logs to stderr by default, instead of registered LogSinks.
+  absl::SetStderrThreshold(absl::LogSeverityAtLeast::kInfo);
+  absl::InitializeLog();
   gpr_set_log_function(&GrpcLog);
   return true;
 }();

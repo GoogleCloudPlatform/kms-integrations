@@ -42,6 +42,7 @@ cc_library(
         "@com_github_grpc_grpc//:grpc",
         "@com_google_absl//absl/base:log_severity",
         "@com_google_absl//absl/log",
+	"@com_google_absl//absl/log:initialize",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/synchronization",
