@@ -127,7 +127,7 @@ func TestDoubleInstall(t *testing.T) {
 	if !regExists(t, ctx) {
 		t.Errorf("registry key %q is missing", registryKey)
 	}
-	if !dllExists(t, ctx) {
+	if !fileExists(t, ctx, libraryFile) {
 		t.Errorf("library file %q is missing", libraryFile)
 	}
 }
@@ -141,7 +141,7 @@ func TestUninstallWithoutInstall(t *testing.T) {
 	if regExists(t, ctx) {
 		t.Errorf("registry key %q unexpectedly exists", registryKey)
 	}
-	if dllExists(t, ctx) {
+	if fileExists(t, ctx, libraryFile) {
 		t.Errorf("library file %q unexpectedly exists", libraryFile)
 	}
 }

@@ -4,10 +4,12 @@
 
 1.  [Getting started](#getting-started)
 2.  [Authentication and authorization](#authentication-and-authorization)
-3.  [Functions](#functions)
-4.  [Cryptographic operations](#cryptographic-operations)
+3.  [Configuration](#configuration)
+4.  [Functions](#functions)
+5.  [Cryptographic operations](#cryptographic-operations)
     1.  [ECDSA signing](#ecdsa-signing)
-5.  [Limitations](#limitations)
+6.  [Limitations](#limitations)
+7.  [FAQs](#faqs)
 
 ## Getting started
 
@@ -18,13 +20,18 @@ Official Google-built releases of this provider are covered by the
 If you are upgrading from a previous version of the provider, be sure to check
 the [change log](../../CHANGELOG.md) for changes that might affect your usage.
 
+Please refer to the [FAQs section](#faqs) to troubleshoot installation or usage
+issues.
+
 ### Windows system requirements
 
 The provider is built and tested on Windows Server (semi-annual channel), on the
 amd64 architecture. The library is designed to be compatible with Windows Server
 2012 R2, Windows 8.1 (x64), and all subsequent server and x64 desktop releases.
+
 The provider requires the preinstallation of the Visual C++ 2022 x64
-Redistributable package, which can be downloaded [here][msvc-redistributable].
+Redistributable package (14.34 or higher), which can be downloaded
+[here][msvc-redistributable].
 
 ### Downloading and verifying the provider
 
@@ -71,6 +78,30 @@ with the following IAM permissions:
 You can learn more about
 [managing access to Cloud KMS resources][kms-permissions-and-roles].
 
+## Configuration
+
+If your application uses `NCryptEnumKeys` calls, you will need to have a YAML
+configuration file in order to locate Cloud KMS resources. The YAML must at a
+minimum contain a single Cloud KMS CryptoKeyVersion.
+
+Your provider configuration should be stored in `C:\Windows\KMSCNG\config.yaml`.
+
+### Sample configuration file
+
+```yaml
+---
+resources:
+  - crypto_key_version: "projects/my-project/locations/us/keyRings/key-ring/cryptoKeys/my-key/cryptoKeyVersions/1"
+  - crypto_key_version: "projects/my-project/locations/us/keyRings/other-key-ring/cryptoKeys/other-key/cryptoKeyVersions/2"
+```
+
+### Configuration reference
+
+Item Name             | Type   | Required | Default | Description
+--------------------- | ------ | -------- | ------- | -----------
+resources             | list   | Yes      | None    | A list of crypto_key_version entries, see field below.
+crypto_key_version    | string | Yes      | None    | The full name of the KMS key version that will be made accessible.
+
 ## Functions
 
 The provider conforms to the
@@ -85,7 +116,7 @@ Function                                                   | Status | Notes
 [`NCryptDeriveKey`][NCryptDeriveKey]                       | ❌     |
 [`NCryptEncrypt`][NCryptEncrypt]                           | ❌     |
 [`NCryptEnumAlgorithms`][NCryptEnumAlgorithms]             | ✅     |
-[`NCryptEnumKeys`][NCryptEnumKeys]                         | ❌     |
+[`NCryptEnumKeys`][NCryptEnumKeys]                         | ✅     |
 [`NCryptExportKey`][NCryptExportKey]                       | ⚠️     | Only supports public key export, since Cloud KMS private keys cannot be exported.
 [`NCryptFinalizeKey`][NCryptFinalizeKey]                   | ❌     |
 [`NCryptFreeBuffer`][NCryptFreeBuffer]                     | ✅     |
@@ -127,6 +158,43 @@ these characteristics:
 
 The CNG provider returns an error when trying to load keys that don't conform to
 these requirements.
+
+## FAQs
+
+### Issues during installation
+
+If you see this error during the installation, Visual C++ is likely not installed
+on your system:
+```
+There is a problem with this Windows Installer package. A DLL required for this
+install to complete could not be run. Contact your support personnel or package
+vendor.
+```
+
+The provider requires the preinstallation of the Visual C++ 2022 x64
+Redistributable package (14.34 or higher), which can be downloaded
+[here][msvc-redistributable].
+
+### gRPC Could not get default PEM root certs
+
+Sample error:
+```
+W0000 00:00:1687369894.825370    1892 logging.cc:39] [external/com_github_grpc_grpc/src/core/lib/security/security_connector/ssl_utils.cc:606]: load_file: UNKNOWN:Failed to load file {filename:"/usr/share/grpc/roots.pem", created_time:"2023-06-21T17:51:34.8251349+00:00", children:[UNKNOWN:No such file or directory [...]]}
+W0000 00:00:1687369894.826457    1892 logging.cc:39] [external/com_github_grpc_grpc/src/core/lib/security/security_connector/ssl/ssl_security_connector.cc:425]: Could not get default pem root certs.
+```
+
+If you see this error, it's likely because gRPC requires an environment variable
+to find the root of trust for SSL. You can download the missing file and set the
+environment variable with:
+```
+@powershell -NoProfile -ExecutionPolicy unrestricted -Command ^
+    (new-object System.Net.WebClient).Downloadfile( ^
+        'https://pki.google.com/roots.pem', 'roots.pem')
+set GRPC_DEFAULT_SSL_ROOTS_FILE_PATH=%cd%\roots.pem
+```
+
+NOTE: the snippet above downloads the roots.pem file to your current directory,
+and sets the environment variable to point to that location.
 
 [cng-key-storage-function-table]: https://learn.microsoft.com/en-us/windows/win32/seccng/cng-algorithm-identifiers
 [gcp-authn-getting-started]: https://cloud.google.com/docs/authentication/getting-started
