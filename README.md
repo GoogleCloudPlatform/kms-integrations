@@ -1,7 +1,8 @@
 # Cloud KMS Integrations
 
 This repository contains clients that integrate Cloud KMS with standard
-cryptographic APIs. Presently, this includes the library for PKCS #11.
+cryptographic APIs. Presently, this includes the library for PKCS #11, and the
+CNG provider.
 
 For                          | Go To
 ---------------------------- | -----
@@ -34,16 +35,33 @@ this if you are writing a new application.
 You can learn more about the PKCS #11 library in the
 [user guide](kmsp11/docs/user_guide.md).
 
-Binary distributions of this library are available as Github releases. These
+## Cloud KMS CNG Provider
+
+NOTE: the CNG provider is currently in public preview.
+
+The CNG provider exposes cryptographic and key management capabilities
+from Google Cloud KMS using the
+[CNG](https://learn.microsoft.com/en-us/windows/win32/seccng/cng-portal) API.
+Sources for this library are contained in the `kmscng/` directory in this
+repository.
+
+Popular uses for the CNG provider include:
+
+* Signing Windows artifacts using Windows SignTool.
+  [Learn more](https://cloud.google.com/kms/docs/reference/cng-signtool).
+* Migrating an existing application that uses the CNG API to the cloud.
+
+You can learn more about the CNG provider in the
+[user guide](kmscng/docs/user_guide.md).
+
+## General Information
+
+Binary distributions of the libraries are available as Github releases. These
 binaries built and distributed by Google are covered by the
 [GCP Terms of Service](https://cloud.google.com/terms), and support is available
 from [Google Cloud support](https://cloud.google.com/support-hub).
 
-We recommend that you use a binary distribution of this library rather than
+We recommend that you use a binary distribution of these libraries rather than
 building from source.  Support for a library that you build yourself from source
 is on a best-effort basis, via GitHub issues. Further information about
 build configurations is available in [BUILDING](BUILDING.md).
-
-## Cloud KMS CNG Provider
-
-The CNG provider is currently under development and is not yet ready for use.
