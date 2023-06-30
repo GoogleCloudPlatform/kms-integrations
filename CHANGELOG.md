@@ -1,5 +1,10 @@
 # Release Notes
 
+## Table of Contents
+
+1.  [PKCS#11 Library](#pkcs-11-cloud-kms-library)
+2.  [CNG Provider](#cng-provider-for-cloud-kms)
+
 ## PKCS #11 Cloud KMS Library
 
 ### v1.2
@@ -49,6 +54,13 @@ The following changes are included in the v1.1 (March 2022) release:
 ### v1.0
 
 Initial release of the library.
+
+## CNG Provider for Cloud KMS
+
+### v0.8
+
+Initial release of the library.
+
 
 [mechanisms]: kmsp11/mechanism.cc
 [user-guide]: kmsp11/docs/user_guide.md
