@@ -810,8 +810,9 @@ TEST(BridgeTest, GetMechanismListSucceeds) {
   std::vector<CK_MECHANISM_TYPE> types(count);
   EXPECT_OK(GetMechanismList(0, types.data(), &count));
   EXPECT_EQ(types.size(), count);
-  EXPECT_THAT(types, IsSupersetOf({CKM_RSA_PKCS, CKM_RSA_PKCS_PSS,
-                                   CKM_RSA_PKCS_OAEP, CKM_ECDSA}));
+  EXPECT_THAT(types,
+              IsSupersetOf({CKM_RSA_PKCS, CKM_RSA_PKCS_PSS, CKM_RSA_PKCS_OAEP,
+                            CKM_ECDSA, CKM_SHA_1_HMAC, CKM_CLOUDKMS_AES_GCM}));
 }
 
 TEST(BridgeTest, GetMechanismListFailsInvalidSize) {
@@ -829,56 +830,6 @@ TEST(BridgeTest, GetMechanismListFailsInvalidSize) {
   EXPECT_THAT(GetMechanismList(0, types.data(), &count),
               StatusRvIs(CKR_BUFFER_TOO_SMALL));
   EXPECT_THAT(count, Ge(4));
-}
-
-TEST(BridgeTest, GetMechanismListMacKeysExperimentEnabled) {
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
-                       fakekms::Server::New());
-  std::string config_file = CreateConfigFileWithOneKeyring(fake_server.get());
-  std::ofstream(config_file, std::ofstream::out | std::ofstream::app)
-      << "experimental_allow_mac_keys: true" << std::endl;
-  absl::Cleanup config_close = [config_file] {
-    std::remove(config_file.c_str());
-  };
-
-  auto init_args = InitArgs(config_file.c_str());
-  EXPECT_OK(Initialize(&init_args));
-  absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
-
-  CK_ULONG count;
-  EXPECT_OK(GetMechanismList(0, nullptr, &count));
-
-  std::vector<CK_MECHANISM_TYPE> types(count);
-  EXPECT_OK(GetMechanismList(0, types.data(), &count));
-  EXPECT_EQ(types.size(), count);
-  EXPECT_THAT(types,
-              IsSupersetOf({CKM_RSA_PKCS, CKM_RSA_PKCS_PSS, CKM_RSA_PKCS_OAEP,
-                            CKM_ECDSA, CKM_SHA_1_HMAC}));
-}
-
-TEST(BridgeTest, GetMechanismListRawEncryptionKeysExperimentEnabled) {
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
-                       fakekms::Server::New());
-  std::string config_file = CreateConfigFileWithOneKeyring(fake_server.get());
-  std::ofstream(config_file, std::ofstream::out | std::ofstream::app)
-      << "experimental_allow_raw_encryption_keys: true" << std::endl;
-  absl::Cleanup config_close = [config_file] {
-    std::remove(config_file.c_str());
-  };
-
-  auto init_args = InitArgs(config_file.c_str());
-  EXPECT_OK(Initialize(&init_args));
-  absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
-
-  CK_ULONG count;
-  EXPECT_OK(GetMechanismList(0, nullptr, &count));
-
-  std::vector<CK_MECHANISM_TYPE> types(count);
-  EXPECT_OK(GetMechanismList(0, types.data(), &count));
-  EXPECT_EQ(types.size(), count);
-  EXPECT_THAT(types,
-              IsSupersetOf({CKM_RSA_PKCS, CKM_RSA_PKCS_PSS, CKM_RSA_PKCS_OAEP,
-                            CKM_ECDSA, CKM_CLOUDKMS_AES_GCM}));
 }
 
 TEST(BridgeTest, GetMechanismListFailsNotInitialized) {
@@ -935,27 +886,10 @@ TEST(BridgeTest, GetMechanismInfoFailsInvalidMechanism) {
               StatusRvIs(CKR_MECHANISM_INVALID));
 }
 
-TEST(BridgeTest, GetMechanismInfoMacKeysExperimentDisabled) {
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
-                       fakekms::Server::New());
-  ASSERT_OK_AND_ASSIGN(std::string config_file,
-                       InitializeBridgeForOneKmsKeyRing(fake_server.get()));
-  absl::Cleanup c = [config_file] {
-    std::remove(config_file.c_str());
-    EXPECT_OK(Finalize(nullptr));
-  };
-
-  CK_MECHANISM_INFO info;
-  EXPECT_THAT(GetMechanismInfo(0, CKM_SHA256_HMAC, &info),
-              StatusRvIs(CKR_MECHANISM_INVALID));
-}
-
-TEST(BridgeTest, GetMechanismInfoMacKeysExperimentEnabled) {
+TEST(BridgeTest, GetMechanismInfoMacKeys) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   std::string config_file = CreateConfigFileWithOneKeyring(fake_server.get());
-  std::ofstream(config_file, std::ofstream::out | std::ofstream::app)
-      << "experimental_allow_mac_keys: true" << std::endl;
   absl::Cleanup config_close = [config_file] {
     std::remove(config_file.c_str());
   };
@@ -972,27 +906,10 @@ TEST(BridgeTest, GetMechanismInfoMacKeysExperimentEnabled) {
   EXPECT_EQ(info.flags, CKF_SIGN | CKF_VERIFY);
 }
 
-TEST(BridgeTest, GetMechanismInfoRawEncryptionKeysExperimentDisabled) {
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
-                       fakekms::Server::New());
-  ASSERT_OK_AND_ASSIGN(std::string config_file,
-                       InitializeBridgeForOneKmsKeyRing(fake_server.get()));
-  absl::Cleanup c = [config_file] {
-    std::remove(config_file.c_str());
-    EXPECT_OK(Finalize(nullptr));
-  };
-
-  CK_MECHANISM_INFO info;
-  EXPECT_THAT(GetMechanismInfo(0, CKM_AES_GCM, &info),
-              StatusRvIs(CKR_MECHANISM_INVALID));
-}
-
-TEST(BridgeTest, GetMechanismInfoRawEncryptionKeysExperimentEnabled) {
+TEST(BridgeTest, GetMechanismInfoRawEncryptionKeys) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
   std::string config_file = CreateConfigFileWithOneKeyring(fake_server.get());
-  std::ofstream(config_file, std::ofstream::out | std::ofstream::app)
-      << "experimental_allow_raw_encryption_keys: true" << std::endl;
   absl::Cleanup config_close = [config_file] {
     std::remove(config_file.c_str());
   };

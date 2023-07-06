@@ -24,26 +24,22 @@ namespace cloud_kms::kmsp11 {
 using DecryptOp = std::unique_ptr<DecrypterInterface>;
 
 absl::StatusOr<DecryptOp> NewDecryptOp(std::shared_ptr<Object> key,
-                                       const CK_MECHANISM* mechanism,
-                                       bool allow_raw_encryption_keys = false);
+                                       const CK_MECHANISM* mechanism);
 
 using EncryptOp = std::unique_ptr<EncrypterInterface>;
 
 absl::StatusOr<EncryptOp> NewEncryptOp(std::shared_ptr<Object> key,
-                                       const CK_MECHANISM* mechanism,
-                                       bool allow_raw_encryption_keys = false);
+                                       const CK_MECHANISM* mechanism);
 
 using SignOp = std::unique_ptr<SignerInterface>;
 
 absl::StatusOr<SignOp> NewSignOp(std::shared_ptr<Object> key,
-                                 const CK_MECHANISM* mechanism,
-                                 bool allow_mac_keys = false);
+                                 const CK_MECHANISM* mechanism);
 
 using VerifyOp = std::unique_ptr<VerifierInterface>;
 
 absl::StatusOr<VerifyOp> NewVerifyOp(std::shared_ptr<Object> key,
-                                     const CK_MECHANISM* mechanism,
-                                     bool allow_mac_keys = false);
+                                     const CK_MECHANISM* mechanism);
 
 }  // namespace cloud_kms::kmsp11
 

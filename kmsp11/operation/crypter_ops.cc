@@ -29,8 +29,7 @@
 namespace cloud_kms::kmsp11 {
 
 absl::StatusOr<DecryptOp> NewDecryptOp(std::shared_ptr<Object> key,
-                                       const CK_MECHANISM* mechanism,
-                                       bool allow_raw_encryption_keys) {
+                                       const CK_MECHANISM* mechanism) {
   switch (mechanism->mechanism) {
     case CKM_RSA_PKCS_OAEP:
       return NewRsaOaepDecrypter(key, mechanism);
@@ -43,21 +42,12 @@ absl::StatusOr<DecryptOp> NewDecryptOp(std::shared_ptr<Object> key,
               mechanism->mechanism),
           CKR_MECHANISM_INVALID, SOURCE_LOCATION);
     case CKM_CLOUDKMS_AES_GCM:
-      if (allow_raw_encryption_keys) {
-        return NewAesGcmDecrypter(key, mechanism);
-      }
-      ABSL_FALLTHROUGH_INTENDED;
+      return NewAesGcmDecrypter(key, mechanism);
     case CKM_AES_CTR:
-      if (allow_raw_encryption_keys) {
-        return NewAesCtrDecrypter(key, mechanism);
-      }
-      ABSL_FALLTHROUGH_INTENDED;
+      return NewAesCtrDecrypter(key, mechanism);
     case CKM_AES_CBC:
     case CKM_AES_CBC_PAD:
-      if (allow_raw_encryption_keys) {
-        return NewAesCbcDecrypter(key, mechanism);
-      }
-      ABSL_FALLTHROUGH_INTENDED;
+      return NewAesCbcDecrypter(key, mechanism);
     default:
       return InvalidMechanismError(mechanism->mechanism, "decrypt",
                                    SOURCE_LOCATION);
@@ -65,8 +55,7 @@ absl::StatusOr<DecryptOp> NewDecryptOp(std::shared_ptr<Object> key,
 }
 
 absl::StatusOr<EncryptOp> NewEncryptOp(std::shared_ptr<Object> key,
-                                       const CK_MECHANISM* mechanism,
-                                       bool allow_raw_encryption_keys) {
+                                       const CK_MECHANISM* mechanism) {
   switch (mechanism->mechanism) {
     case CKM_RSA_PKCS_OAEP:
       return NewRsaOaepEncrypter(key, mechanism);
@@ -79,21 +68,12 @@ absl::StatusOr<EncryptOp> NewEncryptOp(std::shared_ptr<Object> key,
               mechanism->mechanism),
           CKR_MECHANISM_INVALID, SOURCE_LOCATION);
     case CKM_CLOUDKMS_AES_GCM:
-      if (allow_raw_encryption_keys) {
-        return NewAesGcmEncrypter(key, mechanism);
-      }
-      ABSL_FALLTHROUGH_INTENDED;
+      return NewAesGcmEncrypter(key, mechanism);
     case CKM_AES_CTR:
-      if (allow_raw_encryption_keys) {
-        return NewAesCtrEncrypter(key, mechanism);
-      }
-      ABSL_FALLTHROUGH_INTENDED;
+      return NewAesCtrEncrypter(key, mechanism);
     case CKM_AES_CBC:
     case CKM_AES_CBC_PAD:
-      if (allow_raw_encryption_keys) {
-        return NewAesCbcEncrypter(key, mechanism);
-      }
-      ABSL_FALLTHROUGH_INTENDED;
+      return NewAesCbcEncrypter(key, mechanism);
     default:
       return InvalidMechanismError(mechanism->mechanism, "encrypt",
                                    SOURCE_LOCATION);
@@ -101,8 +81,7 @@ absl::StatusOr<EncryptOp> NewEncryptOp(std::shared_ptr<Object> key,
 }
 
 absl::StatusOr<SignOp> NewSignOp(std::shared_ptr<Object> key,
-                                 const CK_MECHANISM* mechanism,
-                                 bool allow_mac_keys) {
+                                 const CK_MECHANISM* mechanism) {
   switch (mechanism->mechanism) {
     case CKM_ECDSA:
     case CKM_ECDSA_SHA256:
@@ -124,10 +103,7 @@ absl::StatusOr<SignOp> NewSignOp(std::shared_ptr<Object> key,
     case CKM_SHA256_HMAC:
     case CKM_SHA384_HMAC:
     case CKM_SHA512_HMAC:
-      if (allow_mac_keys) {
-        return NewHmacSigner(key, mechanism);
-      }
-      ABSL_FALLTHROUGH_INTENDED;
+      return NewHmacSigner(key, mechanism);
     default:
       return InvalidMechanismError(mechanism->mechanism, "sign",
                                    SOURCE_LOCATION);
@@ -135,8 +111,7 @@ absl::StatusOr<SignOp> NewSignOp(std::shared_ptr<Object> key,
 }
 
 absl::StatusOr<VerifyOp> NewVerifyOp(std::shared_ptr<Object> key,
-                                     const CK_MECHANISM* mechanism,
-                                     bool allow_mac_keys) {
+                                     const CK_MECHANISM* mechanism) {
   switch (mechanism->mechanism) {
     case CKM_ECDSA:
     case CKM_ECDSA_SHA256:
@@ -158,10 +133,7 @@ absl::StatusOr<VerifyOp> NewVerifyOp(std::shared_ptr<Object> key,
     case CKM_SHA256_HMAC:
     case CKM_SHA384_HMAC:
     case CKM_SHA512_HMAC:
-      if (allow_mac_keys) {
-        return NewHmacVerifier(key, mechanism);
-      }
-      ABSL_FALLTHROUGH_INTENDED;
+      return NewHmacVerifier(key, mechanism);
     default:
       return InvalidMechanismError(mechanism->mechanism, "verify",
                                    SOURCE_LOCATION);

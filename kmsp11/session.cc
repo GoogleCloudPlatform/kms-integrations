@@ -249,16 +249,14 @@ absl::Status Session::FindObjectsFinal() {
 }
 
 absl::Status Session::DecryptInit(std::shared_ptr<Object> key,
-                                  CK_MECHANISM* mechanism,
-                                  bool allow_raw_encryption_keys) {
+                                  CK_MECHANISM* mechanism) {
   absl::MutexLock l(&op_mutex_);
 
   if (op_.has_value()) {
     return OperationActiveError(SOURCE_LOCATION);
   }
 
-  ASSIGN_OR_RETURN(op_,
-                   NewDecryptOp(key, mechanism, allow_raw_encryption_keys));
+  ASSIGN_OR_RETURN(op_, NewDecryptOp(key, mechanism));
   return absl::OkStatus();
 }
 
@@ -294,16 +292,14 @@ absl::StatusOr<absl::Span<const uint8_t>> Session::DecryptFinal() {
 }
 
 absl::Status Session::EncryptInit(std::shared_ptr<Object> key,
-                                  CK_MECHANISM* mechanism,
-                                  bool allow_raw_encryption_keys) {
+                                  CK_MECHANISM* mechanism) {
   absl::MutexLock l(&op_mutex_);
 
   if (op_.has_value()) {
     return OperationActiveError(SOURCE_LOCATION);
   }
 
-  ASSIGN_OR_RETURN(op_,
-                   NewEncryptOp(key, mechanism, allow_raw_encryption_keys));
+  ASSIGN_OR_RETURN(op_, NewEncryptOp(key, mechanism));
   return absl::OkStatus();
 }
 
@@ -338,14 +334,14 @@ absl::StatusOr<absl::Span<const uint8_t>> Session::EncryptFinal() {
 }
 
 absl::Status Session::SignInit(std::shared_ptr<Object> key,
-                               CK_MECHANISM* mechanism, bool allow_mac_keys) {
+                               CK_MECHANISM* mechanism) {
   absl::MutexLock l(&op_mutex_);
 
   if (op_.has_value()) {
     return OperationActiveError(SOURCE_LOCATION);
   }
 
-  ASSIGN_OR_RETURN(op_, NewSignOp(key, mechanism, allow_mac_keys));
+  ASSIGN_OR_RETURN(op_, NewSignOp(key, mechanism));
   return absl::OkStatus();
 }
 
@@ -391,14 +387,14 @@ absl::StatusOr<size_t> Session::SignatureLength() {
 }
 
 absl::Status Session::VerifyInit(std::shared_ptr<Object> key,
-                                 CK_MECHANISM* mechanism, bool allow_mac_keys) {
+                                 CK_MECHANISM* mechanism) {
   absl::MutexLock l(&op_mutex_);
 
   if (op_.has_value()) {
     return OperationActiveError(SOURCE_LOCATION);
   }
 
-  ASSIGN_OR_RETURN(op_, NewVerifyOp(key, mechanism, allow_mac_keys));
+  ASSIGN_OR_RETURN(op_, NewVerifyOp(key, mechanism));
   return absl::OkStatus();
 }
 

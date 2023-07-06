@@ -424,16 +424,13 @@ absl::Status FindObjectsFinal(CK_SESSION_HANDLE hSession) {
 // http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc235002361
 absl::Status DecryptInit(CK_SESSION_HANDLE hSession,
                          CK_MECHANISM_PTR pMechanism, CK_OBJECT_HANDLE hKey) {
-  ASSIGN_OR_RETURN(Provider * provider, GetProvider());
   ASSIGN_OR_RETURN(std::shared_ptr<Session> session, GetSession(hSession));
   ASSIGN_OR_RETURN(std::shared_ptr<Object> key, session->token()->GetKey(hKey));
 
   if (!pMechanism) {
     return NullArgumentError("pMechanism", SOURCE_LOCATION);
   }
-  return session->DecryptInit(
-      key, pMechanism,
-      provider->library_config().experimental_allow_raw_encryption_keys());
+  return session->DecryptInit(key, pMechanism);
 }
 
 // Complete a decrypt operation.
@@ -552,16 +549,13 @@ absl::Status DecryptFinal(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pLastPart,
 // http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc235002356
 absl::Status EncryptInit(CK_SESSION_HANDLE hSession,
                          CK_MECHANISM_PTR pMechanism, CK_OBJECT_HANDLE hKey) {
-  ASSIGN_OR_RETURN(Provider * provider, GetProvider());
   ASSIGN_OR_RETURN(std::shared_ptr<Session> session, GetSession(hSession));
   ASSIGN_OR_RETURN(std::shared_ptr<Object> key, session->token()->GetKey(hKey));
 
   if (!pMechanism) {
     return NullArgumentError("pMechanism", SOURCE_LOCATION);
   }
-  return session->EncryptInit(
-      key, pMechanism,
-      provider->library_config().experimental_allow_raw_encryption_keys());
+  return session->EncryptInit(key, pMechanism);
 }
 
 // Complete an encrypt operation.
@@ -681,16 +675,13 @@ absl::Status EncryptFinal(CK_SESSION_HANDLE hSession,
 // http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc235002372
 absl::Status SignInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechanism,
                       CK_OBJECT_HANDLE hKey) {
-  ASSIGN_OR_RETURN(Provider * provider, GetProvider());
   ASSIGN_OR_RETURN(std::shared_ptr<Session> session, GetSession(hSession));
   ASSIGN_OR_RETURN(std::shared_ptr<Object> key, session->token()->GetKey(hKey));
 
   if (!pMechanism) {
     return NullArgumentError("pMechanism", SOURCE_LOCATION);
   }
-  return session->SignInit(
-      key, pMechanism,
-      provider->library_config().experimental_allow_mac_keys());
+  return session->SignInit(key, pMechanism);
 }
 
 // Complete a single-part sign operation.
@@ -801,16 +792,13 @@ absl::Status SignFinal(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pSignature,
 // http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html#_Toc235002379
 absl::Status VerifyInit(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechanism,
                         CK_OBJECT_HANDLE hKey) {
-  ASSIGN_OR_RETURN(Provider * provider, GetProvider());
   ASSIGN_OR_RETURN(std::shared_ptr<Session> session, GetSession(hSession));
   ASSIGN_OR_RETURN(std::shared_ptr<Object> key, session->token()->GetKey(hKey));
 
   if (!pMechanism) {
     return NullArgumentError("pMechanism", SOURCE_LOCATION);
   }
-  return session->VerifyInit(
-      key, pMechanism,
-      provider->library_config().experimental_allow_mac_keys());
+  return session->VerifyInit(key, pMechanism);
 }
 
 // Complete a single-part verify operation.

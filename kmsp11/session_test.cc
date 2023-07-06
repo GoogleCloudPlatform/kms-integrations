@@ -444,7 +444,7 @@ TEST_F(SessionTest, DecryptFinalWithoutUpdateFails) {
       sizeof(params),        // ulParameterLen
   };
 
-  EXPECT_OK(s.DecryptInit(key, &mech, true));
+  EXPECT_OK(s.DecryptInit(key, &mech));
   EXPECT_THAT(s.DecryptFinal(), StatusRvIs(CKR_FUNCTION_FAILED));
 }
 
@@ -592,7 +592,7 @@ TEST_F(SessionTest, EncryptFinalWithoutUpdateFails) {
       sizeof(params),        // ulParameterLen
   };
 
-  EXPECT_OK(s.EncryptInit(key, &mech, true));
+  EXPECT_OK(s.EncryptInit(key, &mech));
   EXPECT_THAT(s.EncryptFinal(), StatusRvIs(CKR_FUNCTION_FAILED));
 }
 

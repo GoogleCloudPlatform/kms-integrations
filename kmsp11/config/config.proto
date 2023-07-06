@@ -67,13 +67,7 @@ message LibraryConfig {
   // internal testing only.
   string experimental_rpc_feature_flags = 12;
 
-  // Optional. If true, enables an experiment that allows usage of MAC keys.
-  // Default is false.
-  bool experimental_allow_mac_keys = 13;
-
-  // Optional. If true, enables an experiment that allows usage of interoperable
-  // AES keys. Default is false.
-  bool experimental_allow_raw_encryption_keys = 14;
+  reserved 13, 14;
 }
 
 message TokenConfig {

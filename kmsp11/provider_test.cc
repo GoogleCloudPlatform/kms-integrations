@@ -169,17 +169,5 @@ TEST_F(ProviderTest, UnsupportedMechanism) {
                     StatusRvIs(CKR_MECHANISM_INVALID)));
 }
 
-TEST_F(ProviderTest, MacMechanismExperimentDisabled) {
-  EXPECT_THAT(provider_->MechanismInfo(CKM_SHA_1_HMAC),
-              AllOf(StatusIs(absl::StatusCode::kNotFound),
-                    StatusRvIs(CKR_MECHANISM_INVALID)));
-}
-
-TEST_F(ProviderTest, RawEncryptionMechanismExperimentDisabled) {
-  EXPECT_THAT(provider_->MechanismInfo(CKM_AES_GCM),
-              AllOf(StatusIs(absl::StatusCode::kNotFound),
-                    StatusRvIs(CKR_MECHANISM_INVALID)));
-}
-
 }  // namespace
 }  // namespace cloud_kms::kmsp11

@@ -549,31 +549,6 @@ TEST_P(AsymmetricSignTest, SignFinalInvalidMechanism) {
                     StatusRvIs(CKR_FUNCTION_FAILED)));
 }
 
-TEST_P(AsymmetricSignTest, SignInitMacKeysExperimentDisabled) {
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
-                       fakekms::Server::New());
-  kms_v1::CryptoKeyVersion ckv;
-  ASSERT_OK_AND_ASSIGN(
-      std::string config_file,
-      InitializeBridgeForOneKmsKey(fake_server.get(),
-                                   kms_v1::CryptoKey::ASYMMETRIC_SIGN,
-                                   GetParam().algorithm, &ckv));
-  absl::Cleanup config_close = [config_file] {
-    std::remove(config_file.c_str());
-    EXPECT_OK(Finalize(nullptr));
-  };
-
-  CK_SESSION_HANDLE session;
-  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
-
-  ASSERT_OK_AND_ASSIGN(CK_OBJECT_HANDLE private_key,
-                       GetPrivateKeyObjectHandle(session, ckv));
-
-  CK_MECHANISM mech{CKM_SHA256_HMAC, nullptr, 0};
-  EXPECT_THAT(SignInit(session, &mech, private_key),
-              StatusRvIs(CKR_MECHANISM_INVALID));
-}
-
 TEST_P(AsymmetricSignTest, VerifyFailsNullSignatureSize) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
                        fakekms::Server::New());
@@ -1060,31 +1035,6 @@ TEST_P(AsymmetricSignTest, VerifyFinalInvalidMechanism) {
               AllOf(StatusIs(absl::StatusCode::kFailedPrecondition,
                              HasSubstr("does not support multi-part verify")),
                     StatusRvIs(CKR_FUNCTION_FAILED)));
-}
-
-TEST_P(AsymmetricSignTest, VerifyInitMacKeysExperimentDisabled) {
-  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
-                       fakekms::Server::New());
-  kms_v1::CryptoKeyVersion ckv;
-  ASSERT_OK_AND_ASSIGN(
-      std::string config_file,
-      InitializeBridgeForOneKmsKey(fake_server.get(),
-                                   kms_v1::CryptoKey::ASYMMETRIC_SIGN,
-                                   GetParam().algorithm, &ckv));
-  absl::Cleanup config_close = [config_file] {
-    std::remove(config_file.c_str());
-    EXPECT_OK(Finalize(nullptr));
-  };
-
-  CK_SESSION_HANDLE session;
-  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION, nullptr, nullptr, &session));
-
-  ASSERT_OK_AND_ASSIGN(CK_OBJECT_HANDLE private_key,
-                       GetPrivateKeyObjectHandle(session, ckv));
-
-  CK_MECHANISM mech{CKM_SHA256_HMAC, nullptr, 0};
-  EXPECT_THAT(VerifyInit(session, &mech, private_key),
-              StatusRvIs(CKR_MECHANISM_INVALID));
 }
 
 }  // namespace

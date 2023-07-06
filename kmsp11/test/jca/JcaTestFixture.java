@@ -118,12 +118,6 @@ public class JcaTestFixture implements AutoCloseable {
     s.append("generate_certs: true");
     s.append(System.lineSeparator());
 
-    s.append("experimental_allow_mac_keys: true");
-    s.append(System.lineSeparator());
-
-    s.append("experimental_allow_raw_encryption_keys: true");
-    s.append(System.lineSeparator());
-
     return s.toString();
   }
 

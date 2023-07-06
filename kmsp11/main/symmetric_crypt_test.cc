@@ -81,9 +81,6 @@ absl::StatusOr<std::string> InitializeAsymmetricCryptTest(
   kms_v1::KeyRing kr;
   std::string config_file = CreateConfigFileWithOneKeyring(fake_server, &kr);
 
-  std::ofstream(config_file, std::ofstream::out | std::ofstream::app)
-      << "experimental_allow_raw_encryption_keys: true" << std::endl;
-
   auto init_args = InitArgs(config_file.c_str());
 
   *ckv = InitializeCryptoKeyAndKeyVersion(
