@@ -42,6 +42,9 @@ build:linux --java_runtime_version=remotejdk_11
 # macOS-specific options
 # Ensure compatibility with all macOS versions currently supported by Apple.
 build:macos --copt=-mmacosx-version-min=11.3
+# Suppress errors like
+# clang: error: overriding '-mmacosx-version-min=11.3' option with '-target arm64-apple-macosx13.3' [-Werror,-Woverriding-t-option]
+build:macos --copt=-Wno-overriding-t-option
 # Workaround for build issue: https://github.com/bazelbuild/bazel/issues/4341#issuecomment-572050759
 build:macos --copt=-DGRPC_BAZEL_BUILD
 # Workaround for build issue: https://github.com/bazelbuild/bazel/issues/4341#issuecomment-758361769
