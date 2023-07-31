@@ -43,9 +43,11 @@ constexpr std::wstring_view kProviderDllName = L"kmscng.dll";
 constexpr std::wstring_view kEndpointAddressProperty = L"KMSEndpointAddress";
 constexpr std::wstring_view kChannelCredentialsProperty =
     L"KMSChannelCredentials";
+constexpr std::wstring_view kUserProjectProperty = L"KMSUserProject";
 
 constexpr char kEndpointAddressEnvVariable[] = "KMS_ENDPOINT_ADDRESS";
 constexpr char kChannelCredentialsEnvVariable[] = "KMS_CHANNEL_CREDENTIALS";
+constexpr char kUserProjectEnvVariable[] = "KMS_USER_PROJECT";
 
 }  // namespace cloud_kms::kmscng
 

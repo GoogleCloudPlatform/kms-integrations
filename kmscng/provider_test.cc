@@ -61,6 +61,12 @@ TEST(ProviderTest, GetProviderPropertyChannelCredentialsSuccess) {
               IsOkAndHolds("default"));
 }
 
+TEST(ProviderTest, GetProviderPropertyUserProjectEmptyDefault) {
+  Provider provider;
+
+  EXPECT_THAT(provider.GetProperty(kUserProjectProperty), IsOkAndHolds(""));
+}
+
 TEST(ProviderTest, SetEndpointAddressInEnvVariable) {
   std::string address = "invalid.address";
   SetEnvVariable(kEndpointAddressEnvVariable, address);
@@ -79,6 +85,16 @@ TEST(ProviderTest, SetChannelCredentialsInEnvVariable) {
   Provider provider;
   EXPECT_THAT(provider.GetProperty(kChannelCredentialsProperty),
               IsOkAndHolds(credentials));
+}
+
+TEST(ProviderTest, SetUserProjectInEnvVariable) {
+  std::string user_project = "some-project";
+  SetEnvVariable(kUserProjectEnvVariable, user_project);
+  absl::Cleanup c = [] { ClearEnvVariable(kUserProjectEnvVariable); };
+
+  Provider provider;
+  EXPECT_THAT(provider.GetProperty(kUserProjectProperty),
+              IsOkAndHolds(user_project));
 }
 
 TEST(ProviderTest, SetProviderPropertyUnsupportedProperty) {

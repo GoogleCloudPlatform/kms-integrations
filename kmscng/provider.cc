@@ -34,6 +34,7 @@ static_assert(std::numeric_limits<NCRYPT_PROV_HANDLE>::max ==
 absl::flat_hash_set<std::wstring> mutable_properties = {
     {kEndpointAddressProperty.data()},
     {kChannelCredentialsProperty.data()},
+    {kUserProjectProperty.data()},
 };
 
 absl::flat_hash_map<std::wstring, std::string> BuildInfo() {
@@ -45,12 +46,15 @@ absl::flat_hash_map<std::wstring, std::string> BuildInfo() {
       std::getenv(kChannelCredentialsEnvVariable);
   std::string channel_credentials =
       env_channel_credentials ? env_channel_credentials : "default";
+  const char* env_user_project = std::getenv(kUserProjectEnvVariable);
+  std::string user_project = env_user_project ? env_user_project : "";
 
   return {
       {NCRYPT_IMPL_TYPE_PROPERTY, Uint32ToBytes(NCRYPT_IMPL_HARDWARE_FLAG)},
       {NCRYPT_VERSION_PROPERTY, Uint32ToBytes(kLibraryVersionHex)},
       {std::wstring(kEndpointAddressProperty), endpoint_address},
       {std::wstring(kChannelCredentialsProperty), channel_credentials},
+      {std::wstring(kUserProjectProperty), user_project},
   };
 }
 
@@ -67,6 +71,8 @@ absl::StatusOr<std::unique_ptr<KmsClient>> NewKmsClient(
   options.creds = (creds_type == "insecure")
                       ? grpc::InsecureChannelCredentials()
                       : grpc::GoogleDefaultCredentials();
+  ASSIGN_OR_RETURN(options.user_project_override,
+                   prov->GetProperty(kUserProjectProperty));
   options.rpc_timeout = absl::Seconds(30);
   options.version_major = kLibraryVersionMajor;
   options.version_minor = kLibraryVersionMinor;
