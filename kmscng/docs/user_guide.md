@@ -155,6 +155,7 @@ these characteristics:
 
 *   The purpose for the CryptoKey is `ASYMMETRIC_SIGN`.
 *   The protection level for the CryptoKeyVersion is `HSM`.
+*   The algorithm for the CryptoKeyVersion is `EC_SIGN_P256_SHA256`.
 
 The CNG provider returns an error when trying to load keys that don't conform to
 these requirements.
