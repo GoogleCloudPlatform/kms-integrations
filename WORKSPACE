@@ -68,6 +68,11 @@ http_archive(
 
 http_archive(
     name = "com_github_grpc_grpc",  # v1.52.1 / 2023-02-15
+    patch_args = [
+	"-E",
+        "-p1",
+    ],
+    patches = ["//:third_party/grpc.patch"],
     sha256 = "ec125d7fdb77ecc25b01050a0d5d32616594834d3fe163b016768e2ae42a2df6",
     strip_prefix = "grpc-1.52.1",
     url = "https://github.com/grpc/grpc/archive/v1.52.1.tar.gz",
