@@ -22,7 +22,13 @@ message Scalars {
   bool bool_field = 3;
 }
 
-message RepeatedString { repeated string strings = 1; }
+message RepeatedString {
+  repeated string strings = 1;
+}
+
+message RepeatedUint32 {
+  repeated uint32 uint32s = 1;
+}
 
 message NestedScalars {
   string root_field = 1;

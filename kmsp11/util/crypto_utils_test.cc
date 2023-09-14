@@ -562,6 +562,17 @@ TEST(ParsePublicKeyTest, MalformedKey) {
               StatusIs(absl::StatusCode::kInvalidArgument));
 }
 
+TEST(ParseX509CertificatePem, WellFormedCertificate) {
+  ASSERT_OK_AND_ASSIGN(std::string cert_pem,
+                       LoadTestRunfile("ec_p256_cert.pem"));
+  EXPECT_OK(ParseX509CertificatePem(cert_pem));
+}
+
+TEST(ParseX509CertificatePem, MalformedCertificate) {
+  EXPECT_THAT(ParseX509CertificatePem("foobarbaz"),
+              StatusIs(absl::StatusCode::kInvalidArgument));
+}
+
 TEST(RandBytesTest, SmokeTest) {
   std::string rand = RandBytes(8);
   EXPECT_EQ(rand.size(), 8);

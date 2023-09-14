@@ -18,6 +18,7 @@
 #include "glog/logging.h"
 #include "kmsp11/algorithm_details.h"
 #include "kmsp11/util/crypto_utils.h"
+#include "kmsp11/util/errors.h"
 
 namespace cloud_kms::kmsp11 {
 namespace {
@@ -158,13 +159,32 @@ CK_OBJECT_HANDLE ObjectLoader::Cache::NewHandle() {
 }
 
 absl::StatusOr<std::unique_ptr<ObjectLoader>> ObjectLoader::New(
-    std::string_view key_ring_name, bool generate_certs) {
+    std::string_view key_ring_name,
+    absl::Span<const std::string* const> pem_user_certs, bool generate_certs) {
+  absl::flat_hash_map<std::string, std::string> user_certs;
+  for (const std::string* const pem_cert : pem_user_certs) {
+    ASSIGN_OR_RETURN(bssl::UniquePtr<X509> parsed_cert,
+                     ParseX509CertificatePem(*pem_cert));
+    bssl::UniquePtr<EVP_PKEY> public_key(X509_get_pubkey(parsed_cert.get()));
+    if (!public_key) {
+      return NewInternalError(
+          absl::StrCat("failed to retrieve X.509 certificate's public key: ",
+                       SslErrorToString()),
+          SOURCE_LOCATION);
+    }
+    ASSIGN_OR_RETURN(std::string der_public_key,
+                     MarshalX509PublicKeyDer(public_key.get()));
+    ASSIGN_OR_RETURN(user_certs[der_public_key],
+                     MarshalX509CertificateDer(parsed_cert.get()));
+  }
+
   std::unique_ptr<CertAuthority> cert_authority;
   if (generate_certs) {
     ASSIGN_OR_RETURN(cert_authority, CertAuthority::New());
   }
+
   return absl::WrapUnique(
-      new ObjectLoader(key_ring_name, std::move(cert_authority)));
+      new ObjectLoader(key_ring_name, user_certs, std::move(cert_authority)));
 }
 
 absl::StatusOr<ObjectStoreState> ObjectLoader::BuildState(
@@ -217,7 +237,10 @@ absl::StatusOr<ObjectStoreState> ObjectLoader::BuildState(
                          MarshalX509PublicKeyDer(pub.get()));
 
         std::string cert_der;
-        if (cert_authority_) {
+        if (auto it = user_certs_.find(public_key_der);
+            it != user_certs_.end()) {
+          cert_der = it->second;
+        } else if (cert_authority_) {
           ASSIGN_OR_RETURN(bssl::UniquePtr<X509> cert,
                            cert_authority_->GenerateCert(ckv, pub.get()));
           ASSIGN_OR_RETURN(cert_der, MarshalX509CertificateDer(cert.get()));

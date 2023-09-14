@@ -38,7 +38,8 @@ message LibraryConfig {
   bool use_insecure_grpc_channel_credentials = 4;
 
   // Optional. True means that X.509 certificates will be generated at runtime
-  // for asymmetric KMS keys that are exposed in the library. Certificates are
+  // for asymmetric KMS keys that are exposed in the library if no matching
+  // certificate is found in a token's `experimental_certs`. Certificates are
   // not stable between runs of this library. This functionality is intended for
   // compatibility with the SunPKCS11 JCA provider; other use is discouraged.
   bool generate_certs = 5;
@@ -83,4 +84,8 @@ message TokenConfig {
   // Optional. The label to assign to this token in the PKCS #11
   // CK_TOKEN_INFO structure.
   string label = 2;
+
+  // Optional. PEM-formatted X.509 certificates that should be exposed by this
+  // token if a matching KMS key is found.
+  repeated string experimental_certs = 3;
 }

@@ -80,8 +80,6 @@ absl::Status SetRepeatedField(Message* dest, const FieldDescriptor* field,
 
   switch (field->type()) {
     case FieldDescriptor::TYPE_MESSAGE: {
-      const Reflection* reflect = dest->GetReflection();
-
       // Process all the child messages (and handle any errors) before we make
       // any changes to dest.
       std::vector<std::unique_ptr<Message>> child_messages;
@@ -93,14 +91,34 @@ absl::Status SetRepeatedField(Message* dest, const FieldDescriptor* field,
         RETURN_IF_ERROR(YamlToProto(child_node, child_messages.back().get()));
       }
 
+      const Reflection* reflect = dest->GetReflection();
       // Clear the repeated field. This allows overwriting pre-configured
       // default values with values that are actually specified in YAML. (If we
       // didn't clear repeated fields that are specified in YAML, we'd end up
       // with the sum of the template and what's specified in YAML.)
       reflect->ClearField(dest, field);
-
       for (std::unique_ptr<Message>& m : child_messages) {
         reflect->AddAllocatedMessage(dest, field, m.release());
+      }
+      return absl::OkStatus();
+    }
+    case FieldDescriptor::TYPE_STRING: {
+      // Process all child nodes (and handle any errors) before we make any
+      // changes to dest.
+      std::vector<std::string> child_strings;
+      child_strings.reserve(value.size());
+      for (const YAML::Node& child_node : value) {
+        if (!child_node.IsScalar()) {
+          return YamlError("expected scalar node", child_node.Mark(),
+                           SOURCE_LOCATION);
+        }
+        child_strings.emplace_back(child_node.Scalar());
+      }
+
+      const Reflection* reflect = dest->GetReflection();
+      reflect->ClearField(dest, field);
+      for (const std::string& s : child_strings) {
+        reflect->AddString(dest, field, s);
       }
       return absl::OkStatus();
     }

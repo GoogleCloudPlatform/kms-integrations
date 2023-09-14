@@ -427,6 +427,26 @@ absl::StatusOr<bssl::UniquePtr<X509>> ParseX509CertificateDer(
   return ParseDer(certificate_der, &d2i_X509);
 }
 
+absl::StatusOr<bssl::UniquePtr<X509>> ParseX509CertificatePem(
+    std::string_view certificate_pem) {
+  bssl::UniquePtr<BIO> bio(
+      BIO_new_mem_buf(certificate_pem.data(), certificate_pem.size()));
+  if (!bio) {
+    return NewInternalError(
+        absl::StrCat("error allocating bio: ", SslErrorToString()),
+        SOURCE_LOCATION);
+  }
+
+  bssl::UniquePtr<X509> result(
+      PEM_read_bio_X509(bio.get(), nullptr, nullptr, nullptr));
+  if (!result) {
+    return NewInvalidArgumentError(
+        absl::StrCat("error parsing certificate: ", SslErrorToString()),
+        CKR_DEVICE_ERROR, SOURCE_LOCATION);
+  }
+  return std::move(result);
+}
+
 absl::StatusOr<bssl::UniquePtr<EVP_PKEY>> ParseX509PublicKeyDer(
     std::string_view public_key_der) {
   return ParseDer(public_key_der, &d2i_PUBKEY);

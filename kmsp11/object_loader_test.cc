@@ -14,6 +14,7 @@
 
 #include "kmsp11/object_loader.h"
 
+#include "common/test/runfiles.h"
 #include "common/test/test_status_macros.h"
 #include "fakekms/cpp/fakekms.h"
 #include "gmock/gmock.h"
@@ -35,8 +36,9 @@ class BuildStateTest : public testing::Test {
     kms_stub_ = fake_server_->NewClient();
     key_ring_ = CreateKeyRingOrDie(kms_stub_.get(), kTestLocation, RandomId(),
                                    key_ring_);
-    client_ = std::make_unique<KmsClient>(KmsClient::Options{
-      .endpoint_address = fake_server_->listen_addr(), .rpc_timeout = absl::Seconds(1)});
+    client_ = std::make_unique<KmsClient>(
+        KmsClient::Options{.endpoint_address = fake_server_->listen_addr(),
+                           .rpc_timeout = absl::Seconds(1)});
   }
 
   kms_v1::CryptoKeyVersion AddKeyAndInitialVersion(
@@ -55,6 +57,29 @@ class BuildStateTest : public testing::Test {
     return WaitForEnablement(kms_stub_.get(), ckv);
   }
 
+  absl::StatusOr<std::string> GenerateCertPemForCkv(
+      const kms_v1::CryptoKeyVersion& ckv) {
+    kms_v1::PublicKey public_key_proto =
+        GetPublicKeyOrDie(kms_stub_.get(), ckv);
+    ASSIGN_OR_RETURN(bssl::UniquePtr<EVP_PKEY> public_key,
+                     ParseX509PublicKeyPem(public_key_proto.pem()));
+    ASSIGN_OR_RETURN(std::unique_ptr<CertAuthority> authority,
+                     CertAuthority::New());
+    ASSIGN_OR_RETURN(bssl::UniquePtr<X509> cert,
+                     authority->GenerateCert(ckv, public_key.get()));
+    bssl::UniquePtr<BIO> cert_bio(BIO_new(BIO_s_mem()));
+    if (!PEM_write_bio_X509(cert_bio.get(), cert.get())) {
+      return absl::InternalError(absl::StrCat(
+          "error marshaling X.509 certificate: ", SslErrorToString()));
+    }
+    BUF_MEM* cert_ptr;
+    if (!BIO_get_mem_ptr(cert_bio.get(), &cert_ptr)) {
+      return absl::InternalError(
+          "failed to get pointer to written certificate.");
+    }
+    return std::string(cert_ptr->data, cert_ptr->length);
+  }
+
   std::unique_ptr<fakekms::Server> fake_server_;
   std::unique_ptr<kms_v1::KeyManagementService::Stub> kms_stub_;
   kms_v1::KeyRing key_ring_;
@@ -63,7 +88,7 @@ class BuildStateTest : public testing::Test {
 
 TEST_F(BuildStateTest, EmptyKeyRingReturnsEmptyState) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectLoader> loader_,
-                       ObjectLoader::New(key_ring_.name(), true));
+                       ObjectLoader::New(key_ring_.name(), {}, true));
 
   EXPECT_THAT(loader_->BuildState(*client_),
               IsOkAndHolds(EqualsProto(ObjectStoreState())));
@@ -71,7 +96,7 @@ TEST_F(BuildStateTest, EmptyKeyRingReturnsEmptyState) {
 
 TEST_F(BuildStateTest, OutputContainsVersionProto) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectLoader> loader_,
-                       ObjectLoader::New(key_ring_.name(), true));
+                       ObjectLoader::New(key_ring_.name(), {}, true));
   kms_v1::CryptoKeyVersion ckv =
       AddKeyAndInitialVersion("ck", kms_v1::CryptoKey::ASYMMETRIC_SIGN,
                               kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
@@ -85,7 +110,7 @@ TEST_F(BuildStateTest, OutputContainsVersionProto) {
 
 TEST_F(BuildStateTest, OutputContainsGeneratedHandles) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectLoader> loader_,
-                       ObjectLoader::New(key_ring_.name(), true));
+                       ObjectLoader::New(key_ring_.name(), {}, true));
   kms_v1::CryptoKeyVersion ckv =
       AddKeyAndInitialVersion("ck", kms_v1::CryptoKey::ASYMMETRIC_SIGN,
                               kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
@@ -99,7 +124,7 @@ TEST_F(BuildStateTest, OutputContainsGeneratedHandles) {
 
 TEST_F(BuildStateTest, OutputContainsPublicKey) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectLoader> loader_,
-                       ObjectLoader::New(key_ring_.name(), true));
+                       ObjectLoader::New(key_ring_.name(), {}, true));
   kms_v1::CryptoKeyVersion ckv =
       AddKeyAndInitialVersion("ck", kms_v1::CryptoKey::ASYMMETRIC_SIGN,
                               kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
@@ -112,7 +137,7 @@ TEST_F(BuildStateTest, OutputContainsPublicKey) {
 
 TEST_F(BuildStateTest, OutputContainsCertificateWhenCertsAreEnabled) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectLoader> loader_,
-                       ObjectLoader::New(key_ring_.name(), true));
+                       ObjectLoader::New(key_ring_.name(), {}, true));
   kms_v1::CryptoKeyVersion ckv =
       AddKeyAndInitialVersion("ck", kms_v1::CryptoKey::ASYMMETRIC_SIGN,
                               kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
@@ -127,7 +152,7 @@ TEST_F(BuildStateTest, OutputContainsCertificateWhenCertsAreEnabled) {
 
 TEST_F(BuildStateTest, OutputContainsNoCertificateWhenCertsAreDisabled) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectLoader> loader_,
-                       ObjectLoader::New(key_ring_.name(), false));
+                       ObjectLoader::New(key_ring_.name(), {}, false));
   kms_v1::CryptoKeyVersion ckv =
       AddKeyAndInitialVersion("ck", kms_v1::CryptoKey::ASYMMETRIC_SIGN,
                               kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
@@ -138,9 +163,53 @@ TEST_F(BuildStateTest, OutputContainsNoCertificateWhenCertsAreDisabled) {
   EXPECT_FALSE(state.keys(0).has_certificate());
 }
 
+TEST_F(BuildStateTest, OutputContainsMatchingUserCert) {
+  kms_v1::CryptoKeyVersion ckv =
+      AddKeyAndInitialVersion("ck", kms_v1::CryptoKey::ASYMMETRIC_SIGN,
+                              kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+  ASSERT_OK_AND_ASSIGN(std::string cert_pem, GenerateCertPemForCkv(ckv));
+
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectLoader> loader_,
+                       ObjectLoader::New(key_ring_.name(), {&cert_pem}, false));
+  ASSERT_OK_AND_ASSIGN(ObjectStoreState state, loader_->BuildState(*client_));
+  ASSERT_EQ(state.keys_size(), 1);
+
+  EXPECT_TRUE(state.keys(0).has_certificate());
+}
+
+TEST_F(BuildStateTest, OutputDoesNotContainUnmatchedUserCert) {
+  ASSERT_OK_AND_ASSIGN(std::string cert_pem,
+                       LoadTestRunfile("ec_p256_cert.pem"));
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectLoader> loader_,
+                       ObjectLoader::New(key_ring_.name(), {&cert_pem}, false));
+  kms_v1::CryptoKeyVersion ckv =
+      AddKeyAndInitialVersion("ck", kms_v1::CryptoKey::ASYMMETRIC_SIGN,
+                              kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+
+  ASSERT_OK_AND_ASSIGN(ObjectStoreState state, loader_->BuildState(*client_));
+  ASSERT_EQ(state.keys_size(), 1);
+
+  EXPECT_FALSE(state.keys(0).has_certificate());
+}
+
+TEST_F(BuildStateTest, FallBackToGeneratedCertWhenNoMatchingUserCert) {
+  ASSERT_OK_AND_ASSIGN(std::string cert_pem,
+                       LoadTestRunfile("ec_p256_cert.pem"));
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectLoader> loader_,
+                       ObjectLoader::New(key_ring_.name(), {&cert_pem}, true));
+  kms_v1::CryptoKeyVersion ckv =
+      AddKeyAndInitialVersion("ck", kms_v1::CryptoKey::ASYMMETRIC_SIGN,
+                              kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+
+  ASSERT_OK_AND_ASSIGN(ObjectStoreState state, loader_->BuildState(*client_));
+  ASSERT_EQ(state.keys_size(), 1);
+
+  EXPECT_TRUE(state.keys(0).has_certificate());
+}
+
 TEST_F(BuildStateTest, UnmodifiedStateIsUnchangedAfterRefresh) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectLoader> loader_,
-                       ObjectLoader::New(key_ring_.name(), true));
+                       ObjectLoader::New(key_ring_.name(), {}, true));
   kms_v1::CryptoKeyVersion ckv =
       AddKeyAndInitialVersion("ck", kms_v1::CryptoKey::ASYMMETRIC_SIGN,
                               kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
@@ -151,7 +220,7 @@ TEST_F(BuildStateTest, UnmodifiedStateIsUnchangedAfterRefresh) {
 
 TEST_F(BuildStateTest, PreviouslyRetrievedStateIsUnchangedAfterElementIsAdded) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectLoader> loader_,
-                       ObjectLoader::New(key_ring_.name(), true));
+                       ObjectLoader::New(key_ring_.name(), {}, true));
   kms_v1::CryptoKeyVersion ckv1 =
       AddKeyAndInitialVersion("ck1", kms_v1::CryptoKey::ASYMMETRIC_SIGN,
                               kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
@@ -165,19 +234,19 @@ TEST_F(BuildStateTest, PreviouslyRetrievedStateIsUnchangedAfterElementIsAdded) {
   ASSERT_OK_AND_ASSIGN(ObjectStoreState updated_state,
                        loader_->BuildState(*client_));
 
-  EXPECT_THAT(
-      updated_state.keys(),
-      ElementsAre(
-          // The first element matches the previously retrieved result exactly.
-          EqualsProto(original_state.keys(0)),
-          // The second element refers to the newly added key.
-          Property("crypto_key_version", &Key::crypto_key_version,
-                   EqualsProto(ckv2))));
+  EXPECT_THAT(updated_state.keys(),
+              ElementsAre(
+                  // The first element matches the previously retrieved result
+                  // exactly.
+                  EqualsProto(original_state.keys(0)),
+                  // The second element refers to the newly added key.
+                  Property("crypto_key_version", &Key::crypto_key_version,
+                           EqualsProto(ckv2))));
 }
 
 TEST_F(BuildStateTest, KeyWithPurposeEncryptDecryptIsOmitted) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectLoader> loader_,
-                       ObjectLoader::New(key_ring_.name(), true));
+                       ObjectLoader::New(key_ring_.name(), {}, true));
   kms_v1::CryptoKeyVersion ckv = AddKeyAndInitialVersion(
       "ck", kms_v1::CryptoKey::ENCRYPT_DECRYPT,
       kms_v1::CryptoKeyVersion::GOOGLE_SYMMETRIC_ENCRYPTION);
@@ -188,7 +257,7 @@ TEST_F(BuildStateTest, KeyWithPurposeEncryptDecryptIsOmitted) {
 
 TEST_F(BuildStateTest, KeyWithSoftwareProtectionLevelIsOmitted) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectLoader> loader_,
-                       ObjectLoader::New(key_ring_.name(), true));
+                       ObjectLoader::New(key_ring_.name(), {}, true));
   kms_v1::CryptoKeyVersion ckv =
       AddKeyAndInitialVersion("ck", kms_v1::CryptoKey::ASYMMETRIC_SIGN,
                               kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256,
@@ -200,7 +269,7 @@ TEST_F(BuildStateTest, KeyWithSoftwareProtectionLevelIsOmitted) {
 
 TEST_F(BuildStateTest, VersionWithStateDisabledIsOmitted) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectLoader> loader_,
-                       ObjectLoader::New(key_ring_.name(), true));
+                       ObjectLoader::New(key_ring_.name(), {}, true));
   kms_v1::CryptoKeyVersion ckv =
       AddKeyAndInitialVersion("ck", kms_v1::CryptoKey::ASYMMETRIC_SIGN,
                               kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
@@ -216,7 +285,7 @@ TEST_F(BuildStateTest, VersionWithStateDisabledIsOmitted) {
 
 TEST_F(BuildStateTest, VersionWithAlgorithmP224IsOmitted) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectLoader> loader_,
-                       ObjectLoader::New(key_ring_.name(), true));
+                       ObjectLoader::New(key_ring_.name(), {}, true));
   kms_v1::CryptoKeyVersion ckv = AddKeyAndInitialVersion(
       "ck", kms_v1::CryptoKey::ASYMMETRIC_SIGN,
       kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm(

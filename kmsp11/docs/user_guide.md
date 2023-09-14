@@ -145,6 +145,12 @@ Item Name | Type   | Required | Default | Description
 key_ring  | string | Yes      | None    | The full name of the KMS key ring whose keys will be made accessible.
 label     | string | No       | Empty   | The label to use for this token's `CK_TOKEN_INFO` structure. Setting a value here may help an application disambiguate tokens at runtime.
 
+#### Experimental token configuration options
+
+Item Name                              | Type            | Required | Default | Description
+-------------------------------------- | --------------- | -------- | ------- | -----------
+experimental_certs                     | list of strings | No       | Empty   | Enables an experiment that exposes the provided PEM X.509 certificate(s) alongside any KMS keys they match.
+
 ## Functions
 
 The library conforms to the

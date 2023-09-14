@@ -108,6 +108,11 @@ absl::StatusOr<std::string> MarshalX509Sig(X509_SIG* value);
 absl::StatusOr<bssl::UniquePtr<X509>> ParseX509CertificateDer(
     std::string_view certificate_der);
 
+// Parses an X.509 certificate in PEM format. Returns InvalidArgument if
+// the provided certificate is malformed.
+absl::StatusOr<bssl::UniquePtr<X509>> ParseX509CertificatePem(
+    std::string_view certificate_pem);
+
 // Parses a public key in X.509 SubjectPublicKeyInfo DER format. Returns
 // InvalidArgument if the provided key is malformed.
 absl::StatusOr<bssl::UniquePtr<EVP_PKEY>> ParseX509PublicKeyDer(

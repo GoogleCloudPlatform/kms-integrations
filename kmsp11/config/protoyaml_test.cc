@@ -64,10 +64,10 @@ TEST(ProtoyamlTest, CombinedWithDefaults) {
   YAML::Node node = YAML::Load("bool_field: false");
   Scalars result = ParseTestProto("int_field: 123");
   EXPECT_OK(YamlToProto(node, &result));
-  EXPECT_THAT(result, EqualsProto<Scalars>(ParseTestProto(R"(
-    bool_field: false
-    int_field: 123
-  )")));
+  EXPECT_THAT(result, EqualsProto<Scalars>(ParseTestProto(R"pb(
+                bool_field: false
+                int_field: 123
+              )pb")));
 }
 
 TEST(ProtoyamlTest, FailsOnUnknownField) {
@@ -102,7 +102,7 @@ string_field: bar
   EXPECT_THAT(status.message(), HasSubstr("string_field is multiply defined"));
 }
 
-TEST(ProtoyamlTest, RepeatedStringInternalError) {
+TEST(ProtoyamlTest, RepeatedStringParsesSuccessfully) {
   YAML::Node node = YAML::Load(R"(---
 strings:
   - foo
@@ -110,9 +110,35 @@ strings:
 )");
 
   RepeatedString result;
+  ASSERT_OK(YamlToProto(node, &result));
+  EXPECT_THAT(result.strings(), ElementsAre("foo", "bar"));
+}
+
+TEST(ProtoyamlTest, RepeatedStringFailureNestedNonScalar) {
+  YAML::Node node = YAML::Load(R"(---
+strings:
+  - foo
+  - message:
+    - hello
+)");
+
+  RepeatedString result;
+  absl::Status status = YamlToProto(node, &result);
+  EXPECT_THAT(status, StatusIs(absl::StatusCode::kInvalidArgument));
+  EXPECT_THAT(status.message(), HasSubstr("expected scalar node"));
+}
+
+TEST(ProtoyamlTest, RepeatedUint32InternalError) {
+  YAML::Node node = YAML::Load(R"(---
+uint32s:
+  - 42
+  - 1337
+)");
+
+  RepeatedUint32 result;
   absl::Status status = YamlToProto(node, &result);
   EXPECT_THAT(status, StatusIs(absl::StatusCode::kInternal));
-  EXPECT_THAT(status.message(), HasSubstr("repeated string"));
+  EXPECT_THAT(status.message(), HasSubstr("repeated uint32"));
 }
 
 TEST(ProtoyamlTest, SimpleFieldInComplexMessage) {
@@ -132,12 +158,9 @@ scalars:
   NestedScalars result;
   EXPECT_OK(YamlToProto(node, &result));
 
-  NestedScalars want = ParseTestProto(R"(
-    scalars {
-      bool_field: true
-      string_field: "bar"
-    }
-  )");
+  NestedScalars want = ParseTestProto(R"pb(
+    scalars { bool_field: true string_field: "bar" }
+  )pb");
 
   EXPECT_THAT(result, EqualsProto(want));
 }
@@ -153,15 +176,10 @@ scalars:
   RepeatedScalars result;
   EXPECT_OK(YamlToProto(node, &result));
 
-  RepeatedScalars want = ParseTestProto(R"(
-    scalars {
-      int_field: 123
-    }
-    scalars {
-      bool_field: true
-      string_field: "bar"
-    }
-  )");
+  RepeatedScalars want = ParseTestProto(R"pb(
+    scalars { int_field: 123 }
+    scalars { bool_field: true string_field: "bar" }
+  )pb");
 
   EXPECT_THAT(result, EqualsProto(want));
 }
@@ -172,17 +190,13 @@ scalars:
   - int_field: 123
 )");
 
-  RepeatedScalars result = ParseTestProto(R"(
-scalars {
-  bool_field: false
-})");
+  RepeatedScalars result = ParseTestProto(R"pb(
+    scalars { bool_field: false })pb");
 
   EXPECT_OK(YamlToProto(node, &result));
 
-  RepeatedScalars want = ParseTestProto(R"(
-    scalars {
-      int_field: 123
-    })");
+  RepeatedScalars want = ParseTestProto(R"pb(
+    scalars { int_field: 123 })pb");
 
   EXPECT_THAT(result, EqualsProto(want));
 }
@@ -194,10 +208,8 @@ scalars:
   - foo_field: 456
 )");
 
-  RepeatedScalars want = ParseTestProto(R"(
-scalars {
-  bool_field: false
-})");
+  RepeatedScalars want = ParseTestProto(R"pb(
+    scalars { bool_field: false })pb");
 
   RepeatedScalars got(want);
 
