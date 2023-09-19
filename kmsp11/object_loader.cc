@@ -250,6 +250,21 @@ absl::StatusOr<ObjectStoreState> ObjectLoader::BuildState(
       }
     }
   }
+
+  // Compute the unused user certificates by copying all of them, then removing
+  // the ones that were actually used.
+  absl::flat_hash_set<std::string> unused_user_certs;
+  for (const auto& [spki, cert] : user_certs_) {
+    unused_user_certs.emplace(cert);
+  }
+  for (const Key& key : result.keys()) {
+    unused_user_certs.erase(key.certificate().x509_der());
+  }
+  if (unused_user_certs.size() > 0) {
+    LOG(INFO) << "INFO: one or more provided certificates could not be matched "
+                 "to a KMS key.";
+  }
+
   cache_.EvictUnused(result);
   return result;
 }

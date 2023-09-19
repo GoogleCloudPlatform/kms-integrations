@@ -26,7 +26,11 @@ namespace cloud_kms::kmsp11 {
 namespace {
 
 using ::testing::ElementsAre;
+using ::testing::HasSubstr;
+using ::testing::IsEmpty;
 using ::testing::Property;
+using ::testing::internal::CaptureStderr;
+using ::testing::internal::GetCapturedStderr;
 
 class BuildStateTest : public testing::Test {
  protected:
@@ -190,6 +194,38 @@ TEST_F(BuildStateTest, OutputDoesNotContainUnmatchedUserCert) {
   ASSERT_EQ(state.keys_size(), 1);
 
   EXPECT_FALSE(state.keys(0).has_certificate());
+}
+
+TEST_F(BuildStateTest, NoWarningWhenAllUserCertsAreUsed) {
+  kms_v1::CryptoKeyVersion ckv =
+      AddKeyAndInitialVersion("ck", kms_v1::CryptoKey::ASYMMETRIC_SIGN,
+                              kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+  ASSERT_OK_AND_ASSIGN(std::string cert_pem, GenerateCertPemForCkv(ckv));
+
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectLoader> loader_,
+                       ObjectLoader::New(key_ring_.name(), {&cert_pem}, false));
+
+  CaptureStderr();
+  ASSERT_OK_AND_ASSIGN(ObjectStoreState state, loader_->BuildState(*client_));
+  ASSERT_EQ(state.keys_size(), 1);
+  EXPECT_THAT(GetCapturedStderr(), IsEmpty());
+}
+
+TEST_F(BuildStateTest, WarninOnUnusedUserCert) {
+  ASSERT_OK_AND_ASSIGN(std::string cert_pem,
+                       LoadTestRunfile("ec_p256_cert.pem"));
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectLoader> loader_,
+                       ObjectLoader::New(key_ring_.name(), {&cert_pem}, false));
+  kms_v1::CryptoKeyVersion ckv =
+      AddKeyAndInitialVersion("ck", kms_v1::CryptoKey::ASYMMETRIC_SIGN,
+                              kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+
+  CaptureStderr();
+  ASSERT_OK_AND_ASSIGN(ObjectStoreState state, loader_->BuildState(*client_));
+  ASSERT_EQ(state.keys_size(), 1);
+  EXPECT_THAT(
+      GetCapturedStderr(),
+      HasSubstr("one or more provided certificates could not be matched"));
 }
 
 TEST_F(BuildStateTest, FallBackToGeneratedCertWhenNoMatchingUserCert) {
