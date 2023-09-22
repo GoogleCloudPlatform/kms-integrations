@@ -29,6 +29,39 @@ namespace {
 
 using ::testing::HasSubstr;
 
+TEST(IsValidSigningAlgorithmTest, Success) {
+  EXPECT_OK(
+      IsValidSigningAlgorithm(kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384));
+}
+
+TEST(IsValidSigningAlgorithmTest, InvalidAlgoritmhm) {
+  EXPECT_THAT(IsValidSigningAlgorithm(
+                  kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA1),
+              StatusIs(absl::StatusCode::kInternal,
+                       HasSubstr("invalid asymmetric signing algorithm")));
+}
+
+TEST(DigestForAlgorithmTest, Success) {
+  EXPECT_OK(DigestForAlgorithm(kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384));
+}
+
+TEST(DigestForAlgorithmTest, InvalidAlgoritmhm) {
+  EXPECT_THAT(
+      DigestForAlgorithm(kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA1),
+      StatusIs(absl::StatusCode::kInternal,
+               HasSubstr("cannot get digest type")));
+}
+
+TEST(CurveIdForAlgorithmTest, Success) {
+  EXPECT_OK(CurveIdForAlgorithm(kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384));
+}
+
+TEST(CurveIdForAlgorithmTest, InvalidAlgoritmhm) {
+  EXPECT_THAT(
+      CurveIdForAlgorithm(kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA1),
+      StatusIs(absl::StatusCode::kInternal, HasSubstr("cannot get curve")));
+}
+
 class SignUtilsTest : public testing::Test {
  protected:
   void SetUp() override {

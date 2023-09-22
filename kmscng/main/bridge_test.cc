@@ -360,6 +360,29 @@ TEST(BridgeTest, OpenKeySuccess) {
   EXPECT_OK(FreeKey(provider_handle, key_handle));
 }
 
+TEST(BridgeTest, OpenKeyEc384Success) {
+  ASSERT_OK_AND_ASSIGN(auto fake_server, fakekms::Server::New());
+  auto client = fake_server->NewClient();
+
+  kms_v1::CryptoKeyVersion ckv =
+      NewCryptoKeyVersion(client.get(), kms_v1::CryptoKey::ASYMMETRIC_SIGN,
+                          kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384,
+                          kms_v1::ProtectionLevel::HSM);
+
+  Provider provider;
+  SetFakeKmsProviderProperties(&provider, fake_server->listen_addr());
+
+  NCRYPT_PROV_HANDLE provider_handle =
+      reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
+  NCRYPT_KEY_HANDLE key_handle;
+  EXPECT_OK(OpenKey(provider_handle, &key_handle,
+                    StringToWide(ckv.name()).data(), AT_SIGNATURE, 0));
+  EXPECT_NE(key_handle, 0);
+
+  // Clean up memory.
+  EXPECT_OK(FreeKey(provider_handle, key_handle));
+}
+
 TEST(BridgeTest, OpenKeyInvalidHandle) {
   EXPECT_THAT(OpenKey(0, nullptr, L"some_key_name", 0, 0),
               StatusSsIs(NTE_INVALID_HANDLE));
@@ -1141,6 +1164,41 @@ TEST(BridgeTest, SignHashSuccess) {
                        ValidateKeyHandle(provider_handle, key_handle));
   EXPECT_OK(EcdsaVerifyP1363(
       object->ec_public_key(), EVP_sha256(),
+      absl::MakeConstSpan(digest.data(), digest.size()),
+      absl::MakeConstSpan(signature.data(), signature.size())));
+
+  // Clean up memory.
+  EXPECT_OK(FreeKey(provider_handle, key_handle));
+}
+
+TEST(BridgeTest, SignHashEc384Success) {
+  ASSERT_OK_AND_ASSIGN(auto fake_server, fakekms::Server::New());
+  auto client = fake_server->NewClient();
+  kms_v1::CryptoKeyVersion ckv =
+      NewCryptoKeyVersion(client.get(), kms_v1::CryptoKey::ASYMMETRIC_SIGN,
+                          kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384,
+                          kms_v1::ProtectionLevel::HSM);
+
+  Provider provider;
+  SetFakeKmsProviderProperties(&provider, fake_server->listen_addr());
+
+  NCRYPT_KEY_HANDLE key_handle;
+  NCRYPT_PROV_HANDLE provider_handle =
+      reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
+  EXPECT_OK(OpenKey(provider_handle, &key_handle,
+                    StringToWide(ckv.name()).data(), AT_SIGNATURE, 0));
+
+  std::vector<uint8_t> digest(48, '\1');
+  std::vector<uint8_t> signature(96);
+  DWORD output_size = 0;
+  EXPECT_OK(SignHash(provider_handle, key_handle, nullptr, digest.data(),
+                     digest.size(), signature.data(), signature.size(),
+                     &output_size, 0));
+
+  ASSERT_OK_AND_ASSIGN(Object * object,
+                       ValidateKeyHandle(provider_handle, key_handle));
+  EXPECT_OK(EcdsaVerifyP1363(
+      object->ec_public_key(), EVP_sha384(),
       absl::MakeConstSpan(digest.data(), digest.size()),
       absl::MakeConstSpan(signature.data(), signature.size())));
 

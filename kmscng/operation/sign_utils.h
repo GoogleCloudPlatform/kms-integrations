@@ -26,6 +26,18 @@
 
 namespace cloud_kms::kmscng {
 
+// Validates that the KMS algorithm is supported by the provider.
+absl::Status IsValidSigningAlgorithm(
+    kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm);
+
+// Returns the right digest type for the provided KMS algorithm.
+absl::StatusOr<const EVP_MD*> DigestForAlgorithm(
+    kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm);
+
+// Returns the right curve ID for the provided KMS algorithm.
+absl::StatusOr<int> CurveIdForAlgorithm(
+    kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm);
+
 // Checks the object properties against the expected properties defined in the
 // relevant AlgorithmDetails struct.
 absl::Status ValidateKeyPreconditions(Object* object);

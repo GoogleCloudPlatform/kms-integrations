@@ -34,51 +34,9 @@ using cloud_kms::kmsp11::EcdsaSigLengthP1363;
 using cloud_kms::kmsp11::ParseX509PublicKeyDer;
 using cloud_kms::kmsp11::SslErrorToString;
 
-absl::Status IsValidSigningAlgorithm(
-    kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm) {
-  switch (algorithm) {
-    case kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256:
-      return absl::OkStatus();
-    default:
-      return NewInternalError(
-          absl::StrFormat("invalid asymmetric signing algorithm: %d",
-                          algorithm),
-          SOURCE_LOCATION);
-  }
-}
-
-absl::StatusOr<const EVP_MD*> DigestForAlgorithm(
-    kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm) {
-  switch (algorithm) {
-    case kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256:
-      return EVP_sha256();
-    default:
-      return NewInternalError(
-          absl::StrFormat("cannot get digest type for algorithm: %d",
-                          algorithm),
-          SOURCE_LOCATION);
-  }
-}
-
-absl::StatusOr<int> CurveIdForAlgorithm(
-    kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm) {
-  switch (algorithm) {
-    case kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256:
-      return NID_X9_62_prime256v1;
-    default:
-      return NewInternalError(
-          absl::StrFormat("cannot get curve NID for algorithm: %d", algorithm),
-          SOURCE_LOCATION);
-  }
-}
-
 absl::Status CopySignature(Object* object, std::string_view src,
                            absl::Span<uint8_t> dest) {
-  if (object->algorithm() != kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256) {
-    return NewInternalError(
-        absl::StrFormat("unexpected algorithm: %d", object->algorithm()),
-        SOURCE_LOCATION);
-  }
+  RETURN_IF_ERROR(IsValidSigningAlgorithm(object->algorithm()));
   ASSIGN_OR_RETURN(int curve, CurveIdForAlgorithm(object->algorithm()));
   bssl::UniquePtr<EC_GROUP> group(EC_GROUP_new_by_curve_name(curve));
   absl::StatusOr<std::vector<uint8_t>> ec_sig =
@@ -100,6 +58,49 @@ absl::Status CopySignature(Object* object, std::string_view src,
 }
 
 }  // namespace
+
+absl::Status IsValidSigningAlgorithm(
+    kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm) {
+  switch (algorithm) {
+    case kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256:
+    case kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384:
+      return absl::OkStatus();
+    default:
+      return NewInternalError(
+          absl::StrFormat("invalid asymmetric signing algorithm: %d",
+                          algorithm),
+          SOURCE_LOCATION);
+  }
+}
+
+absl::StatusOr<const EVP_MD*> DigestForAlgorithm(
+    kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm) {
+  switch (algorithm) {
+    case kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256:
+      return EVP_sha256();
+    case kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384:
+      return EVP_sha384();
+    default:
+      return NewInternalError(
+          absl::StrFormat("cannot get digest type for algorithm: %d",
+                          algorithm),
+          SOURCE_LOCATION);
+  }
+}
+
+absl::StatusOr<int> CurveIdForAlgorithm(
+    kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm) {
+  switch (algorithm) {
+    case kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256:
+      return NID_X9_62_prime256v1;
+    case kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384:
+      return NID_secp384r1;
+    default:
+      return NewInternalError(
+          absl::StrFormat("cannot get curve NID for algorithm: %d", algorithm),
+          SOURCE_LOCATION);
+  }
+}
 
 absl::Status ValidateKeyPreconditions(Object* object) {
   RETURN_IF_ERROR(IsValidSigningAlgorithm(object->algorithm()));
@@ -170,6 +171,7 @@ absl::StatusOr<size_t> SignatureLength(Object* object) {
   bssl::UniquePtr<EC_GROUP> group(EC_GROUP_new_by_curve_name(curve));
   switch (object->algorithm()) {
     case kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256:
+    case kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384:
       return EcdsaSigLengthP1363(group.get());
     default:
       return NewInternalError(
@@ -206,6 +208,9 @@ absl::Status SignDigest(Object* object, absl::Span<const uint8_t> digest,
   switch (digest_nid) {
     case NID_sha256:
       req.mutable_digest()->set_sha256(digest.data(), digest.size());
+      break;
+    case NID_sha384:
+      req.mutable_digest()->set_sha384(digest.data(), digest.size());
       break;
     default:
       return NewInternalError(

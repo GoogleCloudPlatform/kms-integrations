@@ -24,6 +24,7 @@ namespace cloud_kms::kmscng {
 
 absl::flat_hash_set<std::wstring> algorithm_identifiers = {
     {BCRYPT_ECDSA_P256_ALGORITHM},
+    {BCRYPT_ECDSA_P384_ALGORITHM},
 };
 
 struct AlgorithmCmp {
@@ -49,6 +50,13 @@ static const auto* const kAlgorithmDetails =
             kms_v1::CryptoKey::ASYMMETRIC_SIGN,             // purpose
             NCRYPT_ECDSA_ALGORITHM_GROUP,                   // algorithm_group
             BCRYPT_ECDSA_P256_ALGORITHM,  // algorithm_property
+            NCRYPT_ALLOW_SIGNING_FLAG,    // key_usage
+        },
+        {
+            kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384,  // algorithm
+            kms_v1::CryptoKey::ASYMMETRIC_SIGN,             // purpose
+            NCRYPT_ECDSA_ALGORITHM_GROUP,                   // algorithm_group
+            BCRYPT_ECDSA_P384_ALGORITHM,  // algorithm_property
             NCRYPT_ALLOW_SIGNING_FLAG,    // key_usage
         },
     };
