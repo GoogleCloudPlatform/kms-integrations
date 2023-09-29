@@ -57,9 +57,17 @@ Initial release of the library.
 
 ## CNG Provider for Cloud KMS
 
+### v0.9
+
+Second public preview release of the library.
+The following changes are included in the v0.9 release:
+
+*   Add support for `EC_SIGN_P384_SHA384`.
+*   Add a gRPC patch to support Windows default system roots loading.
+
 ### v0.8
 
-Initial release of the library.
+Initial public preview release of the library.
 
 
 [mechanisms]: kmsp11/mechanism.cc
