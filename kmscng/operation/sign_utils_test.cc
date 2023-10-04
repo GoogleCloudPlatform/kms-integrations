@@ -62,6 +62,16 @@ TEST(CurveIdForAlgorithmTest, InvalidAlgoritmhm) {
       StatusIs(absl::StatusCode::kInternal, HasSubstr("cannot get curve")));
 }
 
+TEST(MagicIdForAlgorithmTest, Success) {
+  EXPECT_OK(MagicIdForAlgorithm(kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384));
+}
+
+TEST(MagicIdForAlgorithmTest, InvalidAlgoritmhm) {
+  EXPECT_THAT(
+      MagicIdForAlgorithm(kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA1),
+      StatusIs(absl::StatusCode::kInternal, HasSubstr("cannot get magic")));
+}
+
 class SignUtilsTest : public testing::Test {
  protected:
   void SetUp() override {

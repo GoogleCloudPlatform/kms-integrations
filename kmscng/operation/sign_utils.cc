@@ -102,6 +102,20 @@ absl::StatusOr<int> CurveIdForAlgorithm(
   }
 }
 
+absl::StatusOr<uint32_t> MagicIdForAlgorithm(
+    kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm) {
+  switch (algorithm) {
+    case kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256:
+      return BCRYPT_ECDSA_PUBLIC_P256_MAGIC;
+    case kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384:
+      return BCRYPT_ECDSA_PUBLIC_P384_MAGIC;
+    default:
+      return NewInternalError(
+          absl::StrFormat("cannot get magic ID for algorithm: %d", algorithm),
+          SOURCE_LOCATION);
+  }
+}
+
 absl::Status ValidateKeyPreconditions(Object* object) {
   RETURN_IF_ERROR(IsValidSigningAlgorithm(object->algorithm()));
   ASSIGN_OR_RETURN(AlgorithmDetails details, GetDetails(object->algorithm()));
@@ -161,7 +175,7 @@ absl::StatusOr<std::vector<uint8_t>> SerializePublicKey(Object* object) {
   }
   BCRYPT_ECCKEY_BLOB* header =
       reinterpret_cast<BCRYPT_ECCKEY_BLOB*>(result.data());
-  header->dwMagic = BCRYPT_ECDSA_PUBLIC_P256_MAGIC;
+  ASSIGN_OR_RETURN(header->dwMagic, MagicIdForAlgorithm(object->algorithm()));
   header->cbKey = uncompressed_length / 2;
   return result;
 }

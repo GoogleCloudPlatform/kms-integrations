@@ -38,6 +38,10 @@ absl::StatusOr<const EVP_MD*> DigestForAlgorithm(
 absl::StatusOr<int> CurveIdForAlgorithm(
     kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm);
 
+// Returns the right magic ID for the provided KMS algorithm.
+absl::StatusOr<uint32_t> MagicIdForAlgorithm(
+    kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm);
+
 // Checks the object properties against the expected properties defined in the
 // relevant AlgorithmDetails struct.
 absl::Status ValidateKeyPreconditions(Object* object);
