@@ -22,8 +22,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
-	fmpb "google.golang.org/genproto/protobuf/field_mask"
+	"cloud.google.com/go/kms/apiv1/kmspb"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
 
 func TestUpdateCryptoKeyAlgorithm(t *testing.T) {
@@ -43,7 +43,7 @@ func TestUpdateCryptoKeyAlgorithm(t *testing.T) {
 
 	got, err := client.UpdateCryptoKey(ctx, &kmspb.UpdateCryptoKeyRequest{
 		CryptoKey: ck,
-		UpdateMask: &fmpb.FieldMask{
+		UpdateMask: &fieldmaskpb.FieldMask{
 			Paths: []string{"version_template.algorithm"},
 		},
 	})
@@ -88,7 +88,7 @@ func TestUpdateCryptoKeyIncompatibleAlgorithm(t *testing.T) {
 
 	_, err := client.UpdateCryptoKey(ctx, &kmspb.UpdateCryptoKeyRequest{
 		CryptoKey: ck,
-		UpdateMask: &fmpb.FieldMask{
+		UpdateMask: &fieldmaskpb.FieldMask{
 			Paths: []string{"version_template.algorithm"},
 		},
 	})
@@ -111,7 +111,7 @@ func TestUpdateCryptoKeyUnsupportedField(t *testing.T) {
 
 	_, err := client.UpdateCryptoKey(ctx, &kmspb.UpdateCryptoKeyRequest{
 		CryptoKey: ck,
-		UpdateMask: &fmpb.FieldMask{
+		UpdateMask: &fieldmaskpb.FieldMask{
 			Paths: []string{"name"},
 		},
 	})

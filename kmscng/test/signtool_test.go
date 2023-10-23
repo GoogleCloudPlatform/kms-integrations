@@ -35,7 +35,7 @@ import (
 	"google.golang.org/api/option"
 	"google.golang.org/grpc"
 
-	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
+	"cloud.google.com/go/kms/apiv1/kmspb"
 )
 
 func generateSelfSignedCertTempFile(t *testing.T, signer *gcpkms.Signer, alg x509.SignatureAlgorithm) string {

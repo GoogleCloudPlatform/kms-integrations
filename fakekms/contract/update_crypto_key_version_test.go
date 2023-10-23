@@ -22,8 +22,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
-	fmpb "google.golang.org/genproto/protobuf/field_mask"
+	"cloud.google.com/go/kms/apiv1/kmspb"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
 
 func TestUpdateCryptoKeyVersionDisableEnable(t *testing.T) {
@@ -40,7 +40,7 @@ func TestUpdateCryptoKeyVersionDisableEnable(t *testing.T) {
 	ck.Primary.State = kmspb.CryptoKeyVersion_DISABLED
 	gotVersion, err := client.UpdateCryptoKeyVersion(ctx, &kmspb.UpdateCryptoKeyVersionRequest{
 		CryptoKeyVersion: ck.Primary,
-		UpdateMask: &fmpb.FieldMask{
+		UpdateMask: &fieldmaskpb.FieldMask{
 			Paths: []string{"state"},
 		},
 	})
@@ -64,7 +64,7 @@ func TestUpdateCryptoKeyVersionDisableEnable(t *testing.T) {
 	ck.Primary.State = kmspb.CryptoKeyVersion_ENABLED
 	gotVersion, err = client.UpdateCryptoKeyVersion(ctx, &kmspb.UpdateCryptoKeyVersionRequest{
 		CryptoKeyVersion: ck.Primary,
-		UpdateMask: &fmpb.FieldMask{
+		UpdateMask: &fieldmaskpb.FieldMask{
 			Paths: []string{"state"},
 		},
 	})
@@ -114,7 +114,7 @@ func TestUpdateCryptoKeyVersionUnsupportedState(t *testing.T) {
 
 	_, err := client.UpdateCryptoKeyVersion(ctx, &kmspb.UpdateCryptoKeyVersionRequest{
 		CryptoKeyVersion: ckv,
-		UpdateMask: &fmpb.FieldMask{
+		UpdateMask: &fieldmaskpb.FieldMask{
 			Paths: []string{"state"},
 		},
 	})
@@ -140,7 +140,7 @@ func TestUpdateCryptoKeyVersionUnsupportedField(t *testing.T) {
 
 	_, err := client.UpdateCryptoKeyVersion(ctx, &kmspb.UpdateCryptoKeyVersionRequest{
 		CryptoKeyVersion: ckv,
-		UpdateMask: &fmpb.FieldMask{
+		UpdateMask: &fieldmaskpb.FieldMask{
 			Paths: []string{"name"},
 		},
 	})

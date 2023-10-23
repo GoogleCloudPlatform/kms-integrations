@@ -17,12 +17,12 @@ package fakekms
 import (
 	"testing"
 
-	"google.golang.org/protobuf/proto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 
-	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
+	"cloud.google.com/go/kms/apiv1/kmspb"
 )
 
 func TestAllowlistScalars(t *testing.T) {

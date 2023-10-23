@@ -4,26 +4,20 @@ workspace(name = "com_google_kmstools")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_file")
 
 http_archive(
-    name = "bazel_gazelle",  # v0.24.0 / 2021-10-11
-    sha256 = "de69a09dc70417580aabf20a28619bb3ef60d038470c7cf8442fafcf627c21cb",
+    name = "bazel_gazelle",  # v0.33.0 / 2023-09-06
+    sha256 = "d3fa66a39028e97d76f9e2db8f1b0c11c099e8e01bf363a923074784e451f809",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/bazel-gazelle/releases/download/v0.24.0/bazel-gazelle-v0.24.0.tar.gz",
-        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.24.0/bazel-gazelle-v0.24.0.tar.gz",
+        "https://mirror.bazel.build/github.com/bazelbuild/bazel-gazelle/releases/download/v0.33.0/bazel-gazelle-v0.33.0.tar.gz",
+        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.33.0/bazel-gazelle-v0.33.0.tar.gz",
     ],
 )
 
 http_archive(
-    name = "io_bazel_rules_go",  # v0.33.0 / 2022-06-06
-    # Patch HMAC and interoperable encryption into rules_go's copy of googleapis.
-    patch_args = [
-        "-E",
-        "-p1",
-    ],
-    patches = ["//:third_party/rules_go.patch"],
-    sha256 = "685052b498b6ddfe562ca7a97736741d87916fe536623afb7da2824c0211c369",
+    name = "io_bazel_rules_go",  #v0.41.0 // 2023-07-10
+    sha256 = "278b7ff5a826f3dc10f04feaf0b70d48b68748ccd512d7f98bf442077f043fe3",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.33.0/rules_go-v0.33.0.zip",
-        "https://github.com/bazelbuild/rules_go/releases/download/v0.33.0/rules_go-v0.33.0.zip",
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.41.0/rules_go-v0.41.0.zip",
+        "https://github.com/bazelbuild/rules_go/releases/download/v0.41.0/rules_go-v0.41.0.zip",
     ],
 )
 
@@ -67,15 +61,18 @@ http_archive(
 )
 
 http_archive(
-    name = "com_github_grpc_grpc",  # v1.52.1 / 2023-02-15
+    name = "com_github_grpc_grpc",  # v1.59.1 / 2023-10-06
     patch_args = [
-	"-E",
+        "-E",
         "-p1",
     ],
-    patches = ["//:third_party/grpc.patch"],
-    sha256 = "ec125d7fdb77ecc25b01050a0d5d32616594834d3fe163b016768e2ae42a2df6",
-    strip_prefix = "grpc-1.52.1",
-    url = "https://github.com/grpc/grpc/archive/v1.52.1.tar.gz",
+    patches = [
+        "//:third_party/grpc_windows_system_roots.patch",
+        "//:third_party/grpc_mac_event_engine.patch",
+    ],
+    sha256 = "916f88a34f06b56432611aaa8c55befee96d0a7b7d7457733b9deeacbc016f99",
+    strip_prefix = "grpc-1.59.1",
+    url = "https://github.com/grpc/grpc/archive/v1.59.1.tar.gz",
 )
 
 http_archive(
@@ -100,29 +97,24 @@ http_archive(
 )
 
 http_archive(
-    name = "com_google_protobuf",  # v3.19.4 // 2022-01-2
-    sha256 = "3bd7828aa5af4b13b99c191e8b1e884ebfa9ad371b0ce264605d347f135d2568",
-    strip_prefix = "protobuf-3.19.4",
-    url = "https://github.com/protocolbuffers/protobuf/archive/v3.19.4.tar.gz",
+    name = "com_google_protobuf",  # v24.4 / 2023-10-03
+    sha256 = "616bb3536ac1fff3fb1a141450fa28b875e985712170ea7f1bfe5e5fc41e2cd8",
+    strip_prefix = "protobuf-24.4",
+    url = "https://github.com/protocolbuffers/protobuf/archive/v24.4.tar.gz",
 )
 
-# In general it's best to keep this sync'd with the version used in rules_go,
-# above. Otherwise, we're working with two versions of the same repo.
-# https://github.com/bazelbuild/rules_go/blob/v0.33.0/go/private/repositories.bzl#L244
 http_archive(
-    name = "com_google_googleapis",  # 2022-06-05
-    # Patch HMAC and interoperable encryption into googleapis.
-    patch_args = [
-        "-E",
-        "-p1",
-    ],
-    patches = ["//:third_party/googleapis.patch"],
-    sha256 = "9181bb36a1df4f397375ec5aa480db797b882073518801e3a20b0e46418f2f90",
-    strip_prefix = "googleapis-530ca55953b470ab3b37dc9de37fcfa59410b741",
-    urls = [
-        "https://mirror.bazel.build/github.com/googleapis/googleapis/archive/530ca55953b470ab3b37dc9de37fcfa59410b741.zip",
-        "https://github.com/googleapis/googleapis/archive/530ca55953b470ab3b37dc9de37fcfa59410b741.zip",
-    ],
+    name = "upb",  # 2023-07-12
+    sha256 = "9c91d50bc22e2d78dcf268f3894fef17c2b8e80255ead9752a93ded456891b50",
+    strip_prefix = "upb-79af13abde31f5ab8d29931429df70d282a3e867",
+    url = "https://github.com/protocolbuffers/upb/archive/79af13abde31f5ab8d29931429df70d282a3e867.tar.gz",
+)
+
+http_archive(
+    name = "com_google_googleapis",  # 2023-08-08
+    sha256 = "bebd8086ab6690bede0d3fa1116b6d549b55e84e4fd25fe3402c19ca87c09263",
+    strip_prefix = "googleapis-4a274fa45dec28e84198082dcdb3a9fb7f818b0c",
+    url = "https://github.com/googleapis/googleapis/archive/4a274fa45dec28e84198082dcdb3a9fb7f818b0c.zip",
 )
 
 http_file(
@@ -166,13 +158,10 @@ rules_foreign_cc_dependencies(register_built_tools = False)
 
 load("@com_google_googleapis//:repository_rules.bzl", "switched_rules_by_language")
 
-# TODO(b/234842124): drop gapic and java once the interoperable AES proto changes are released.
 switched_rules_by_language(
     name = "com_google_googleapis_imports",
     cc = True,  # C++ support is only "Partially implemented", roll our own.
-    gapic = True,
     grpc = True,
-    java = True,
 )
 
 # gRPC
@@ -180,11 +169,6 @@ switched_rules_by_language(
 load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
 
 grpc_deps()
-
-# Call the workspace dependency functions defined, but not invoked, in grpc_deps.bzl.
-load("@upb//bazel:workspace_deps.bzl", "upb_deps")
-
-upb_deps()
 
 load("@build_bazel_rules_apple//apple:repositories.bzl", "apple_rules_dependencies")
 
@@ -234,122 +218,34 @@ http_archive(
 load("@rules_jvm_external//:defs.bzl", "maven_install")
 
 maven_install(
-    artifacts = PROTOBUF_MAVEN_ARTIFACTS + ["com.google.cloud:google-cloud-kms:2.4.0"],
+    artifacts = PROTOBUF_MAVEN_ARTIFACTS + ["com.google.cloud:google-cloud-kms:2.27.0"],
     generate_compat_repositories = True,
     repositories = [
         "https://repo.maven.apache.org/maven2/",
     ],
 )
 
-#############################################################################
-# Temporary dependencies to be able to patch the java version of googleapis #
-# TODO(b/234842124): drop once interoperable AES proto changes are released #
-#############################################################################
-http_archive(
-    name = "com_google_api_codegen",
-    sha256 = "65f72d3143bbcd53da37b04ec7d5dd647010a15272a004022e5b078552b64416",
-    strip_prefix = "gapic-generator-857e2aab8017ecbb2abc9adc02d8571c02f94b3b",
-    urls = ["https://github.com/googleapis/gapic-generator/archive/857e2aab8017ecbb2abc9adc02d8571c02f94b3b.zip"],
-)
-
-_gax_java_version = "2.18.1"
-
-http_archive(
-    name = "com_google_api_gax_java",
-    sha256 = "0d7baa60f068a7f29da90e3ad61ebf2f3d19e7cb69a64903ae235498331cdac0",
-    strip_prefix = "gax-java-%s" % _gax_java_version,
-    urls = ["https://github.com/googleapis/gax-java/archive/v%s.zip" % _gax_java_version],
-)
-
-load("@com_google_api_gax_java//:repository_rules.bzl", "com_google_api_gax_java_properties")
-
-com_google_api_gax_java_properties(
-    name = "com_google_api_gax_java_properties",
-    file = "@com_google_api_gax_java//:dependencies.properties",
-)
-
-load("@com_google_api_gax_java//:repositories.bzl", "com_google_api_gax_java_repositories")
-
-com_google_api_gax_java_repositories()
-
-load("@io_grpc_grpc_java//:repositories.bzl", "grpc_java_repositories")
-
-grpc_java_repositories()
-
-# Java microgenerator.
-# Must go AFTER java-gax, since both java gax and gapic-generator are written in java and may conflict.
-_gapic_generator_java_version = "2.8.2"
-
-http_archive(
-    name = "gapic_generator_java",
-    sha256 = "d2ddccbbfa8397b002a81b549c1f5daa31292113f97cbb34781a46298e1393d9",
-    strip_prefix = "sdk-platform-java-%s" % _gapic_generator_java_version,
-    urls = ["https://github.com/googleapis/gapic-generator-java/archive/v%s.zip" % _gapic_generator_java_version],
-)
-
-load("@gapic_generator_java//:repositories.bzl", "gapic_generator_java_repositories")
-
-gapic_generator_java_repositories()
-
-# gapic-generator transitive
-# (goes AFTER java-gax, since both java gax and gapic-generator are written in java and may conflict)
-load("@com_google_api_codegen//:repository_rules.bzl", "com_google_api_codegen_properties")
-
-com_google_api_codegen_properties(
-    name = "com_google_api_codegen_properties",
-    file = "@com_google_api_codegen//:dependencies.properties",
-)
-
-load("@com_google_api_codegen//:repositories.bzl", "com_google_api_codegen_repositories")
-
-http_archive(
-    name = "com_google_protoc_java_resource_names_plugin",
-    sha256 = "4b714b35ee04ba90f560ee60e64c7357428efcb6b0f3a298f343f8ec2c6d4a5d",
-    strip_prefix = "protoc-java-resource-names-plugin-8d749cb5b7aa2734656e1ad36ceda92894f33153",
-    urls = ["https://github.com/googleapis/protoc-java-resource-names-plugin/archive/8d749cb5b7aa2734656e1ad36ceda92894f33153.zip"],
-)
-
-com_google_api_codegen_repositories()
-
-# protoc-java-resource-names-plugin (loaded in com_google_api_codegen_repositories())
-# (required to support resource names feature in gapic generator)
-load(
-    "@com_google_protoc_java_resource_names_plugin//:repositories.bzl",
-    "com_google_protoc_java_resource_names_plugin_repositories",
-)
-
-com_google_protoc_java_resource_names_plugin_repositories()
-########################################################
-# End of temporary java dependencies TODO(b/234842124) #
-########################################################
-
 # End: Googleapis Java dependencies
 
 ## Golang
+
+# Ensure our own repositories are loaded before standard toolchain stuff. Otherwise we can inherit
+# versions we do not intend.
 load("//:go.bzl", "go_repositories")
 
 # gazelle:repository_macro go.bzl%go_repositories
 go_repositories()
 
 load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
-
-go_rules_dependencies()
-
-go_register_toolchains("1.17.6")
-
 load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
 
+go_register_toolchains("1.21.1")
+
 gazelle_dependencies()
+
+go_rules_dependencies()
 
 ## Protobuf
 load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
 
 protobuf_deps()
-
-# Locally built Bazel. Details at ./build/bazel/README.md
-# Adding a local_repository reference to that workspace ensures that this workspace
-# sees it as separate, and `bazel build ...` skips ./build/bazel.
-local_repository(
-    name = "local_bazel",
-    path = "./build/bazel",
-)

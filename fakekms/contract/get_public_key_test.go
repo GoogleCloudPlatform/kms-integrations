@@ -30,8 +30,8 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/testing/protocmp"
 
-	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
-	fmpb "google.golang.org/genproto/protobuf/field_mask"
+	"cloud.google.com/go/kms/apiv1/kmspb"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
 
 var ignorePEMAndPEMCRC = protocmp.IgnoreFields(new(kmspb.PublicKey),
@@ -200,7 +200,7 @@ func TestGetPublicKeyDisabled(t *testing.T) {
 
 	_, err := client.UpdateCryptoKeyVersion(ctx, &kmspb.UpdateCryptoKeyVersionRequest{
 		CryptoKeyVersion: ckv,
-		UpdateMask:       &fmpb.FieldMask{Paths: []string{"state"}},
+		UpdateMask:       &fieldmaskpb.FieldMask{Paths: []string{"state"}},
 	})
 	if err != nil {
 		t.Fatal(err)

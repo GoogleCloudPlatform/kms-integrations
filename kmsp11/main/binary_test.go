@@ -221,7 +221,7 @@ func TestImportedLibrariesFreeBSD(t *testing.T) {
 		"libc++.so.1", "libc.so.7", "libcxxrt.so.1",
 		"libgcc_s.so.1", "libm.so.5", "libthr.so.3"}
 	if *expectOpenSSL {
-		want = append(want, "libcrypto.so.8", "libssl.so.8")
+		want = append(want, "libcrypto.so.111", "libssl.so.111")
 	}
 	sort.Strings(want)
 

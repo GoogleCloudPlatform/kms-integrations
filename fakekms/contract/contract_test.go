@@ -25,11 +25,11 @@ import (
 	"testing"
 	"time"
 
+	kms "cloud.google.com/go/kms/apiv1"
+	"cloud.google.com/kms/integrations/fakekms"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc"
 
-	kms "cloud.google.com/go/kms/apiv1"
-	"cloud.google.com/kms/integrations/fakekms"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 

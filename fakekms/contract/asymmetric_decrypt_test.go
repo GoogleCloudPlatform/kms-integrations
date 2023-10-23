@@ -26,8 +26,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
-	fmpb "google.golang.org/genproto/protobuf/field_mask"
+	"cloud.google.com/go/kms/apiv1/kmspb"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
@@ -224,7 +224,7 @@ func TestAsymmetricDecryptDisabled(t *testing.T) {
 
 	_, err := client.UpdateCryptoKeyVersion(ctx, &kmspb.UpdateCryptoKeyVersionRequest{
 		CryptoKeyVersion: ckv,
-		UpdateMask:       &fmpb.FieldMask{Paths: []string{"state"}},
+		UpdateMask:       &fieldmaskpb.FieldMask{Paths: []string{"state"}},
 	})
 	if err != nil {
 		t.Fatal(err)

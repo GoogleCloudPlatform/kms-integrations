@@ -18,7 +18,7 @@ import (
 	"context"
 	"crypto/rand"
 
-	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
+	"cloud.google.com/go/kms/apiv1/kmspb"
 )
 
 // GenerateRandomBytes fakes a Cloud KMS API function.

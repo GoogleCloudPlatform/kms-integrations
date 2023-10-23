@@ -34,19 +34,8 @@
 
 #ifdef OPENSSL_IS_BORINGSSL
 #define BSSL_CONST const
-#ifdef BORINGSSL_FIPS
 
-// X509_SIG_get0 and X509_SIG_getm were added to BoringSSL after the most
-// recent FIPS validation.
-// https://boringssl-review.googlesource.com/c/boringssl/+/42344
-
-void X509_SIG_get0(const X509_SIG* sig, const X509_ALGOR** out_alg,
-                   const ASN1_OCTET_STRING** out_digest);
-void X509_SIG_getm(X509_SIG* sig, X509_ALGOR** out_alg,
-                   ASN1_OCTET_STRING** out_digest);
-
-#endif  // BORINGSSL_FIPS
-#else   // OPENSSL_IS_BORINGSSL
+#else  // OPENSSL_IS_BORINGSSL
 
 #define BSSL_CONST
 

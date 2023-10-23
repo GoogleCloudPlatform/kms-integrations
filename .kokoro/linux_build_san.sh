@@ -17,6 +17,8 @@
 # Fail on any error.
 set -e
 
+
+
 # Display commands being run.
 # WARNING: please only enable 'set -x' if necessary for debugging, and be very
 #  careful if you handle credentials (e.g. from Keystore) with 'set -x':
@@ -34,6 +36,9 @@ cd "${PROJECT_ROOT}"
 
 export RESULTS_DIR="${KOKORO_ARTIFACTS_DIR}/results"
 mkdir "${RESULTS_DIR}"
+
+sudo apt-get update
+sudo apt-get install -y libtinfo5
 
 # Pull in a more recent LLVM toolchain
 export LLVM_VERSION=10.0.1
@@ -61,7 +66,8 @@ ${GOROOT}/bin/go run ./.kokoro/unwrap_key.go \
 
 # Configure user.bazelrc with remote build caching options and Google creds
 cp .kokoro/remote_cache.bazelrc user.bazelrc
-echo "build --remote_default_exec_properties=cache-silo-key=linux" >> user.bazelrc
+echo "build --remote_default_exec_properties=cache-silo-key=${KOKORO_JOB_NAME}" \
+  >> user.bazelrc
 echo "test --test_env=GOOGLE_APPLICATION_CREDENTIALS" >> user.bazelrc
 
 # Ensure that build outputs and test logs are uploaded even on failure

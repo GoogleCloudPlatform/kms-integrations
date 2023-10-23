@@ -45,8 +45,6 @@ build:macos --copt=-mmacosx-version-min=11.3
 # Suppress errors like
 # clang: error: overriding '-mmacosx-version-min=11.3' option with '-target arm64-apple-macosx13.3' [-Werror,-Woverriding-t-option]
 build:macos --copt=-Wno-overriding-t-option
-# Workaround for build issue: https://github.com/bazelbuild/bazel/issues/4341#issuecomment-572050759
-build:macos --copt=-DGRPC_BAZEL_BUILD
 # Workaround for build issue: https://github.com/bazelbuild/bazel/issues/4341#issuecomment-758361769
 build:macos --features=-supports_dynamic_linker
 build:macos --dynamic_mode=off
@@ -58,12 +56,20 @@ build:macos --java_runtime_version=remotejdk_11
 # C++ redistributable on Windows 10 and up.
 build:windows --features=static_link_msvcrt
 # Prevent glog symbols from being exported with `__declspec(dllexport)`
-build:windows --cxxopt=/DGOOGLE_GLOG_DLL_DECL=
+build:windows --copt=/DGOOGLE_GLOG_DLL_DECL=
 # Prevent glog from conflicting with windows.h
 # https://code.google.com/archive/p/google-glog/issues/33
-build:windows --cxxopt=/DGLOG_NO_ABBREVIATED_SEVERITIES
+build:windows --copt=/DGLOG_NO_ABBREVIATED_SEVERITIES
 # Java Version
 build:windows --java_runtime_version=remotejdk_11
+
+# gRPC options
+# Workaround for build issue: https://github.com/bazelbuild/bazel/issues/4341#issuecomment-572050759
+build:macos --copt=-DGRPC_BAZEL_BUILD
+# Enable forking - https://github.com/grpc/grpc/blob/ddd4d6e318ae41b07bc853d7abe4c2f9c1b9e070/tools/bazel.rc#L73-L75
+build:freebsd --cxxopt=-DGRPC_POSIX_FORK_ALLOW_PTHREAD_ATFORK=1
+build:linux --cxxopt=-DGRPC_POSIX_FORK_ALLOW_PTHREAD_ATFORK=1
+build:macos --cxxopt=-DGRPC_POSIX_FORK_ALLOW_PTHREAD_ATFORK=1
 
 # x86 builds on amd64
 build:m32 --copt=-m32 --linkopt=-m32 --test_tag_filters=-no_m32

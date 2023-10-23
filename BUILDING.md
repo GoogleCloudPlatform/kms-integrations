@@ -1,7 +1,7 @@
 # Building
 
-The project is built using the [Bazel](https://bazel.build) build tool, version 6,
-release 6.1.1 or later. Bazelisk is the recommended way to install Bazel on
+The project is built using the [Bazel](https://bazel.build) build tool, version
+6.4.0. Bazelisk is the recommended way to install Bazel on
 Ubuntu, Windows, and macOS. It automatically downloads and installs the
 appropriate version of Bazel, based on the .bazelversion file in this project.
 See https://bazel.build/install/bazelisk for additional information.
@@ -26,10 +26,12 @@ The project is built and tested by Google on the following platforms.
 
 ### FreeBSD
 
-* Operating System: FreeBSD 11, FreeBSD 12
+* Operating System: FreeBSD 13
 * Architecture: amd64, i386
-* Compiler: clang 9.0+
+* Compiler: clang 15.0+
 * C++ Standard Library: libc++
+* Bazel: 6.2.0 (replacing the contents of .bazelversion in the root of the
+  repository prior to building)
 
 ### macOS
 

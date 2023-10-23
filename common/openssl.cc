@@ -14,9 +14,8 @@
 
 #include "common/openssl.h"
 
-// BORINGSSL_FIPS and OpenSSL < 1.1.0 both require X509_SIG_* implementations.
-#if defined(BORINGSSL_FIPS) || \
-    (!defined(OPENSSL_IS_BORINGSSL) && OPENSSL_VERSION_NUMBER < 0x10100000L)
+#if !defined(OPENSSL_IS_BORINGSSL)
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 
 void X509_SIG_get0(const X509_SIG* sig, const X509_ALGOR** out_alg,
                    const ASN1_OCTET_STRING** out_digest) {
@@ -37,11 +36,6 @@ void X509_SIG_getm(X509_SIG* sig, X509_ALGOR** out_alg,
     *out_digest = sig->digest;
   }
 }
-
-#endif
-
-#if !defined(OPENSSL_IS_BORINGSSL)
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
 
 EC_KEY* EVP_PKEY_get0_EC_KEY(EVP_PKEY* pkey) {
   if (pkey->type != EVP_PKEY_EC) {

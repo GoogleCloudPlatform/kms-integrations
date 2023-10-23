@@ -1,4 +1,3 @@
-load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@rules_java//java:defs.bzl", "java_library", "java_test")
 
 java_library(
@@ -8,26 +7,11 @@ java_library(
     visibility = ["//visibility:public"],
     deps = [
         "@bazel_tools//tools/java/runfiles",
-    ] + selects.with_or({
-        # Since RawEncrypt/RawDecrypt is not GA yet, we have to use the patched
-        # version of googleapis instead of maven, which uses a gapic-generator
-        # that is only compatible with Linux and MacOS.
-        # This requirement can be dropped once the interoperable AES feature is
-        # released publicly, by switching back to maven.
-        ("@platforms//os:linux", "@platforms//os:macos"): [
-            "@com_google_api_gax_java//gax",
-            "@com_google_api_gax_java//gax-grpc:gax_grpc",
-            "@com_google_googleapis//google/cloud/kms/v1:kms_java_gapic",
-            "@com_google_googleapis//google/cloud/kms/v1:kms_java_proto",
-            "@io_grpc_grpc_java//api",
-        ],
-        "//conditions:default": [
-            "@maven//:com_google_api_gax",
-            "@maven//:com_google_api_gax_grpc",
-            "@maven//:com_google_cloud_google_cloud_kms",
-            "@maven//:io_grpc_grpc_api",
-        ],
-    }),
+        "@maven//:com_google_api_gax",
+        "@maven//:com_google_api_gax_grpc",
+        "@maven//:com_google_cloud_google_cloud_kms",
+        "@maven//:io_grpc_grpc_api",
+    ],
 )
 
 java_test(
@@ -38,20 +22,8 @@ java_test(
     test_class = "com.google.cloud.kms.pkcs11.fakekms.FakeKmsTest",
     deps = [
         ":FakeKms",
+        "@maven//:com_google_api_grpc_proto_google_cloud_kms_v1",
+        "@maven//:com_google_cloud_google_cloud_kms",
         "@maven//:junit_junit",
-    ] + selects.with_or({
-        # Since RawEncrypt/RawDecrypt is not GA yet, we have to use the patched
-        # version of googleapis instead of maven, which uses a gapic-generator
-        # that is only compatible with Linux and MacOS.
-        # This requirement can be dropped once the interoperable AES feature is
-        # released publicly, by switching back to maven.
-        ("@platforms//os:linux", "@platforms//os:macos"): [
-            "@com_google_googleapis//google/cloud/kms/v1:kms_java_gapic",
-            "@com_google_googleapis//google/cloud/kms/v1:kms_java_proto",
-        ],
-        "//conditions:default": [
-            "@maven//:com_google_api_grpc_proto_google_cloud_kms_v1",
-            "@maven//:com_google_cloud_google_cloud_kms",
-        ],
-    }),
+    ],
 )

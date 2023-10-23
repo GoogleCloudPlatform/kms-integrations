@@ -25,7 +25,7 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/testing/protocmp"
 
-	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
+	"cloud.google.com/go/kms/apiv1/kmspb"
 )
 
 var ignoreDataAndDataCRC = protocmp.IgnoreFields(new(kmspb.GenerateRandomBytesResponse),

@@ -171,6 +171,11 @@ template <typename T>
 struct ZeroDeallocator {
   using value_type = T;
 
+  ZeroDeallocator() = default;
+
+  template <class U>
+  constexpr ZeroDeallocator(const ZeroDeallocator<U>&) noexcept {}
+
   T* allocate(std::size_t len) { return static_cast<T*>(std::malloc(len)); }
   void deallocate(T* ptr, std::size_t len) {
     OPENSSL_cleanse(ptr, len);

@@ -26,8 +26,8 @@ import (
 	"google.golang.org/protobuf/testing/protocmp"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
-	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
-	fmpb "google.golang.org/genproto/protobuf/field_mask"
+	"cloud.google.com/go/kms/apiv1/kmspb"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
 
 var crc32cTable = crc32.MakeTable(crc32.Castagnoli)
@@ -408,7 +408,7 @@ func TestRawEncryptKeyDisabled(t *testing.T) {
 
 	_, err := client.UpdateCryptoKeyVersion(ctx, &kmspb.UpdateCryptoKeyVersionRequest{
 		CryptoKeyVersion: ckv,
-		UpdateMask:       &fmpb.FieldMask{Paths: []string{"state"}},
+		UpdateMask:       &fieldmaskpb.FieldMask{Paths: []string{"state"}},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -444,7 +444,7 @@ func TestRawDecryptKeyDisabled(t *testing.T) {
 
 	_, err := client.UpdateCryptoKeyVersion(ctx, &kmspb.UpdateCryptoKeyVersionRequest{
 		CryptoKeyVersion: ckv,
-		UpdateMask:       &fmpb.FieldMask{Paths: []string{"state"}},
+		UpdateMask:       &fieldmaskpb.FieldMask{Paths: []string{"state"}},
 	})
 	if err != nil {
 		t.Fatal(err)

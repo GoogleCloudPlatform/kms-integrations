@@ -41,7 +41,8 @@ go run ./.kokoro/unwrap_key.go ^
 
 :: Configure user.bazelrc with remote build caching options and Google creds
 copy .kokoro\remote_cache.bazelrc user.bazelrc
-echo build --remote_default_exec_properties=cache-silo-key=windows >> user.bazelrc
+echo build --remote_default_exec_properties=cache-silo-key=%KOKORO_JOB_NAME% ^
+  >> user.bazelrc
 echo test --test_env=GOOGLE_APPLICATION_CREDENTIALS >> user.bazelrc
 
 :: https://docs.bazel.build/versions/master/windows.html#build-c-with-msvc

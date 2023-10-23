@@ -51,6 +51,7 @@ absl::Status OpenProvider(__out NCRYPT_PROV_HANDLE* phProvider,
                           __in LPCWSTR pszProviderName, __in DWORD dwFlags) {
   LOG_IF(INFO, std::getenv(kVerboseLoggingEnvVariable))
       << "OpenProvider invoked\n"
+      << "Process id: " << GetCurrentProcessId()
       << "Provider name: " << WideToString(std::wstring(pszProviderName))
       << "\n"
       << "Flags: " << dwFlags << "\n\n";

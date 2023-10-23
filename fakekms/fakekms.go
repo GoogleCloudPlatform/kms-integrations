@@ -24,8 +24,8 @@ import (
 	"cloud.google.com/kms/integrations/fakekms/fault"
 	"google.golang.org/grpc"
 
+	"cloud.google.com/go/kms/apiv1/kmspb"
 	"cloud.google.com/kms/integrations/fakekms/fault/faultpb"
-	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 )
 
 // maxPageSize is the maximum number of elements that will be returned in

@@ -38,13 +38,9 @@ cmake(
     cache_entries = {
         "CMAKE_BUILD_TYPE": "Release",
         "FIPS": "1",
+        "GO_EXECUTABLE": "$GOROOT/bin/go",
     },
-    env = {
-        "GOROOT": "%GOROOT%",
-        "GOPATH": "%GOPATH%",
-        "GOCACHE": "%GOCACHE%",
-        "PATH": "%GOROOT%/bin:%GOPATH%/bin:${PATH}",
-    },
+    env = %CMAKE_ENV%,
 )
 
 filegroup(
@@ -80,6 +76,7 @@ cc_library(
     srcs = ["libcrypto.a"],
     hdrs = _crypto_headers,
     strip_include_prefix = "src/include",
+    linkstatic = True,
     visibility = ["//visibility:public"],
 )
 
@@ -89,6 +86,7 @@ cc_library(
     hdrs = _ssl_headers,
     deps = [":crypto"],
     strip_include_prefix = "src/include",
+    linkstatic = True,
     visibility = ["//visibility:public"],
 )
 """
@@ -141,10 +139,10 @@ def _crypto_library_impl(repo_ctx):
 
     if library == "boringssl":
         repo_ctx.download_and_extract(
-            # 2023-03-23
-            url = "https://github.com/google/boringssl/archive/8872d958b7b07173bf29b8f3b8bf36a1ca8c94a3.tar.gz",
-            sha256 = "a8b2c40d5223ca951d463ed73dd810836dccdafd8f948db6fb4fb709b9827ab5",
-            stripPrefix = "boringssl-8872d958b7b07173bf29b8f3b8bf36a1ca8c94a3",
+            # 2023-09-12
+            url = "https://github.com/google/boringssl/archive/48a16fed0bf57f3d04f856a17490b5935458eb99.tar.gz",
+            sha256 = "5e475b54e1f7a7536c66fb777aeac97943d032b46bbff4c646dfcd337828ff87",
+            stripPrefix = "boringssl-48a16fed0bf57f3d04f856a17490b5935458eb99",
         )
         return
 
@@ -171,29 +169,20 @@ def _crypto_library_impl(repo_ctx):
 
     # Proceeding to set up BoringSSL + FIPS config
 
-    # ae223d6138807a13006342edfeef32e813246b39 is the latest FIPS-validated version.
-    # https://csrc.nist.gov/CSRC/media/projects/cryptographic-module-validation-program/documents/security-policies/140sp3678.pdf
+    # 853ca1ea1168dff08011e5d42d94609cc0ca2e27 is the latest FIPS-validated version.
+    # https://csrc.nist.gov/projects/cryptographic-module-validation-program/certificate/4407
     repo_ctx.download_and_extract(
-        url = "https://github.com/google/boringssl/archive/ae223d6138807a13006342edfeef32e813246b39.tar.gz",
-        stripPrefix = "boringssl-ae223d6138807a13006342edfeef32e813246b39",
-        sha256 = "06cb9d317001e026bde318d47a532a31651c68c7cf788ce0c30327f2d5e6b639",
+        url = "https://github.com/google/boringssl/archive/853ca1ea1168dff08011e5d42d94609cc0ca2e27.tar.gz",
+        stripPrefix = "boringssl-853ca1ea1168dff08011e5d42d94609cc0ca2e27",
+        sha256 = "61e85d6eaecf1706be0420a9104b66ff01bd04301b5fad323970685f942108ed",
         output = "src",
     )
 
     fips_patches = [
-        # From upstream at 05cd93068b0a553afc48f69acbceae10c6a17593 and
-        # 1e547722d412a77f2708bf92cfef75c287d2cb9e; needed to build with
-        # clang+llvm.
-        Label("//:third_party/bssl_clang_fallthrough.patch"),
         # Specific to our builds. Needed to ensure that symbols are exposed
         # transitively within the Bazel ecosystem.
         Label("//:third_party/bssl_visibility.patch"),
     ]
-
-    if repo_ctx.os.name == "freebsd":
-        # Based on upstream at c953ee4af7ad385a82709d33ed3116f5900343d4;
-        # required to compile the BoringSSL RNG on FreeBSD.
-        fips_patches += [Label("//:third_party/bssl_fips_random_freebsd.patch")]
 
     for patch in fips_patches:
         _must_succeed(
@@ -216,14 +205,26 @@ def _crypto_library_impl(repo_ctx):
     )
 
     go_env = _read_go_env(repo_ctx, str(repo_ctx.path(repo_ctx.attr._go_cache)))
+
+    build_env = {
+        "GOROOT": go_env["GOROOT"],
+        "GOPATH": go_env["GOPATH"],
+        "GOCACHE": "$BUILD_TMPDIR/cache",
+        "SYSTEM_NAME": repo_ctx.os.name,
+    }
+
+    # Download dependencies from go.mod
+    _must_succeed("go get", repo_ctx.execute(
+        [go_env["GOROOT"] + "/bin/go", "get", "-u", "..."],
+        working_directory = "src",
+        environment = build_env,
+    ))
+
     repo_ctx.template(
         "BUILD",
         "BUILD.tmpl",
         substitutions = {
-            "%GOROOT%": go_env["GOROOT"],
-            "%GOPATH%": go_env["GOPATH"],
-            "%GOCACHE%": "$BUILD_TMPDIR/cache",
-            "%SYSTEM_NAME%": repo_ctx.os.name,
+            "%CMAKE_ENV%": str(build_env),
         },
         executable = False,
     )

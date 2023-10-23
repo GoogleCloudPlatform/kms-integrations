@@ -23,8 +23,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
-	fmpb "google.golang.org/genproto/protobuf/field_mask"
+	"cloud.google.com/go/kms/apiv1/kmspb"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -70,7 +70,7 @@ func TestDestroyDisabledCryptoKeyVersion(t *testing.T) {
 	ck.Primary.State = kmspb.CryptoKeyVersion_DISABLED
 	ckv, err := client.UpdateCryptoKeyVersion(ctx, &kmspb.UpdateCryptoKeyVersionRequest{
 		CryptoKeyVersion: ck.Primary,
-		UpdateMask: &fmpb.FieldMask{
+		UpdateMask: &fieldmaskpb.FieldMask{
 			Paths: []string{"state"},
 		},
 	})

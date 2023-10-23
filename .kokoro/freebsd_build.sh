@@ -35,36 +35,20 @@ cd "${PROJECT_ROOT}"
 export RESULTS_DIR="${KOKORO_ARTIFACTS_DIR}/results"
 mkdir "${RESULTS_DIR}"
 
-# Install package dependencies. Stored in GCS since FreeBSD11 repos
-# have been turned down.
-tar zxvf ${KOKORO_GFILE_DIR}/freebsd11-amd64-packages.tar.gz -C ${KOKORO_ARTIFACTS_DIR}
-pushd ${KOKORO_ARTIFACTS_DIR}/freebsd11-amd64-packages
+# Install package dependencies. Stored in GCS since FreeBSD aggressively
+# turns down package repositories when a distribution hits end of life.
+tar zxvf ${KOKORO_GFILE_DIR}/freebsd13-amd64-packages.tar.gz -C ${KOKORO_ARTIFACTS_DIR}
+pushd ${KOKORO_ARTIFACTS_DIR}/freebsd13-amd64-packages
+sudo pkg add bazel-6.2.0.pkg
 #  Required for BoringSSL FIPS builds.
-sudo pkg add cmake-3.19.2.txz
-sudo pkg add ninja-1.10.2,2.txz
-# Required for building Bazel from source
-sudo pkg add openjdk8-8.275.01.1.txz
-sudo pkg add bazel-4.2.1.txz
-sudo pkg add unzip-6.0_8.txz
-sudo pkg add zip-3.0_1.txz
+sudo pkg add cmake-core-3.26.1_3.pkg
+sudo pkg add ninja-1.11.1,2.pkg
 popd
-
-# Make Bazel use a JDK that isn't a million years old, which fixes weird
-# gRPC connection issues with remote build cache. :-(
-export JAVA_HOME=/usr/local/openjdk11
 
 # Configure user.bazelrc with remote build caching options
 cp .kokoro/remote_cache.bazelrc user.bazelrc
-echo "build --remote_default_exec_properties=cache-silo-key=freebsd" >> user.bazelrc
-
-# Build a more modern Bazel than what's on FreeBSD 11. :-(
-pushd build/bazel
-bazel --bazelrc=${PROJECT_ROOT}/user.bazelrc build :bazel > ${RESULTS_DIR}/bazel_build.log
-shopt -s expand_aliases
-alias local_bazel=`pwd`/bazel-bin/bazel
-popd
-# Fail loudly if it's the wrong version.
-local_bazel version | grep $(cat .bazelversion)
+echo "build --remote_default_exec_properties=cache-silo-key=${KOKORO_JOB_NAME}" \
+  >> user.bazelrc
 
 # Ensure that build outputs and test logs are uploaded even on failure
 _upload_artifacts() {
@@ -84,14 +68,18 @@ _upload_artifacts() {
 }
 trap _upload_artifacts EXIT
 
+# This is a temporary hack to work around the fact that we don't
+# have the latest Bazel on FreeBSD.
+echo '6.2.0' > .bazelversion
+
 # Ensure Bazel version information is included in the build log
-local_bazel version
+bazel version
 
 export BAZEL_ARGS="-c opt --keep_going ${BAZEL_EXTRA_ARGS}"
 
-local_bazel test ${BAZEL_ARGS} ... :ci_only_tests
+bazel test ${BAZEL_ARGS} ... :ci_only_tests
 
-local_bazel run ${BAZEL_ARGS} //kmsp11/tools/buildsigner -- \
+bazel run ${BAZEL_ARGS} //kmsp11/tools/buildsigner -- \
   -signing_key=${BUILD_SIGNING_KEY} \
   < bazel-bin/kmsp11/main/libkmsp11.so \
   > ${RESULTS_DIR}/libkmsp11.so.sig

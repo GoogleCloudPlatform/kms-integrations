@@ -22,7 +22,7 @@ import (
 	kms "cloud.google.com/go/kms/apiv1"
 	"google.golang.org/protobuf/proto"
 
-	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
+	"cloud.google.com/go/kms/apiv1/kmspb"
 )
 
 // testClient is a key management client with additional helpers.

@@ -28,7 +28,8 @@ import (
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/miekg/pkcs11"
-	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
+
+	"cloud.google.com/go/kms/apiv1/kmspb"
 )
 
 const (

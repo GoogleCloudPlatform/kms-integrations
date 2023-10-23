@@ -23,13 +23,25 @@
 namespace cloud_kms::kmsp11 {
 
 absl::Status RegisterForkHandlers() {
-  int result = pthread_atfork(grpc_prefork, grpc_postfork_parent, [] {
-    grpc_postfork_child();
-    // This deadlocks unless it comes after the gRPC postfork routine.
-    // Presumably there is some mutex/counter of created gRPC objects.
-    ReleaseGlobalProvider().IgnoreError();
-    ShutdownLogging();
-  });
+  // pthread_atfork handlers are run in order according to specified rules.
+  // https://man7.org/linux/man-pages/man3/pthread_atfork.3.html#RETURN_VALUE
+  //
+  //
+  // Our post-fork child routine hangs unless it comes after gRPC's.
+
+  // This is the gRPC team's prescribed way of registering fork handlers.
+  //
+  // Internally, gRPC registers its fork handlers during `grpc_init()`. The
+  // right way to call grpc_init from C++ is to instantiate
+  // `grpc::internal::GrpcLibrary` or one of its subclasses.
+  grpc::internal::GrpcLibrary init;
+
+  // Now we can register our own fork handler.
+  int result =
+      pthread_atfork(/*prepare=*/nullptr, /*parent=*/nullptr, /*child=*/[] {
+        ReleaseGlobalProvider().IgnoreError();
+        ShutdownLogging();
+      });
   if (result != 0) {
     return absl::InternalError(
         absl::StrCat("pthread_atfork failed with error ", strerror(result)));

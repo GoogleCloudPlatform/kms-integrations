@@ -23,7 +23,7 @@ import (
 	"crypto/rand"
 	"io"
 
-	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
+	"cloud.google.com/go/kms/apiv1/kmspb"
 )
 
 // maxPlaintextSize is the maximum plaintext size accepted by Cloud KMS.
