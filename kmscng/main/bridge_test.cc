@@ -1372,17 +1372,18 @@ TEST(BridgeTest, EnumAlgorithmsSuccess) {
   NCRYPT_PROV_HANDLE provider_handle;
   EXPECT_OK(OpenProvider(&provider_handle, kProviderName.data(), 0));
 
-  NCryptAlgorithmName* alg;
+  NCryptAlgorithmName alg_array[kAlgorithmNames.size()];
+  NCryptAlgorithmName* alg = alg_array;
   DWORD output_size = 0;
   EXPECT_OK(EnumAlgorithms(provider_handle, NCRYPT_SIGNATURE_OPERATION,
                            &output_size, &alg, 0));
-  // TODO(b/278902908): Rework this testing logic once we add support for more
-  // algorithms. Currently, only one algorithm is available.
-  EXPECT_EQ(output_size, 1);
-  EXPECT_EQ(alg->pszName, BCRYPT_ECDSA_P256_ALGORITHM);
-  EXPECT_EQ(alg->dwClass, NCRYPT_SIGNATURE_INTERFACE);
-  EXPECT_EQ(alg->dwAlgOperations, NCRYPT_SIGNATURE_OPERATION);
-  EXPECT_EQ(alg->dwFlags, 0);
+  EXPECT_EQ(output_size, kAlgorithmNames.size());
+  for (int i = 0; i < output_size; i++) {
+    EXPECT_STREQ(alg[i].pszName, kAlgorithmNames[i].pszName);
+    EXPECT_EQ(alg[i].dwClass, kAlgorithmNames[i].dwClass);
+    EXPECT_EQ(alg[i].dwAlgOperations, kAlgorithmNames[i].dwAlgOperations);
+    EXPECT_EQ(alg[i].dwFlags, kAlgorithmNames[i].dwFlags);
+  }
 
   // Clean up memory.
   EXPECT_OK(FreeProvider(provider_handle));
