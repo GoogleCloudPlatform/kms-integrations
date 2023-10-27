@@ -92,9 +92,15 @@ cc_library(
         "//conditions:default": ["test_platform_posix.cc"],
     }),
     hdrs = ["test_platform.h"],
+    linkopts = select({
+        "//:linux": ["-ldl"],
+        "//conditions:default": [],
+    }),
     deps = [
         "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/strings:str_format",
     ],
 )
 

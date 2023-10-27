@@ -12,11 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <dlfcn.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "common/test/test_platform.h"
 
@@ -34,6 +36,22 @@ absl::Status SetMode(const char* filename, int mode) {
         "unable to change mode of file %s: error %d", filename, errno));
   }
   return absl::OkStatus();
+}
+
+absl::StatusOr<void*> LoadLibrarySymbol(const char* library_filename,
+                                        const char* symbol_name) {
+  void* library = dlopen(library_filename, RTLD_LAZY | RTLD_NODELETE);
+  if (!library) {
+    return absl::UnknownError(
+        absl::StrCat("failed to load ", library_filename));
+  }
+
+  void* symbol = dlsym(library, symbol_name);
+  if (!symbol) {
+    return absl::NotFoundError(absl::StrFormat(
+        "symbol %s not found in library %s", symbol_name, library_filename));
+  }
+  return symbol;
 }
 
 }  // namespace cloud_kms

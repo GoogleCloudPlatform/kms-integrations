@@ -51,7 +51,7 @@ set BAZEL_VC=C:\VS\VC\
 :: Force msys2 environment instead of Cygwin
 set PATH=C:\msys64\usr\bin;%PATH%
 set BAZEL_SH=C:\msys64\usr\bin\bash.exe
-set BAZEL_ARGS=-c opt --keep_going %BAZEL_EXTRA_ARGS%
+set BAZEL_ARGS=-c opt --keep_going --enable_runfiles %BAZEL_EXTRA_ARGS%
 :: https://bazel.build/configure/windows#long-path-issues
 set BAZEL_STARTUP_ARGS=--output_user_root c:\bzltmp
 

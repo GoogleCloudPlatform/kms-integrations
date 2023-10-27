@@ -12,9 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <dlfcn.h>
-#include <stdlib.h>
-
 #include <fstream>
 #include <string_view>
 #include <vector>
@@ -109,13 +106,11 @@ tokens:
   // Dynamically load the PKCS#11 shared library.
   // Note that there should be no corresponding dlclose call, since our
   // library does not support being dynamically unloaded.
-  void* library = dlopen(library_path_.c_str(), RTLD_LAZY | RTLD_NODELETE);
-  ASSERT_THAT(library, Not(IsNull())) << "error loading libkmsp11.so";
-
-  // Dynamically load the function list table from the loaded library.
-  CK_C_GetFunctionList get_fn_list = reinterpret_cast<CK_C_GetFunctionList>(
-      dlsym(library, "C_GetFunctionList"));
-  ASSERT_THAT(get_fn_list, Not(IsNull()));
+  ASSERT_OK_AND_ASSIGN(
+      void* untyped_get_fn_list,
+      LoadLibrarySymbol(library_path_.c_str(), "C_GetFunctionList"));
+  CK_C_GetFunctionList get_fn_list =
+      reinterpret_cast<CK_C_GetFunctionList>(untyped_get_fn_list);
 
   // Load the function list into 'f_'.
   ASSERT_EQ(get_fn_list(&f_), CKR_OK);
@@ -165,7 +160,7 @@ TEST_F(EndToEndTest, TestEcdsaSignVerify) {
   std::vector<CK_ATTRIBUTE> attrs = {
       CK_ATTRIBUTE{.type = CKA_LABEL,
                    .pValue = key_label.data(),
-                   .ulValueLen = key_label.size()},
+                   .ulValueLen = uint32_t(key_label.size())},
       CK_ATTRIBUTE{.type = CKA_KMS_ALGORITHM,
                    .pValue = &kms_algorithm,
                    .ulValueLen = sizeof(kms_algorithm)},

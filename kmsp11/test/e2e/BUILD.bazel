@@ -5,12 +5,6 @@ cc_library(
     testonly = 1,
     srcs = ["e2e_test.cc"],
     linkstatic = 1,
-    target_compatible_with = select({
-        "@platforms//os:freebsd": [],
-        "@platforms//os:linux": [],
-        "@platforms//os:macos": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
     deps = [
         "//common:openssl",
         "//common/test:test_platform",
@@ -39,8 +33,6 @@ cc_test(
         "//:linux": [
             # Disallow undefined symbols in object files.
             "-z defs",
-            # Link with libdl.
-            "-ldl",
             # Link statically with the C++ stdlib (usually LLVM/libc++ despite these names).
             "-static-libstdc++",
             "-static-libgcc",

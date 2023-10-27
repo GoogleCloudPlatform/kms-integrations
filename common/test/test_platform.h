@@ -20,6 +20,7 @@
 #include <string>
 
 #include "absl/status/status.h"
+#include "absl/status/statusor.h"
 
 namespace cloud_kms {
 
@@ -44,6 +45,10 @@ inline void ClearEnvVariable(const std::string& name) {
 // Set the file mode at the provided path. Note that this always returns
 // Unimplemented on Windows.
 absl::Status SetMode(const char* filename, int mode);
+
+// Dynamically load the provided library, and locate the enclosed symbol.
+absl::StatusOr<void*> LoadLibrarySymbol(const char* library_filename,
+                                        const char* symbol_name);
 
 }  // namespace cloud_kms
 
