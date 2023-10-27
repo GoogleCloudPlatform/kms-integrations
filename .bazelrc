@@ -54,6 +54,9 @@ build:macos --dynamic_mode=off
 build:macos --java_runtime_version=remotejdk_11
 
 # Windows-specific options
+# Statically link in the C++ runtime, which avoids needing to install the
+# C++ redistributable on Windows 10 and up.
+build:windows --features=static_link_msvcrt
 # Prevent glog symbols from being exported with `__declspec(dllexport)`
 build:windows --cxxopt=/DGOOGLE_GLOG_DLL_DECL=
 # Prevent glog from conflicting with windows.h

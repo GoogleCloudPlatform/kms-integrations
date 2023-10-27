@@ -36,8 +36,10 @@ compile the library yourself, and it does not require an installation routine.
 The library is built and tested on Windows Server (semi-annual channel), on the
 amd64 architecture. The library is designed to be compatible with Windows Server
 2012 R2, Windows 8.1 (x64), and all subsequent server and x64 desktop releases.
-The library requires the preinstallation of the Visual C++ 2019 x64
-Redistributable package, which can be downloaded [here][msvc-redistributable].
+
+On Windows versions prior to Windows 10, the library requires the
+preinstallation of the Visual C++ 2022 x64 Redistributable package (14.34 or
+higher), which can be downloaded [here][msvc-redistributable].
 
 ### Downloading and verifying the library
 
