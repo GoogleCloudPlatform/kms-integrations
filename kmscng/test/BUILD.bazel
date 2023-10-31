@@ -58,6 +58,7 @@ cc_test(
 go_test(
     name = "signtool_test",
     srcs = ["signtool_test.go"],
+    flaky = True,  # https://github.com/GoogleCloudPlatform/kms-integrations/issues/19
     tags = [
         "exclusive",  # only one test that does Windows installers at a time
         "manual",  # don't run on dev workstations; included in //:ci_only_tests

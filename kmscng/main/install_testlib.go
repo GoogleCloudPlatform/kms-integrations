@@ -73,7 +73,16 @@ func RunInstaller(ctx context.Context, cmd, msiRunfile string) (detailedLog stri
 	defer os.Remove(log.Name())
 	log.Close() // log gets written by msiexec, not us
 
-	err = exec.CommandContext(ctx, "msiexec.exe", cmd, msiLoc, "/qn", "/l*v", log.Name()).Run()
+	msiexecArgs := []string{cmd, msiLoc, "/qn", "/l*v", log.Name()}
+	if os.Getenv("KOKORO_JOB_NAME") != "" {
+		// In CI envs, reduce test flakiness by disabling rollbacks and not saving copies of deleted files.
+		msiexecArgs = append(msiexecArgs,
+			"MSIFASTINSTALL=3",  // https://learn.microsoft.com/en-us/windows/win32/msi/msifastinstall
+			"DISABLEROLLBACK=1", // https://learn.microsoft.com/en-us/windows/win32/msi/-disablerollback
+		)
+	}
+
+	err = exec.CommandContext(ctx, "msiexec.exe", msiexecArgs...).Run()
 	d, logErr := readUTF16(log.Name())
 	if logErr != nil {
 		return "", fmt.Errorf("cannot read installer log: %v", logErr)
