@@ -7,7 +7,20 @@
 
 ## PKCS #11 Cloud KMS Library
 
-### v1.2
+### PKCS#11 v1.3
+
+The following changes are included in the v1.3 (November 2023) release:
+
+*   Promote HMAC and raw symmetric AES encryption/decryption experimental
+    features to fully supported. This includes dropping the related
+    experimental configuration flags (`experimental_allow_mac_keys` and
+    `experimental_allow_raw_encryption_keys`), please remove them from your
+    config if used.
+*   Add configuration flag to skip fork handlers registration, for applications
+    that don't need the library to work in the child process.
+*   Several internal dependencies were updated.
+
+### PKCS#11 v1.2
 
 The following changes are included in the v1.2 (April 2023) release:
 
@@ -35,7 +48,7 @@ The following changes are included in the v1.2 (April 2023) release:
     [`C_Initialize`](https://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/os/pkcs11-base-v2.40-os.html#_Toc385057894)
 *   Several internal dependencies were updated.
 
-### v1.1
+### PKCS#11 v1.1
 
 The following changes are included in the v1.1 (March 2022) release:
 
@@ -51,13 +64,17 @@ The following changes are included in the v1.1 (March 2022) release:
 *   The library must now be built with Bazel v4.2.1.
 *   Several internal dependencies were updated.
 
-### v1.0
+### PKCS#11 v1.0
 
 Initial release of the library.
 
 ## CNG Provider for Cloud KMS
 
-### v0.9
+### CNG v1.0
+
+Initial GA release of the provider.
+
+### CNG v0.9
 
 Second public preview release of the library.
 The following changes are included in the v0.9 release:
@@ -65,7 +82,7 @@ The following changes are included in the v0.9 release:
 *   Add support for `EC_SIGN_P384_SHA384`.
 *   Add a gRPC patch to support Windows default system roots loading.
 
-### v0.8
+### CNG v0.8
 
 Initial public preview release of the library.
 
