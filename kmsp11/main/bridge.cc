@@ -73,17 +73,6 @@ absl::Status Initialize(CK_VOID_PTR pInitArgs) {
     }
   }
 
-  // Registering fork handlers is a one-time operation.
-  static const absl::Status kForkHandlersRegistered = RegisterForkHandlers();
-  RETURN_IF_ERROR(kForkHandlersRegistered);
-
-  Provider* existing_provider = GetGlobalProvider();
-  if (existing_provider) {
-    return FailedPreconditionError("the library is already initialized",
-                                   CKR_CRYPTOKI_ALREADY_INITIALIZED,
-                                   SOURCE_LOCATION);
-  }
-
   LibraryConfig config;
   if (init_args && init_args->pReserved) {
     // This behavior isn't part of the spec, but there are numerous libraries
@@ -94,6 +83,19 @@ absl::Status Initialize(CK_VOID_PTR pInitArgs) {
         config, LoadConfigFromFile(static_cast<char*>(init_args->pReserved)));
   } else {
     ASSIGN_OR_RETURN(config, LoadConfigFromEnvironment());
+  }
+
+  // Registering fork handlers is a one-time operation.
+  if (!config.skip_fork_handlers()) {
+    static const absl::Status kForkHandlersRegistered = RegisterForkHandlers();
+    RETURN_IF_ERROR(kForkHandlersRegistered);
+  }
+
+  Provider* existing_provider = GetGlobalProvider();
+  if (existing_provider) {
+    return FailedPreconditionError("the library is already initialized",
+                                   CKR_CRYPTOKI_ALREADY_INITIALIZED,
+                                   SOURCE_LOCATION);
   }
 
   CHECK(kCryptoLibraryInitialized);

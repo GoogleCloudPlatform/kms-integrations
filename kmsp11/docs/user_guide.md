@@ -131,6 +131,7 @@ log_directory         | string | No       | None    | A directory where applicat
 log_filename_suffix   | string | No       | None    | A suffix that will be appended to application log file names.
 generate_certs        | bool   | No       | false   | Whether to generate certificates at runtime for asymmetric KMS keys. The certificates are regenerated each time the library is intiailized, and they do not chain to a public root of trust. They are intended to provide compatibility with the [Sun PKCS #11 JCA Provider][java-p11-guide] which requires that all private keys have an associated certificate. Other use is discouraged.
 require_fips_mode     | bool   | No       | false   | Whether to enable an initialization time check that requires that BoringSSL or OpenSSL have been built in FIPS mode, and that FIPS self checks pass.
+skip_fork_handlers    | bool   | No       | false   | Whether to skip fork handlers registration, for applications that don't need the PKCS#11 library to work in the child process.
 
 #### Experimental global configuration options
 

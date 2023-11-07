@@ -17,6 +17,8 @@ syntax = "proto3";
 package cloud_kms.kmsp11;
 
 message LibraryConfig {
+  // Next_value = 16
+
   // Required. The list of tokens to expose in this library.
   repeated TokenConfig tokens = 1;
 
@@ -66,6 +68,10 @@ message LibraryConfig {
   // Optional. Cloud KMS feature flags to emit with all RPC requests. Used for
   // internal testing only.
   string experimental_rpc_feature_flags = 12;
+
+  // Optional. If true, skips fork handlers registration, for applications that
+  // don't need the library to work in the child process. Default is false.
+  bool skip_fork_handlers = 15;
 
   reserved 13, 14;
 }
