@@ -165,9 +165,3 @@ TEST_F(EndToEndTest, TestEcdsaP256SignSuccess) {
 
 }  // namespace
 }  // namespace cloud_kms::kmscng
-
-int main(int argc, char** argv) {
-  testing::InitGoogleTest(&argc, argv);
-  absl::ParseCommandLine(argc, argv);
-  return RUN_ALL_TESTS();
-}

@@ -206,9 +206,3 @@ TEST_F(EndToEndTest, TestEcdsaSignVerify) {
 
 }  // namespace
 }  // namespace cloud_kms::kmsp11
-
-int main(int argc, char** argv) {
-  testing::InitGoogleTest(&argc, argv);
-  absl::ParseCommandLine(argc, argv);
-  return RUN_ALL_TESTS();
-}

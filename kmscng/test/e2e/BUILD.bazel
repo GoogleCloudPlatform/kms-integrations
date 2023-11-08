@@ -1,29 +1,8 @@
-load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
-
-cc_library(
-    name = "e2e_test_lib",
-    testonly = 1,
-    srcs = ["e2e_test.cc"],
-    linkstatic = 1,
-    target_compatible_with = ["@platforms//os:windows"],
-    deps = [
-        "//common:kms_v1",
-        "//common/test:resource_helpers",
-        "//common/test:test_platform",
-        "//kmscng:cng_headers",
-        "//kmscng:provider",
-        "//kmscng/util:registration",
-        "//kmscng/util:string_utils",
-        "@com_github_google_glog//:glog",
-        "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/flags:parse",
-        "@com_google_googletest//:gtest",
-    ],
-    alwayslink = 1,
-)
+load("@rules_cc//cc:defs.bzl", "cc_test")
 
 cc_test(
     name = "e2e_test",
+    srcs = ["e2e_test.cc"],
     args = [
         "--kms_endpoint=staging-cloudkms.sandbox.googleapis.com:443",
         "--user_project=oss-tools-test",
@@ -36,5 +15,18 @@ cc_test(
     # This test is only used by the CNG prober and is not included in CI runs..
     # TODO(b/294085082): make this work in CI too.
     tags = ["manual"],
-    deps = [":e2e_test_lib"],
+    target_compatible_with = ["@platforms//os:windows"],
+    deps = [
+        "//common:kms_v1",
+        "//common/test:resource_helpers",
+        "//common/test:test_platform",
+        "//kmscng:cng_headers",
+        "//kmscng:provider",
+        "//kmscng/util:registration",
+        "//kmscng/util:string_utils",
+        "@com_github_google_glog//:glog",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/flags:parse",
+        "@com_google_googletest//:gtest_main",
+    ],
 )

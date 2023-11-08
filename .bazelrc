@@ -5,6 +5,8 @@ build --enable_platform_specific_config
 # Silence warnings from third party libaries
 # https://github.com/bazelbuild/bazel/commit/08936aecb96f2937c61bdedfebcf1c5a41a0786d
 build --features=external-include-paths
+# Make Gtest use Abseil for CLI parsing (and other stuff)
+build --define=absl=1 --copt=-DGTEST_HAS_ABSL
 
 # C++ Version
 build:freebsd --cxxopt=-std=c++20 --linkopt=-std=c++20

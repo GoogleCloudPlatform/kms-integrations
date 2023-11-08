@@ -1,25 +1,8 @@
-load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
-
-cc_library(
-    name = "e2e_test_lib",
-    testonly = 1,
-    srcs = ["e2e_test.cc"],
-    linkstatic = 1,
-    deps = [
-        "//common:openssl",
-        "//common/test:test_platform",
-        "//kmsp11:cryptoki_headers",
-        "//kmsp11/test:resource_helpers",
-        "@com_github_google_glog//:glog",
-        "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/flags:parse",
-        "@com_google_googletest//:gtest",
-    ],
-    alwayslink = 1,
-)
+load("@rules_cc//cc:defs.bzl", "cc_test")
 
 cc_test(
     name = "e2e_test",
+    srcs = ["e2e_test.cc"],
     args = [
         "--library_path=$(location //kmsp11/main:libkmsp11.so)",
         "--kms_endpoint=staging-cloudkms.sandbox.googleapis.com:443",
@@ -40,7 +23,6 @@ cc_test(
         "//:freebsd": [
             # Disallow undefined symbols in object files.
             "-z defs",
-            # On FreeBSD, libdl is part of libc, so no explicit link needed.
         ],
         "//conditions:default": [],
     }),
@@ -48,5 +30,14 @@ cc_test(
     # This test should always be run when building releases, and is included
     # in the `//:ci_only_tests` target so that it runs in CI builds.
     tags = ["manual"],
-    deps = [":e2e_test_lib"],
+    deps = [
+        "//common:openssl",
+        "//common/test:test_platform",
+        "//kmsp11:cryptoki_headers",
+        "//kmsp11/test:resource_helpers",
+        "@com_github_google_glog//:glog",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/flags:parse",
+        "@com_google_googletest//:gtest_main",
+    ],
 )
