@@ -73,7 +73,7 @@ if exist "%PROJECT_ROOT%\bazel-bin\kmsp11\main\libkmsp11.so" copy ^
     "%RESULTS_DIR%\kmsp11.dll"
 if exist "%PROJECT_ROOT%\bazel-bin\kmsp11\test\e2e\e2e_test.exe" copy ^
     "%PROJECT_ROOT%\bazel-bin\kmsp11\test\e2e\e2e_test.exe" ^
-    "%RESULTS_DIR%\e2e_test.exe"
+    "%RESULTS_DIR%\kmsp11_e2e_test.exe"
 
 if exist "%PROJECT_ROOT%\bazel-bin\kmscng\main\kmscng.dll" copy ^
     "%PROJECT_ROOT%\bazel-bin\kmscng\main\kmscng.dll" ^
@@ -83,7 +83,7 @@ if exist "%PROJECT_ROOT%\bazel-bin\kmscng\main\kmscng.msi" copy ^
     "%RESULTS_DIR%\kmscng.msi"
 if exist "%PROJECT_ROOT%\bazel-bin\kmscng\test\e2e\e2e_test.exe" copy ^
     "%PROJECT_ROOT%\bazel-bin\kmscng\test\e2e\e2e_test.exe" ^
-    "%RESULTS_DIR%\e2e_test.exe"
+    "%RESULTS_DIR%\kmscng_e2e_test.exe"
 
 copy "%PROJECT_ROOT%\LICENSE" "%RESULTS_DIR%\LICENSE"
 

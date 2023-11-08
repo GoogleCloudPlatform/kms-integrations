@@ -63,7 +63,7 @@ _finish() {
   fi
   if [ -e "${PROJECT_ROOT}/bazel-bin/kmsp11/test/e2e/e2e_test" ]; then
     cp "${PROJECT_ROOT}/bazel-bin/kmsp11/test/e2e/e2e_test" \
-      "${RESULTS_DIR}/e2e_test"
+      "${RESULTS_DIR}/libkmsp11_e2e_test"
   fi
 
   cp "${PROJECT_ROOT}/LICENSE" "${RESULTS_DIR}"
