@@ -60,10 +60,12 @@ class EndToEndTest : public testing::Test {
         location_name_(absl::GetFlag(FLAGS_location_name)),
         key_ring_id_(RandomId(absl::GetFlag(FLAGS_key_ring_id_prefix))) {}
 
-  // std::string kms_endpoint() { return kms_endpoint_;  }
   absl::StatusOr<kms_v1::CryptoKeyVersion> CreateTestCryptoKeyVersion();
 
  protected:
+  static void SetUpTestSuite() { ASSERT_OK(RegisterProvider()); }
+  static void TearDownTestSuite() { ASSERT_OK(UnregisterProvider()); }
+
   const std::string kms_endpoint_;
   const std::string user_project_;
   const std::string location_name_;
@@ -95,6 +97,7 @@ EndToEndTest::CreateTestCryptoKeyVersion() {
 
   kms_v1::CryptoKey crypto_key;
   crypto_key.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
+  crypto_key.mutable_version_template()->set_protection_level(kms_v1::HSM);
   crypto_key.mutable_version_template()->set_algorithm(
       kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
   kms_v1::CreateCryptoKeyRequest req_ck;
@@ -137,10 +140,10 @@ TEST_F(EndToEndTest, TestEcdsaP256SignSuccess) {
       NCryptOpenStorageProvider(&provider_handle, kProviderName.data(), 0));
 
   // Set custom property to hit the right KMS endpoint.
-  std::string kms_endpoint = kms_endpoint_.data();
   ASSERT_SUCCESS(NCryptSetProperty(
       provider_handle, kEndpointAddressProperty.data(),
-      reinterpret_cast<uint8_t*>(&kms_endpoint), kms_endpoint_.size(), 0));
+      reinterpret_cast<uint8_t*>(const_cast<char*>(kms_endpoint_.data())),
+      kms_endpoint_.size(), 0));
 
   NCRYPT_KEY_HANDLE key_handle;
   EXPECT_SUCCESS(NCryptOpenKey(provider_handle, &key_handle,

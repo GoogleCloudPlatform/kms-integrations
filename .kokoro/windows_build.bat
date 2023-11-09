@@ -62,6 +62,13 @@ bazelisk %BAZEL_STARTUP_ARGS% test %BAZEL_ARGS% ^
     ... :ci_only_tests :windows_ci_only_tests
 set RV=%ERRORLEVEL%
 
+:: Run e2e test last and make sure the DLL is in system32.
+if exist "%PROJECT_ROOT%\bazel-bin\kmscng\main\kmscng.dll" copy ^
+    "%PROJECT_ROOT%\bazel-bin\kmscng\main\kmscng.dll" ^
+    "C:\Windows\system32\kmscng.dll"
+bazelisk %BAZEL_STARTUP_ARGS% test %BAZEL_ARGS% //kmscng/test/e2e:e2e_test
+set RV_E2E=%ERRORLEVEL%
+
 bazelisk %BAZEL_STARTUP_ARGS% run %BAZEL_ARGS% //kmsp11/tools/buildsigner -- ^
   -signing_key=%BUILD_SIGNING_KEY% ^
   < "%PROJECT_ROOT%\bazel-bin\kmsp11\main\libkmsp11.so" ^
@@ -90,4 +97,6 @@ copy "%PROJECT_ROOT%\LICENSE" "%RESULTS_DIR%\LICENSE"
 python "%PROJECT_ROOT%\.kokoro\copy_test_outputs.py" ^
     "%PROJECT_ROOT%\bazel-testlogs" "%RESULTS_DIR%\testlogs"
 
-if not %RV% == 0 exit %RV% else exit %SIGN_RV%
+if %RV% NEQ 0 exit %RV% ^
+    else if %RV_E2E% NEQ 0 exit %RV_E2E% ^
+    else exit %SIGN_RV%
