@@ -37,8 +37,6 @@ You can learn more about the PKCS #11 library in the
 
 ## Cloud KMS CNG Provider
 
-NOTE: the CNG provider is currently in public preview.
-
 The CNG provider exposes cryptographic and key management capabilities
 from Google Cloud KMS using the
 [CNG](https://learn.microsoft.com/en-us/windows/win32/seccng/cng-portal) API.
