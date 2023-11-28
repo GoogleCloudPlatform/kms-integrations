@@ -86,7 +86,7 @@ absl::StatusOr<std::unique_ptr<Token>> Token::New(CK_SLOT_ID slot_id,
   ASSIGN_OR_RETURN(
       std::unique_ptr<ObjectLoader> loader,
       ObjectLoader::New(token_config.key_ring(),
-                        token_config.experimental_certs(), generate_certs));
+                        token_config.certs(), generate_certs));
   ASSIGN_OR_RETURN(ObjectStoreState state, loader->BuildState(*kms_client));
   ASSIGN_OR_RETURN(std::unique_ptr<ObjectStore> store, ObjectStore::New(state));
 

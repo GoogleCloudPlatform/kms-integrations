@@ -18,6 +18,8 @@ The following changes are included in the v1.3 (November 2023) release:
     config if used.
 *   Add configuration flag to skip fork handlers registration, for applications
     that don't need the library to work in the child process.
+*   Add configuration item to provide X.509 certificates that will be exposed
+    by the library when matched with a KMS key.
 *   Several internal dependencies were updated.
 
 ### PKCS#11 v1.2

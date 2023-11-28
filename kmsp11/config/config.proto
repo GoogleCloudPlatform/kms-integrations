@@ -41,7 +41,7 @@ message LibraryConfig {
 
   // Optional. True means that X.509 certificates will be generated at runtime
   // for asymmetric KMS keys that are exposed in the library if no matching
-  // certificate is found in a token's `experimental_certs`. Certificates are
+  // certificate is found in a token's `certs`. Certificates are
   // not stable between runs of this library. This functionality is intended for
   // compatibility with the SunPKCS11 JCA provider; other use is discouraged.
   bool generate_certs = 5;
@@ -87,5 +87,5 @@ message TokenConfig {
 
   // Optional. PEM-formatted X.509 certificates that should be exposed by this
   // token if a matching KMS key is found.
-  repeated string experimental_certs = 3;
+  repeated string certs = 3;
 }
