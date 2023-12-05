@@ -141,6 +141,7 @@ experimental_create_multiple_versions  | bool | No       | false   | Enables an 
 
 ### Per token configuration
 
+Item Name | Type            | Required | Default | Description
 --------- | --------------- | -------- | ------- | -----------
 key_ring  | string          | Yes      | None    | The full name of the KMS key ring whose keys will be made accessible.
 label     | string          | No       | Empty   | The label to use for this token's `CK_TOKEN_INFO` structure. Setting a value here may help an application disambiguate tokens at runtime.
