@@ -497,6 +497,7 @@ absl::StatusOr<CK_OBJECT_HANDLE> Session::GenerateKey(
 
   switch (mechanism.mechanism) {
     case CKM_GENERIC_SECRET_KEY_GEN:
+    case CKM_AES_KEY_GEN:
       break;
     default:
       return InvalidMechanismError(mechanism.mechanism, "GenerateKey",
