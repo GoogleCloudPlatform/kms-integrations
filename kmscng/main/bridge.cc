@@ -36,7 +36,7 @@ namespace cloud_kms::kmscng {
 namespace {
 
 absl::Status ValidateFlags(uint32_t flags) {
-  if (flags != 0 && flags != NCRYPT_SILENT_FLAG) {
+  if (flags != 0 && flags != NCRYPT_SILENT_FLAG && flags != BCRYPT_PAD_PKCS1) {
     return NewInvalidArgumentError(
         absl::StrFormat("unsupported flag specified: %u", flags), NTE_BAD_FLAGS,
         SOURCE_LOCATION);
@@ -240,7 +240,8 @@ absl::Status ExportKey(
                                    NTE_INVALID_PARAMETER, SOURCE_LOCATION);
   }
   constexpr std::wstring_view kEccPublicKeyType(BCRYPT_ECCPUBLIC_BLOB);
-  if (pszBlobType != kEccPublicKeyType) {
+  constexpr std::wstring_view kRsaPublicKeyType(BCRYPT_RSAPUBLIC_BLOB);
+  if (pszBlobType != kEccPublicKeyType && pszBlobType != kRsaPublicKeyType) {
     return NewInvalidArgumentError(
         absl::StrFormat("blob type not supported: %s",
                         WideToString(pszBlobType)),
@@ -416,11 +417,6 @@ absl::Status SignHash(__in NCRYPT_PROV_HANDLE hProvider,
       << "Signature result size: " << uintptr_t(pcbResult) << "\n"
       << "Flags: " << dwFlags << "\n\n";
   ASSIGN_OR_RETURN(Object * object, ValidateKeyHandle(hProvider, hKey));
-  // We won't need padding info until we support PKCS#1 or PSS algorithms.
-  if (pPaddingInfo != nullptr) {
-    return NewInvalidArgumentError("unsupported pPaddingInfo",
-                                   NTE_INVALID_PARAMETER, SOURCE_LOCATION);
-  }
   if (!pbHashValue) {
     return NewInvalidArgumentError("pbHashValue cannot be null",
                                    NTE_INVALID_PARAMETER, SOURCE_LOCATION);

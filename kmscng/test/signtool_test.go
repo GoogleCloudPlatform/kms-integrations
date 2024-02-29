@@ -166,3 +166,93 @@ func TestSigntoolECDSAP256(t *testing.T) {
 		t.Fatalf("signtool command failed (%v):\n%s", err, string(out))
 	}
 }
+
+func TestSigntoolRSA4096(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	installtestlib.MustInstall(t, ctx)
+	defer installtestlib.MustUninstall(t, ctx)
+
+	srv, err := fakekms.NewServer()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	clientConn, err := grpc.Dial(srv.Addr.String(), grpc.WithInsecure())
+	if err != nil {
+		t.Fatalf("error opening gRPC client connection to fakekms: %v", err)
+	}
+
+	client, err := kms.NewKeyManagementClient(ctx, option.WithGRPCConn(clientConn))
+	if err != nil {
+		t.Fatalf("error creating KMS client: %v", err)
+	}
+	defer client.Close()
+
+	kr, err := client.CreateKeyRing(ctx, &kmspb.CreateKeyRingRequest{
+		Parent:    "projects/foo/locations/global",
+		KeyRingId: uuid.NewString(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ck, err := client.CreateCryptoKey(ctx, &kmspb.CreateCryptoKeyRequest{
+		Parent:      kr.Name,
+		CryptoKeyId: uuid.NewString(),
+		CryptoKey: &kmspb.CryptoKey{
+			Purpose: kmspb.CryptoKey_ASYMMETRIC_SIGN,
+			VersionTemplate: &kmspb.CryptoKeyVersionTemplate{
+				Algorithm:       kmspb.CryptoKeyVersion_RSA_SIGN_PKCS1_4096_SHA256,
+				ProtectionLevel: kmspb.ProtectionLevel_HSM,
+			},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req := &kmspb.GetCryptoKeyVersionRequest{Name: ck.Name + "/cryptoKeyVersions/1"}
+	ckv := &kmspb.CryptoKeyVersion{}
+	for ckv.State != kmspb.CryptoKeyVersion_ENABLED {
+		if ckv, err = client.GetCryptoKeyVersion(ctx, req); err != nil {
+			t.Fatal(err)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	signer, err := gcpkms.NewSigner(ctx, client, ckv.Name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	certFilePath := generateSelfSignedCertTempFile(t, signer, x509.SHA256WithRSA)
+	defer os.Remove(certFilePath)
+
+	// Copying notepad.exe to a temp file so that this test is idempotent.
+	fileToSign, err := os.CreateTemp("", "signfile-*.exe")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(fileToSign.Name())
+	notepadExe, err := os.Open("C:\\Windows\\notepad.exe")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := io.Copy(fileToSign, notepadExe); err != nil {
+		t.Fatal(err)
+	}
+	fileToSign.Close() // signtool will open it
+
+	cmd := exec.CommandContext(ctx, signtoolLocation(), "sign", "/v", "/debug",
+		"/fd", "sha256", "/f", certFilePath, "/csp", "Google Cloud KMS Provider",
+		"/kc", ckv.Name, fileToSign.Name())
+	cmd.Env = []string{
+		"KMS_ENDPOINT_ADDRESS=" + srv.Addr.String(),
+		"KMS_CHANNEL_CREDENTIALS=insecure",
+		"KMS_CNG_VERBOSE=1",
+	}
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("signtool command failed (%v):\n%s", err, string(out))
+	}
+}

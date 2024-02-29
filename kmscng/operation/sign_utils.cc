@@ -34,9 +34,8 @@ using cloud_kms::kmsp11::EcdsaSigLengthP1363;
 using cloud_kms::kmsp11::ParseX509PublicKeyDer;
 using cloud_kms::kmsp11::SslErrorToString;
 
-absl::Status CopySignature(Object* object, std::string_view src,
+absl::Status CopyEcSignature(Object* object, std::string_view src,
                            absl::Span<uint8_t> dest) {
-  RETURN_IF_ERROR(IsValidSigningAlgorithm(object->algorithm()));
   ASSIGN_OR_RETURN(int curve, CurveIdForAlgorithm(object->algorithm()));
   bssl::UniquePtr<EC_GROUP> group(EC_GROUP_new_by_curve_name(curve));
   absl::StatusOr<std::vector<uint8_t>> ec_sig =
@@ -57,6 +56,110 @@ absl::Status CopySignature(Object* object, std::string_view src,
   return absl::OkStatus();
 }
 
+absl::Status CopyRsaSignature(Object* object, std::string_view src,
+                           absl::Span<uint8_t> dest) {
+  if (src.size() != dest.size()) {
+    return NewInternalError(
+        absl::StrFormat("unexpected signature length (got %d, want %d)",
+                        src.size(), dest.size()),
+        SOURCE_LOCATION);
+  }
+  const uint8_t* sig_data = reinterpret_cast<const uint8_t*>(src.data());
+  std::copy(sig_data, sig_data + src.size(), dest.data());
+  return absl::OkStatus();
+}
+
+absl::Status CopySignature(Object* object, std::string_view src,
+                           absl::Span<uint8_t> dest) {
+  switch (object->algorithm()) {
+    case kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256:
+    case kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384:
+      return CopyEcSignature(object, src, dest);
+    case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA256:
+      return CopyRsaSignature(object, src, dest);
+    default:
+      return NewInternalError(
+        absl::StrFormat("unsupported signature algorithm %s)",
+                        object->algorithm()),
+        SOURCE_LOCATION);
+  }
+}
+
+absl::StatusOr<std::vector<uint8_t>> SerializePublicEcKey(Object* object) {
+  ASSIGN_OR_RETURN(int curve, CurveIdForAlgorithm(object->algorithm()));
+  size_t header_size = sizeof(BCRYPT_ECCKEY_BLOB);
+  bssl::UniquePtr<EC_GROUP> group(EC_GROUP_new_by_curve_name(curve));
+  size_t uncompressed_length =
+      2 * BN_num_bytes(EC_GROUP_get0_order(group.get()));  // == 32 for P-256
+
+  std::vector<uint8_t> result(header_size + uncompressed_length);
+  // The uncompressed public key includes a 0x04 prefix byte to indicate that
+  // the key is in uncompressed format, but the BCRYPT_ECCPUBLIC_BLOB struct
+  // should only include the X and Y coordinates, so we write starting from
+  // header_size - 1 (since we override the other struct fields below anyways).
+  uint8_t* pub_minus_one = result.data() + header_size - 1;
+  size_t bytes_written = EC_POINT_point2oct(
+      group.get(), EC_KEY_get0_public_key(object->ec_public_key()),
+      POINT_CONVERSION_UNCOMPRESSED, pub_minus_one, uncompressed_length + 1,
+      nullptr);
+  if (bytes_written != uncompressed_length + 1) {
+    return NewInternalError(
+        absl::StrFormat(
+            "Error serializing public key: %d bytes written, wanted %d. %s",
+            bytes_written, uncompressed_length, SslErrorToString()),
+        SOURCE_LOCATION);
+  }
+  BCRYPT_ECCKEY_BLOB* header =
+      reinterpret_cast<BCRYPT_ECCKEY_BLOB*>(result.data());
+  ASSIGN_OR_RETURN(header->dwMagic, MagicIdForAlgorithm(object->algorithm()));
+  header->cbKey = uncompressed_length / 2;
+  return result;
+}
+
+absl::StatusOr<std::vector<uint8_t>> SerializePublicRsaKey(Object* object) {
+  RSA *rsa = object->rsa_public_key();
+  const BIGNUM *public_exponent = RSA_get0_e(rsa);
+  const BIGNUM *modulus = RSA_get0_n(rsa);
+  unsigned int public_exponent_size = BN_num_bytes(public_exponent);
+  unsigned int modulus_size = BN_num_bytes(modulus);
+
+  // Build the BCRYPT_RSAPUBLIC_BLOB structure, as specified in
+  // https://learn.microsoft.com/en-us/windows/win32/api/bcrypt/ns-bcrypt-bcrypt_rsakey_blob#remarks
+  size_t header_size = sizeof(BCRYPT_RSAKEY_BLOB);
+  size_t payload_size = public_exponent_size + modulus_size;
+  std::vector<uint8_t> result(header_size + payload_size);
+  // Header
+  BCRYPT_RSAKEY_BLOB* header =
+      reinterpret_cast<BCRYPT_RSAKEY_BLOB*>(result.data());
+  ASSIGN_OR_RETURN(header->Magic, MagicIdForAlgorithm(object->algorithm()));
+  header->BitLength = RSA_bits(rsa);
+  header->cbPublicExp = public_exponent_size;
+  header->cbModulus = modulus_size;
+  header->cbPrime1 = 0L; // not used by public keys
+  header->cbPrime2 = 0L; // not used by public keys
+  // Public key data, Big Endian
+  size_t bytes_written;
+  uint8_t* exponent_data = result.data() + header_size;
+  bytes_written = BN_bn2bin(public_exponent, exponent_data);
+  if (bytes_written != public_exponent_size) {
+    return NewInternalError(
+        absl::StrFormat(
+            "Error serializing public key (RSA public exponent): %d bytes written, wanted %d. %s",
+            bytes_written, public_exponent_size, SslErrorToString()),
+        SOURCE_LOCATION);
+  }
+  uint8_t* modulus_data = exponent_data + public_exponent_size;
+  bytes_written = BN_bn2bin(modulus, modulus_data);
+  if (bytes_written != modulus_size) {
+    return NewInternalError(
+        absl::StrFormat(
+            "Error serializing public key (RSA modulus): %d bytes written, wanted %d. %s",
+            bytes_written, modulus_size, SslErrorToString()),
+        SOURCE_LOCATION);
+  }
+  return result;
+}
+
 }  // namespace
 
 absl::Status IsValidSigningAlgorithm(
@@ -64,6 +167,7 @@ absl::Status IsValidSigningAlgorithm(
   switch (algorithm) {
     case kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256:
     case kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384:
+    case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA256:
       return absl::OkStatus();
     default:
       return NewInternalError(
@@ -77,6 +181,7 @@ absl::StatusOr<const EVP_MD*> DigestForAlgorithm(
     kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm) {
   switch (algorithm) {
     case kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256:
+    case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA256:
       return EVP_sha256();
     case kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384:
       return EVP_sha384();
@@ -109,6 +214,8 @@ absl::StatusOr<uint32_t> MagicIdForAlgorithm(
       return BCRYPT_ECDSA_PUBLIC_P256_MAGIC;
     case kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384:
       return BCRYPT_ECDSA_PUBLIC_P384_MAGIC;
+    case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA256:
+      return BCRYPT_RSAPUBLIC_MAGIC;
     default:
       return NewInternalError(
           absl::StrFormat("cannot get magic ID for algorithm: %d", algorithm),
@@ -150,43 +257,30 @@ absl::Status ValidateKeyPreconditions(Object* object) {
 }
 
 absl::StatusOr<std::vector<uint8_t>> SerializePublicKey(Object* object) {
-  ASSIGN_OR_RETURN(int curve, CurveIdForAlgorithm(object->algorithm()));
-  size_t header_size = sizeof(BCRYPT_ECCKEY_BLOB);
-  bssl::UniquePtr<EC_GROUP> group(EC_GROUP_new_by_curve_name(curve));
-  size_t uncompressed_length =
-      2 * BN_num_bytes(EC_GROUP_get0_order(group.get()));  // == 32 for P-256
-
-  std::vector<uint8_t> result(header_size + uncompressed_length);
-  // The uncompressed public key includes a 0x04 prefix byte to indicate that
-  // the key is in uncompressed format, but the BCRYPT_ECCPUBLIC_BLOB struct
-  // should only include the X and Y coordinates, so we write starting from
-  // header_size - 1 (since we override the other struct fields below anyways).
-  uint8_t* pub_minus_one = result.data() + header_size - 1;
-  size_t bytes_written = EC_POINT_point2oct(
-      group.get(), EC_KEY_get0_public_key(object->ec_public_key()),
-      POINT_CONVERSION_UNCOMPRESSED, pub_minus_one, uncompressed_length + 1,
-      nullptr);
-  if (bytes_written != uncompressed_length + 1) {
-    return NewInternalError(
-        absl::StrFormat(
-            "Error serializing public key: %d bytes written, wanted %d. %s",
-            bytes_written, uncompressed_length, SslErrorToString()),
-        SOURCE_LOCATION);
-  }
-  BCRYPT_ECCKEY_BLOB* header =
-      reinterpret_cast<BCRYPT_ECCKEY_BLOB*>(result.data());
-  ASSIGN_OR_RETURN(header->dwMagic, MagicIdForAlgorithm(object->algorithm()));
-  header->cbKey = uncompressed_length / 2;
-  return result;
-}
-
-absl::StatusOr<size_t> SignatureLength(Object* object) {
-  ASSIGN_OR_RETURN(int curve, CurveIdForAlgorithm(object->algorithm()));
-  bssl::UniquePtr<EC_GROUP> group(EC_GROUP_new_by_curve_name(curve));
   switch (object->algorithm()) {
     case kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256:
     case kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384:
+      return SerializePublicEcKey(object);
+    case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA256:
+      return SerializePublicRsaKey(object);
+    default:
+      return NewInternalError(
+          absl::StrFormat("invalid asymmetric signing algorithm: %d",
+                          object->algorithm()),
+          SOURCE_LOCATION);
+  }
+}
+
+absl::StatusOr<size_t> SignatureLength(Object* object) {
+  switch (object->algorithm()) {
+    case kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256:
+    case kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384: {
+      ASSIGN_OR_RETURN(int curve, CurveIdForAlgorithm(object->algorithm()));
+      bssl::UniquePtr<EC_GROUP> group(EC_GROUP_new_by_curve_name(curve));
       return EcdsaSigLengthP1363(group.get());
+    }
+    case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA256:
+      return 4096/8;  // RSA signature has the same size as the key bit size (in bytes here)
     default:
       return NewInternalError(
           absl::StrFormat("cannot get signature length for algorithm: %d",

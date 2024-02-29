@@ -383,6 +383,29 @@ TEST(BridgeTest, OpenKeyEc384Success) {
   EXPECT_OK(FreeKey(provider_handle, key_handle));
 }
 
+TEST(BridgeTest, OpenKeyRsa4096Success) {
+  ASSERT_OK_AND_ASSIGN(auto fake_server, fakekms::Server::New());
+  auto client = fake_server->NewClient();
+
+  kms_v1::CryptoKeyVersion ckv =
+      NewCryptoKeyVersion(client.get(), kms_v1::CryptoKey::ASYMMETRIC_SIGN,
+                          kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA256,
+                          kms_v1::ProtectionLevel::HSM);
+
+  Provider provider;
+  SetFakeKmsProviderProperties(&provider, fake_server->listen_addr());
+
+  NCRYPT_PROV_HANDLE provider_handle =
+      reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
+  NCRYPT_KEY_HANDLE key_handle;
+  EXPECT_OK(OpenKey(provider_handle, &key_handle,
+                    StringToWide(ckv.name()).data(), AT_SIGNATURE, 0));
+  EXPECT_NE(key_handle, 0);
+
+  // Clean up memory.
+  EXPECT_OK(FreeKey(provider_handle, key_handle));
+}
+
 TEST(BridgeTest, OpenKeyInvalidHandle) {
   EXPECT_THAT(OpenKey(0, nullptr, L"some_key_name", 0, 0),
               StatusSsIs(NTE_INVALID_HANDLE));
@@ -600,6 +623,43 @@ TEST(BridgeTest, ExportKeySuccess) {
       reinterpret_cast<BCRYPT_ECCKEY_BLOB*>(output.data());
   EXPECT_EQ(header->dwMagic, BCRYPT_ECDSA_PUBLIC_P256_MAGIC);
   EXPECT_EQ(header->cbKey, 32);
+
+  // Clean up memory.
+  EXPECT_OK(FreeKey(provider_handle, key_handle));
+}
+
+TEST(BridgeTest, ExportKeyRsa4096Success) {
+  ASSERT_OK_AND_ASSIGN(auto fake_server, fakekms::Server::New());
+  auto client = fake_server->NewClient();
+  kms_v1::CryptoKeyVersion ckv =
+      NewCryptoKeyVersion(client.get(), kms_v1::CryptoKey::ASYMMETRIC_SIGN,
+                          kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA256,
+                          kms_v1::ProtectionLevel::HSM);
+
+  Provider provider;
+  SetFakeKmsProviderProperties(&provider, fake_server->listen_addr());
+
+  NCRYPT_KEY_HANDLE key_handle;
+  NCRYPT_PROV_HANDLE provider_handle =
+      reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
+  EXPECT_OK(OpenKey(provider_handle, &key_handle,
+                    StringToWide(ckv.name()).data(), AT_SIGNATURE, 0));
+
+  DWORD output_size = 0;
+  // Get output size.
+  EXPECT_OK(ExportKey(provider_handle, key_handle, 0, BCRYPT_RSAPUBLIC_BLOB,
+                      nullptr, nullptr, 0, &output_size, 0));
+
+  std::vector<uint8_t> output(output_size);
+  EXPECT_OK(ExportKey(provider_handle, key_handle, 0, BCRYPT_RSAPUBLIC_BLOB,
+                      nullptr, output.data(), output.size(), &output_size, 0));
+  EXPECT_EQ(output_size, output.size());
+  BCRYPT_RSAKEY_BLOB* header =
+      reinterpret_cast<BCRYPT_RSAKEY_BLOB*>(output.data());
+  EXPECT_EQ(header->Magic, BCRYPT_RSAPUBLIC_MAGIC);
+  EXPECT_EQ(header->BitLength, 4096L);
+  EXPECT_EQ(header->cbPrime1, 0L);
+  EXPECT_EQ(header->cbPrime2, 0L);
 
   // Clean up memory.
   EXPECT_OK(FreeKey(provider_handle, key_handle));
@@ -1201,6 +1261,43 @@ TEST(BridgeTest, SignHashEc384Success) {
       object->ec_public_key(), EVP_sha384(),
       absl::MakeConstSpan(digest.data(), digest.size()),
       absl::MakeConstSpan(signature.data(), signature.size())));
+
+  // Clean up memory.
+  EXPECT_OK(FreeKey(provider_handle, key_handle));
+}
+
+TEST(BridgeTest, SignHashRsa4096Success) {
+  ASSERT_OK_AND_ASSIGN(auto fake_server, fakekms::Server::New());
+  auto client = fake_server->NewClient();
+  kms_v1::CryptoKeyVersion ckv =
+      NewCryptoKeyVersion(client.get(), kms_v1::CryptoKey::ASYMMETRIC_SIGN,
+                          kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA256,
+                          kms_v1::ProtectionLevel::HSM);
+
+  Provider provider;
+  SetFakeKmsProviderProperties(&provider, fake_server->listen_addr());
+
+  NCRYPT_KEY_HANDLE key_handle;
+  NCRYPT_PROV_HANDLE provider_handle =
+      reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
+  EXPECT_OK(OpenKey(provider_handle, &key_handle,
+                    StringToWide(ckv.name()).data(), AT_SIGNATURE, 0));
+
+  std::vector<uint8_t> digest(32, '\1');
+  std::vector<uint8_t> signature(512); // sig is 4096 bits -> 512 bytes
+  DWORD output_size = 0;
+  EXPECT_OK(SignHash(provider_handle, key_handle, nullptr, digest.data(),
+                     digest.size(), signature.data(), signature.size(),
+                     &output_size, 0));
+
+  ASSERT_OK_AND_ASSIGN(Object * object,
+                       ValidateKeyHandle(provider_handle, key_handle));
+
+  EXPECT_EQ(RSA_verify(NID_sha256,
+                         digest.data(), digest.size(),
+                         signature.data(), signature.size(),
+                         object->rsa_public_key()),
+              1);
 
   // Clean up memory.
   EXPECT_OK(FreeKey(provider_handle, key_handle));

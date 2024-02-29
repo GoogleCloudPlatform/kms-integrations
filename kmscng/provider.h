@@ -22,12 +22,16 @@
 
 namespace cloud_kms::kmscng {
 
-static constexpr std::array<NCryptAlgorithmName, 2> kAlgorithmNames{
+static constexpr std::array<NCryptAlgorithmName, 3> kAlgorithmNames{
     {{.pszName = const_cast<wchar_t*>(BCRYPT_ECDSA_P256_ALGORITHM),
       .dwClass = NCRYPT_SIGNATURE_INTERFACE,
       .dwAlgOperations = NCRYPT_SIGNATURE_OPERATION,
       .dwFlags = 0},
      {.pszName = const_cast<wchar_t*>(BCRYPT_ECDSA_P384_ALGORITHM),
+      .dwClass = NCRYPT_SIGNATURE_INTERFACE,
+      .dwAlgOperations = NCRYPT_SIGNATURE_OPERATION,
+      .dwFlags = 0},
+      {.pszName = const_cast<wchar_t*>(BCRYPT_RSA_ALGORITHM),
       .dwClass = NCRYPT_SIGNATURE_INTERFACE,
       .dwAlgOperations = NCRYPT_SIGNATURE_OPERATION,
       .dwFlags = 0}}};

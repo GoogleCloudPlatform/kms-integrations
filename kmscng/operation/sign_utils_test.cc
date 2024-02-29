@@ -29,9 +29,14 @@ namespace {
 
 using ::testing::HasSubstr;
 
-TEST(IsValidSigningAlgorithmTest, Success) {
+TEST(IsValidSigningEcAlgorithmTest, Success) {
   EXPECT_OK(
       IsValidSigningAlgorithm(kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384));
+}
+
+TEST(IsValidSigningRsaAlgorithmTest, Success) {
+  EXPECT_OK(
+      IsValidSigningAlgorithm(kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA256));
 }
 
 TEST(IsValidSigningAlgorithmTest, InvalidAlgoritmhm) {
@@ -41,8 +46,12 @@ TEST(IsValidSigningAlgorithmTest, InvalidAlgoritmhm) {
                        HasSubstr("invalid asymmetric signing algorithm")));
 }
 
-TEST(DigestForAlgorithmTest, Success) {
+TEST(DigestForEcAlgorithmTest, Success) {
   EXPECT_OK(DigestForAlgorithm(kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384));
+}
+
+TEST(DigestForRsaAlgorithmTest, Success) {
+  EXPECT_OK(DigestForAlgorithm(kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA256));
 }
 
 TEST(DigestForAlgorithmTest, InvalidAlgoritmhm) {
@@ -62,8 +71,12 @@ TEST(CurveIdForAlgorithmTest, InvalidAlgoritmhm) {
       StatusIs(absl::StatusCode::kInternal, HasSubstr("cannot get curve")));
 }
 
-TEST(MagicIdForAlgorithmTest, Success) {
+TEST(MagicIdForEcAlgorithmTest, Success) {
   EXPECT_OK(MagicIdForAlgorithm(kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384));
+}
+
+TEST(MagicIdForRsaAlgorithmTest, Success) {
+  EXPECT_OK(MagicIdForAlgorithm(kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA256));
 }
 
 TEST(MagicIdForAlgorithmTest, InvalidAlgoritmhm) {
@@ -81,18 +94,31 @@ class SignUtilsTest : public testing::Test {
     kms_v1::KeyRing kr;
     kr = CreateKeyRingOrDie(client.get(), kTestLocation, RandomId(), kr);
 
-    kms_v1::CryptoKey ck;
-    ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
-    ck.mutable_version_template()->set_algorithm(
+    kms_v1::CryptoKey ec_ck;
+    ec_ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
+    ec_ck.mutable_version_template()->set_algorithm(
         kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
-    ck.mutable_version_template()->set_protection_level(
+    ec_ck.mutable_version_template()->set_protection_level(
         kms_v1::ProtectionLevel::HSM);
 
-    ck = CreateCryptoKeyOrDie(client.get(), kr.name(), "ck", ck, true);
+    ec_ck = CreateCryptoKeyOrDie(client.get(), kr.name(), "ec_ck", ec_ck, true);
 
-    kms_v1::CryptoKeyVersion ckv;
-    ckv = CreateCryptoKeyVersionOrDie(client.get(), ck.name(), ckv);
-    ckv = WaitForEnablement(client.get(), ckv);
+    kms_v1::CryptoKeyVersion ec_ckv;
+    ec_ckv = CreateCryptoKeyVersionOrDie(client.get(), ec_ck.name(), ec_ckv);
+    ec_ckv = WaitForEnablement(client.get(), ec_ckv);
+
+    kms_v1::CryptoKey rsa_ck;
+    rsa_ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
+    rsa_ck.mutable_version_template()->set_algorithm(
+        kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA256);
+    rsa_ck.mutable_version_template()->set_protection_level(
+        kms_v1::ProtectionLevel::HSM);
+
+    rsa_ck = CreateCryptoKeyOrDie(client.get(), kr.name(), "rsa_ck", rsa_ck, true);
+
+    kms_v1::CryptoKeyVersion rsa_ckv;
+    rsa_ckv = CreateCryptoKeyVersionOrDie(client.get(), rsa_ck.name(), rsa_ckv);
+    rsa_ckv = WaitForEnablement(client.get(), rsa_ckv);
 
     Provider provider;
     // Set custom properties to hit fake KMS.
@@ -101,44 +127,61 @@ class SignUtilsTest : public testing::Test {
     EXPECT_OK(provider.SetProperty(kChannelCredentialsProperty, "insecure"));
 
     ASSERT_OK_AND_ASSIGN(
-        object_, Object::New(reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider),
-                             ckv.name()));
+        ec_object_, Object::New(reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider),
+                             ec_ckv.name()));
+    ASSERT_OK_AND_ASSIGN(
+        rsa_object_, Object::New(reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider),
+                             rsa_ckv.name()));
   }
 
   std::unique_ptr<fakekms::Server> fake_server_;
-  Object* object_;
+  Object* ec_object_;
+  Object* rsa_object_;
 };
 
-TEST_F(SignUtilsTest, ValidateKeyPreconditionsSuccess) {
-  EXPECT_OK(ValidateKeyPreconditions(object_));
+TEST_F(SignUtilsTest, ValidateEcKeyPreconditionsSuccess) {
+  EXPECT_OK(ValidateKeyPreconditions(ec_object_));
 }
 
-TEST_F(SignUtilsTest, SerializePublicKeySuccess) {
+TEST_F(SignUtilsTest, ValidateRsaKeyPreconditionsSuccess) {
+  EXPECT_OK(ValidateKeyPreconditions(rsa_object_));
+}
+
+TEST_F(SignUtilsTest, SerializePublicEcKeySuccess) {
   ASSERT_OK_AND_ASSIGN(std::vector<uint8_t> output,
-                       SerializePublicKey(object_));
+                       SerializePublicKey(ec_object_));
   BCRYPT_ECCKEY_BLOB* header =
       reinterpret_cast<BCRYPT_ECCKEY_BLOB*>(output.data());
   EXPECT_EQ(header->dwMagic, BCRYPT_ECDSA_PUBLIC_P256_MAGIC);
   EXPECT_EQ(header->cbKey, 32);
 }
 
+TEST_F(SignUtilsTest, SerializePublicRsaKeySuccess) {
+  ASSERT_OK_AND_ASSIGN(std::vector<uint8_t> output,
+                       SerializePublicKey(rsa_object_));
+  BCRYPT_RSAKEY_BLOB* header =
+      reinterpret_cast<BCRYPT_RSAKEY_BLOB*>(output.data());
+  EXPECT_EQ(header->Magic, BCRYPT_RSAPUBLIC_MAGIC);
+  EXPECT_EQ(header->BitLength, 4096);
+}
+
 TEST_F(SignUtilsTest, ExpectedSignatureLengthSuccess) {
   // Expected EC_SIGN_P256_SHA256 signature length == 64.
-  EXPECT_THAT(SignatureLength(object_), IsOkAndHolds(64));
+  EXPECT_THAT(SignatureLength(ec_object_), IsOkAndHolds(64));
 }
 
 TEST_F(SignUtilsTest, SignDigestSuccess) {
   std::vector<uint8_t> digest(32, '\1');
   std::vector<uint8_t> signature(64, '\0');
   EXPECT_OK(
-      SignDigest(object_, absl::MakeSpan(digest), absl::MakeSpan(signature)));
+      SignDigest(ec_object_, absl::MakeSpan(digest), absl::MakeSpan(signature)));
 }
 
 TEST_F(SignUtilsTest, SignDigestInvalidDigestSize) {
   std::vector<uint8_t> digest(33, '\1');
   std::vector<uint8_t> signature(64, '\0');
   EXPECT_THAT(
-      SignDigest(object_, absl::MakeSpan(digest), absl::MakeSpan(signature)),
+      SignDigest(ec_object_, absl::MakeSpan(digest), absl::MakeSpan(signature)),
       StatusIs(absl::StatusCode::kInvalidArgument,
                HasSubstr("digest has incorrect size")));
 }
@@ -147,7 +190,7 @@ TEST_F(SignUtilsTest, SignDigestInvalidSignatureSize) {
   std::vector<uint8_t> digest(32, '\1');
   std::vector<uint8_t> signature(65, '\0');
   EXPECT_THAT(
-      SignDigest(object_, absl::MakeSpan(digest), absl::MakeSpan(signature)),
+      SignDigest(ec_object_, absl::MakeSpan(digest), absl::MakeSpan(signature)),
       StatusIs(absl::StatusCode::kInternal,
                HasSubstr("signature buffer has incorrect size")));
 }

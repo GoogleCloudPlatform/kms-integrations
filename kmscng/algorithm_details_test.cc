@@ -34,6 +34,18 @@ TEST(GetAlgorithmDetailsTest, AlgorithmEc) {
   EXPECT_EQ(details.key_usage, NCRYPT_ALLOW_SIGNING_FLAG);
 }
 
+TEST(GetAlgorithmDetailsTest, AlgorithmRsa) {
+  ASSERT_OK_AND_ASSIGN(
+      AlgorithmDetails details,
+      GetDetails(kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA256));
+
+  EXPECT_EQ(details.algorithm, kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA256);
+  EXPECT_EQ(details.purpose, kms_v1::CryptoKey::ASYMMETRIC_SIGN);
+  EXPECT_THAT(details.algorithm_group, NCRYPT_RSA_ALGORITHM_GROUP);
+  EXPECT_EQ(details.algorithm_property, BCRYPT_RSA_ALGORITHM);
+  EXPECT_EQ(details.key_usage, NCRYPT_ALLOW_SIGNING_FLAG);
+}
+
 TEST(GetAlgorithmDetailsTest, AlgorithmNotFound) {
   absl::StatusOr<AlgorithmDetails> details =
       GetDetails(kms_v1::CryptoKeyVersion::EXTERNAL_SYMMETRIC_ENCRYPTION);
