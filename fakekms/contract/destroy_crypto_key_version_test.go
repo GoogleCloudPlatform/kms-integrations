@@ -46,7 +46,7 @@ func TestDestroyEnabledCryptoKeyVersion(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expectedDestroyTime := time.Now().Add(24 * time.Hour).Truncate(time.Microsecond)
+	expectedDestroyTime := time.Now().Add(30 * 24 * time.Hour).Truncate(time.Microsecond)
 
 	ckv.State = kmspb.CryptoKeyVersion_DESTROY_SCHEDULED
 	ckv.DestroyTime = timestamppb.New(expectedDestroyTime)
@@ -85,7 +85,7 @@ func TestDestroyDisabledCryptoKeyVersion(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expectedDestroyTime := time.Now().Add(24 * time.Hour).Truncate(time.Microsecond)
+	expectedDestroyTime := time.Now().Add(30 * 24 * time.Hour).Truncate(time.Microsecond)
 
 	ckv.State = kmspb.CryptoKeyVersion_DESTROY_SCHEDULED
 	ckv.DestroyTime = timestamppb.New(expectedDestroyTime)
