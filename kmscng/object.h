@@ -37,6 +37,7 @@ class Object {
   EC_KEY* ec_public_key() const {
     return EVP_PKEY_get0_EC_KEY(public_key_.get());
   }
+  RSA* rsa_public_key() const { return EVP_PKEY_get0_RSA(public_key_.get()); }
 
  private:
   Object(std::string kms_key_name, std::unique_ptr<KmsClient> client,

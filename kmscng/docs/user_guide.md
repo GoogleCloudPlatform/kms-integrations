@@ -8,6 +8,7 @@
 4.  [Functions](#functions)
 5.  [Cryptographic operations](#cryptographic-operations)
     1.  [ECDSA signing](#ecdsa-signing)
+    2.  [RSA signing](#rsa-signing)
 6.  [Limitations](#limitations)
 7.  [FAQs](#faqs)
 
@@ -146,6 +147,18 @@ CNG Function                 | [`NCryptSignHash`][NCryptSignHash]
 CNG Algorithm ID             | `BCRYPT_ECDSA_P256_ALGORITHM`, `BCRYPT_ECDSA_P384_ALGORITHM`
 Cloud KMS Algorithm          | [`EC_SIGN_P256_SHA256`][kms-ec-algorithms], [`EC_SIGN_P384_SHA384`][kms-ec-algorithms]
 
+### RSA Signing
+
+The provider may be used for RSA signing. The expected input for a signing
+operation is a message digest of the appropriate length for the Cloud KMS
+algorithm.
+
+Compatibility                | Compatible With
+---------------------------- | ---------------
+CNG Function                 | [`NCryptSignHash`][NCryptSignHash]
+CNG Algorithm ID             | `BCRYPT_RSA_ALGORITHM`
+Cloud KMS Algorithm          | [`RSA_SIGN_PKCS1_4096_SHA256`][kms-rsa-algorithms]
+
 ## Limitations
 
 ### Key purpose and protection level
@@ -155,8 +168,8 @@ these characteristics:
 
 *   The purpose for the CryptoKey is `ASYMMETRIC_SIGN`.
 *   The protection level for the CryptoKeyVersion is `HSM`.
-*   The algorithm for the CryptoKeyVersion is `EC_SIGN_P256_SHA256`, or
-    `EC_SIGN_P384_SHA384`.
+*   The algorithm for the CryptoKeyVersion is `EC_SIGN_P256_SHA256`,
+    `EC_SIGN_P384_SHA384` or `RSA_SIGN_PKCS1_4096_SHA256`.
 
 The CNG provider returns an error when trying to load keys that don't conform to
 these requirements.
@@ -203,6 +216,7 @@ and sets the environment variable to point to that location.
 [gcp-authn-prod]: https://cloud.google.com/docs/authentication/production
 [gcp-service-terms]: https://cloud.google.com/terms/service-terms#1
 [kms-ec-algorithms]: https://cloud.google.com/kms/docs/algorithms#elliptic_curve_signing_algorithms
+[kms-rsa-algorithms]: https://cloud.google.com/kms/docs/algorithms#rsa_signing_algorithms
 [kms-permissions-and-roles]: https://cloud.google.com/kms/docs/reference/permissions-and-roles
 [kms-rsa-sign-algorithms]: https://cloud.google.com/kms/docs/algorithms#rsa_signing_algorithms
 [msvc-redistributable]: https://aka.ms/vs/17/release/vc_redist.x64.exe
