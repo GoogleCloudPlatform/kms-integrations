@@ -74,9 +74,21 @@ _upload_artifacts() {
   fi
 
   cp "${PROJECT_ROOT}/LICENSE" "${RESULTS_DIR}"
+  cp "${PROJECT_ROOT}/kmsp11/kmsp11.h" "${RESULTS_DIR}"
 
   python3 "${PROJECT_ROOT}/.kokoro/copy_test_outputs.py" \
     "${PROJECT_ROOT}/bazel-testlogs" "${RESULTS_DIR}/testlogs"
+
+  export P11_VERSION=$(grep kLibraryVersion "${PROJECT_ROOT}/kmsp11/version.h" |\
+      sed -e 's/.*{\(.*\), \(.*\)}.*/\1.\2/')
+  export RELEASE_NAME="libkmsp11-${P11_VERSION}-linux-amd64"
+  if [ "${BAZEL_EXTRA_ARGS}" == "--config fips" ]; then
+    export RELEASE_NAME="${RELEASE_NAME}-fips"
+  fi
+  cd ${RESULTS_DIR}
+  mkdir ${RELEASE_NAME}
+  cp LICENSE kmsp11.h libkmsp11.so libkmsp11.so.sig ${RELEASE_NAME}/
+  tar -zcvf ${RELEASE_NAME}.tar.gz ${RELEASE_NAME}/
 }
 trap _upload_artifacts EXIT
 

@@ -207,7 +207,7 @@ func (f *fakeKMS) DestroyCryptoKeyVersion(ctx context.Context, req *kmspb.Destro
 	}
 
 	// destroy_time is represented internally in KMS as int64 micros
-	destroyTime := time.Now().Add(24 * time.Hour).Truncate(time.Microsecond)
+	destroyTime := time.Now().Add(30 * 24 * time.Hour).Truncate(time.Microsecond)
 
 	ckv.pb.DestroyTime = timestamppb.New(destroyTime)
 	ckv.pb.State = kmspb.CryptoKeyVersion_DESTROY_SCHEDULED

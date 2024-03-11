@@ -78,7 +78,7 @@ func (f *fakeKMS) CreateCryptoKey(ctx context.Context, req *kmspb.CreateCryptoKe
 			ProtectionLevel: protLevel,
 			Algorithm:       alg,
 		},
-		DestroyScheduledDuration: &durationpb.Duration{Seconds: 86400},
+		DestroyScheduledDuration: &durationpb.Duration{Seconds: 2592000},
 	}
 
 	ck := &cryptoKey{

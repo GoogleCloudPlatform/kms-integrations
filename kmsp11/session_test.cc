@@ -1394,6 +1394,238 @@ TEST_F(GenerateKeyPairTest,
                        HasSubstr("key attribute mismatch")));
 }
 
+class GenerateKeyTest : public SessionTest {};
+
+TEST_F(GenerateKeyTest, ReadOnlySessionReturnsFailedPrecondition) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadOnly, client_.get());
+
+  EXPECT_THAT(s.GenerateKey(CK_MECHANISM{}, {}),
+              AllOf(StatusIs(absl::StatusCode::kFailedPrecondition),
+                    StatusRvIs(CKR_SESSION_READ_ONLY)));
+}
+
+TEST_F(GenerateKeyTest, InvalidMechanismReturnsInvalidArgument) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadWrite, client_.get());
+  CK_MECHANISM mech = {CKM_RSA_PKCS, nullptr, 0};
+
+  EXPECT_THAT(s.GenerateKey(mech, {}),
+              AllOf(StatusIs(absl::StatusCode::kInvalidArgument),
+                    StatusRvIs(CKR_MECHANISM_INVALID)));
+}
+
+TEST_F(GenerateKeyTest, MechanismParameterReturnsInvalidArgument) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadWrite, client_.get());
+
+  char dummy[128];
+  CK_MECHANISM mech = {CKM_AES_KEY_GEN, dummy, sizeof(dummy)};
+
+  EXPECT_THAT(s.GenerateKey(mech, {}),
+              AllOf(StatusIs(absl::StatusCode::kInvalidArgument),
+                    StatusRvIs(CKR_MECHANISM_PARAM_INVALID)));
+}
+
+TEST_F(GenerateKeyTest, KeyTemplateMissingAlgorithmReturnsInvalidArgument) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadWrite, client_.get());
+
+  CK_MECHANISM mech = {CKM_AES_KEY_GEN, nullptr, 0};
+  std::string label = "my-great-key";
+  CK_ATTRIBUTE key_template[] = {
+      {CKA_LABEL, label.data(), label.size()},
+  };
+
+  EXPECT_THAT(s.GenerateKey(mech, key_template),
+              AllOf(StatusIs(absl::StatusCode::kInvalidArgument,
+                             HasSubstr("CKA_KMS_ALGORITHM must be specified")),
+                    StatusRvIs(CKR_TEMPLATE_INCOMPLETE)));
+}
+
+TEST_F(GenerateKeyTest,
+       KeyTemplateInvalidAlgorithmValueSizeReturnsInvalidArgument) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadWrite, client_.get());
+
+  CK_MECHANISM mech = {CKM_AES_KEY_GEN, nullptr, 0};
+  std::string label = "my-great-key";
+  CK_BYTE bad_algorithm_datatype = 1;
+  CK_ATTRIBUTE key_template[] = {
+      {CKA_KMS_ALGORITHM, &bad_algorithm_datatype,
+       sizeof(bad_algorithm_datatype)},
+      {CKA_LABEL, label.data(), label.size()},
+  };
+
+  EXPECT_THAT(
+      s.GenerateKey(mech, key_template),
+      AllOf(StatusIs(absl::StatusCode::kInvalidArgument,
+                     HasSubstr("CKA_KMS_ALGORITHM value should be CK_ULONG")),
+            StatusRvIs(CKR_ATTRIBUTE_VALUE_INVALID)));
+}
+
+TEST_F(GenerateKeyTest, KeyTemplateMissingLabelReturnsInvalidArgument) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadWrite, client_.get());
+
+  CK_MECHANISM mech = {CKM_AES_KEY_GEN, nullptr, 0};
+  CK_ULONG kms_algorithm = KMS_ALGORITHM_AES_256_GCM;
+  CK_ATTRIBUTE key_template[] = {
+      {CKA_KMS_ALGORITHM, &kms_algorithm, sizeof(kms_algorithm)},
+  };
+
+  EXPECT_THAT(s.GenerateKey(mech, key_template),
+              AllOf(StatusIs(absl::StatusCode::kInvalidArgument,
+                             HasSubstr("CKA_LABEL must be specified")),
+                    StatusRvIs(CKR_TEMPLATE_INCOMPLETE)));
+}
+
+TEST_F(GenerateKeyTest, KeyTemplateBadLabelValueReturnsInvalidArgument) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadWrite, client_.get());
+
+  CK_MECHANISM mech = {CKM_AES_KEY_GEN, nullptr, 0};
+  std::string label = "$invalid-label!";
+  CK_ULONG kms_algorithm = KMS_ALGORITHM_AES_256_GCM;
+  CK_ATTRIBUTE key_template[] = {
+      {CKA_KMS_ALGORITHM, &kms_algorithm, sizeof(kms_algorithm)},
+      {CKA_LABEL, label.data(), label.size()},
+  };
+
+  EXPECT_THAT(
+      s.GenerateKey(mech, key_template),
+      AllOf(StatusIs(absl::StatusCode::kInvalidArgument,
+                     HasSubstr("LABEL must be a valid Cloud KMS CryptoKey ID")),
+            StatusRvIs(CKR_ATTRIBUTE_VALUE_INVALID)));
+}
+
+TEST_F(GenerateKeyTest, KeyTemplateBadAlgorithmValueReturnsInvalidArgument) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadWrite, client_.get());
+
+  CK_MECHANISM mech = {CKM_AES_KEY_GEN, nullptr, 0};
+  std::string label = "my-great-key";
+  CK_ULONG kms_algorithm = 1337;
+  CK_ATTRIBUTE key_template[] = {
+      {CKA_KMS_ALGORITHM, &kms_algorithm, sizeof(kms_algorithm)},
+      {CKA_LABEL, label.data(), label.size()},
+  };
+
+  EXPECT_THAT(s.GenerateKey(mech, key_template),
+              AllOf(StatusIs(absl::StatusCode::kInvalidArgument,
+                             HasSubstr("algorithm not found")),
+                    StatusRvIs(CKR_ATTRIBUTE_VALUE_INVALID)));
+}
+
+TEST_F(GenerateKeyTest, MismatchedAlgorithmAndMechanismReturnsInvalidArgument) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadWrite, client_.get());
+
+  CK_MECHANISM mech = {CKM_GENERIC_SECRET_KEY_GEN, nullptr, 0};
+  std::string label = "my-great-key";
+  CK_ULONG kms_algorithm = KMS_ALGORITHM_AES_256_GCM;
+  CK_ATTRIBUTE key_template[] = {
+      {CKA_KMS_ALGORITHM, &kms_algorithm, sizeof(kms_algorithm)},
+      {CKA_LABEL, label.data(), label.size()},
+  };
+
+  EXPECT_THAT(
+      s.GenerateKey(mech, key_template),
+      AllOf(StatusIs(absl::StatusCode::kInvalidArgument,
+                     HasSubstr("algorithm mismatches keygen mechanism")),
+            StatusRvIs(CKR_TEMPLATE_INCONSISTENT)));
+}
+
+TEST_F(GenerateKeyTest, DuplicateLabelReturnsAlreadyExistsDefaultConfig) {
+  std::string label = "my-great-key";
+
+  auto kms_client = fake_server_->NewClient();
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::RAW_ENCRYPT_DECRYPT);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion::AES_256_GCM);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM);
+  ck =
+      CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), label, ck, true);
+
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadWrite, client_.get());
+
+  CK_MECHANISM mech = {CKM_AES_KEY_GEN, nullptr, 0};
+  CK_ULONG kms_algorithm = KMS_ALGORITHM_AES_256_GCM;
+  CK_ATTRIBUTE key_template[] = {
+      {CKA_KMS_ALGORITHM, &kms_algorithm, sizeof(kms_algorithm)},
+      {CKA_LABEL, label.data(), label.size()},
+  };
+
+  EXPECT_THAT(s.GenerateKey(mech, key_template),
+              AllOf(StatusIs(absl::StatusCode::kAlreadyExists),
+                    StatusRvIs(CKR_ARGUMENTS_BAD)));
+}
+
+TEST_F(GenerateKeyTest,
+       Version2CanBeCreatedWithExperimentalCreateMultipleVersions) {
+  std::string label = "my-great-key";
+
+  auto kms_client = fake_server_->NewClient();
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::RAW_ENCRYPT_DECRYPT);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion::AES_256_GCM);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM);
+  ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), label, ck,
+                            false);
+
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadWrite, client_.get());
+
+  CK_MECHANISM mech = {CKM_AES_KEY_GEN, nullptr, 0};
+  CK_ULONG kms_algorithm = KMS_ALGORITHM_AES_256_GCM;
+  CK_ATTRIBUTE key_template[] = {
+      {CKA_KMS_ALGORITHM, &kms_algorithm, sizeof(kms_algorithm)},
+      {CKA_LABEL, label.data(), label.size()},
+  };
+
+  EXPECT_OK(s.GenerateKey(mech, key_template, true));
+  EXPECT_THAT(token->FindObjects([&](const Object& o) {
+    return absl::StartsWith(o.kms_key_name(), ck.name());
+  }),
+              SizeIs(2)  // Two secret keys.
+  );
+}
+
+TEST_F(GenerateKeyTest, GeneratedKeyIsImmediatelyAvailable) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadWrite, client_.get());
+
+  CK_MECHANISM mech = {CKM_GENERIC_SECRET_KEY_GEN, nullptr, 0};
+  std::string label = "my-great-key";
+  CK_ULONG kms_algorithm = KMS_ALGORITHM_HMAC_SHA256;
+  CK_ATTRIBUTE key_template[] = {
+      {CKA_KMS_ALGORITHM, &kms_algorithm, sizeof(kms_algorithm)},
+      {CKA_LABEL, label.data(), label.size()},
+  };
+
+  ASSERT_OK_AND_ASSIGN(CK_OBJECT_HANDLE handle,
+                       s.GenerateKey(mech, key_template, true));
+
+  EXPECT_OK(token->GetObject(handle));
+}
+
 class DestroyObjectTest : public SessionTest {};
 
 TEST_F(DestroyObjectTest, ReadOnlySessionReturnsFailedPrecondition) {

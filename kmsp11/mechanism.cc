@@ -195,7 +195,7 @@ AllMechanisms() {
           {
               CKM_AES_KEY_GEN,
               {
-                  32,                        // ulMinKeySize
+                  16,                        // ulMinKeySize
                   32,                        // ulMaxKeySize
                   CKF_DECRYPT | CKF_ENCRYPT  // flags
               },
