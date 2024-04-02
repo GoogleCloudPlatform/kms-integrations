@@ -7,6 +7,12 @@
 
 ## PKCS #11 Cloud KMS Library
 
+### PKCS#11 v1.4
+
+The following changes are included in the v1.4 (April 2024) release:
+
+*   Add support for symmetric AES key creation.
+
 ### PKCS#11 v1.3
 
 The following changes are included in the v1.3 (November 2023) release:
