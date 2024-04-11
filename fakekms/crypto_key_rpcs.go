@@ -25,7 +25,6 @@ import (
 
 // CreateCryptoKey fakes a Cloud KMS API function.
 func (f *fakeKMS) CreateCryptoKey(ctx context.Context, req *kmspb.CreateCryptoKeyRequest) (*kmspb.CryptoKey, error) {
-	// TODO(bdhess): revisit handling of output-only fields (http://g/api-discuss/vUowIGKPFT4)
 	if err := allowlist("parent", "crypto_key_id", "skip_initial_version_creation",
 		"crypto_key.purpose", "crypto_key.version_template.algorithm",
 		"crypto_key.version_template.protection_level").check(req); err != nil {

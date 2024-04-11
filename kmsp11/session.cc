@@ -155,10 +155,10 @@ absl::StatusOr<CryptoKeyAndVersion> CreateKeyAndVersion(
       client.CreateCryptoKeyAndWaitForFirstVersion(req);
   if (absl::IsAlreadyExists(key_and_version.status())) {
     if (experimental_create_multiple_versions) {
-      // TODO(bdhess): If we choose to make this experiment a full-fledged
-      // feature, we should gracefully handle the case where the CryptoKey is
-      // created by another (thread|process|caller) while this request is in
-      // flight.
+      // If we choose to make this experiment a full-fledged feature, we should
+      // gracefully handle the case where the CryptoKey is created by another
+      // (thread|process|caller) while this request is in flight.
+      //
       // That recursive logic will be sort of ugly and complicated; just
       // returning CKR_DEVICE_ERROR/AlreadyExists here seems fine for the
       // purposes of the experiment.

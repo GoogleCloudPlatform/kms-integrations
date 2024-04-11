@@ -24,7 +24,6 @@ import (
 
 // CreateKeyRing fakes a Cloud KMS API function.
 func (f *fakeKMS) CreateKeyRing(ctx context.Context, req *kmspb.CreateKeyRingRequest) (*kmspb.KeyRing, error) {
-	// TODO(bdhess): revisit handling of output-only fields (http://g/api-discuss/vUowIGKPFT4)
 	if err := allowlist("parent", "key_ring_id").check(req); err != nil {
 		return nil, err
 	}

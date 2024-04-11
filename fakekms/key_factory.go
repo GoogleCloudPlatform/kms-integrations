@@ -31,8 +31,6 @@ var testdata embed.FS
 
 type keyFactory interface {
 	Generate() interface{}
-	// TODO(bdhess): implement for import
-	// Parse([]byte) (interface{}, error)
 }
 
 type ecKeyFactory struct {

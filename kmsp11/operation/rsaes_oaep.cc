@@ -95,8 +95,9 @@ absl::StatusOr<absl::Span<const uint8_t>> RsaOaepDecrypter::Decrypt(
   if (!resp.ok()) {
     switch (resp.status().code()) {
       case absl::StatusCode::kInvalidArgument:
-        // TODO(bdhess): Consider if there is a clearer way for KMS to specify
-        // that it's the ciphertext that's invalid (and not something else).
+        // A nice enhancement would be to consider if there is a clearer way for
+        // KMS to specify that it's the ciphertext that's invalid (and not
+        // something else).
         return NewInvalidArgumentError(resp.status().message(),
                                        CKR_ENCRYPTED_DATA_INVALID,
                                        SOURCE_LOCATION);

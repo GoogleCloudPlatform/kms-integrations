@@ -155,9 +155,9 @@ absl::StatusOr<bssl::UniquePtr<X509>> CertAuthority::GenerateCert(
   RETURN_IF_ERROR(
       AddExtension(&ctx, cert.get(), NID_subject_key_identifier, "hash"));
 
-  // TODO(bdhess): Consider adding authority key identifier. It's somewhat
-  // complicated by the fact that we don't actually generate a self-signed CA
-  // cert for the signing key (maybe we should?).
+  // We don't add authority key identifier, which is a fairly standard
+  // extension. It's complicated here because we don't actually generate a
+  // self-signed CA cert for the signing key (maybe we should?).
 
   ASSIGN_OR_RETURN(AlgorithmDetails algorithm, GetDetails(ckv.algorithm()));
   switch (algorithm.purpose) {

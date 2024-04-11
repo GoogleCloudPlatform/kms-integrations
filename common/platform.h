@@ -26,7 +26,6 @@ namespace cloud_kms {
 
 // Ensure that the file at the provided path is not group- or world- writeable.
 // Note that always returns OK on Windows. (See b/148377771).
-// TODO(bdhess): move to C++17 filesystem module for Beta
 absl::Status EnsureWriteProtected(const char* filename);
 
 // Returns "x86" or "amd64" indicating the target platform for this binary.
