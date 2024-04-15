@@ -82,7 +82,7 @@ func TestGetPublicKeyEC(t *testing.T) {
 		ProtectionLevel: kmspb.ProtectionLevel_SOFTWARE,
 	}
 
-	opts := append(ProtoDiffOpts(), ignorePEMAndPEMCRC)
+	opts := append(ProtoDiffOpts(), ignorePEMAndPEMCRC, protocmp.IgnoreUnknown())
 	if diff := cmp.Diff(want, got, opts...); diff != "" {
 		t.Errorf("proto mismatch (-want +got): %s", diff)
 	}
@@ -126,7 +126,7 @@ func TestGetPublicKeyRSA(t *testing.T) {
 		ProtectionLevel: kmspb.ProtectionLevel_HSM,
 	}
 
-	opts := append(ProtoDiffOpts(), ignorePEMAndPEMCRC)
+	opts := append(ProtoDiffOpts(), ignorePEMAndPEMCRC, protocmp.IgnoreUnknown())
 	if diff := cmp.Diff(want, got, opts...); diff != "" {
 		t.Errorf("proto mismatch (-want +got): %s", diff)
 	}
