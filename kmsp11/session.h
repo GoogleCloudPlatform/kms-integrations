@@ -78,12 +78,14 @@ class Session {
       const CK_MECHANISM& mechanism,
       absl::Span<const CK_ATTRIBUTE> public_key_attrs,
       absl::Span<const CK_ATTRIBUTE> private_key_attrs,
-      bool experimental_create_multiple_versions = false);
+      bool experimental_create_multiple_versions = false,
+      bool allow_software_keys = false);
 
   absl::StatusOr<CK_OBJECT_HANDLE> GenerateKey(
       const CK_MECHANISM& mechanism,
       absl::Span<const CK_ATTRIBUTE> secret_key_attrs,
-      bool experimental_create_multiple_versions = false);
+      bool experimental_create_multiple_versions = false,
+      bool allow_software_keys = false);
 
   absl::Status DestroyObject(std::shared_ptr<Object> object);
 

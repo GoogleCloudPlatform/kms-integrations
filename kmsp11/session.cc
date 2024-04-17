@@ -16,6 +16,8 @@
 
 #include <regex>
 
+#include "absl/container/flat_hash_set.h"
+#include "absl/strings/str_join.h"
 #include "common/kms_client.h"
 #include "common/status_macros.h"
 #include "kmsp11/kmsp11.h"
@@ -94,11 +96,16 @@ absl::StatusOr<KeyGenerationParams> ExtractKeyGenerationParams(
 
 absl::StatusOr<kms_v1::CryptoKeyVersion> CreateNewVersionOfExistingKey(
     const KmsClient& client, const kms_v1::CryptoKey& crypto_key,
-    const KeyGenerationParams& gen_params) {
+    const KeyGenerationParams& gen_params, bool allow_software_keys) {
+  absl::flat_hash_set<kms_v1::ProtectionLevel> allowed_protection_levels = {
+      kms_v1::HSM};
+  if (allow_software_keys) allowed_protection_levels.insert(kms_v1::SOFTWARE);
+
   if (crypto_key.purpose() != gen_params.algorithm.purpose ||
       crypto_key.version_template().algorithm() !=
           gen_params.algorithm.algorithm ||
-      crypto_key.version_template().protection_level() != kms_v1::HSM) {
+      !allowed_protection_levels.contains(
+          crypto_key.version_template().protection_level())) {
     return NewError(
         absl::StatusCode::kInvalidArgument,
         absl::StrFormat("key attribute mismatch when attempting to create "
@@ -106,12 +113,12 @@ absl::StatusOr<kms_v1::CryptoKeyVersion> CreateNewVersionOfExistingKey(
                         "current purpose=%d, requested purpose=%d; "
                         "current algorithm=%d, requested algorithm=%d; "
                         "current protection_level=%d, "
-                        "requested protection_level=%d",
+                        "allowed protection_level=%s",
                         crypto_key.purpose(), gen_params.algorithm.purpose,
                         crypto_key.version_template().algorithm(),
                         gen_params.algorithm.algorithm,
                         crypto_key.version_template().protection_level(),
-                        kms_v1::HSM),
+                        absl::StrJoin(allowed_protection_levels, " or ")),
         CKR_ARGUMENTS_BAD, SOURCE_LOCATION);
   }
   kms_v1::CreateCryptoKeyVersionRequest req;
@@ -122,16 +129,16 @@ absl::StatusOr<kms_v1::CryptoKeyVersion> CreateNewVersionOfExistingKey(
 absl::StatusOr<CryptoKeyAndVersion> CreateKeyAndVersion(
     const KmsClient& client, std::string_view key_ring_name,
     const KeyGenerationParams& gen_params,
-    bool experimental_create_multiple_versions) {
+    bool experimental_create_multiple_versions, bool allow_software_keys) {
   if (experimental_create_multiple_versions) {
     kms_v1::GetCryptoKeyRequest req;
     req.set_name(absl::StrCat(key_ring_name, "/cryptoKeys/", gen_params.label));
     absl::StatusOr<kms_v1::CryptoKey> ck = client.GetCryptoKey(req);
     switch (ck.status().code()) {
       case absl::StatusCode::kOk: {
-        ASSIGN_OR_RETURN(
-            kms_v1::CryptoKeyVersion ckv,
-            CreateNewVersionOfExistingKey(client, *ck, gen_params));
+        ASSIGN_OR_RETURN(kms_v1::CryptoKeyVersion ckv,
+                         CreateNewVersionOfExistingKey(client, *ck, gen_params,
+                                                       allow_software_keys));
         return CryptoKeyAndVersion{*ck, ckv};
       }
       case absl::StatusCode::kNotFound:
@@ -148,6 +155,7 @@ absl::StatusOr<CryptoKeyAndVersion> CreateKeyAndVersion(
   req.mutable_crypto_key()->set_purpose(gen_params.algorithm.purpose);
   req.mutable_crypto_key()->mutable_version_template()->set_algorithm(
       gen_params.algorithm.algorithm);
+  // Always create HSM keys independent of whether SOFTWARE keys are allowed.
   req.mutable_crypto_key()->mutable_version_template()->set_protection_level(
       kms_v1::HSM);
 
@@ -433,7 +441,7 @@ absl::StatusOr<AsymmetricHandleSet> Session::GenerateKeyPair(
     const CK_MECHANISM& mechanism,
     absl::Span<const CK_ATTRIBUTE> public_key_attrs,
     absl::Span<const CK_ATTRIBUTE> private_key_attrs,
-    bool experimental_create_multiple_versions) {
+    bool experimental_create_multiple_versions, bool allow_software_keys) {
   if (session_type_ == SessionType::kReadOnly) {
     return SessionReadOnlyError(SOURCE_LOCATION);
   }
@@ -468,7 +476,8 @@ absl::StatusOr<AsymmetricHandleSet> Session::GenerateKeyPair(
   ASSIGN_OR_RETURN(
       CryptoKeyAndVersion key_and_version,
       CreateKeyAndVersion(*kms_client_, token_->key_ring_name(), prv_gen_params,
-                          experimental_create_multiple_versions));
+                          experimental_create_multiple_versions,
+                          allow_software_keys));
   RETURN_IF_ERROR(token_->RefreshState(*kms_client_));
 
   AsymmetricHandleSet result;
@@ -490,7 +499,7 @@ absl::StatusOr<AsymmetricHandleSet> Session::GenerateKeyPair(
 absl::StatusOr<CK_OBJECT_HANDLE> Session::GenerateKey(
     const CK_MECHANISM& mechanism,
     absl::Span<const CK_ATTRIBUTE> secret_key_attrs,
-    bool experimental_create_multiple_versions) {
+    bool experimental_create_multiple_versions, bool allow_software_keys) {
   if (session_type_ == SessionType::kReadOnly) {
     return SessionReadOnlyError(SOURCE_LOCATION);
   }
@@ -519,7 +528,8 @@ absl::StatusOr<CK_OBJECT_HANDLE> Session::GenerateKey(
   ASSIGN_OR_RETURN(
       CryptoKeyAndVersion key_and_version,
       CreateKeyAndVersion(*kms_client_, token_->key_ring_name(), gen_params,
-                          experimental_create_multiple_versions));
+                          experimental_create_multiple_versions,
+                          allow_software_keys));
   RETURN_IF_ERROR(token_->RefreshState(*kms_client_));
 
   return token_->FindSingleObject([&](const Object& o) -> bool {

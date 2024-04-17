@@ -32,7 +32,8 @@ class ObjectLoader {
  public:
   static absl::StatusOr<std::unique_ptr<ObjectLoader>> New(
       std::string_view key_ring_name,
-      absl::Span<const std::string* const> pem_user_certs, bool generate_certs);
+      absl::Span<const std::string* const> pem_user_certs, bool generate_certs,
+      bool allow_software_keys = false);
 
   inline std::string_view key_ring_name() const { return key_ring_name_; }
 
@@ -41,15 +42,21 @@ class ObjectLoader {
  private:
   ObjectLoader(std::string_view key_ring_name,
                absl::flat_hash_map<std::string, std::string> user_certs,
-               std::unique_ptr<CertAuthority> cert_authority)
+               std::unique_ptr<CertAuthority> cert_authority,
+               bool allow_software_keys)
       : key_ring_name_(key_ring_name),
         user_certs_(user_certs),
-        cert_authority_(std::move(cert_authority)) {}
+        cert_authority_(std::move(cert_authority)),
+        allow_software_keys_(allow_software_keys) {}
+
+  bool IsLoadable(const kms_v1::CryptoKey& key);
+  bool IsLoadable(const kms_v1::CryptoKeyVersion& ckv);
 
   std::string key_ring_name_;
   // map from SPKI DER to user-provided certificate DER
   absl::flat_hash_map<std::string, std::string> user_certs_;
   std::unique_ptr<CertAuthority> cert_authority_;
+  bool allow_software_keys_;
 
   class Cache {
    public:

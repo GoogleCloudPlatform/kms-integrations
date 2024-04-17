@@ -1312,7 +1312,7 @@ TEST_F(GenerateKeyPairTest, DuplicateLabelReturnsAlreadyExistsDefaultConfig) {
 }
 
 TEST_F(GenerateKeyPairTest,
-       Version2CanBeCreatedWithExperimentalCreateMultipleVersions) {
+       Version2CanBeCreatedWithExperimentalCreateMultipleVersionsForHSMKeys) {
   std::string label = "my-great-key";
 
   auto kms_client = fake_server_->NewClient();
@@ -1337,6 +1337,43 @@ TEST_F(GenerateKeyPairTest,
   };
 
   EXPECT_OK(s.GenerateKeyPair(mech, {}, prv_template, true));
+  EXPECT_THAT(token->FindObjects([&](const Object& o) {
+    return absl::StartsWith(o.kms_key_name(), ck.name());
+  }),
+              SizeIs(4)  // Two keypairs, each with public and private.
+  );
+}
+
+
+TEST_F(
+    GenerateKeyPairTest,
+    Version2CanBeCreatedWithExperimentalCreateMultipleVersionsForSoftwareKeys) {
+  std::string label = "my-great-key";
+
+  auto kms_client = fake_server_->NewClient();
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::SOFTWARE);
+  ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), label, ck,
+                            false);
+
+  ASSERT_OK_AND_ASSIGN(
+      std::unique_ptr<Token> token,
+      Token::New(0, config_, client_.get(), /*generate_certs = */ false,
+                 /*allow_software_keys = */ true));
+  Session s(token.get(), SessionType::kReadWrite, client_.get());
+
+  CK_MECHANISM mech = {CKM_EC_KEY_PAIR_GEN, nullptr, 0};
+  CK_ULONG kms_algorithm = KMS_ALGORITHM_EC_SIGN_P384_SHA384;
+  CK_ATTRIBUTE prv_template[] = {
+      {CKA_KMS_ALGORITHM, &kms_algorithm, sizeof(kms_algorithm)},
+      {CKA_LABEL, label.data(), label.size()},
+  };
+
+  EXPECT_OK(s.GenerateKeyPair(mech, {}, prv_template, true, true));
   EXPECT_THAT(token->FindObjects([&](const Object& o) {
     return absl::StartsWith(o.kms_key_name(), ck.name());
   }),

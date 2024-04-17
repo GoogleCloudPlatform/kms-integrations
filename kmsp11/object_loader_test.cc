@@ -291,7 +291,8 @@ TEST_F(BuildStateTest, KeyWithPurposeEncryptDecryptIsOmitted) {
               IsOkAndHolds(EqualsProto(ObjectStoreState())));
 }
 
-TEST_F(BuildStateTest, KeyWithSoftwareProtectionLevelIsOmitted) {
+TEST_F(BuildStateTest,
+       KeyWithSoftwareProtectionLevelIsOmittedWhenSoftwareKeysAreDisallowed) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectLoader> loader_,
                        ObjectLoader::New(key_ring_.name(), {}, true));
   kms_v1::CryptoKeyVersion ckv =
@@ -301,6 +302,20 @@ TEST_F(BuildStateTest, KeyWithSoftwareProtectionLevelIsOmitted) {
 
   EXPECT_THAT(loader_->BuildState(*client_),
               IsOkAndHolds(EqualsProto(ObjectStoreState())));
+}
+
+TEST_F(BuildStateTest,
+       KeyWithSoftwareProtectionLevelIncludedWhenSoftwareKeysAreAllowed) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectLoader> loader_,
+                       ObjectLoader::New(key_ring_.name(), {}, true,
+                                         /*allow_software_keys=*/true));
+  kms_v1::CryptoKeyVersion ckv =
+      AddKeyAndInitialVersion("ck", kms_v1::CryptoKey::ASYMMETRIC_SIGN,
+                              kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256,
+                              kms_v1::ProtectionLevel::SOFTWARE);
+
+  ASSERT_OK_AND_ASSIGN(ObjectStoreState state, loader_->BuildState(*client_));
+  EXPECT_EQ(state.keys_size(), 1);
 }
 
 TEST_F(BuildStateTest, VersionWithStateDisabledIsOmitted) {

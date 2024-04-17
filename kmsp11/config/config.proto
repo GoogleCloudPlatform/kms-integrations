@@ -73,6 +73,9 @@ message LibraryConfig {
   // don't need the library to work in the child process. Default is false.
   bool skip_fork_handlers = 15;
 
+  // Optional. If true, software keys are allowed. By default only HSM keys are
+  // allowed.
+  bool allow_software_keys = 16;
   reserved 13, 14;
 }
 

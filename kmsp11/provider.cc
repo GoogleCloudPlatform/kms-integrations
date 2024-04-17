@@ -75,7 +75,7 @@ absl::StatusOr<std::unique_ptr<Provider>> Provider::New(LibraryConfig config) {
   for (const TokenConfig& tokenConfig : config.tokens()) {
     ASSIGN_OR_RETURN(std::unique_ptr<Token> token,
                      Token::New(tokens.size(), tokenConfig, client.get(),
-                                config.generate_certs()));
+                                config.generate_certs(), config.allow_software_keys()));
     tokens.emplace_back(std::move(token));
   }
 

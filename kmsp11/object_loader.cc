@@ -27,7 +27,9 @@ std::string EnumNameOrValue(std::string name, int value) {
   return name.empty() ? std::to_string(value) : name;
 }
 
-bool IsLoadable(const kms_v1::CryptoKey& key) {
+}  // namespace
+
+bool ObjectLoader::IsLoadable(const kms_v1::CryptoKey& key) {
   switch (key.purpose()) {
     case kms_v1::CryptoKey::ASYMMETRIC_DECRYPT:
     case kms_v1::CryptoKey::ASYMMETRIC_SIGN:
@@ -44,7 +46,9 @@ bool IsLoadable(const kms_v1::CryptoKey& key) {
   }
 
   if (key.version_template().protection_level() !=
-      kms_v1::ProtectionLevel::HSM) {
+          kms_v1::ProtectionLevel::HSM &&
+      key.version_template().protection_level() !=
+          kms_v1::ProtectionLevel::SOFTWARE) {
     LOG(INFO) << "INFO: key " << key.name()
               << " is not loadable due to unsupported protection level "
               << EnumNameOrValue(kms_v1::ProtectionLevel_Name(
@@ -53,10 +57,20 @@ bool IsLoadable(const kms_v1::CryptoKey& key) {
     return false;
   }
 
+  if (key.version_template().protection_level() ==
+          kms_v1::ProtectionLevel::SOFTWARE &&
+      !allow_software_keys_) {
+    LOG(INFO) << "INFO: key " << key.name()
+              << " is not loadable because it has protection level = "
+                 "SOFTWARE but only keys with protection level = HSM are "
+                 "allowed. If you want to be able to use software keys, use "
+                 "allow_software_keys in the configuration.";
+    return false;
+  }
   return true;
 }
 
-bool IsLoadable(const kms_v1::CryptoKeyVersion& ckv) {
+bool ObjectLoader::IsLoadable(const kms_v1::CryptoKeyVersion& ckv) {
   if (ckv.state() != kms_v1::CryptoKeyVersion::ENABLED) {
     LOG(INFO) << "INFO: version " << ckv.name()
               << " is not loadable due to unsupported state "
@@ -79,8 +93,6 @@ bool IsLoadable(const kms_v1::CryptoKeyVersion& ckv) {
 
   return true;
 }
-
-}  // namespace
 
 Key* ObjectLoader::Cache::Get(std::string_view ckv_name) {
   auto it = keys_.find(ckv_name);
@@ -160,7 +172,8 @@ CK_OBJECT_HANDLE ObjectLoader::Cache::NewHandle() {
 
 absl::StatusOr<std::unique_ptr<ObjectLoader>> ObjectLoader::New(
     std::string_view key_ring_name,
-    absl::Span<const std::string* const> pem_user_certs, bool generate_certs) {
+    absl::Span<const std::string* const> pem_user_certs, bool generate_certs,
+    bool allow_software_keys) {
   absl::flat_hash_map<std::string, std::string> user_certs;
   for (const std::string* const pem_cert : pem_user_certs) {
     ASSIGN_OR_RETURN(bssl::UniquePtr<X509> parsed_cert,
@@ -183,8 +196,9 @@ absl::StatusOr<std::unique_ptr<ObjectLoader>> ObjectLoader::New(
     ASSIGN_OR_RETURN(cert_authority, CertAuthority::New());
   }
 
-  return absl::WrapUnique(
-      new ObjectLoader(key_ring_name, user_certs, std::move(cert_authority)));
+  return absl::WrapUnique(new ObjectLoader(key_ring_name, user_certs,
+                                           std::move(cert_authority),
+                                           allow_software_keys));
 }
 
 absl::StatusOr<ObjectStoreState> ObjectLoader::BuildState(

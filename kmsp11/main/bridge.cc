@@ -888,7 +888,8 @@ absl::Status GenerateKey(CK_SESSION_HANDLE hSession,
       CK_OBJECT_HANDLE handle,
       session->GenerateKey(
           *pMechanism, attributes,
-          provider->library_config().experimental_create_multiple_versions()));
+          provider->library_config().experimental_create_multiple_versions(),
+          provider->library_config().allow_software_keys()));
 
   *phKey = handle;
   return absl::OkStatus();
@@ -936,7 +937,8 @@ absl::Status GenerateKeyPair(
       AsymmetricHandleSet handles,
       session->GenerateKeyPair(
           *pMechanism, pub_attributes, prv_attributes,
-          provider->library_config().experimental_create_multiple_versions()));
+          provider->library_config().experimental_create_multiple_versions(),
+          provider->library_config().allow_software_keys()));
 
   *phPublicKey = handles.public_key_handle;
   *phPrivateKey = handles.private_key_handle;

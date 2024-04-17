@@ -78,7 +78,8 @@ absl::StatusOr<CK_TOKEN_INFO> NewTokenInfo(std::string_view token_label) {
 absl::StatusOr<std::unique_ptr<Token>> Token::New(CK_SLOT_ID slot_id,
                                                   TokenConfig token_config,
                                                   KmsClient* kms_client,
-                                                  bool generate_certs) {
+                                                  bool generate_certs,
+                                                  bool allow_software_keys) {
   ASSIGN_OR_RETURN(CK_SLOT_INFO slot_info, NewSlotInfo());
   ASSIGN_OR_RETURN(CK_TOKEN_INFO token_info,
                    NewTokenInfo(token_config.label()));
@@ -86,7 +87,7 @@ absl::StatusOr<std::unique_ptr<Token>> Token::New(CK_SLOT_ID slot_id,
   ASSIGN_OR_RETURN(
       std::unique_ptr<ObjectLoader> loader,
       ObjectLoader::New(token_config.key_ring(),
-                        token_config.certs(), generate_certs));
+                        token_config.certs(), generate_certs, allow_software_keys));
   ASSIGN_OR_RETURN(ObjectStoreState state, loader->BuildState(*kms_client));
   ASSIGN_OR_RETURN(std::unique_ptr<ObjectStore> store, ObjectStore::New(state));
 

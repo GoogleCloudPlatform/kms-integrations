@@ -37,7 +37,7 @@ class Token {
  public:
   static absl::StatusOr<std::unique_ptr<Token>> New(
       CK_SLOT_ID slot_id, TokenConfig token_config, KmsClient* kms_client,
-      bool generate_certs = false);
+      bool generate_certs = false, bool allow_software_keys = false);
 
   CK_SLOT_ID slot_id() const { return slot_id_; }
   const CK_SLOT_INFO& slot_info() const { return slot_info_; }
