@@ -132,6 +132,8 @@ log_filename_suffix   | string | No       | None    | A suffix that will be appe
 generate_certs        | bool   | No       | false   | Whether to generate certificates at runtime for asymmetric KMS keys. The certificates are regenerated each time the library is intiailized, and they do not chain to a public root of trust. They are intended to provide compatibility with the [Sun PKCS #11 JCA Provider][java-p11-guide] which requires that all private keys have an associated certificate. Other use is discouraged.
 require_fips_mode     | bool   | No       | false   | Whether to enable an initialization time check that requires that BoringSSL or OpenSSL have been built in FIPS mode, and that FIPS self checks pass.
 skip_fork_handlers    | bool   | No       | false   | Whether to skip fork handlers registration, for applications that don't need the PKCS#11 library to work in the child process.
+allow_software_keys   | bool   | No       | false   | Whether the library may be
+used to act on crypto key versions with protection level = `SOFTWARE`.
 
 #### Experimental global configuration options
 
@@ -216,7 +218,7 @@ Function                                         | Status | Notes
 [`C_DecryptDigestUpdate`][C_DecryptDigestUpdate] | ❌      |
 [`C_SignEncryptUpdate`][C_SignEncryptUpdate]     | ❌      |
 [`C_DecryptVerifyUpdate`][C_DecryptVerifyUpdate] | ❌      |
-[`C_GenerateKey`][C_GenerateKey]                 | ✅      | When using this function, the template must specify the attributes `CKA_LABEL` and `CKA_KMS_ALGORITHM`, and must not specify any other attributes. This function creates a Cloud KMS CryptoKey and a first version. This mechanism cannot be used to create additional versions in an existing CryptoKey, unless the `experimental_create_multiple_versions` option is enabled.
+[`C_GenerateKey`][C_GenerateKey]                 | ✅      | When using this function, the template must specify the attributes `CKA_LABEL` and `CKA_KMS_ALGORITHM`, and must not specify any other attributes. This function creates a Cloud KMS CryptoKey with `HSM` protection level and a first version. This mechanism cannot be used to create additional versions in an existing CryptoKey, unless the `experimental_create_multiple_versions` option is enabled.
 [`C_GenerateKeyPair`][C_GenerateKeyPair]         | ✅      | When using this function, a public key template must not be specified. The private key template must specify the attributes `CKA_LABEL` and `CKA_KMS_ALGORITHM`, and must not specify any other attributes. This function creates a Cloud KMS CryptoKey and a first version. This mechanism cannot be used to create additional versions in an existing CryptoKey, unless the `experimental_create_multiple_versions` option is enabled.
 [`C_WrapKey`][C_WrapKey]                         | ❌      |
 [`C_UnwrapKey`][C_UnwrapKey]                     | ❌      |
@@ -400,7 +402,9 @@ these characteristics:
 
 *   The purpose for the CryptoKey is `ASYMMETRIC_SIGN`, `ASYMMETRIC_DECRYPT`,
     `RAW_ENCRYPT_DECRYPT`, or `MAC`.
-*   The protection level for the CryptoKeyVersion is `HSM`.
+*   The protection level for the CryptoKeyVersion is `HSM`. The protection level
+    for the CryptoKeyVersion may also be `SOFTWARE` if the YAML configuration
+    file contains `allow_software_keys: true`.
 *   The CryptoKeyVersion is in state `ENABLED`.
 
 The PKCS #11 library ignores keys that don't conform to these requirements.
