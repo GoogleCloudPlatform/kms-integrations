@@ -7,6 +7,13 @@
 
 ## PKCS #11 Cloud KMS Library
 
+### PKCS#11 v1.5
+
+The following changes are included in the v1.5 (May 2024) release:
+
+*   Add support for software keys. See the user guide to learn more about the
+    new `allow_software_keys` configuration flag.
+
 ### PKCS#11 v1.4
 
 The following changes are included in the v1.4 (April 2024) release:
@@ -18,14 +25,14 @@ The following changes are included in the v1.4 (April 2024) release:
 The following changes are included in the v1.3 (November 2023) release:
 
 *   Promote HMAC and raw symmetric AES encryption/decryption experimental
-    features to fully supported. This includes dropping the related
-    experimental configuration flags (`experimental_allow_mac_keys` and
+    features to fully supported. This includes dropping the related experimental
+    configuration flags (`experimental_allow_mac_keys` and
     `experimental_allow_raw_encryption_keys`), please remove them from your
     config if used.
 *   Add configuration flag to skip fork handlers registration, for applications
     that don't need the library to work in the child process.
-*   Add configuration item to provide X.509 certificates that will be exposed
-    by the library when matched with a KMS key.
+*   Add configuration item to provide X.509 certificates that will be exposed by
+    the library when matched with a KMS key.
 *   Several internal dependencies were updated.
 
 ### PKCS#11 v1.2
@@ -43,12 +50,12 @@ The following changes are included in the v1.2 (April 2023) release:
     mechanisms, such as `CKM_AES_CTR`, and the related functions (eg.
     `C_Encrypt`, `C_Decrypt`, etc). See the [user guide][user-guide] for the
     full list of mechanisms and functions. This feature is currently in private
-    preview and can only be accessed by allowlisted preview customers. If
-    you are interested, please fill out
+    preview and can only be accessed by allowlisted preview customers. If you
+    are interested, please fill out
     [this form](https://forms.gle/z8qpV5wkG9gtVCof8).
 *   Add experimental support for HMAC symmetric signing mechanisms, such as
-    `CKM_SHA256_HMAC`. Some of these algorithms are in public preview but can
-    be accessed without restrictions. See [mechanism.cc][mechanisms] for the full
+    `CKM_SHA256_HMAC`. Some of these algorithms are in public preview but can be
+    accessed without restrictions. See [mechanism.cc][mechanisms] for the full
     list of mechanisms.
 *   Add integrity verification checks for crypto operations performed through
     the library.
@@ -67,8 +74,8 @@ The following changes are included in the v1.1 (March 2022) release:
     has been built in FIPS mode.
 *   The configuration option `experimental_require_fips_mode` is now fully
     supported, and has been renamed to `require_fips_mode`.
-*   For `CK_RSA_PKCS_OAEP_PARAMS.source`, the value `0` is treated as
-    meaning "no label" for compatibility purposes.
+*   For `CK_RSA_PKCS_OAEP_PARAMS.source`, the value `0` is treated as meaning
+    "no label" for compatibility purposes.
 *   The library must now be built with Bazel v4.2.1.
 *   Several internal dependencies were updated.
 
@@ -90,8 +97,8 @@ Initial GA release of the provider.
 
 ### CNG v0.9
 
-Second public preview release of the library.
-The following changes are included in the v0.9 release:
+Second public preview release of the library. The following changes are included
+in the v0.9 release:
 
 *   Add support for `EC_SIGN_P384_SHA384`.
 *   Add a gRPC patch to support Windows default system roots loading.
@@ -99,7 +106,6 @@ The following changes are included in the v0.9 release:
 ### CNG v0.8
 
 Initial public preview release of the library.
-
 
 [mechanisms]: kmsp11/mechanism.cc
 [user-guide]: kmsp11/docs/user_guide.md
