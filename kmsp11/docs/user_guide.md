@@ -432,8 +432,15 @@ Keys can be located with the `CKA_LABEL` attribute, which is the Cloud KMS
 CryptoKey identifier, or with the `CKA_ID` attribute, which is the full Cloud
 KMS CryptoKeyVersion name. As an example, a key might have a `CKA_ID` of
 `projects/some_project/locations/some_location/keyRings/some_keyring/cryptoKeys/some_ck/cryptoKeyVersions/1`
-and a `CKA_LABEL` of `some_ck`.  Note that some tools including `pkcs11-tool`
-hex-encode `CKA_ID` attribute values, so they seem different at first.
+and a `CKA_LABEL` of `some_ck`.  Some tools including `pkcs11-tool` hex-encode
+`CKA_ID` attribute values, so they seem different at first.
+
+Note that the OpenSC libp11 engine used by OpenSSL has a 100-character limit on
+the PKCS#11 `CKA_ID`s that can be passed as input. For our library, this means
+that you won't be able to pass a specific CryptoKeyVersion to OpenSSL if the
+resource name is longer than 100 characters. See
+https://github.com/OpenSC/libp11/issues/531. As a workaround, use short KeyRing
+and CryptoKey names, or use `CKA_LABEL` instead.
 
 For multi-part crypto operations, the library caches input data and parameters
 in memory (up to a max buffer, depending on the specific crypto operation and
