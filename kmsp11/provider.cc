@@ -42,7 +42,8 @@ absl::StatusOr<CK_INFO> NewCkInfo() {
   return info;
 }
 
-std::unique_ptr<KmsClient> NewKmsClient(const LibraryConfig& config) {
+absl::StatusOr<std::unique_ptr<KmsClient>> NewKmsClient(
+    const LibraryConfig& config) {
   KmsClient::Options options;
   options.endpoint_address = config.kms_endpoint().empty()
                                  ? kDefaultKmsEndpoint
@@ -50,6 +51,13 @@ std::unique_ptr<KmsClient> NewKmsClient(const LibraryConfig& config) {
   options.creds = config.use_insecure_grpc_channel_credentials()
                       ? grpc::InsecureChannelCredentials()
                       : grpc::GoogleDefaultCredentials();
+  if (!options.creds) {
+    return NewError(absl::StatusCode::kInvalidArgument,
+                    "Invalid Application Default Credentials. See "
+                    "https://cloud.google.com/docs/authentication/"
+                    "external/about-adc",
+                    CKR_ARGUMENTS_BAD, SOURCE_LOCATION);
+  }
   options.rpc_timeout = config.rpc_timeout_secs() == 0
                             ? kDefaultRpcTimeout
                             : absl::Seconds(config.rpc_timeout_secs());
@@ -68,7 +76,7 @@ std::unique_ptr<KmsClient> NewKmsClient(const LibraryConfig& config) {
 
 absl::StatusOr<std::unique_ptr<Provider>> Provider::New(LibraryConfig config) {
   ASSIGN_OR_RETURN(CK_INFO info, NewCkInfo());
-  std::unique_ptr<KmsClient> client = NewKmsClient(config);
+  ASSIGN_OR_RETURN(std::unique_ptr<KmsClient> client, NewKmsClient(config));
 
   std::vector<std::unique_ptr<Token>> tokens;
   tokens.reserve(config.tokens_size());

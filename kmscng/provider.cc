@@ -71,6 +71,13 @@ absl::StatusOr<std::unique_ptr<KmsClient>> NewKmsClient(
   options.creds = (creds_type == "insecure")
                       ? grpc::InsecureChannelCredentials()
                       : grpc::GoogleDefaultCredentials();
+  if (!options.creds) {
+    return NewError(absl::StatusCode::kInvalidArgument,
+                    "Invalid Application Default Credentials. See "
+                    "https://cloud.google.com/docs/authentication/"
+                    "external/about-adc",
+                    NTE_INVALID_PARAMETER, SOURCE_LOCATION);
+  }
   ASSIGN_OR_RETURN(options.user_project_override,
                    prov->GetProperty(kUserProjectProperty));
   options.rpc_timeout = absl::Seconds(30);
