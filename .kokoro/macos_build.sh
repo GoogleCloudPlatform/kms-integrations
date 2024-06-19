@@ -73,9 +73,8 @@ _finish() {
 }
 trap _finish EXIT
 
-# Use Developer Tools for macOS 12.0.
-# go/kokoro/development/macos_big_sur_config.md#command-line-tools
-sudo xcode-select -s /Applications/Xcode_12.5.1.app
+# Use Developer Tools for macOS 13.0, from Kokoro configuration.
+sudo xcode-select -s /Applications/Xcode_15.1.app
 
 # Ensure Bazel version information is included in the build log
 bazelisk version
