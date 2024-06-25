@@ -92,6 +92,15 @@ extern "C" {
 // AES+CTR (Counter Mode) with a 256 bit key.
 #define KMS_ALGORITHM_AES_256_CTR 45UL
 
+// An attribute that indicates the backing ProtectionLevel in Cloud
+// KMS.
+#define CKA_KMS_PROTECTION_LEVEL (CKA_GOOGLE_DEFINED | 0x02UL)
+
+// Software protection level.
+#define KMS_PROTECTION_LEVEL_SOFTWARE 1UL
+// Hardware protection level.
+#define KMS_PROTECTION_LEVEL_HARDWARE 2UL
+
 // A marker for a PKCS #11 mechanism defined by Google.
 // (Note that 0x80000000UL is CKM_VENDOR_DEFINED).
 #define CKM_GOOGLE_DEFINED (0x80000000UL | 0x1E100UL)

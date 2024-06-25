@@ -34,12 +34,14 @@ absl::Status SessionReadOnlyError(const SourceLocation& source_location) {
 struct KeyGenerationParams {
   std::string label;
   AlgorithmDetails algorithm;
+  std::optional<kms_v1::ProtectionLevel> protection_level;
 };
 
 absl::StatusOr<KeyGenerationParams> ExtractKeyGenerationParams(
-    absl::Span<const CK_ATTRIBUTE> prv_template) {
+    absl::Span<const CK_ATTRIBUTE> prv_template, bool allow_software_keys) {
   std::optional<std::string> label;
   std::optional<kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm> algorithm;
+  std::optional<kms_v1::ProtectionLevel> protection_level;
 
   for (const CK_ATTRIBUTE& attr : prv_template) {
     switch (attr.type) {
@@ -64,6 +66,36 @@ absl::StatusOr<KeyGenerationParams> ExtractKeyGenerationParams(
         }
         algorithm = kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm(
             *static_cast<CK_ULONG*>(attr.pValue));
+        break;
+      case CKA_KMS_PROTECTION_LEVEL:
+        if (attr.ulValueLen != sizeof(CK_ULONG)) {
+          return NewInvalidArgumentError(
+              absl::StrFormat(
+                  "CKA_KMS_PROTECTION_LEVEL value should be CK_ULONG "
+                  "(size=%d, got=%d)",
+                  sizeof(CK_ULONG), attr.ulValueLen),
+              CKR_ATTRIBUTE_VALUE_INVALID, SOURCE_LOCATION);
+        }
+        protection_level =
+            kms_v1::ProtectionLevel(*static_cast<CK_ULONG*>(attr.pValue));
+        if (protection_level != kms_v1::SOFTWARE &&
+            protection_level != kms_v1::HSM) {
+          return NewInvalidArgumentError(
+              absl::StrFormat("CKA_KMS_PROTECTION_LEVEL value should be "
+                              "1(SOFTWARE) or 2(HSM) "
+                              ", got=%d",
+                              attr.ulValueLen),
+              CKR_ATTRIBUTE_VALUE_INVALID, SOURCE_LOCATION);
+        }
+        if (protection_level == kms_v1::SOFTWARE && !allow_software_keys) {
+          return NewInvalidArgumentError(
+              "CKA_KMS_PROTECTION_LEVEL cannot be SOFTWARE because only keys "
+              "with protection level = HSM are "
+              "allowed. If you want to be able to create software keys, use "
+              "allow_software_keys in the "
+              "configuration.",
+              CKR_ATTRIBUTE_VALUE_INVALID, SOURCE_LOCATION);
+        }
         break;
       default:
         return NewInvalidArgumentError(
@@ -91,36 +123,68 @@ absl::StatusOr<KeyGenerationParams> ExtractKeyGenerationParams(
                                    SOURCE_LOCATION);
   }
 
-  return KeyGenerationParams{*label, *algorithm_details};
+  return KeyGenerationParams{*label, *algorithm_details, protection_level};
 }
 
 absl::StatusOr<kms_v1::CryptoKeyVersion> CreateNewVersionOfExistingKey(
     const KmsClient& client, const kms_v1::CryptoKey& crypto_key,
     const KeyGenerationParams& gen_params, bool allow_software_keys) {
+   if (crypto_key.purpose() != gen_params.algorithm.purpose) {
+    return NewError(
+        absl::StatusCode::kInvalidArgument,
+        absl::StrFormat("key attribute mismatch when attempting to create "
+                        "new version of existing key: "
+                        "current purpose=%d, requested purpose=%d",
+                        crypto_key.purpose(), gen_params.algorithm.purpose),
+        CKR_ARGUMENTS_BAD, SOURCE_LOCATION);
+  }
+
+  if (crypto_key.version_template().algorithm() !=
+          gen_params.algorithm.algorithm) {
+    return NewError(
+        absl::StatusCode::kInvalidArgument,
+        absl::StrFormat("key attribute mismatch when attempting to create "
+                        "new version of existing key: "
+                        "current algorithm=%d, requested algorithm=%d",
+                        crypto_key.version_template().algorithm(),
+                        gen_params.algorithm.algorithm),
+        CKR_ARGUMENTS_BAD, SOURCE_LOCATION);
+  }
+
+  // Check that if the protection level is specified in the key generation
+  // params, it matches the protection level of the crypto key.
+  if (gen_params.protection_level.has_value() &&
+      *gen_params.protection_level !=
+          crypto_key.version_template().protection_level()) {
+    return NewError(
+        absl::StatusCode::kInvalidArgument,
+        absl::StrFormat("key attribute mismatch when attempting to create "
+                        "new version of existing key: "
+                        "current protection_level=%d, "
+                        "requested protection_level=%d",
+                        crypto_key.version_template().protection_level(),
+                        *gen_params.protection_level),
+        CKR_ARGUMENTS_BAD, SOURCE_LOCATION);
+  }
+
+  // Check the crypto key's protection level against the allowed protection
+  // levels.
   absl::flat_hash_set<kms_v1::ProtectionLevel> allowed_protection_levels = {
       kms_v1::HSM};
   if (allow_software_keys) allowed_protection_levels.insert(kms_v1::SOFTWARE);
-
-  if (crypto_key.purpose() != gen_params.algorithm.purpose ||
-      crypto_key.version_template().algorithm() !=
-          gen_params.algorithm.algorithm ||
-      !allowed_protection_levels.contains(
+  if (!allowed_protection_levels.contains(
           crypto_key.version_template().protection_level())) {
     return NewError(
         absl::StatusCode::kInvalidArgument,
         absl::StrFormat("key attribute mismatch when attempting to create "
                         "new version of existing key: "
-                        "current purpose=%d, requested purpose=%d; "
-                        "current algorithm=%d, requested algorithm=%d; "
                         "current protection_level=%d, "
                         "allowed protection_level=%s",
-                        crypto_key.purpose(), gen_params.algorithm.purpose,
-                        crypto_key.version_template().algorithm(),
-                        gen_params.algorithm.algorithm,
                         crypto_key.version_template().protection_level(),
                         absl::StrJoin(allowed_protection_levels, " or ")),
         CKR_ARGUMENTS_BAD, SOURCE_LOCATION);
   }
+
   kms_v1::CreateCryptoKeyVersionRequest req;
   req.set_parent(crypto_key.name());
   return client.CreateCryptoKeyVersionAndWait(req);
@@ -155,9 +219,15 @@ absl::StatusOr<CryptoKeyAndVersion> CreateKeyAndVersion(
   req.mutable_crypto_key()->set_purpose(gen_params.algorithm.purpose);
   req.mutable_crypto_key()->mutable_version_template()->set_algorithm(
       gen_params.algorithm.algorithm);
-  // Always create HSM keys independent of whether SOFTWARE keys are allowed.
-  req.mutable_crypto_key()->mutable_version_template()->set_protection_level(
-      kms_v1::HSM);
+  // Unless otherwise specified in the key generation params, we generate keys
+  // with protection level = HSM.
+  if (gen_params.protection_level.has_value()) {
+    req.mutable_crypto_key()->mutable_version_template()->set_protection_level(
+        *gen_params.protection_level);
+  } else {
+    req.mutable_crypto_key()->mutable_version_template()->set_protection_level(
+        kms_v1::HSM);
+  }
 
   absl::StatusOr<CryptoKeyAndVersion> key_and_version =
       client.CreateCryptoKeyAndWaitForFirstVersion(req);
@@ -465,8 +535,9 @@ absl::StatusOr<AsymmetricHandleSet> Session::GenerateKeyPair(
         CKR_TEMPLATE_INCONSISTENT, SOURCE_LOCATION);
   }
 
-  ASSIGN_OR_RETURN(KeyGenerationParams prv_gen_params,
-                   ExtractKeyGenerationParams(private_key_attrs));
+  ASSIGN_OR_RETURN(
+      KeyGenerationParams prv_gen_params,
+      ExtractKeyGenerationParams(private_key_attrs, allow_software_keys));
 
   if (prv_gen_params.algorithm.key_gen_mechanism != mechanism.mechanism) {
     return NewInvalidArgumentError("algorithm mismatches keygen mechanism",
@@ -517,8 +588,9 @@ absl::StatusOr<CK_OBJECT_HANDLE> Session::GenerateKey(
         "key generation mechanisms do not take parameters", SOURCE_LOCATION);
   }
 
-  ASSIGN_OR_RETURN(KeyGenerationParams gen_params,
-                   ExtractKeyGenerationParams(secret_key_attrs));
+  ASSIGN_OR_RETURN(
+      KeyGenerationParams gen_params,
+      ExtractKeyGenerationParams(secret_key_attrs, allow_software_keys));
 
   if (gen_params.algorithm.key_gen_mechanism != mechanism.mechanism) {
     return NewInvalidArgumentError("algorithm mismatches keygen mechanism",
