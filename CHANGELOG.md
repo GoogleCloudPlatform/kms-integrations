@@ -7,6 +7,14 @@
 
 ## PKCS #11 Cloud KMS Library
 
+### PKCS#11 v1.6
+
+The following changes are included in the v1.6 (July 2024) release:
+
+*   Add support for software key creation by specifying the
+    `CKA_KMS_PROTECTION_LEVEL` attribute. See the [user guide][user-guide] to
+    learn more.
+
 ### PKCS#11 v1.5
 
 The following changes are included in the v1.5 (May 2024) release:
