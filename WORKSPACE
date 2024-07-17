@@ -54,10 +54,10 @@ http_archive(
 )
 
 http_archive(
-    name = "com_github_google_glog",  # 2020-02-16
-    sha256 = "6fc352c434018b11ad312cd3b56be3597b4c6b88480f7bd4e18b3a3b2cf961aa",
-    strip_prefix = "glog-3ba8976592274bc1f907c402ce22558011d6fc5e",
-    url = "https://github.com/google/glog/archive/3ba8976592274bc1f907c402ce22558011d6fc5e.tar.gz",
+    name = "com_github_google_glog",  # v0.7.1 / 2024-06-08
+    sha256 = "00e4a87e87b7e7612f519a41e491f16623b12423620006f59f5688bfd8d13b08",
+    strip_prefix = "glog-0.7.1",
+    url = "https://github.com/google/glog/archive/refs/tags/v0.7.1.tar.gz",
 )
 
 http_archive(

@@ -36,7 +36,7 @@ void GrpcLog(gpr_log_func_args* args) {
   // Map gRPC severities to glog severities.
   // gRPC severities: ERROR, INFO, DEBUG
   // glog severities: FATAL, ERROR, WARNING, INFO
-  int severity;
+  google::LogSeverity severity;
   switch (args->severity) {
     // gRPC ERROR -> glog WARNING. gRPC errors aren't necessarily errors for
     // us; see e.g. https://github.com/grpc/grpc/issues/22613. We should emit
@@ -61,7 +61,7 @@ void GrpcLog(gpr_log_func_args* args) {
 class GlogSink : public absl::LogSink {
  public:
   virtual void Send(const absl::LogEntry& entry) override {
-    int severity;
+    google::LogSeverity severity;
     switch (entry.log_severity()) {
       case absl::LogSeverity::kError:
         severity = google::GLOG_ERROR;
@@ -108,25 +108,33 @@ absl::Status InitializeLogging(std::string_view output_directory,
          {google::GLOG_INFO, google::GLOG_WARNING, google::GLOG_ERROR,
           google::GLOG_FATAL}) {
       google::SetLogDestination(severity, "");
+      google::SetLogSymlink(severity, "");
     }
   } else {
     // FATAL logs crash the program; emit these to standard error as well.
     google::SetStderrLogging(google::GLOG_FATAL);
 
-    google::SetLogDestination(
-        google::GLOG_INFO,
-        absl::StrCat(output_directory, "/libkmsp11.log-").c_str());
+    if (!output_filename_suffix.empty()) {
+      google::SetLogDestination(
+          google::GLOG_INFO, absl::StrCat(output_directory, "/libkmsp11.log-",
+                                          output_filename_suffix, "-")
+                                 .c_str());
+    } else {
+      google::SetLogDestination(
+          google::GLOG_INFO,
+          absl::StrCat(output_directory, "/libkmsp11.log-").c_str());
+    }
+
+    // Disable symlink creation, which causes removal issues on FreeBSD.
+    // https://www.mail-archive.com/freebsd-bugs@freebsd.org/msg79713.html
+    google::SetLogSymlink(google::GLOG_INFO, "");
 
     // Disable discrete log files for all levels but INFO -- they all still
     // get logged to the INFO logfile.
     for (google::LogSeverity severity :
          {google::GLOG_WARNING, google::GLOG_ERROR, google::GLOG_FATAL}) {
       google::SetLogDestination(severity, "");
-    }
-
-    if (!output_filename_suffix.empty()) {
-      google::SetLogFilenameExtension(
-          absl::StrCat(output_filename_suffix, "-").c_str());
+      google::SetLogSymlink(severity, "");
     }
   }
 
