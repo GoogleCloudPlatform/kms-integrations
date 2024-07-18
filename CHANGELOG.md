@@ -14,6 +14,8 @@ The following changes are included in the v1.6 (July 2024) release:
 *   Add support for software key creation by specifying the
     `CKA_KMS_PROTECTION_LEVEL` attribute. See the [user guide][user-guide] to
     learn more.
+*   Updated deps:
+    *   glog => v0.7.1
 
 ### PKCS#11 v1.5
 
