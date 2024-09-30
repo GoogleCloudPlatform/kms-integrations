@@ -128,6 +128,22 @@ EndToEndTest::CreateTestCryptoKeyVersion() {
   }
 
   CHECK_OK(kms_stub->CreateCryptoKeyVersion(&ctx3, req_ckv, &ckv));
+
+  grpc::ClientContext ctx4;
+  ctx4.AddMetadata("x-goog-request-params", absl::StrCat("parent=", ck.name()));
+  if (!user_project_.empty()) {
+    ctx4.AddMetadata("x-goog-user-project", user_project_);
+  }
+  for (int i = 0; i++; i < 3) {
+    absl::SleepFor(absl::Seconds(1));
+    kms_v1::GetCryptoKeyVersionRequest req_get;
+    req_get.set_name(ckv.name());
+    CHECK_OK(kms_stub->GetCryptoKeyVersion(&ctx4, req_get, &ckv));
+
+    if (ckv.state() == kms_v1::CryptoKeyVersion::ENABLED) {
+      break;
+    }
+  }
   return ckv;
 }
 
