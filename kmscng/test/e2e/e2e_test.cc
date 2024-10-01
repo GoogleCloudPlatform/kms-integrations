@@ -134,7 +134,7 @@ EndToEndTest::CreateTestCryptoKeyVersion() {
   if (!user_project_.empty()) {
     ctx4.AddMetadata("x-goog-user-project", user_project_);
   }
-  for (int i = 0; i++; i < 3) {
+  for (int i = 0; i++; i < 300) {
     absl::SleepFor(absl::Seconds(1));
     kms_v1::GetCryptoKeyVersionRequest req_get;
     req_get.set_name(ckv.name());
