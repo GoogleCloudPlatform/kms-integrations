@@ -274,7 +274,7 @@ Compatibility                 | Compatible With
 PKCS #11 Function             | [`C_GenerateKeyPair`][C_GenerateKeyPair]
 PKCS #11 Mechanism            | [`CKM_RSA_PKCS_KEY_PAIR_GEN`][CKM_RSA_PKCS_KEY_PAIR_GEN]
 PKCS #11 Mechanism Parameters | None
-Cloud KMS Algorithm           | [`RSA_DECRYPT_OAEP_2048_SHA256`][kms-asymmetric-encrypt-algorithms], [`RSA_DECRYPT_OAEP_3072_SHA256`][kms-asymmetric-encrypt-algorithms], [`RSA_DECRYPT_OAEP_4096_SHA256`][kms-asymmetric-encrypt-algorithms], [`RSA_DECRYPT_OAEP_4096_SHA512`][kms-asymmetric-encrypt-algorithms], [`RSA_SIGN_PKCS1_2048_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PKCS1_3072_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PKCS1_4096_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PKCS1_4096_SHA512`][kms-rsa-sign-algorithms], [`RSA_SIGN_PSS_2048_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PSS_3072_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PSS_4096_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PSS_4096_SHA512`][kms-rsa-sign-algorithms], [`RSA_SIGN_RAW_PKCS1_2048_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_RAW_PKCS1_3072_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_RAW_PKCS1_4096_SHA256`][kms-rsa-sign-algorithms]
+Cloud KMS Algorithm           | [`RSA_DECRYPT_OAEP_2048_SHA256`][kms-asymmetric-encrypt-algorithms], [`RSA_DECRYPT_OAEP_3072_SHA256`][kms-asymmetric-encrypt-algorithms], [`RSA_DECRYPT_OAEP_4096_SHA256`][kms-asymmetric-encrypt-algorithms], [`RSA_DECRYPT_OAEP_4096_SHA512`][kms-asymmetric-encrypt-algorithms], [`RSA_SIGN_PKCS1_2048_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PKCS1_3072_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PKCS1_4096_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PKCS1_4096_SHA512`][kms-rsa-sign-algorithms], [`RSA_SIGN_PSS_2048_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PSS_3072_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PSS_4096_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PSS_4096_SHA512`][kms-rsa-sign-algorithms], [`RSA_SIGN_RAW_PKCS1_2048`][kms-rsa-sign-algorithms], [`RSA_SIGN_RAW_PKCS1_3072`][kms-rsa-sign-algorithms], [`RSA_SIGN_RAW_PKCS1_4096`][kms-rsa-sign-algorithms]
 
 ### RSA-OAEP Encryption and Decryption
 
@@ -303,14 +303,14 @@ Compatibility                | Compatible With
 PKCS #11 Functions           | [`C_Sign`][C_Sign], [`C_Verify`][C_Verify]
 PKCS #11 Mechanism           | [`CKM_RSA_PKCS`][CKM_RSA_PKCS], `CKM_RSA_PKCS_SHA256`, `CKM_RSA_PKCS_SHA512`
 PKCS #11 Mechanism Parameter | None
-Cloud KMS Algorithm          | [`RSA_SIGN_PKCS1_2048_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PKCS1_3072_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PKCS1_4096_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PKCS1_4096_SHA512`][kms-rsa-sign-algorithms], [`RSA_SIGN_RAW_PKCS1_2048_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_RAW_PKCS1_3072_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_RAW_PKCS1_4096_SHA256`][kms-rsa-sign-algorithms]
+Cloud KMS Algorithm          | [`RSA_SIGN_PKCS1_2048_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PKCS1_3072_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PKCS1_4096_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PKCS1_4096_SHA512`][kms-rsa-sign-algorithms], [`RSA_SIGN_RAW_PKCS1_2048`][kms-rsa-sign-algorithms], [`RSA_SIGN_RAW_PKCS1_3072`][kms-rsa-sign-algorithms], [`RSA_SIGN_RAW_PKCS1_4096`][kms-rsa-sign-algorithms]
 
 Compatibility                | Compatible With
 ---------------------------- | ---------------
 PKCS #11 Functions           | [`C_SignUpdate`][C_SignUpdate], [`C_SignFinal`][C_SignFinal], [`C_VerifyUpdate`][C_VerifyUpdate], [`C_VerifyFinal`][C_VerifyFinal]
 PKCS #11 Mechanism           | `CKM_RSA_PKCS_SHA256`, `CKM_RSA_PKCS_SHA512`
 PKCS #11 Mechanism Parameter | None
-Cloud KMS Algorithm          | [`RSA_SIGN_PKCS1_2048_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PKCS1_3072_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PKCS1_4096_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PKCS1_4096_SHA512`][kms-rsa-sign-algorithms], [`RSA_SIGN_RAW_PKCS1_2048_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_RAW_PKCS1_3072_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_RAW_PKCS1_4096_SHA256`][kms-rsa-sign-algorithms]
+Cloud KMS Algorithm          | [`RSA_SIGN_PKCS1_2048_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PKCS1_3072_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PKCS1_4096_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PKCS1_4096_SHA512`][kms-rsa-sign-algorithms], [`RSA_SIGN_RAW_PKCS1_2048`][kms-rsa-sign-algorithms], [`RSA_SIGN_RAW_PKCS1_3072`][kms-rsa-sign-algorithms], [`RSA_SIGN_RAW_PKCS1_4096`][kms-rsa-sign-algorithms]
 
 ### RSA-PSS Signing and Verification
 
