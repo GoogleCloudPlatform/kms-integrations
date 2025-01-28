@@ -24,6 +24,8 @@ set RESULTS_DIR=%KOKORO_ARTIFACTS_DIR%\results
 mkdir "%RESULTS_DIR%"
 
 :: Get Bazelisk
+msiexec /i %KOKORO_GFILE_DIR%\go1.22.0.windows-amd64.msi /qn
+set GOROOT=C:\Program Files\go
 set GOPATH=%KOKORO_ARTIFACTS_DIR%\gopath
 go install github.com/bazelbuild/bazelisk@latest
 set PATH=%GOPATH%\bin;%PATH%

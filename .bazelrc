@@ -88,6 +88,9 @@ build:san --strip=never
 build:san --copt=-fno-omit-frame-pointer
 build:san --copt=-DGPR_NO_DIRECT_SYSCALLS
 build:san --linkopt=-fsanitize-link-c++-runtime
+# Use linkmode=pie to prevent cgo failures with more recent rules_go versions
+# https://github.com/bazel-contrib/rules_go/issues/3691#issuecomment-2311047667
+build:san --@io_bazel_rules_go//go/config:linkmode=pie
 
 build:asan --config=san
 build:asan --copt=-fsanitize=address

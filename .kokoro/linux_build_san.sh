@@ -40,6 +40,9 @@ mkdir "${RESULTS_DIR}"
 sudo apt-get update
 sudo apt-get install -y libtinfo5
 
+# https://github.com/google/sanitizers/issues/1716#issuecomment-1902782650
+sudo sysctl vm.mmap_rnd_bits=28
+
 # Pull in a more recent LLVM toolchain
 export LLVM_VERSION=10.0.1
 export LLVM_DIST="clang+llvm-${LLVM_VERSION}-x86_64-linux-gnu-ubuntu-16.04"
@@ -50,7 +53,7 @@ echo "BAZEL_EXTRA_ARGS:"
 echo "${BAZEL_EXTRA_ARGS}"
 
 # Get Go and Bazelisk
-sudo tar xf "${KOKORO_GFILE_DIR}/go1.20.3.linux-amd64.tar.gz" -C /opt
+sudo tar xf "${KOKORO_GFILE_DIR}/go1.22.0.linux-amd64.tar.gz" -C /opt
 export GOROOT=/opt/go
 export GOPATH=${KOKORO_ARTIFACTS_DIR}/gopath
 ${GOROOT}/bin/go install github.com/bazelbuild/bazelisk@latest

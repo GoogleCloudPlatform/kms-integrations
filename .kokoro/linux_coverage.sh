@@ -26,6 +26,9 @@ cd "${PROJECT_ROOT}"
 export RESULTS_DIR="${KOKORO_ARTIFACTS_DIR}/results"
 mkdir "${RESULTS_DIR}"
 
+sudo apt-get update
+sudo apt-get install -y libc++abi-dev
+
 # Pull in a more recent LLVM toolchain
 export LLVM_VERSION=10.0.1
 export LLVM_DIST="clang+llvm-${LLVM_VERSION}-x86_64-linux-gnu-ubuntu-16.04"
@@ -33,7 +36,7 @@ export LLVM_ROOT=/opt/${LLVM_DIST}
 sudo tar xf "${KOKORO_GFILE_DIR}/${LLVM_DIST}.tar.xz" -C /opt
 
 # Get Go and Bazelisk
-sudo tar xf "${KOKORO_GFILE_DIR}/go1.20.3.linux-amd64.tar.gz" -C /opt
+sudo tar xf "${KOKORO_GFILE_DIR}/go1.22.0.linux-amd64.tar.gz" -C /opt
 export GOROOT=/opt/go
 export GOPATH=${KOKORO_ARTIFACTS_DIR}/gopath
 ${GOROOT}/bin/go install github.com/bazelbuild/bazelisk@latest
