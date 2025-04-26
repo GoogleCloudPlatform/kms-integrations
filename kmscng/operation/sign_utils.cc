@@ -75,6 +75,8 @@ absl::Status CopySignature(Object* object, std::string_view src,
     case kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256:
     case kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384:
       return CopyEcSignature(object, src, dest);
+    case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_2048_SHA256:
+    case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_3072_SHA256:
     case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA256:
       return CopyRsaSignature(object, src, dest);
     default:
@@ -168,6 +170,8 @@ absl::Status IsValidSigningAlgorithm(
   switch (algorithm) {
     case kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256:
     case kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384:
+    case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_2048_SHA256:
+    case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_3072_SHA256:
     case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA256:
       return absl::OkStatus();
     default:
@@ -182,6 +186,8 @@ absl::StatusOr<const EVP_MD*> DigestForAlgorithm(
     kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm) {
   switch (algorithm) {
     case kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256:
+    case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_2048_SHA256:
+    case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_3072_SHA256:
     case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA256:
       return EVP_sha256();
     case kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384:
@@ -215,6 +221,8 @@ absl::StatusOr<uint32_t> MagicIdForAlgorithm(
       return BCRYPT_ECDSA_PUBLIC_P256_MAGIC;
     case kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384:
       return BCRYPT_ECDSA_PUBLIC_P384_MAGIC;
+    case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_2048_SHA256:
+    case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_3072_SHA256:
     case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA256:
       return BCRYPT_RSAPUBLIC_MAGIC;
     default:
@@ -262,6 +270,8 @@ absl::StatusOr<std::vector<uint8_t>> SerializePublicKey(Object* object) {
     case kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256:
     case kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384:
       return SerializePublicEcKey(object);
+    case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_2048_SHA256:
+    case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_3072_SHA256:
     case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA256:
       return SerializePublicRsaKey(object);
     default:
@@ -280,9 +290,13 @@ absl::StatusOr<size_t> SignatureLength(Object* object) {
       bssl::UniquePtr<EC_GROUP> group(EC_GROUP_new_by_curve_name(curve));
       return EcdsaSigLengthP1363(group.get());
     }
+    // RSA signatures have the same size as the key bit size (in bytes here).
+    case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_2048_SHA256:
+      return 2048 / 8;
+    case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_3072_SHA256:
+      return 3072 / 8;
     case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA256:
-      return 4096 / 8;  // RSA signature has the same size as the key bit size
-                        // (in bytes here)
+      return 4096 / 8;
     default:
       return NewInternalError(
           absl::StrFormat("cannot get signature length for algorithm: %d",

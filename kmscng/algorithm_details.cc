@@ -61,6 +61,20 @@ static const auto* const kAlgorithmDetails =
             NCRYPT_ALLOW_SIGNING_FLAG,    // key_usage
         },
         {
+            kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_2048_SHA256,  // algorithm
+            kms_v1::CryptoKey::ASYMMETRIC_SIGN,                    // purpose
+            NCRYPT_RSA_ALGORITHM_GROUP,  // algorithm_group
+            BCRYPT_RSA_ALGORITHM,        // algorithm_property
+            NCRYPT_ALLOW_SIGNING_FLAG,   // key_usage
+        },
+        {
+            kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_3072_SHA256,  // algorithm
+            kms_v1::CryptoKey::ASYMMETRIC_SIGN,                    // purpose
+            NCRYPT_RSA_ALGORITHM_GROUP,  // algorithm_group
+            BCRYPT_RSA_ALGORITHM,        // algorithm_property
+            NCRYPT_ALLOW_SIGNING_FLAG,   // key_usage
+        },
+        {
             kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA256,  // algorithm
             kms_v1::CryptoKey::ASYMMETRIC_SIGN,                    // purpose
             NCRYPT_RSA_ALGORITHM_GROUP,  // algorithm_group

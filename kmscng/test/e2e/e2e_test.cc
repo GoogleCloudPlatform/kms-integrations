@@ -60,7 +60,8 @@ class EndToEndTest : public testing::Test {
         location_name_(absl::GetFlag(FLAGS_location_name)),
         key_ring_id_(RandomId(absl::GetFlag(FLAGS_key_ring_id_prefix))) {}
 
-  absl::StatusOr<kms_v1::CryptoKeyVersion> CreateTestCryptoKeyVersion();
+  absl::StatusOr<kms_v1::CryptoKeyVersion> CreateTestCryptoKeyVersion(
+      kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm);
 
  protected:
   static void SetUpTestSuite() { ASSERT_OK(RegisterProvider()); }
@@ -73,7 +74,8 @@ class EndToEndTest : public testing::Test {
 };
 
 absl::StatusOr<kms_v1::CryptoKeyVersion>
-EndToEndTest::CreateTestCryptoKeyVersion() {
+EndToEndTest::CreateTestCryptoKeyVersion(
+    kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm) {
   auto kms_stub = kms_v1::KeyManagementService::NewStub(
       grpc::CreateChannel(kms_endpoint_, grpc::GoogleDefaultCredentials()));
 
@@ -98,8 +100,7 @@ EndToEndTest::CreateTestCryptoKeyVersion() {
   kms_v1::CryptoKey crypto_key;
   crypto_key.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
   crypto_key.mutable_version_template()->set_protection_level(kms_v1::HSM);
-  crypto_key.mutable_version_template()->set_algorithm(
-      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+  crypto_key.mutable_version_template()->set_algorithm(algorithm);
   kms_v1::CreateCryptoKeyRequest req_ck;
   req_ck.set_parent(kr.name());
   req_ck.set_crypto_key_id("ck");
@@ -149,7 +150,8 @@ EndToEndTest::CreateTestCryptoKeyVersion() {
 
 TEST_F(EndToEndTest, TestEcdsaP256SignSuccess) {
   ASSERT_OK_AND_ASSIGN(const kms_v1::CryptoKeyVersion ckv,
-                       CreateTestCryptoKeyVersion());
+                       CreateTestCryptoKeyVersion(
+                           kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256));
 
   NCRYPT_PROV_HANDLE provider_handle;
   EXPECT_SUCCESS(
@@ -168,6 +170,43 @@ TEST_F(EndToEndTest, TestEcdsaP256SignSuccess) {
 
   std::vector<uint8_t> digest(32, '\1');
   std::vector<uint8_t> signature(64, '\0');
+  std::vector<uint8_t> empty_sig = signature;
+  DWORD output_size = 0;
+  NTSTATUS status =
+      NCryptSignHash(key_handle, nullptr, digest.data(), digest.size(),
+                     signature.data(), signature.size(), &output_size, 0);
+  EXPECT_SUCCESS(status) << absl::StrFormat(
+      "NCryptSignHash failed with error code 0x%08x\n", status);
+  EXPECT_EQ(output_size, signature.size());
+  EXPECT_NE(signature, empty_sig);
+
+  EXPECT_SUCCESS(NCryptFreeObject(key_handle));
+  EXPECT_SUCCESS(NCryptFreeObject(provider_handle));
+}
+
+TEST_F(EndToEndTest, TestRsa2048SignSuccess) {
+  ASSERT_OK_AND_ASSIGN(
+      const kms_v1::CryptoKeyVersion ckv,
+      CreateTestCryptoKeyVersion(
+          kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_2048_SHA256));
+
+  NCRYPT_PROV_HANDLE provider_handle;
+  EXPECT_SUCCESS(
+      NCryptOpenStorageProvider(&provider_handle, kProviderName.data(), 0));
+
+  // Set custom property to hit the right KMS endpoint.
+  ASSERT_SUCCESS(NCryptSetProperty(
+      provider_handle, kEndpointAddressProperty.data(),
+      reinterpret_cast<uint8_t*>(const_cast<char*>(kms_endpoint_.data())),
+      kms_endpoint_.size(), 0));
+
+  NCRYPT_KEY_HANDLE key_handle;
+  EXPECT_SUCCESS(NCryptOpenKey(provider_handle, &key_handle,
+                               StringToWide(ckv.name()).data(), AT_SIGNATURE,
+                               0));
+
+  std::vector<uint8_t> digest(32, '\1');
+  std::vector<uint8_t> signature(256, '\0');
   std::vector<uint8_t> empty_sig = signature;
   DWORD output_size = 0;
   NTSTATUS status =

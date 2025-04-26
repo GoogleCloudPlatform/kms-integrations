@@ -29,14 +29,25 @@ namespace {
 
 using ::testing::HasSubstr;
 
-TEST(IsValidSigningEcAlgorithmTest, Success) {
+class ValidAlgorithmSignUtilsTest
+    : public testing::Test,
+      public testing::WithParamInterface<
+          kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm> {};
+
+const std::array kSupportedAlgorithms = {
+    kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256,
+    kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384,
+    kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_2048_SHA256,
+    kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_3072_SHA256,
+    kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA256
+};
+
+INSTANTIATE_TEST_SUITE_P(TestValidAlgorithms, ValidAlgorithmSignUtilsTest,
+                         testing::ValuesIn(kSupportedAlgorithms));
+
+TEST_P(ValidAlgorithmSignUtilsTest, IsValidSigningAlgorithmSuccess) {
   EXPECT_OK(
       IsValidSigningAlgorithm(kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384));
-}
-
-TEST(IsValidSigningRsaAlgorithmTest, Success) {
-  EXPECT_OK(IsValidSigningAlgorithm(
-      kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA256));
 }
 
 TEST(IsValidSigningAlgorithmTest, InvalidAlgoritmhm) {
@@ -46,13 +57,8 @@ TEST(IsValidSigningAlgorithmTest, InvalidAlgoritmhm) {
                        HasSubstr("invalid asymmetric signing algorithm")));
 }
 
-TEST(DigestForEcAlgorithmTest, Success) {
+TEST_P(ValidAlgorithmSignUtilsTest, DigestForAlgorithmSuccess) {
   EXPECT_OK(DigestForAlgorithm(kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384));
-}
-
-TEST(DigestForRsaAlgorithmTest, Success) {
-  EXPECT_OK(
-      DigestForAlgorithm(kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA256));
 }
 
 TEST(DigestForAlgorithmTest, InvalidAlgoritmhm) {
@@ -62,23 +68,18 @@ TEST(DigestForAlgorithmTest, InvalidAlgoritmhm) {
                HasSubstr("cannot get digest type")));
 }
 
-TEST(CurveIdForAlgorithmTest, Success) {
+TEST(CurveIdForAlgorithmTest, EcdsaSuccess) {
   EXPECT_OK(CurveIdForAlgorithm(kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384));
 }
 
 TEST(CurveIdForAlgorithmTest, InvalidAlgoritmhm) {
   EXPECT_THAT(
-      CurveIdForAlgorithm(kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA1),
+      CurveIdForAlgorithm(kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_2048_SHA256),
       StatusIs(absl::StatusCode::kInternal, HasSubstr("cannot get curve")));
 }
 
-TEST(MagicIdForEcAlgorithmTest, Success) {
+TEST_P(ValidAlgorithmSignUtilsTest, MagicIdForAlgorithmSuccess) {
   EXPECT_OK(MagicIdForAlgorithm(kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384));
-}
-
-TEST(MagicIdForRsaAlgorithmTest, Success) {
-  EXPECT_OK(MagicIdForAlgorithm(
-      kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA256));
 }
 
 TEST(MagicIdForAlgorithmTest, InvalidAlgoritmhm) {
