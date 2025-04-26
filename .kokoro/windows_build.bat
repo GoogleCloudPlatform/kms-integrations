@@ -27,7 +27,7 @@ mkdir "%RESULTS_DIR%"
 msiexec /i %KOKORO_GFILE_DIR%\go1.22.0.windows-amd64.msi /qn
 set GOROOT=C:\Program Files\go
 set GOPATH=%KOKORO_ARTIFACTS_DIR%\gopath
-go install github.com/bazelbuild/bazelisk@latest
+go install github.com/bazelbuild/bazelisk@v1.25.0
 set PATH=%GOPATH%\bin;%PATH%
 
 :: Unwrap our wrapped service account key

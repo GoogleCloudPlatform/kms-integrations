@@ -39,7 +39,7 @@ sudo tar xf "${KOKORO_GFILE_DIR}/${LLVM_DIST}.tar.xz" -C /opt
 sudo tar xf "${KOKORO_GFILE_DIR}/go1.22.0.linux-amd64.tar.gz" -C /opt
 export GOROOT=/opt/go
 export GOPATH=${KOKORO_ARTIFACTS_DIR}/gopath
-${GOROOT}/bin/go install github.com/bazelbuild/bazelisk@latest
+${GOROOT}/bin/go install github.com/bazelbuild/bazelisk@v1.25.0
 shopt -s expand_aliases
 alias bazelisk=${GOPATH}/bin/bazelisk
 

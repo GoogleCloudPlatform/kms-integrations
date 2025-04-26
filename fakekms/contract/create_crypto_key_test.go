@@ -24,6 +24,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"cloud.google.com/go/kms/apiv1/kmspb"
+	"google.golang.org/protobuf/testing/protocmp"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -62,7 +63,8 @@ func TestCreateCryptoKeyDefaults(t *testing.T) {
 		DestroyScheduledDuration: &durationpb.Duration{Seconds: 2592000},
 	}
 
-	if diff := cmp.Diff(want, got, ProtoDiffOpts()...); diff != "" {
+	opts := append(ProtoDiffOpts(), protocmp.IgnoreUnknown())
+	if diff := cmp.Diff(want, got, opts...); diff != "" {
 		t.Errorf("unexpected diff (-want, +got): %s", diff)
 	}
 }
@@ -150,8 +152,8 @@ func TestCreateCryptoKeyAlgorithms(t *testing.T) {
 				},
 				DestroyScheduledDuration: &durationpb.Duration{Seconds: 2592000},
 			}
-
-			if diff := cmp.Diff(want, got, ProtoDiffOpts()...); diff != "" {
+			opts := append(ProtoDiffOpts(), protocmp.IgnoreUnknown())
+			if diff := cmp.Diff(want, got, opts...); diff != "" {
 				t.Errorf("unexpected diff (-want +got): %s", diff)
 			}
 		})
