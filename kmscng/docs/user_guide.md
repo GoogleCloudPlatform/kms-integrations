@@ -157,7 +157,7 @@ Compatibility                | Compatible With
 ---------------------------- | ---------------
 CNG Function                 | [`NCryptSignHash`][NCryptSignHash]
 CNG Algorithm ID             | `BCRYPT_RSA_ALGORITHM`
-Cloud KMS Algorithm          | [`RSA_SIGN_PKCS1_4096_SHA256`][kms-rsa-algorithms]
+Cloud KMS Algorithm          | [`RSA_SIGN_PKCS1_2048_SHA256`][kms-rsa-algorithms], [`RSA_SIGN_PKCS1_3072_SHA256`][kms-rsa-algorithms], [`RSA_SIGN_PKCS1_4096_SHA256`][kms-rsa-algorithms]
 
 ## Limitations
 
@@ -169,7 +169,8 @@ these characteristics:
 *   The purpose for the CryptoKey is `ASYMMETRIC_SIGN`.
 *   The protection level for the CryptoKeyVersion is `HSM`.
 *   The algorithm for the CryptoKeyVersion is `EC_SIGN_P256_SHA256`,
-    `EC_SIGN_P384_SHA384` or `RSA_SIGN_PKCS1_4096_SHA256`.
+    `EC_SIGN_P384_SHA384`, `RSA_SIGN_PKCS1_2048_SHA256`,
+    `RSA_SIGN_PKCS1_3072_SHA256` or `RSA_SIGN_PKCS1_4096_SHA256`.
 
 The CNG provider returns an error when trying to load keys that don't conform to
 these requirements.
