@@ -18,6 +18,7 @@
 
 #include "absl/container/flat_hash_set.h"
 #include "absl/status/statusor.h"
+#include "common/backoff.h"
 #include "common/kms_client.h"
 #include "common/status_macros.h"
 #include "kmsp11/object_loader.h"
@@ -88,7 +89,20 @@ absl::StatusOr<std::unique_ptr<Token>> Token::New(CK_SLOT_ID slot_id,
       std::unique_ptr<ObjectLoader> loader,
       ObjectLoader::New(token_config.key_ring(),
                         token_config.certs(), generate_certs, allow_software_keys));
-  ASSIGN_OR_RETURN(ObjectStoreState state, loader->BuildState(*kms_client));
+  absl::StatusOr<ObjectStoreState> state_resp = loader->BuildState(*kms_client);
+
+  // Exponential backoff to reduce errors at library initialization.
+  constexpr absl::Duration kMinDelay = absl::Milliseconds(10);
+  constexpr absl::Duration kMaxDelay = absl::Seconds(1);
+  int retries = 0;
+  while (retries < 10 &&
+         (state_resp.status().code() == absl::StatusCode::kDeadlineExceeded ||
+          state_resp.status().code() == absl::StatusCode::kUnavailable)) {
+    absl::SleepFor(ComputeBackoff(kMinDelay, kMaxDelay, retries++));
+    state_resp = loader->BuildState(*kms_client);
+  }
+
+  ASSIGN_OR_RETURN(ObjectStoreState state, state_resp);
   ASSIGN_OR_RETURN(std::unique_ptr<ObjectStore> store, ObjectStore::New(state));
 
   // using `new` to invoke a private constructor

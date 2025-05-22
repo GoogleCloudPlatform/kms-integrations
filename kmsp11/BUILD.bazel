@@ -286,6 +286,7 @@ cc_library(
         ":object_loader",
         ":object_store",
         ":object_store_state_cc_proto",
+        "//common:backoff",
         "//common:kms_client",
         "//common:status_macros",
         "//kmsp11/config:config_cc_proto",
