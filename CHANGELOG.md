@@ -102,6 +102,13 @@ Initial release of the library.
 
 ## CNG Provider for Cloud KMS
 
+### CNG v1.2
+
+The following changes are included in the v1.2 (May 2025) release:
+
+*   Add support for `RSA_SIGN_PKCS1_2048_SHA256` and
+    `RSA_SIGN_PKCS1_3072_SHA256`.
+
 ### CNG v1.1
 
 The following changes are included in the v1.1 (April 2024) release:
