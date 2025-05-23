@@ -7,6 +7,13 @@
 
 ## PKCS #11 Cloud KMS Library
 
+### PKCS#11 v1.7
+
+The following changes are included in the v1.7 (May 2025) release:
+
+*   Add retries at library initialization to reduce transient failures.
+*   Dependency updates.
+
 ### PKCS#11 v1.6
 
 The following changes are included in the v1.6 (July 2024) release:
