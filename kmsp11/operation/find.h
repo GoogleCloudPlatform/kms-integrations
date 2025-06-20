@@ -38,15 +38,14 @@ class FindOp {
   // appropriately.
   inline absl::Span<const CK_OBJECT_HANDLE> Next(size_t max_count) {
     size_t remaining_count = objects_.size() - offset_;
-    if (remaining_count <= max_count) {
-      absl::Span<const CK_OBJECT_HANDLE> result(&objects_[offset_],
-                                                remaining_count);
-      offset_ = objects_.size();
-      return result;
+    // Return an empty Span if there are no more objects left.
+    if (remaining_count == 0) {
+      return absl::Span<const CK_OBJECT_HANDLE>();
     }
-
-    absl::Span<const CK_OBJECT_HANDLE> result(&objects_[offset_], max_count);
-    offset_ += max_count;
+    size_t count = std::min(max_count, remaining_count);
+    absl::Span<const CK_OBJECT_HANDLE> result =
+        absl::MakeSpan(objects_).subspan(offset_, count);
+    offset_ += count;
     return result;
   }
 
