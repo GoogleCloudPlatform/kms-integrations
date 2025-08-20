@@ -48,9 +48,15 @@ absl::StatusOr<std::unique_ptr<KmsClient>> NewKmsClient(
   options.endpoint_address = config.kms_endpoint().empty()
                                  ? kDefaultKmsEndpoint
                                  : config.kms_endpoint();
-  options.creds = config.use_insecure_grpc_channel_credentials()
-                      ? grpc::InsecureChannelCredentials()
-                      : grpc::GoogleDefaultCredentials();
+  if (config.use_google_compute_engine_credentials()) {
+    options.creds = grpc::CompositeChannelCredentials(
+        grpc::SslCredentials(grpc::SslCredentialsOptions()),
+        grpc::GoogleComputeEngineCredentials());
+  } else {
+    options.creds = config.use_insecure_grpc_channel_credentials()
+                        ? grpc::InsecureChannelCredentials()
+                        : grpc::GoogleDefaultCredentials();
+  }
   if (!options.creds) {
     return NewError(absl::StatusCode::kInvalidArgument,
                     "Invalid Application Default Credentials. See "

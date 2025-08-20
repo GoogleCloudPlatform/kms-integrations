@@ -17,7 +17,7 @@ syntax = "proto3";
 package cloud_kms.kmsp11;
 
 message LibraryConfig {
-  // Next_value = 16
+  // Next_value = 18
 
   // Required. The list of tokens to expose in this library.
   repeated TokenConfig tokens = 1;
@@ -38,6 +38,11 @@ message LibraryConfig {
   // instead. Intended for use in test environments only, as this will result in
   // PERMISSION_DENIED in real KMS environments.
   bool use_insecure_grpc_channel_credentials = 4;
+
+  // Optional. True means that Google Compute Engine credentials should be used.
+  // This is the preferred approach when running in the context of a Service
+  // Account on GCE.
+  bool use_google_compute_engine_credentials = 17;
 
   // Optional. True means that X.509 certificates will be generated at runtime
   // for asymmetric KMS keys that are exposed in the library if no matching
