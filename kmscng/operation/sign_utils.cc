@@ -78,6 +78,7 @@ absl::Status CopySignature(Object* object, std::string_view src,
     case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_2048_SHA256:
     case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_3072_SHA256:
     case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA256:
+    case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA512:
       return CopyRsaSignature(object, src, dest);
     default:
       return NewInternalError(
@@ -173,6 +174,7 @@ absl::Status IsValidSigningAlgorithm(
     case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_2048_SHA256:
     case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_3072_SHA256:
     case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA256:
+    case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA512:
       return absl::OkStatus();
     default:
       return NewInternalError(
@@ -192,6 +194,8 @@ absl::StatusOr<const EVP_MD*> DigestForAlgorithm(
       return EVP_sha256();
     case kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384:
       return EVP_sha384();
+    case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA512:
+      return EVP_sha512();
     default:
       return NewInternalError(
           absl::StrFormat("cannot get digest type for algorithm: %d",
@@ -224,6 +228,7 @@ absl::StatusOr<uint32_t> MagicIdForAlgorithm(
     case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_2048_SHA256:
     case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_3072_SHA256:
     case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA256:
+    case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA512:
       return BCRYPT_RSAPUBLIC_MAGIC;
     default:
       return NewInternalError(
@@ -273,6 +278,7 @@ absl::StatusOr<std::vector<uint8_t>> SerializePublicKey(Object* object) {
     case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_2048_SHA256:
     case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_3072_SHA256:
     case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA256:
+    case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA512:
       return SerializePublicRsaKey(object);
     default:
       return NewInternalError(
@@ -296,6 +302,7 @@ absl::StatusOr<size_t> SignatureLength(Object* object) {
     case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_3072_SHA256:
       return 3072 / 8;
     case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA256:
+    case kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA512:
       return 4096 / 8;
     default:
       return NewInternalError(
@@ -335,6 +342,9 @@ absl::Status SignDigest(Object* object, absl::Span<const uint8_t> digest,
       break;
     case NID_sha384:
       req.mutable_digest()->set_sha384(digest.data(), digest.size());
+      break;
+    case NID_sha512:
+      req.mutable_digest()->set_sha512(digest.data(), digest.size());
       break;
     default:
       return NewInternalError(
