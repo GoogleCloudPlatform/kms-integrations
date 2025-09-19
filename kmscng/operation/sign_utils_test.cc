@@ -39,7 +39,8 @@ const std::array kSupportedAlgorithms = {
     kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384,
     kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_2048_SHA256,
     kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_3072_SHA256,
-    kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA256
+    kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA256,
+    kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA512
 };
 
 INSTANTIATE_TEST_SUITE_P(TestValidAlgorithms, ValidAlgorithmSignUtilsTest,

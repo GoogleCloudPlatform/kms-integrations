@@ -87,9 +87,10 @@ func TestSigntoolSuccess(t *testing.T) {
 	}{
 		{"ECDSA256", kmspb.CryptoKeyVersion_EC_SIGN_P256_SHA256, x509.ECDSAWithSHA256, "sha256"},
 		{"ECDSA384", kmspb.CryptoKeyVersion_EC_SIGN_P384_SHA384, x509.ECDSAWithSHA384, "sha384"},
-		{"RSA2048", kmspb.CryptoKeyVersion_RSA_SIGN_PKCS1_2048_SHA256, x509.SHA256WithRSA, "sha256"},
-		{"RSA3072", kmspb.CryptoKeyVersion_RSA_SIGN_PKCS1_3072_SHA256, x509.SHA256WithRSA, "sha256"},
-		{"RSA4096", kmspb.CryptoKeyVersion_RSA_SIGN_PKCS1_4096_SHA256, x509.SHA256WithRSA, "sha256"},
+		{"RSA2048SHA256", kmspb.CryptoKeyVersion_RSA_SIGN_PKCS1_2048_SHA256, x509.SHA256WithRSA, "sha256"},
+		{"RSA3072SHA256", kmspb.CryptoKeyVersion_RSA_SIGN_PKCS1_3072_SHA256, x509.SHA256WithRSA, "sha256"},
+		{"RSA4096SHA256", kmspb.CryptoKeyVersion_RSA_SIGN_PKCS1_4096_SHA256, x509.SHA256WithRSA, "sha256"},
+		{"RSA4096SHA512", kmspb.CryptoKeyVersion_RSA_SIGN_PKCS1_4096_SHA512, x509.SHA512WithRSA, "sha512"},
 	}
 
 	for _, test := range tests {
