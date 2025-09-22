@@ -1,13 +1,12 @@
-:: Simple Signing Script for the KMS oss-tools Windows artifacts
+:: Simple signing script for the KMS oss-tools Windows artifacts
 
-echo "We start here:"
-dir
+echo "Starting signing job:"
 
-:: The parent job's output artifacts should have been copied to KOKORO_GFILE_DIR.
+:: The parent job's output artifacts get copied to KOKORO_GFILE_DIR.
 :: go/kokoro-grouping#artifacts-transfer
 cd "%KOKORO_GFILE_DIR%"
 
-:: Display dir contents for logging
+:: Display dir contents for logging.
 dir /s
 
 :: Create the standard output results directory.
@@ -48,10 +47,8 @@ go run ./.kokoro/unwrap_key.go ^
   -wrapped_key_file=%KOKORO_GFILE_DIR%/oss-tools-ci-key.json.enc ^
   > %GOOGLE_APPLICATION_CREDENTIALS%
 
-:: Configure user.bazelrc with remote build caching and Google creds
-copy .kokoro\remote_cache.bazelrc user.bazelrc
-echo build --remote_default_exec_properties=cache-silo-key=%KOKORO_JOB_NAME% ^
-  >> user.bazelrc
+:: Create and configure user.bazelrc with Google creds
+echo build --google_default_credentials=true > user.bazelrc
 echo test --test_env=GOOGLE_APPLICATION_CREDENTIALS >> user.bazelrc
 
 :: Force msys2 environment instead of Cygwin
