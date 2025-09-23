@@ -71,25 +71,19 @@ if exist "%PROJECT_ROOT%\bazel-bin\kmscng\main\kmscng.dll" copy ^
 bazelisk %BAZEL_STARTUP_ARGS% test %BAZEL_ARGS% //kmscng/test/e2e:e2e_test
 set RV_E2E=%ERRORLEVEL%
 
-bazelisk %BAZEL_STARTUP_ARGS% run %BAZEL_ARGS% //kmsp11/tools/buildsigner -- ^
-  -signing_key=%BUILD_SIGNING_KEY% ^
-  < "%PROJECT_ROOT%\bazel-bin\kmsp11\main\libkmsp11.so" ^
-  > "%RESULTS_DIR%\kmsp11.dll.sig"
-set SIGN_RV=%ERRORLEVEL%
-
 if exist "%PROJECT_ROOT%\bazel-bin\kmsp11\main\libkmsp11.so" copy ^
     "%PROJECT_ROOT%\bazel-bin\kmsp11\main\libkmsp11.so" ^
-    "%RESULTS_DIR%\kmsp11.dll"
+    "%RESULTS_DIR%\kmsp11_unsigned.dll"
 if exist "%PROJECT_ROOT%\bazel-bin\kmsp11\test\e2e\e2e_test.exe" copy ^
     "%PROJECT_ROOT%\bazel-bin\kmsp11\test\e2e\e2e_test.exe" ^
     "%RESULTS_DIR%\kmsp11_e2e_test.exe"
 
 if exist "%PROJECT_ROOT%\bazel-bin\kmscng\main\kmscng.dll" copy ^
     "%PROJECT_ROOT%\bazel-bin\kmscng\main\kmscng.dll" ^
-    "%RESULTS_DIR%\kmscng.dll"
+    "%RESULTS_DIR%\kmscng_usigned.dll"
 if exist "%PROJECT_ROOT%\bazel-bin\kmscng\main\kmscng.msi" copy ^
     "%PROJECT_ROOT%\bazel-bin\kmscng\main\kmscng.msi" ^
-    "%RESULTS_DIR%\kmscng.msi"
+    "%RESULTS_DIR%\kmscng_unsigned.msi"
 if exist "%PROJECT_ROOT%\bazel-bin\kmscng\test\e2e\e2e_test.exe" copy ^
     "%PROJECT_ROOT%\bazel-bin\kmscng\test\e2e\e2e_test.exe" ^
     "%RESULTS_DIR%\kmscng_e2e_test.exe"
@@ -100,5 +94,4 @@ python "%PROJECT_ROOT%\.kokoro\copy_test_outputs.py" ^
     "%PROJECT_ROOT%\bazel-testlogs" "%RESULTS_DIR%\testlogs"
 
 if %RV% NEQ 0 exit %RV% ^
-    else if %RV_E2E% NEQ 0 exit %RV_E2E% ^
-    else exit %SIGN_RV%
+    else if %RV_E2E% NEQ 0 exit %RV_E2E%

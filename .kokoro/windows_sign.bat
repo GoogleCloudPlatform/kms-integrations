@@ -16,8 +16,8 @@ dir /s
 :: See warning at the bottom of go/kokoro-grouping#artifacts-transfer.
 set RESULTS_DIR=%KOKORO_ARTIFACTS_DIR%\results
 mkdir "%RESULTS_DIR%"
-copy kmsp11.dll "%RESULTS_DIR%\kmsp11_google_signed.dll"
-copy kmscng.msi "%RESULTS_DIR%\kmscng_google_signed.msi"
+copy kmsp11_unsigned.dll "%RESULTS_DIR%\kmsp11_google_signed.dll"
+copy kmscng_unsigned.msi "%RESULTS_DIR%\kmscng_google_signed.msi"
 cd "%RESULTS_DIR%"
 
 :: Attempt the signing for PKCS#11
