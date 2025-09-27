@@ -64,12 +64,20 @@ bazelisk %BAZEL_STARTUP_ARGS% test %BAZEL_ARGS% ^
     ... :ci_only_tests :windows_ci_only_tests
 set RV=%ERRORLEVEL%
 
+:: Upload test logs for debugging and MOSS compliance.
+python "%PROJECT_ROOT%\.kokoro\copy_test_outputs.py" ^
+    "%PROJECT_ROOT%\bazel-testlogs" "%RESULTS_DIR%\testlogs"
+
+:: Early exit if build/test failed.
+if %RV% NEQ 0 exit %RV%
+
 :: Run e2e test last and make sure the DLL is in system32.
 if exist "%PROJECT_ROOT%\bazel-bin\kmscng\main\kmscng.dll" copy ^
     "%PROJECT_ROOT%\bazel-bin\kmscng\main\kmscng.dll" ^
     "C:\Windows\system32\kmscng.dll"
 bazelisk %BAZEL_STARTUP_ARGS% test %BAZEL_ARGS% //kmscng/test/e2e:e2e_test
-set RV_E2E=%ERRORLEVEL%
+:: Early exit if e2e_test failed.
+if %ERRORLEVEL% NEQ 0 exit %ERRORLEVEL%
 
 if exist "%PROJECT_ROOT%\bazel-bin\kmsp11\main\libkmsp11.so" copy ^
     "%PROJECT_ROOT%\bazel-bin\kmsp11\main\libkmsp11.so" ^
@@ -89,9 +97,3 @@ if exist "%PROJECT_ROOT%\bazel-bin\kmscng\test\e2e\e2e_test.exe" copy ^
     "%RESULTS_DIR%\kmscng_e2e_test.exe"
 
 copy "%PROJECT_ROOT%\LICENSE" "%RESULTS_DIR%\LICENSE"
-
-python "%PROJECT_ROOT%\.kokoro\copy_test_outputs.py" ^
-    "%PROJECT_ROOT%\bazel-testlogs" "%RESULTS_DIR%\testlogs"
-
-if %RV% NEQ 0 exit %RV% ^
-    else if %RV_E2E% NEQ 0 exit %RV_E2E%
