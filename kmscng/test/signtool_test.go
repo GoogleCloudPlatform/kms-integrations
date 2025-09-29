@@ -69,13 +69,9 @@ func generateSelfSignedCertTempFile(t *testing.T, signer *gcpkms.Signer, alg x50
 }
 
 func signtoolLocation() string {
-	// As of 2023-05-25, `SIGNTOOL_LOCATION` is unused, but is intended to be
-	// a convenient way to change the path to signtool without changing code.
-	loc, ok := os.LookupEnv("SIGNTOOL_LOCATION")
-	if ok {
-		return loc
-	}
-	return "C:\\Program Files (x86)\\Windows Kits\\10\\bin\\10.0.22621.0\\x64\\signtool.exe"
+	// Only 32-bit signtool is part of the PATH on docker images.
+	// When the kokoro image is updated, this needs to be updated too.
+	return "C:\\Program Files (x86)\\Windows Kits\\10\\bin\\10.0.26100.0\\x64\\signtool.exe"
 }
 
 func TestSigntoolSuccess(t *testing.T) {
