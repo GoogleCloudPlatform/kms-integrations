@@ -7,6 +7,13 @@
 
 ## PKCS #11 Cloud KMS Library
 
+### PKCS#11 v1.8
+
+The following changes are included in the v1.8 (October 2025) release:
+
+*   Add GCE credentials configuration option.
+*   Bug fix: Fix potential undefined behavior in FindOp::Next.
+
 ### PKCS#11 v1.7
 
 The following changes are included in the v1.7 (May 2025) release:
