@@ -88,7 +88,7 @@ if exist "%PROJECT_ROOT%\bazel-bin\kmsp11\test\e2e\e2e_test.exe" copy ^
 
 if exist "%PROJECT_ROOT%\bazel-bin\kmscng\main\kmscng.dll" copy ^
     "%PROJECT_ROOT%\bazel-bin\kmscng\main\kmscng.dll" ^
-    "%RESULTS_DIR%\kmscng_usigned.dll"
+    "%RESULTS_DIR%\kmscng.dll"
 if exist "%PROJECT_ROOT%\bazel-bin\kmscng\main\kmscng.msi" copy ^
     "%PROJECT_ROOT%\bazel-bin\kmscng\main\kmscng.msi" ^
     "%RESULTS_DIR%\kmscng_unsigned.msi"
