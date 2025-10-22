@@ -61,7 +61,7 @@ set BAZEL_STARTUP_ARGS=--output_user_root c:\bzltmp
 bazelisk %BAZEL_STARTUP_ARGS% version
 
 bazelisk %BAZEL_STARTUP_ARGS% test %BAZEL_ARGS% ^
-    ... :ci_only_tests :windows_ci_only_tests
+    ... :ci_only_tests %BAZEL_EXTRA_TESTS%
 set RV=%ERRORLEVEL%
 
 :: Upload test logs for debugging and MOSS compliance.
@@ -71,18 +71,21 @@ python "%PROJECT_ROOT%\.kokoro\copy_test_outputs.py" ^
 :: Early exit if build/test failed.
 if %RV% NEQ 0 exit %RV%
 
-:: Run e2e test last and make sure the DLL is in system32.
+:: Run e2e test last and make sure the DLL is in system32 / SysWOW64.
+set SYSTEM_DIR="System32"
+if "%BAZEL_EXTRA_ARGS%"=="--cpu x64_x86_windows" set SYSTEM_DIR="SysWOW64"
 if exist "%PROJECT_ROOT%\bazel-bin\kmscng\main\kmscng.dll" copy ^
     "%PROJECT_ROOT%\bazel-bin\kmscng\main\kmscng.dll" ^
-    "C:\Windows\system32\kmscng.dll"
+    "C:\Windows\%SYSTEM_DIR%\kmscng.dll"
 bazelisk %BAZEL_STARTUP_ARGS% test %BAZEL_ARGS% //kmscng/test/e2e:e2e_test
+set RV_E2E=%ERRORLEVEL%
 
 :: Re-upload test logs after e2e_test is complete.
 python "%PROJECT_ROOT%\.kokoro\copy_test_outputs.py" ^
     "%PROJECT_ROOT%\bazel-testlogs" "%RESULTS_DIR%\testlogs"
 
 :: Early exit if e2e_test failed.
-if %ERRORLEVEL% NEQ 0 exit %ERRORLEVEL%
+if %RV_E2E% NEQ 0 exit %RV_E2E%
 
 if exist "%PROJECT_ROOT%\bazel-bin\kmsp11\main\libkmsp11.so" copy ^
     "%PROJECT_ROOT%\bazel-bin\kmsp11\main\libkmsp11.so" ^

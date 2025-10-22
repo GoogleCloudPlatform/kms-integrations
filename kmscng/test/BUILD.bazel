@@ -63,6 +63,18 @@ go_test(
         "exclusive",  # only one test that does Windows installers at a time
         "manual",  # don't run on dev workstations; included in //:ci_only_tests
     ],
+    args = select({
+	# Use the right signtool path depending on bit-ness.
+	# When the kokoro image is updated, this needs to be updated too.
+	# NOTE: this test does not run for 32-bit builds, since support is
+	# experimental / brittle and is not currently installer-compatible.
+        "//kmscng:windows_x86": [
+            '''-signtool_path="C:\\Program Files (x86)\\Windows Kits\\10\\bin\\10.0.26100.0\\x86\\signtool.exe"''',
+        ],
+        "//conditions:default": [
+	    '''-signtool_path="C:\\Program Files (x86)\\Windows Kits\\10\\bin\\10.0.26100.0\\x64\\signtool.exe"''',
+	],
+    }),
     target_compatible_with = ["@platforms//os:windows"],
     deps = [
         "//fakekms",

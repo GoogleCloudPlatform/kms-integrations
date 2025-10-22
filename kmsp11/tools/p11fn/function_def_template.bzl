@@ -21,6 +21,7 @@ def function_def_template(name, src, out):
         \"$(location //kmsp11/tools/p11fn/templater)\" \
             --func_list_path \"$(location //kmsp11/tools/p11fn:function_defs.textproto)\" \
             --template_path \"$(SRCS)\" > \"$(@)\"""",
+        cmd_bat = "$(location //kmsp11/tools/p11fn/templater) --func_list_path \"$(location //kmsp11/tools/p11fn:function_defs.textproto)\" --template_path \"$(SRCS)\" > \"$(@)\"",
         tools = [
             "//kmsp11/tools/p11fn/templater",
             "//kmsp11/tools/p11fn:function_defs.textproto",

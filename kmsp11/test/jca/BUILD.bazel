@@ -48,6 +48,7 @@ java_test(
         # The workspace rules pull in 64-bit Java on 64-bit hosts, so we can't
         # test with a 32-bit shared library.
         "no_m32",
+	"manual",
         # The Java runtime we pull in with the workspace rules doesn't have
         # sanitizer support.
         "no_san",
@@ -70,6 +71,7 @@ java_test(
         # The workspace rules pull in 64-bit Java on 64-bit hosts, so we can't
         # test with a 32-bit shared library.
         "no_m32",
+	"manual",
         # The Java runtime we pull in with the workspace rules doesn't have
         # sanitizer support.
         "no_san",

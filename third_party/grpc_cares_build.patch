@@ -1,0 +1,17 @@
+--- a/third_party/cares/cares.BUILD	Sat Oct  7 01:44:58 2023
++++ b/third_party/cares/cares.BUILD	Wed Oct 22 11:02:05 2025
+@@ -23,5 +22,0 @@
+-config_setting(
+-    name = "windows",
+-    values = {"cpu": "x64_windows"},
+-)
+-
+@@ -125 +120 @@
+-        ":windows": "@com_github_grpc_grpc//third_party/cares:config_windows/ares_config.h",
++        "@platforms//os:windows": "@com_github_grpc_grpc//third_party/cares:config_windows/ares_config.h",
+@@ -231 +226 @@
+-        ":windows": [
++        "@platforms//os:windows": [
+@@ -242 +237 @@
+-        ":windows": ["-defaultlib:ws2_32.lib"],
++        "@platforms//os:windows": ["-defaultlib:ws2_32.lib"],

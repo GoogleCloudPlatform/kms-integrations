@@ -25,7 +25,8 @@ def _cpdk_impl(repo_ctx):
         fail("Could not find Cryptographic Provider Development Kit at %s", location)
     repo_ctx.symlink(location + "\\Include\\bcrypt_provider.h", "bcrypt_provider.h")
     repo_ctx.symlink(location + "\\Include\\ncrypt_provider.h", "ncrypt_provider.h")
-    repo_ctx.symlink(location + "\\Lib\\x64", "lib")
+    # Append x64 or x86 based on specified target architecture.
+    repo_ctx.symlink(location + "\\Lib\\" + repo_ctx.attr.lib_suffix, "lib")
     repo_ctx.file(
         "BUILD.bazel",
         content = _CPDK_BUILD_FILE_CONTENT,
@@ -34,4 +35,5 @@ def _cpdk_impl(repo_ctx):
 cpdk = repository_rule(
     implementation = _cpdk_impl,
     environ = ["CPDK_LOCATION"],
+    attrs = { "lib_suffix": attr.string(mandatory = True) }
 )

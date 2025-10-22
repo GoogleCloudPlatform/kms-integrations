@@ -26,7 +26,15 @@ select_crypto_library()
 
 load("//kmscng:cpdk.bzl", "cpdk")
 
-cpdk(name = "cpdk")
+cpdk(
+    name = "cpdk_x86",
+    lib_suffix = "x86"
+)
+
+cpdk(
+    name = "cpdk_x64",
+    lib_suffix = "x64"
+)
 
 http_archive(
     name = "wix",
@@ -47,6 +55,13 @@ cloudkms_grpc_service_config(name = "cloudkms_grpc_service_config")
 
 http_archive(
     name = "com_github_gflags_gflags",  # 2020-03-18
+    patch_args = [
+        "-p1",
+    ],
+    # Patch to support x86 builds.
+    patches = [
+        "//:third_party/gflags_windows.patch",
+    ],
     sha256 = "68e26a487038a842da3ef2ddd1f886dad656e9efaf1a3d49e87d1d3a9fa3a8eb",
     strip_prefix = "gflags-addd749114fab4f24b7ea1e0f2f837584389e52c",
     url = "https://github.com/gflags/gflags/archive/addd749114fab4f24b7ea1e0f2f837584389e52c.tar.gz",
@@ -62,12 +77,14 @@ http_archive(
 http_archive(
     name = "com_github_grpc_grpc",  # v1.59.1 / 2023-10-06
     patch_args = [
-        "-E",
         "-p1",
     ],
     patches = [
         "//:third_party/grpc_windows_system_roots.patch",
         "//:third_party/grpc_mac_event_engine.patch",
+	# Patch to support x86 builds.
+        "//:third_party/grpc_windows_event_engine.patch",
+        "//:third_party/grpc_cares_build.patch",
     ],
     sha256 = "916f88a34f06b56432611aaa8c55befee96d0a7b7d7457733b9deeacbc016f99",
     strip_prefix = "grpc-1.59.1",
@@ -146,7 +163,6 @@ http_file(
 http_archive(
     name = "rules_foreign_cc",  # 2021-03-18
     patch_args = [
-        "-E",
         "-p1",
     ],
     patches = ["//:third_party/rules_foreign_cc.patch"],

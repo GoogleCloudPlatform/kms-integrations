@@ -28,7 +28,10 @@ TEST(Uint32ToBytesTest, Success) {
 TEST(ProvHandleToBytesTest, Success) {
   NCRYPT_PROV_HANDLE handle = 1;
   // Use string constructor to handle \x00.
-  EXPECT_EQ(ProvHandleToBytes(handle), std::string("\x1\0\0\0\0\0\0\0", 8));
+  // AnyOf handles the fact that we build for both 32-bit and 64-bit.
+  EXPECT_THAT(ProvHandleToBytes(handle),
+		  testing::AnyOf(std::string("\x1\0\0\0\0\0\0\0", 8),
+			  std::string("\x1\0\0\0", 4)));
 }
 
 TEST(WideStringTest, StringToWideSuccess) {

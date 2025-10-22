@@ -19,6 +19,7 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"flag"
 	"io"
 	"math/big"
 	"os"
@@ -36,6 +37,10 @@ import (
 	"google.golang.org/grpc"
 
 	"cloud.google.com/go/kms/apiv1/kmspb"
+)
+
+var (
+  signtoolPath = flag.String("signtool_path", "", "path to signtool exe")
 )
 
 func generateSelfSignedCertTempFile(t *testing.T, signer *gcpkms.Signer, alg x509.SignatureAlgorithm) string {
@@ -66,12 +71,6 @@ func generateSelfSignedCertTempFile(t *testing.T, signer *gcpkms.Signer, alg x50
 	certFile.Close()
 
 	return certFile.Name()
-}
-
-func signtoolLocation() string {
-	// Only 32-bit signtool is part of the PATH on docker images.
-	// When the kokoro image is updated, this needs to be updated too.
-	return "C:\\Program Files (x86)\\Windows Kits\\10\\bin\\10.0.26100.0\\x64\\signtool.exe"
 }
 
 func TestSigntoolSuccess(t *testing.T) {
@@ -167,7 +166,7 @@ func TestSigntoolSuccess(t *testing.T) {
 			}
 			fileToSign.Close() // signtool will open it
 
-			cmd := exec.CommandContext(ctx, signtoolLocation(), "sign", "/v", "/debug",
+			cmd := exec.CommandContext(ctx, *signtoolPath, "sign", "/v", "/debug",
 				"/fd", test.sha, "/f", certFilePath, "/csp", "Google Cloud KMS Provider",
 				"/kc", ckv.Name, fileToSign.Name())
 			cmd.Env = []string{
