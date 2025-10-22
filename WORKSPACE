@@ -62,7 +62,6 @@ http_archive(
 http_archive(
     name = "com_github_grpc_grpc",  # v1.59.1 / 2023-10-06
     patch_args = [
-        "-E",
         "-p1",
     ],
     patches = [
@@ -140,7 +139,6 @@ http_file(
 http_archive(
     name = "rules_foreign_cc",  # 2021-03-18
     patch_args = [
-        "-E",
         "-p1",
     ],
     patches = ["//:third_party/rules_foreign_cc.patch"],
