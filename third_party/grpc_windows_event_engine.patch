@@ -1,0 +1,10 @@
+--- a/src/core/BUILD	Wed Oct 22 09:32:38 2025
++++ b/src/core/BUILD	Fri Sep 26 14:25:53 2025
+@@ -2305,6 +2305,7 @@
+         "//:windows": ["windows_event_engine"],
+         "//:windows_msvc": ["windows_event_engine"],
+         "//:windows_other": ["windows_event_engine"],
++        "@platforms//os:windows": ["windows_event_engine"],
+         "//:mac": [
+             "posix_event_engine",
+             "cf_event_engine",
