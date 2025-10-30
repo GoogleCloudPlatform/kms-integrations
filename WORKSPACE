@@ -111,6 +111,12 @@ http_archive(
 
 http_archive(
     name = "com_google_googleapis",  # 2023-08-08
+    # Patch unreleased HSM_SINGLE_TENANT protection level into googleapis.
+    patch_args = [
+        "-E",
+        "-p1",
+    ],
+    patches = ["//:third_party/googleapis.patch"],
     sha256 = "bebd8086ab6690bede0d3fa1116b6d549b55e84e4fd25fe3402c19ca87c09263",
     strip_prefix = "googleapis-4a274fa45dec28e84198082dcdb3a9fb7f818b0c",
     url = "https://github.com/googleapis/googleapis/archive/4a274fa45dec28e84198082dcdb3a9fb7f818b0c.zip",

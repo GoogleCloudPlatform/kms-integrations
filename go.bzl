@@ -851,6 +851,12 @@ def go_repositories():
         importpath = "cloud.google.com/go/kms",
         sum = "h1:lh6qra6oC4AyWe5fUUUBe/S27k12OHAleOOOw6KakdE=",
         version = "v1.15.2",
+        # Patch HSM_SINGLE_TENANT protection level into KMS client.
+        patch_args = [
+            "-E",
+            "-p2",
+        ],
+        patches = ["//:third_party/go_kms.patch"],
     )
     go_repository(
         name = "com_google_cloud_go_language",
