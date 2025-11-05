@@ -31,15 +31,30 @@ cc_test(
     ],
 )
 
+config_setting(
+    name = "windows_x86_64",
+    values = {
+        "cpu": "x64_x86_windows",
+    }
+)
+
 cc_library(
     name = "cng_headers",
     hdrs = ["cng_headers.h"],
     target_compatible_with = ["@platforms//os:windows"],
     deps = [
-        "//kmsp11/util:crypto_utils",
-        "@cpdk//:bcrypt_provider",
-        "@cpdk//:ncrypt_provider",
-    ],
+            "//kmsp11/util:crypto_utils"
+        ] + 
+        select({
+            ":windows_x86_64": [        
+                  "@cpdk_x86//:bcrypt_provider",
+                  "@cpdk_x86//:ncrypt_provider",
+            ], 
+            "//conditions:default": [        
+                  "@cpdk_x64//:bcrypt_provider",
+                  "@cpdk_x64//:ncrypt_provider",
+            ],  
+        }),
 )
 
 cc_library(

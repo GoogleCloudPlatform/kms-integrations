@@ -26,7 +26,15 @@ select_crypto_library()
 
 load("//kmscng:cpdk.bzl", "cpdk")
 
-cpdk(name = "cpdk")
+cpdk(
+    name = "cpdk_x86",
+    lib_suffix = "x86"
+)
+
+cpdk(
+    name = "cpdk_x64",
+    lib_suffix = "x64"
+)
 
 http_archive(
     name = "wix",
