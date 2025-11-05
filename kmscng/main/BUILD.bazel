@@ -101,7 +101,7 @@ genrule(
         ":kmscng.dll",
     ],
     outs = ["libkmscng.dll"],
-    cmd_bat = "copy $(@D)\\kmscng.dll $(@D)\\libkmscng.dll > NUL && robocopy $(@D) C:\\Windows\\System32 kmscng.dll /xc /xo > NUL & exit /b 0",
+    cmd_bat = "copy $(@D)\\kmscng.dll $(@D)\\libkmscng.dll > NUL && robocopy $(@D) C:\\Windows\\System32 kmscng.dll /xc /xo /r:0 > NUL & exit /b 0",
     target_compatible_with = ["@platforms//os:windows"],
 )
 
