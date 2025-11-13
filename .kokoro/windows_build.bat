@@ -76,6 +76,11 @@ if exist "%PROJECT_ROOT%\bazel-bin\kmscng\main\kmscng.dll" copy ^
     "%PROJECT_ROOT%\bazel-bin\kmscng\main\kmscng.dll" ^
     "C:\Windows\system32\kmscng.dll"
 bazelisk %BAZEL_STARTUP_ARGS% test %BAZEL_ARGS% //kmscng/test/e2e:e2e_test
+
+:: Re-upload test logs after e2e_test is complete.
+python "%PROJECT_ROOT%\.kokoro\copy_test_outputs.py" ^
+    "%PROJECT_ROOT%\bazel-testlogs" "%RESULTS_DIR%\testlogs"
+
 :: Early exit if e2e_test failed.
 if %ERRORLEVEL% NEQ 0 exit %ERRORLEVEL%
 
