@@ -222,6 +222,14 @@ absl::StatusOr<CryptoKeyAndVersion> CreateKeyAndVersion(
   // Unless otherwise specified in the key generation params, we generate keys
   // with protection level = HSM.
   if (gen_params.protection_level.has_value()) {
+    if (*gen_params.protection_level ==
+        kms_v1::ProtectionLevel::HSM_SINGLE_TENANT) {
+      return NewError(
+          absl::StatusCode::kInvalidArgument,
+          absl::StrFormat("key creation for HSM_SINGLE_TENANT "
+                          "protection level currently not supported"),
+          CKR_ARGUMENTS_BAD, SOURCE_LOCATION);
+    }
     req.mutable_crypto_key()->mutable_version_template()->set_protection_level(
         *gen_params.protection_level);
   } else {

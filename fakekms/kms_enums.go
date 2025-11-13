@@ -224,7 +224,8 @@ func nameForValue(names map[int32]string, value int32) string {
 // level is not supported. Note that PROTECTION_LEVEL_UNSPECIFIED is not a supported level.
 func validateProtectionLevel(pl kmspb.ProtectionLevel) error {
 	switch pl {
-	case kmspb.ProtectionLevel_SOFTWARE, kmspb.ProtectionLevel_HSM:
+	case kmspb.ProtectionLevel_SOFTWARE, kmspb.ProtectionLevel_HSM,
+		kmspb.ProtectionLevel_HSM_SINGLE_TENANT:
 		return nil
 	default:
 		return errUnimplemented("unsupported protection level: %s",

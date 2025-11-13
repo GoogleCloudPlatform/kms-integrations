@@ -346,5 +346,23 @@ TEST_F(BuildStateTest, VersionWithAlgorithmP224IsOmitted) {
               IsOkAndHolds(EqualsProto(ObjectStoreState())));
 }
 
+TEST_F(BuildStateTest,
+       KeyWithSingleTenantProtectionLevelIncluded) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectLoader> loader_,
+                       ObjectLoader::New(key_ring_.name(), {}, true,
+                                         /*allow_software_keys=*/false));
+  kms_v1::CryptoKeyVersion ckv =
+      AddKeyAndInitialVersion("ck", kms_v1::CryptoKey::ASYMMETRIC_SIGN,
+                              kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256,
+                              kms_v1::ProtectionLevel::HSM_SINGLE_TENANT);
+
+
+
+
+  ASSERT_OK_AND_ASSIGN(ObjectStoreState state, loader_->BuildState(*client_));
+  EXPECT_EQ(state.keys_size(), 1);
+}
+
+
 }  // namespace
 }  // namespace cloud_kms::kmsp11

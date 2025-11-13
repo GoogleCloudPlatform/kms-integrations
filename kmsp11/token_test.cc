@@ -415,6 +415,37 @@ TEST_F(TokenTest, SoftwareKeyAvailableWhenSoftwareKeysAllowed) {
           Property("object_class", &Object::object_class, CKO_PUBLIC_KEY)))));
 }
 
+TEST_F(TokenTest, SingleTenantKeyAvailable) {
+  auto kms_client = fake_server_->NewClient();
+
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM_SINGLE_TENANT);
+  ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), "ck", ck, true);
+  kms_v1::CryptoKeyVersion ckv;
+  ckv = CreateCryptoKeyVersionOrDie(kms_client.get(), ck.name(), ckv);
+  ckv = WaitForEnablement(kms_client.get(), ckv);
+  ASSERT_OK_AND_ASSIGN(
+      std::unique_ptr<Token> token,
+      Token::New(0, config_, client_.get(), /* generate_certs = */ false,
+                 /* allow_software_keys =*/ false));
+
+  std::vector<CK_ULONG> handles =
+      token->FindObjects([](const Object& o) -> bool {
+        return o.object_class() == CKO_PUBLIC_KEY;
+      });
+  EXPECT_EQ(handles.size(), 1);
+
+  EXPECT_THAT(
+      token->GetObject(handles[0]),
+      IsOkAndHolds(Pointee(AllOf(
+          Property("kms_key_name", &Object::kms_key_name, ckv.name()),
+          Property("object_class", &Object::object_class, CKO_PUBLIC_KEY)))));
+}
+
 TEST_F(TokenTest, DisabledKeyUnavailable) {
   auto kms_client = fake_server_->NewClient();
 

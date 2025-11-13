@@ -48,7 +48,9 @@ bool ObjectLoader::IsLoadable(const kms_v1::CryptoKey& key) {
   if (key.version_template().protection_level() !=
           kms_v1::ProtectionLevel::HSM &&
       key.version_template().protection_level() !=
-          kms_v1::ProtectionLevel::SOFTWARE) {
+          kms_v1::ProtectionLevel::SOFTWARE &&
+      key.version_template().protection_level() !=
+          kms_v1::ProtectionLevel::HSM_SINGLE_TENANT) {
     LOG(INFO) << "INFO: key " << key.name()
               << " is not loadable due to unsupported protection level "
               << EnumNameOrValue(kms_v1::ProtectionLevel_Name(
