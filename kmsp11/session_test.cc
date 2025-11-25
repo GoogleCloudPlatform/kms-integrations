@@ -1287,7 +1287,8 @@ TEST_F(GenerateKeyPairTest,
   EXPECT_THAT(s.GenerateKeyPair(mech, {}, prv_template),
               AllOf(StatusIs(absl::StatusCode::kInvalidArgument,
                              HasSubstr("CKA_KMS_PROTECTION_LEVEL value should "
-                                       "be 1(SOFTWARE) or 2(HSM)")),
+                                       "be 1(SOFTWARE), 2(HSM), or "
+                                       "5(HSM_SINGLE_TENANT)")),
                     StatusRvIs(CKR_ATTRIBUTE_VALUE_INVALID)));
 }
 
@@ -1354,6 +1355,31 @@ TEST_F(GenerateKeyPairTest,
       AllOf(StatusIs(absl::StatusCode::kInvalidArgument,
                      HasSubstr("algorithm mismatches keygen mechanism")),
             StatusRvIs(CKR_TEMPLATE_INCONSISTENT)));
+}
+
+TEST_F(GenerateKeyPairTest,
+       MissingCryptoKeyBackendWhenSingleTenantReturnsInvalidArgument) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadWrite, client_.get());
+
+  CK_MECHANISM mech = {CKM_RSA_PKCS_KEY_PAIR_GEN, nullptr, 0};
+  std::string label = "my-great-key";
+  CK_ULONG kms_algorithm = KMS_ALGORITHM_EC_SIGN_P256_SHA256;
+  CK_ULONG protection_level = KMS_PROTECTION_LEVEL_HSM_SINGLE_TENANT;
+  CK_ATTRIBUTE prv_template[] = {
+      {CKA_KMS_ALGORITHM, &kms_algorithm, sizeof(kms_algorithm)},
+      {CKA_LABEL, label.data(), label.size()},
+      {CKA_KMS_PROTECTION_LEVEL, &protection_level, sizeof(protection_level)},
+  };
+
+  EXPECT_THAT(
+      s.GenerateKeyPair(mech, {}, prv_template),
+      AllOf(StatusIs(absl::StatusCode::kInvalidArgument,
+                     HasSubstr("CKA_KMS_CRYPTO_KEY_BACKEND must be "
+                               "specified with protection level "
+                               "HSM_SINGLE_TENANT")),
+            StatusRvIs(CKR_TEMPLATE_INCOMPLETE)));
 }
 
 TEST_F(GenerateKeyPairTest, DuplicateLabelReturnsAlreadyExistsDefaultConfig) {
@@ -1454,6 +1480,43 @@ TEST_F(
   );
 }
 
+TEST_F(
+    GenerateKeyPairTest,
+    Version2CanBeCreatedWithExperimentalCreateMultipleVersionsForSingleTenantKeys) {
+  std::string label = "my-great-key";
+
+  auto kms_client = fake_server_->NewClient();
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::ASYMMETRIC_SIGN);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM_SINGLE_TENANT);
+  ck.set_crypto_key_backend("test");
+  ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), label, ck,
+                            false);
+
+  ASSERT_OK_AND_ASSIGN(
+      std::unique_ptr<Token> token,
+      Token::New(0, config_, client_.get(), /*generate_certs = */ false,
+                 /*allow_software_keys = */ false));
+  Session s(token.get(), SessionType::kReadWrite, client_.get());
+
+  CK_MECHANISM mech = {CKM_EC_KEY_PAIR_GEN, nullptr, 0};
+  CK_ULONG kms_algorithm = KMS_ALGORITHM_EC_SIGN_P384_SHA384;
+  CK_ATTRIBUTE prv_template[] = {
+      {CKA_KMS_ALGORITHM, &kms_algorithm, sizeof(kms_algorithm)},
+      {CKA_LABEL, label.data(), label.size()},
+  };
+
+  EXPECT_OK(s.GenerateKeyPair(mech, {}, prv_template, true, false));
+  EXPECT_THAT(token->FindObjects([&](const Object& o) {
+    return absl::StartsWith(o.kms_key_name(), ck.name());
+  }),
+              SizeIs(4)  // Two keypairs, each with public and private.
+  );
+}
+
 TEST_F(GenerateKeyPairTest, GeneratedHsmKeyPairIsImmediatelyAvailable) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
                        Token::New(0, config_, client_.get()));
@@ -1493,6 +1556,33 @@ TEST_F(GenerateKeyPairTest, GeneratedSoftwareKeyPairIsImmediatelyAvailable) {
 
   ASSERT_OK_AND_ASSIGN(AsymmetricHandleSet handles,
                        s.GenerateKeyPair(mech, {}, prv_template, true, true));
+
+  EXPECT_OK(token->GetObject(handles.public_key_handle));
+  EXPECT_OK(token->GetObject(handles.private_key_handle));
+}
+
+TEST_F(GenerateKeyPairTest,
+       GeneratedSingleTenantKeyPairIsImmediatelyAvailable) {
+  ASSERT_OK_AND_ASSIGN(
+      std::unique_ptr<Token> token,
+      Token::New(0, config_, client_.get(), /*generate_certs = */ false,
+                 /*allow_software_keys = */ false));
+  Session s(token.get(), SessionType::kReadWrite, client_.get());
+
+  CK_MECHANISM mech = {CKM_EC_KEY_PAIR_GEN, nullptr, 0};
+  std::string label = "my-great-key";
+  CK_ULONG kms_algorithm = KMS_ALGORITHM_EC_SIGN_P256_SHA256;
+  CK_ULONG protection_level = KMS_PROTECTION_LEVEL_HSM_SINGLE_TENANT;
+  std::string crypto_key_backend = "test";
+  CK_ATTRIBUTE prv_template[] = {
+      {CKA_KMS_ALGORITHM, &kms_algorithm, sizeof(kms_algorithm)},
+      {CKA_LABEL, label.data(), label.size()},
+      {CKA_KMS_PROTECTION_LEVEL, &protection_level, sizeof(protection_level)},
+      {CKA_KMS_CRYPTO_KEY_BACKEND, crypto_key_backend.data(),
+       crypto_key_backend.size()}};
+
+  ASSERT_OK_AND_ASSIGN(AsymmetricHandleSet handles,
+                       s.GenerateKeyPair(mech, {}, prv_template, true, false));
 
   EXPECT_OK(token->GetObject(handles.public_key_handle));
   EXPECT_OK(token->GetObject(handles.private_key_handle));
@@ -1715,6 +1805,31 @@ TEST_F(GenerateKeyTest, MismatchedAlgorithmAndMechanismReturnsInvalidArgument) {
             StatusRvIs(CKR_TEMPLATE_INCONSISTENT)));
 }
 
+TEST_F(GenerateKeyTest,
+       MissingCryptoKeyBackendWhenSingleTenantReturnsInvalidArgument) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
+                       Token::New(0, config_, client_.get()));
+  Session s(token.get(), SessionType::kReadWrite, client_.get());
+
+  CK_MECHANISM mech = {CKM_AES_KEY_GEN, nullptr, 0};
+  std::string label = "my-great-key";
+  CK_ULONG kms_algorithm = KMS_ALGORITHM_AES_256_GCM;
+  CK_ULONG protection_level = KMS_PROTECTION_LEVEL_HSM_SINGLE_TENANT;
+  CK_ATTRIBUTE key_template[] = {
+      {CKA_KMS_ALGORITHM, &kms_algorithm, sizeof(kms_algorithm)},
+      {CKA_LABEL, label.data(), label.size()},
+      {CKA_KMS_PROTECTION_LEVEL, &protection_level, sizeof(protection_level)},
+  };
+
+  EXPECT_THAT(
+      s.GenerateKey(mech, key_template),
+      AllOf(StatusIs(absl::StatusCode::kInvalidArgument,
+                     HasSubstr("CKA_KMS_CRYPTO_KEY_BACKEND must be "
+                               "specified with protection level "
+                               "HSM_SINGLE_TENANT")),
+            StatusRvIs(CKR_TEMPLATE_INCOMPLETE)));
+}
+
 TEST_F(GenerateKeyTest, DuplicateLabelReturnsAlreadyExistsDefaultConfig) {
   std::string label = "my-great-key";
 
@@ -1812,6 +1927,42 @@ TEST_F(GenerateKeyTest,
   );
 }
 
+TEST_F(GenerateKeyTest,
+       Version2CanBeCreatedWithExperimentalCreateMultipleVersionsForSingleTenantKeys) {
+  std::string label = "my-great-key";
+
+  auto kms_client = fake_server_->NewClient();
+  kms_v1::CryptoKey ck;
+  ck.set_purpose(kms_v1::CryptoKey::RAW_ENCRYPT_DECRYPT);
+  ck.mutable_version_template()->set_algorithm(
+      kms_v1::CryptoKeyVersion::AES_256_GCM);
+  ck.mutable_version_template()->set_protection_level(
+      kms_v1::ProtectionLevel::HSM_SINGLE_TENANT);
+  ck.set_crypto_key_backend("test");
+  ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), label, ck,
+                            false);
+
+  ASSERT_OK_AND_ASSIGN(
+      std::unique_ptr<Token> token,
+      Token::New(0, config_, client_.get(), /*generate_certs = */ false,
+                 /*allow_software_keys = */ false));
+  Session s(token.get(), SessionType::kReadWrite, client_.get());
+
+  CK_MECHANISM mech = {CKM_AES_KEY_GEN, nullptr, 0};
+  CK_ULONG kms_algorithm = KMS_ALGORITHM_AES_256_GCM;
+  CK_ATTRIBUTE key_template[] = {
+      {CKA_KMS_ALGORITHM, &kms_algorithm, sizeof(kms_algorithm)},
+      {CKA_LABEL, label.data(), label.size()},
+  };
+
+  EXPECT_OK(s.GenerateKey(mech, key_template, true, false));
+  EXPECT_THAT(token->FindObjects([&](const Object& o) {
+    return absl::StartsWith(o.kms_key_name(), ck.name());
+  }),
+              SizeIs(2)  // Two secret keys.
+  );
+}
+
 TEST_F(GenerateKeyTest, GeneratedHsmKeyIsImmediatelyAvailable) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<Token> token,
                        Token::New(0, config_, client_.get()));
@@ -1850,6 +2001,32 @@ TEST_F(GenerateKeyTest, GeneratedSoftwareKeyIsImmediatelyAvailable) {
 
   ASSERT_OK_AND_ASSIGN(CK_OBJECT_HANDLE handle,
                        s.GenerateKey(mech, key_template, true, true));
+
+  EXPECT_OK(token->GetObject(handle));
+}
+
+TEST_F(GenerateKeyTest, GeneratedSingleTenantKeyIsImmediatelyAvailable) {
+  ASSERT_OK_AND_ASSIGN(
+      std::unique_ptr<Token> token,
+      Token::New(0, config_, client_.get(), /*generate_certs = */ false,
+                 /*allow_software_keys = */ false));
+  Session s(token.get(), SessionType::kReadWrite, client_.get());
+
+  CK_MECHANISM mech = {CKM_GENERIC_SECRET_KEY_GEN, nullptr, 0};
+  std::string label = "my-great-key";
+  CK_ULONG kms_algorithm = KMS_ALGORITHM_HMAC_SHA256;
+  CK_ULONG protection_level = KMS_PROTECTION_LEVEL_HSM_SINGLE_TENANT;
+  std::string crypto_key_backend = "test";
+  CK_ATTRIBUTE key_template[] = {
+      {CKA_KMS_ALGORITHM, &kms_algorithm, sizeof(kms_algorithm)},
+      {CKA_LABEL, label.data(), label.size()},
+      {CKA_KMS_PROTECTION_LEVEL, &protection_level, sizeof(protection_level)},
+      {CKA_KMS_CRYPTO_KEY_BACKEND, crypto_key_backend.data(),
+       crypto_key_backend.size()}
+  };
+
+  ASSERT_OK_AND_ASSIGN(CK_OBJECT_HANDLE handle,
+                       s.GenerateKey(mech, key_template, true, false));
 
   EXPECT_OK(token->GetObject(handle));
 }

@@ -35,6 +35,7 @@ struct KeyGenerationParams {
   std::string label;
   AlgorithmDetails algorithm;
   std::optional<kms_v1::ProtectionLevel> protection_level;
+  std::optional<std::string> crypto_key_backend;
 };
 
 absl::StatusOr<KeyGenerationParams> ExtractKeyGenerationParams(
@@ -42,6 +43,7 @@ absl::StatusOr<KeyGenerationParams> ExtractKeyGenerationParams(
   std::optional<std::string> label;
   std::optional<kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm> algorithm;
   std::optional<kms_v1::ProtectionLevel> protection_level;
+  std::optional<std::string> crypto_key_backend;
 
   for (const CK_ATTRIBUTE& attr : prv_template) {
     switch (attr.type) {
@@ -79,10 +81,11 @@ absl::StatusOr<KeyGenerationParams> ExtractKeyGenerationParams(
         protection_level =
             kms_v1::ProtectionLevel(*static_cast<CK_ULONG*>(attr.pValue));
         if (protection_level != kms_v1::SOFTWARE &&
-            protection_level != kms_v1::HSM) {
+            protection_level != kms_v1::HSM &&
+            protection_level != kms_v1::HSM_SINGLE_TENANT) {
           return NewInvalidArgumentError(
               absl::StrFormat("CKA_KMS_PROTECTION_LEVEL value should be "
-                              "1(SOFTWARE) or 2(HSM) "
+                              "1(SOFTWARE), 2(HSM), or 5(HSM_SINGLE_TENANT)"
                               ", got=%d",
                               attr.ulValueLen),
               CKR_ATTRIBUTE_VALUE_INVALID, SOURCE_LOCATION);
@@ -96,6 +99,10 @@ absl::StatusOr<KeyGenerationParams> ExtractKeyGenerationParams(
               "configuration.",
               CKR_ATTRIBUTE_VALUE_INVALID, SOURCE_LOCATION);
         }
+        break;
+      case CKA_KMS_CRYPTO_KEY_BACKEND:
+        crypto_key_backend =
+            std::string(reinterpret_cast<char*>(attr.pValue), attr.ulValueLen);
         break;
       default:
         return NewInvalidArgumentError(
@@ -123,13 +130,23 @@ absl::StatusOr<KeyGenerationParams> ExtractKeyGenerationParams(
                                    SOURCE_LOCATION);
   }
 
-  return KeyGenerationParams{*label, *algorithm_details, protection_level};
+  if (protection_level.has_value() &&
+      protection_level == kms_v1::HSM_SINGLE_TENANT &&
+      !crypto_key_backend.has_value()) {
+    return NewInvalidArgumentError(
+        "CKA_KMS_CRYPTO_KEY_BACKEND must be specified with protection level "
+        "HSM_SINGLE_TENANT",
+        CKR_TEMPLATE_INCOMPLETE, SOURCE_LOCATION);
+  }
+
+  return KeyGenerationParams{*label, *algorithm_details, protection_level,
+                             crypto_key_backend};
 }
 
 absl::StatusOr<kms_v1::CryptoKeyVersion> CreateNewVersionOfExistingKey(
     const KmsClient& client, const kms_v1::CryptoKey& crypto_key,
     const KeyGenerationParams& gen_params, bool allow_software_keys) {
-   if (crypto_key.purpose() != gen_params.algorithm.purpose) {
+  if (crypto_key.purpose() != gen_params.algorithm.purpose) {
     return NewError(
         absl::StatusCode::kInvalidArgument,
         absl::StrFormat("key attribute mismatch when attempting to create "
@@ -140,7 +157,7 @@ absl::StatusOr<kms_v1::CryptoKeyVersion> CreateNewVersionOfExistingKey(
   }
 
   if (crypto_key.version_template().algorithm() !=
-          gen_params.algorithm.algorithm) {
+      gen_params.algorithm.algorithm) {
     return NewError(
         absl::StatusCode::kInvalidArgument,
         absl::StrFormat("key attribute mismatch when attempting to create "
@@ -170,7 +187,7 @@ absl::StatusOr<kms_v1::CryptoKeyVersion> CreateNewVersionOfExistingKey(
   // Check the crypto key's protection level against the allowed protection
   // levels.
   absl::flat_hash_set<kms_v1::ProtectionLevel> allowed_protection_levels = {
-      kms_v1::HSM};
+      kms_v1::HSM, kms_v1::HSM_SINGLE_TENANT};
   if (allow_software_keys) allowed_protection_levels.insert(kms_v1::SOFTWARE);
   if (!allowed_protection_levels.contains(
           crypto_key.version_template().protection_level())) {
@@ -222,16 +239,12 @@ absl::StatusOr<CryptoKeyAndVersion> CreateKeyAndVersion(
   // Unless otherwise specified in the key generation params, we generate keys
   // with protection level = HSM.
   if (gen_params.protection_level.has_value()) {
-    if (*gen_params.protection_level ==
-        kms_v1::ProtectionLevel::HSM_SINGLE_TENANT) {
-      return NewError(
-          absl::StatusCode::kInvalidArgument,
-          absl::StrFormat("key creation for HSM_SINGLE_TENANT "
-                          "protection level currently not supported"),
-          CKR_ARGUMENTS_BAD, SOURCE_LOCATION);
-    }
     req.mutable_crypto_key()->mutable_version_template()->set_protection_level(
         *gen_params.protection_level);
+    if (*gen_params.protection_level == kms_v1::HSM_SINGLE_TENANT) {
+      req.mutable_crypto_key()->set_crypto_key_backend(
+          *gen_params.crypto_key_backend);
+    }
   } else {
     req.mutable_crypto_key()->mutable_version_template()->set_protection_level(
         kms_v1::HSM);

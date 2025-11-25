@@ -74,16 +74,24 @@ func TestCreateCryptoKeyAlgorithms(t *testing.T) {
 	kr := client.CreateTestKR(ctx, t, &kmspb.CreateKeyRingRequest{Parent: location})
 
 	var cases = []struct {
-		Name            string
-		Purpose         kmspb.CryptoKey_CryptoKeyPurpose
-		Algorithm       kmspb.CryptoKeyVersion_CryptoKeyVersionAlgorithm
-		ProtectionLevel kmspb.ProtectionLevel
+		Name             string
+		Purpose          kmspb.CryptoKey_CryptoKeyPurpose
+		Algorithm        kmspb.CryptoKeyVersion_CryptoKeyVersionAlgorithm
+		ProtectionLevel  kmspb.ProtectionLevel
+		CryptoKeyBackend string
 	}{
 		{
 			Name:            "ENCRYPT_DECRYPT_SOFTWARE",
 			Purpose:         kmspb.CryptoKey_ENCRYPT_DECRYPT,
 			Algorithm:       kmspb.CryptoKeyVersion_GOOGLE_SYMMETRIC_ENCRYPTION,
 			ProtectionLevel: kmspb.ProtectionLevel_SOFTWARE,
+		},
+		{
+			Name:             "ENCRYPT_DECRYPT_SINGLE_TENANT",
+			Purpose:          kmspb.CryptoKey_ENCRYPT_DECRYPT,
+			Algorithm:        kmspb.CryptoKeyVersion_GOOGLE_SYMMETRIC_ENCRYPTION,
+			ProtectionLevel:  kmspb.ProtectionLevel_HSM_SINGLE_TENANT,
+			CryptoKeyBackend: "projects/cloudkms-testing-hsm/locations/us-central1/singleTenantHsmInstances/staging-tmp-longrunning",
 		},
 		{
 			Name:            "SIGN_P256_HSM",
@@ -110,6 +118,13 @@ func TestCreateCryptoKeyAlgorithms(t *testing.T) {
 			ProtectionLevel: kmspb.ProtectionLevel_HSM,
 		},
 		{
+			Name:             "SIGN_RSAPSS4096SHA512_SINGLE_TENANT",
+			Purpose:          kmspb.CryptoKey_ASYMMETRIC_SIGN,
+			Algorithm:        kmspb.CryptoKeyVersion_RSA_SIGN_PSS_4096_SHA512,
+			ProtectionLevel:  kmspb.ProtectionLevel_HSM_SINGLE_TENANT,
+			CryptoKeyBackend: "projects/cloudkms-testing-hsm/locations/us-central1/singleTenantHsmInstances/staging-tmp-longrunning",
+		},
+		{
 			Name:            "ASYMM_DECRYPT_OAEP2048_SOFTWARE",
 			Purpose:         kmspb.CryptoKey_ASYMMETRIC_DECRYPT,
 			Algorithm:       kmspb.CryptoKeyVersion_RSA_DECRYPT_OAEP_2048_SHA256,
@@ -120,6 +135,13 @@ func TestCreateCryptoKeyAlgorithms(t *testing.T) {
 			Purpose:         kmspb.CryptoKey_ASYMMETRIC_DECRYPT,
 			Algorithm:       kmspb.CryptoKeyVersion_RSA_DECRYPT_OAEP_4096_SHA256,
 			ProtectionLevel: kmspb.ProtectionLevel_HSM,
+		},
+		{
+			Name:             "ASYMM_DECRYPT_OAEP3072SHA256_SINGLE_TENANT",
+			Purpose:          kmspb.CryptoKey_ASYMMETRIC_DECRYPT,
+			Algorithm:        kmspb.CryptoKeyVersion_RSA_DECRYPT_OAEP_3072_SHA256,
+			ProtectionLevel:  kmspb.ProtectionLevel_HSM_SINGLE_TENANT,
+			CryptoKeyBackend: "projects/cloudkms-testing-hsm/locations/us-central1/singleTenantHsmInstances/staging-tmp-longrunning",
 		},
 	}
 
@@ -135,6 +157,7 @@ func TestCreateCryptoKeyAlgorithms(t *testing.T) {
 						ProtectionLevel: c.ProtectionLevel,
 						Algorithm:       c.Algorithm,
 					},
+					CryptoKeyBackend: c.CryptoKeyBackend,
 				},
 				SkipInitialVersionCreation: true,
 			})
@@ -150,6 +173,7 @@ func TestCreateCryptoKeyAlgorithms(t *testing.T) {
 					ProtectionLevel: c.ProtectionLevel,
 					Algorithm:       c.Algorithm,
 				},
+				CryptoKeyBackend:         c.CryptoKeyBackend,
 				DestroyScheduledDuration: &durationpb.Duration{Seconds: 2592000},
 			}
 			opts := append(ProtoDiffOpts(), protocmp.IgnoreUnknown())

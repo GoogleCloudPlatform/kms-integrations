@@ -100,6 +100,13 @@ extern "C" {
 #define KMS_PROTECTION_LEVEL_SOFTWARE 1UL
 // Hardware protection level.
 #define KMS_PROTECTION_LEVEL_HARDWARE 2UL
+// Single tenant hardware protection level.
+#define KMS_PROTECTION_LEVEL_HSM_SINGLE_TENANT 5UL
+
+// An attribute that indicates the crypto key backend of an existing
+// single tenant instance for key creation under the HSM_SINGLE_TENANT
+// protection level.
+#define CKA_KMS_CRYPTO_KEY_BACKEND (CKA_GOOGLE_DEFINED | 0x03UL)
 
 // A marker for a PKCS #11 mechanism defined by Google.
 // (Note that 0x80000000UL is CKM_VENDOR_DEFINED).

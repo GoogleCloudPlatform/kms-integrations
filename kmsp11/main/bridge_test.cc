@@ -1784,6 +1784,62 @@ TEST(BridgeTest, GenerateKeyPairSuccess) {
       kr.name() + "/cryptoKeys/" + key_id + "/cryptoKeyVersions/1");
 }
 
+TEST(BridgeTest, GenerateKeyPairSingleTenantSuccess) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
+                       fakekms::Server::New());
+  kms_v1::KeyRing kr;
+  std::string config_file =
+      CreateConfigFileWithOneKeyring(fake_server.get(), &kr);
+  absl::Cleanup config_close = [config_file] {
+    std::remove(config_file.c_str());
+  };
+
+  auto init_args = InitArgs(config_file.c_str());
+
+  EXPECT_OK(Initialize(&init_args));
+  absl::Cleanup c = [] { EXPECT_OK(Finalize(nullptr)); };
+
+  CK_SESSION_HANDLE session;
+  EXPECT_OK(OpenSession(0, CKF_SERIAL_SESSION | CKF_RW_SESSION, nullptr,
+                        nullptr, &session));
+
+  std::string key_id = "my-great-id";
+  CK_ULONG algorithm = KMS_ALGORITHM_EC_SIGN_P256_SHA256;
+
+  CK_MECHANISM gen_mech = {CKM_EC_KEY_PAIR_GEN, nullptr, 0};
+  CK_ULONG protection_level = KMS_PROTECTION_LEVEL_HSM_SINGLE_TENANT;
+  std::string crypto_key_backend = "test";
+  CK_ATTRIBUTE tmpl[4] = {
+      {CKA_LABEL, key_id.data(), key_id.size()},
+      {CKA_KMS_ALGORITHM, &algorithm, sizeof(algorithm)},
+      {CKA_KMS_PROTECTION_LEVEL, &protection_level, sizeof(protection_level)},
+      {CKA_KMS_CRYPTO_KEY_BACKEND, crypto_key_backend.data(),
+       crypto_key_backend.size()}
+  };
+  CK_OBJECT_HANDLE handles[2];
+
+  EXPECT_OK(GenerateKeyPair(session, &gen_mech, nullptr, 0, &tmpl[0], 2,
+                            &handles[0], &handles[1]));
+  EXPECT_NE(handles[0], CK_INVALID_HANDLE);
+  EXPECT_NE(handles[1], CK_INVALID_HANDLE);
+
+  // Ensure that the generated keypair can be found with C_FindObjects
+  CK_ULONG found_count;
+  CK_OBJECT_HANDLE found_handles[2];
+  EXPECT_OK(FindObjectsInit(session, &tmpl[0], 2));
+  EXPECT_OK(FindObjects(session, &found_handles[0], 2, &found_count));
+  EXPECT_EQ(found_count, 2);
+  EXPECT_OK(FindObjectsFinal(session));
+
+  EXPECT_THAT(found_handles, testing::UnorderedElementsAreArray(handles));
+
+  // Ensure that the CKV can be located with direct KMS API calls.
+  auto fake_client = fake_server->NewClient();
+  GetCryptoKeyVersionOrDie(
+      fake_client.get(),
+      kr.name() + "/cryptoKeys/" + key_id + "/cryptoKeyVersions/1");
+}
+
 TEST(BridgeTest,
      GenerateTwoKeyPairsSuccessWithExperimentalCreateMultipleVersions) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,

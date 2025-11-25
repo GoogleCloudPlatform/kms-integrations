@@ -48,11 +48,15 @@ class BuildStateTest : public testing::Test {
   kms_v1::CryptoKeyVersion AddKeyAndInitialVersion(
       std::string_view key_name, kms_v1::CryptoKey::CryptoKeyPurpose purpose,
       kms_v1::CryptoKeyVersion::CryptoKeyVersionAlgorithm algorithm,
-      kms_v1::ProtectionLevel protection_level = kms_v1::HSM) {
+      kms_v1::ProtectionLevel protection_level = kms_v1::HSM,
+      std::string_view crypto_key_backend = "") {
     kms_v1::CryptoKey ck;
     ck.set_purpose(purpose);
     ck.mutable_version_template()->set_algorithm(algorithm);
     ck.mutable_version_template()->set_protection_level(protection_level);
+    if (crypto_key_backend != "") {
+      ck.set_crypto_key_backend(crypto_key_backend);
+    }
     ck = CreateCryptoKeyOrDie(kms_stub_.get(), key_ring_.name(), key_name, ck,
                               true);
 
@@ -346,23 +350,19 @@ TEST_F(BuildStateTest, VersionWithAlgorithmP224IsOmitted) {
               IsOkAndHolds(EqualsProto(ObjectStoreState())));
 }
 
-TEST_F(BuildStateTest,
-       KeyWithSingleTenantProtectionLevelIncluded) {
+TEST_F(BuildStateTest, KeyWithSingleTenantProtectionLevelIncluded) {
   ASSERT_OK_AND_ASSIGN(std::unique_ptr<ObjectLoader> loader_,
                        ObjectLoader::New(key_ring_.name(), {}, true,
                                          /*allow_software_keys=*/false));
   kms_v1::CryptoKeyVersion ckv =
       AddKeyAndInitialVersion("ck", kms_v1::CryptoKey::ASYMMETRIC_SIGN,
                               kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256,
-                              kms_v1::ProtectionLevel::HSM_SINGLE_TENANT);
-
-
-
+                              kms_v1::ProtectionLevel::HSM_SINGLE_TENANT,
+                              "test");
 
   ASSERT_OK_AND_ASSIGN(ObjectStoreState state, loader_->BuildState(*client_));
   EXPECT_EQ(state.keys_size(), 1);
 }
-
 
 }  // namespace
 }  // namespace cloud_kms::kmsp11

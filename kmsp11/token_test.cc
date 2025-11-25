@@ -424,6 +424,7 @@ TEST_F(TokenTest, SingleTenantKeyAvailable) {
       kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256);
   ck.mutable_version_template()->set_protection_level(
       kms_v1::ProtectionLevel::HSM_SINGLE_TENANT);
+  ck.set_crypto_key_backend("test");
   ck = CreateCryptoKeyOrDie(kms_client.get(), key_ring_.name(), "ck", ck, true);
   kms_v1::CryptoKeyVersion ckv;
   ckv = CreateCryptoKeyVersionOrDie(kms_client.get(), ck.name(), ckv);

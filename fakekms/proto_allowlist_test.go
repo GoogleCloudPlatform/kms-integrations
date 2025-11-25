@@ -66,6 +66,14 @@ func TestAllowlistScalars(t *testing.T) {
 			},
 			Path: "crypto_key.version_template.protection_level",
 		},
+		{
+			Message: &kmspb.CreateCryptoKeyRequest{
+				CryptoKey: &kmspb.CryptoKey{
+					CryptoKeyBackend: "test",
+				},
+			},
+			Path: "crypto_key.crypto_key_backend",
+		},
 	}
 
 	for _, c := range cases {

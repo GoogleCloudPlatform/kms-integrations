@@ -27,7 +27,8 @@ import (
 func (f *fakeKMS) CreateCryptoKey(ctx context.Context, req *kmspb.CreateCryptoKeyRequest) (*kmspb.CryptoKey, error) {
 	if err := allowlist("parent", "crypto_key_id", "skip_initial_version_creation",
 		"crypto_key.purpose", "crypto_key.version_template.algorithm",
-		"crypto_key.version_template.protection_level").check(req); err != nil {
+		"crypto_key.version_template.protection_level",
+		"crypto_key.crypto_key_backend").check(req); err != nil {
 		return nil, err
 	}
 
@@ -61,6 +62,12 @@ func (f *fakeKMS) CreateCryptoKey(ctx context.Context, req *kmspb.CreateCryptoKe
 		return nil, err
 	}
 
+	cryptoKeyBackend := req.GetCryptoKey().GetCryptoKeyBackend()
+	if protLevel == kmspb.ProtectionLevel_HSM_SINGLE_TENANT &&
+		cryptoKeyBackend == "" {
+		return nil, errRequiredField("crypto_key.crypto_key_backend")
+	}
+
 	kr, ok := f.keyRings[krName]
 	if !ok {
 		return nil, errNotFound(krName)
@@ -77,6 +84,7 @@ func (f *fakeKMS) CreateCryptoKey(ctx context.Context, req *kmspb.CreateCryptoKe
 			ProtectionLevel: protLevel,
 			Algorithm:       alg,
 		},
+		CryptoKeyBackend:         cryptoKeyBackend,
 		DestroyScheduledDuration: &durationpb.Duration{Seconds: 2592000},
 	}
 
