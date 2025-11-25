@@ -217,8 +217,8 @@ Function                                         | Status | Notes
 [`C_DecryptDigestUpdate`][C_DecryptDigestUpdate] | ❌      |
 [`C_SignEncryptUpdate`][C_SignEncryptUpdate]     | ❌      |
 [`C_DecryptVerifyUpdate`][C_DecryptVerifyUpdate] | ❌      |
-[`C_GenerateKey`][C_GenerateKey]                 | ✅      | When using this function, the template must specify the attributes `CKA_LABEL` and `CKA_KMS_ALGORITHM` (required). The template may also optionally specify the attribute `CKA_KMS_PROTECTION_LEVEL`. No other attributes are supported. This function creates a Cloud KMS CryptoKey with `HSM` protection level (unless otherwise specified in the `CKA_KMS_PROTECTION_LEVEL` attribute) and a first version. This mechanism cannot be used to create additional versions in an existing CryptoKey, unless the `experimental_create_multiple_versions` option is enabled.
-[`C_GenerateKeyPair`][C_GenerateKeyPair]         | ✅      | When using this function, a public key template must not be specified. The private key template must specify the attributes `CKA_LABEL` and `CKA_KMS_ALGORITHM` (required). The template may also optionally specify the attribute `CKA_KMS_PROTECTION_LEVEL`. No other attributes are supported. This function creates a Cloud KMS CryptoKey with `HSM` protection level (unless otherwise specified in the `CKA_KMS_PROTECTION_LEVEL` attribute) and a first version. This mechanism cannot be used to create additional versions in an existing CryptoKey, unless the `experimental_create_multiple_versions` option is enabled.
+[`C_GenerateKey`][C_GenerateKey]                 | ✅      | When using this function, the template must specify the attributes `CKA_LABEL` and `CKA_KMS_ALGORITHM` (required). The template may also optionally specify the attribute `CKA_KMS_PROTECTION_LEVEL`. If protection level `HSM_SINGLE_TENANT` is specified, `CKA_KMS_CRYPTO_KEY_BACKEND` must also be specified. No other attributes are supported. This function creates a Cloud KMS CryptoKey with `HSM` protection level (unless otherwise specified in the `CKA_KMS_PROTECTION_LEVEL` attribute) and a first version. This mechanism cannot be used to create additional versions in an existing CryptoKey, unless the `experimental_create_multiple_versions` option is enabled.
+[`C_GenerateKeyPair`][C_GenerateKeyPair]         | ✅      | When using this function, a public key template must not be specified. The private key template must specify the attributes `CKA_LABEL` and `CKA_KMS_ALGORITHM` (required). The template may also optionally specify the attribute `CKA_KMS_PROTECTION_LEVEL`. If protection level `HSM_SINGLE_TENANT` is specified, `CKA_KMS_CRYPTO_KEY_BACKEND` must also be specified. No other attributes are supported. This function creates a Cloud KMS CryptoKey with `HSM` protection level (unless otherwise specified in the `CKA_KMS_PROTECTION_LEVEL` attribute) and a first version. This mechanism cannot be used to create additional versions in an existing CryptoKey, unless the `experimental_create_multiple_versions` option is enabled.
 [`C_WrapKey`][C_WrapKey]                         | ❌      |
 [`C_UnwrapKey`][C_UnwrapKey]                     | ❌      |
 [`C_DeriveKey`][C_DeriveKey]                     | ❌      |
@@ -401,9 +401,10 @@ these characteristics:
 
 *   The purpose for the CryptoKey is `ASYMMETRIC_SIGN`, `ASYMMETRIC_DECRYPT`,
     `RAW_ENCRYPT_DECRYPT`, or `MAC`.
-*   The protection level for the CryptoKeyVersion is `HSM`. The protection level
-    for the CryptoKeyVersion may also be `SOFTWARE` if the YAML configuration
-    file contains `allow_software_keys: true`.
+*   The protection level for the CryptoKeyVersion is `HSM` or
+    `HSM_SINGLE_TENANT`. The protection level for the CryptoKeyVersion may also
+    be `SOFTWARE` if the YAML configuration file contains
+    `allow_software_keys: true`.
 *   The CryptoKeyVersion is in state `ENABLED`.
 
 The PKCS #11 library ignores keys that don't conform to these requirements.
