@@ -21,7 +21,7 @@
 
 namespace cloud_kms::kmsp11 {
 
-constexpr CK_VERSION kLibraryVersion = {1, 8};
+constexpr CK_VERSION kLibraryVersion = {1, 9};
 
 }
 
