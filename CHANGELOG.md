@@ -7,6 +7,16 @@
 
 ## PKCS #11 Cloud KMS Library
 
+### PKCS#11 v1.9
+
+The following changes are included in the v1.9 (December 2025) release:
+
+*   Add support for Single-tenant Cloud HSM key loading.
+*   Add support for Single-tenant Cloud HSM key creation by specifying the
+    `CKA_KMS_PROTECTION_LEVEL` and `CKA_CRYPTO_KEY_BACKEND` attributes. See the
+    [user guide][user-guide] to learn more.
+
+
 ### PKCS#11 v1.8
 
 The following changes are included in the v1.8 (October 2025) release:
