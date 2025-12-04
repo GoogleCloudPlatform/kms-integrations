@@ -35,6 +35,17 @@ absl::Status SetRandomSerial(X509* x509) {
   constexpr size_t kSerialByteLength = 20;
 
   std::string serial_bytes = RandBytes(kSerialByteLength);
+
+  // Ensure that the serial number is a positive integer, and that the DER
+  // encoding will not exceed 20 bytes.
+  //
+  // Verbose explanation:
+  // - the leftmost bit of the serial is interpreted as the sign bit
+  // - DER requires non-negative integers
+  // - 0x7F is 01111111
+  // - so we force a "0" as the leftmost bit with a bitwise AND operation
+  serial_bytes[0] &= 0x7F;
+
   bssl::UniquePtr<BIGNUM> serial(
       BN_bin2bn(reinterpret_cast<const uint8_t*>(serial_bytes.data()),
                 serial_bytes.size(), nullptr));

@@ -77,13 +77,17 @@ TEST_F(CertAuthorityTest, CertVersionIs2) {
   EXPECT_EQ(X509_get_version(cert.get()), 0x02);
 }
 
-TEST_F(CertAuthorityTest, CertSerialIs20Bytes) {
+TEST_F(CertAuthorityTest, CertSerialIsPositiveAndAtMost20Bytes) {
   ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<X509> cert,
                        authority_->GenerateCert(ckv_, test_key_.get()));
   // https://tools.ietf.org/html/rfc5280#section-4.1.2.2
+  // At most 20 bytes long, because if the randomly generated serial number has
+  // leading zeros, it will be represented with less than 20 bytes.
+  // It should never be negative though, per DER encoding rules.
   bssl::UniquePtr<BIGNUM> serial_bn(
       ASN1_INTEGER_to_BN(X509_get_serialNumber(cert.get()), nullptr));
-  EXPECT_EQ(BN_num_bytes(serial_bn.get()), 20);
+  EXPECT_FALSE(BN_is_negative(serial_bn.get()));
+  EXPECT_LE(BN_num_bytes(serial_bn.get()), 20);
 }
 
 TEST_F(CertAuthorityTest, StartDateBeforeNow) {
