@@ -428,9 +428,10 @@ This means that:
 
 ## Other notes
 
-Keys can be located with the `CKA_LABEL` attribute, which is the Cloud KMS
-CryptoKey identifier, or with the `CKA_ID` attribute, which is the full Cloud
-KMS CryptoKeyVersion name. As an example, a key might have a `CKA_ID` of
+Keys can be located with the `CKA_LABEL` attribute (`pkcs11:object` in openssl
+commands), which is the Cloud KMS CryptoKey identifier, or with the `CKA_ID`
+attribute (`pkcs11:id` in openssl commands), which is the full Cloud KMS
+CryptoKeyVersion name. As an example, a key might have a `CKA_ID` of
 `projects/some_project/locations/some_location/keyRings/some_keyring/cryptoKeys/some_ck/cryptoKeyVersions/1`
 and a `CKA_LABEL` of `some_ck`.  Some tools including `pkcs11-tool` hex-encode
 `CKA_ID` attribute values, so they seem different at first.
