@@ -15,7 +15,8 @@ The following changes are included in the v1.9 (December 2025) release:
 *   Add support for Single-tenant Cloud HSM key creation by specifying the
     `CKA_KMS_PROTECTION_LEVEL` and `CKA_CRYPTO_KEY_BACKEND` attributes. See the
     [user guide][user-guide] to learn more.
-
+*   Fix a bug related to the random serial number used for auto-generation of
+    x.509 certificates.
 
 ### PKCS#11 v1.8
 
