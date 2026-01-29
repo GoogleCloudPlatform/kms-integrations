@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-  <Product Id="*" Language="1033" Codepage="1252" UpgradeCode="{AB7C91D4-D9B6-4E79-A332-6839067BF60D}" Manufacturer="Google LLC" Name="Cloud KMS Provider for Microsoft CNG" Version="1.1.0">
+  <Product Id="*" Language="1033" Codepage="1252" UpgradeCode="{AB7C91D4-D9B6-4E79-A332-6839067BF60D}" Manufacturer="Google LLC" Name="Cloud KMS Provider for Microsoft CNG" Version="1.3.0">
     <Package InstallScope="perMachine" InstallerVersion="200" Compressed="yes" Platform="x64"/>
     <MajorUpgrade DowngradeErrorMessage="A later version of [ProductName] is already installed."/>
     <MediaTemplate EmbedCab="yes"/>
