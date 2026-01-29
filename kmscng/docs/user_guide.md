@@ -30,6 +30,9 @@ The provider is built and tested on Windows Server (semi-annual channel), on the
 amd64 architecture. The library is designed to be compatible with Windows Server
 2012 R2, Windows 8.1 (x64), and all subsequent server and x64 desktop releases.
 
+We also provide an experimental, not formally supported way of generating 32-bit
+builds of our CNG provider, more information in the FAQs section below.
+
 On Windows versions prior to Windows 10, the provider requires the
 preinstallation of the Visual C++ 2022 x64 Redistributable package (14.34 or
 higher), which can be downloaded [here][msvc-redistributable].
@@ -190,6 +193,22 @@ vendor.
 The provider requires the preinstallation of the Visual C++ 2022 x64
 Redistributable package (14.34 or higher), which can be downloaded
 [here][msvc-redistributable].
+
+### Are 32-bit workflows supported?
+
+Thanks to external contributions by the community, we have added /experimental/
+support for 32-bit builds. To build a 32-bit version of the CNG provider, you
+can pass `--cpu x64_x86_windows` to your bazel build command.
+
+NOTE: this feature is experimental / not formally supported, and may break in
+the future. You should also use the generated `kmscng.dll` DLL located in
+`bazel-bin\kmscng\main\` directly, rather than the regular .msi installer. On
+64-bit platforms, this DLL should be placed in `C:\Windows\SysWOW64`, rather
+than `C:\Windows\System32`.
+
+Building from source on Windows is especially tricky and brittle, if you run
+into issues, make sure to check the closed issues on the GitHub repo for
+pointers.
 
 ### gRPC Could not get default PEM root certs
 
