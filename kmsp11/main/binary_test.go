@@ -172,11 +172,11 @@ func TestImportedSymbolsLinux(t *testing.T) {
 	}
 
 	if *expectOpenSSL {
-		allowedDeps["libcrypto.so.1.0.0"] = false
-		allowedDeps["libssl.so.1.0.0"] = false
+		allowedDeps["libcrypto.so.1.1"] = false
+		allowedDeps["libssl.so.1.1"] = false
 	}
 
-	// We target GLIBC >= 2.17, so all symbols we import must be <= 2.17.
+	// We target GLIBC >= 2.29, so all symbols we import must be <= 2.29.
 	// Version strings for imported symbols should look like one of these:
 	// - GLIBC_2.2.4
 	// - GLIBC_2.14
@@ -206,8 +206,8 @@ func TestImportedSymbolsLinux(t *testing.T) {
 			continue
 		}
 
-		if minor > 17 {
-			t.Errorf("unexpected imported symbol dependency on GLIBC > 2.17: %v", sym)
+		if minor > 29 {
+			t.Errorf("unexpected imported symbol dependency on GLIBC > 2.29: %v", sym)
 		}
 	}
 }

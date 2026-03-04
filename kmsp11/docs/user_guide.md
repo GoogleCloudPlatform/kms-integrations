@@ -26,10 +26,13 @@ the [change log](../../CHANGELOG.md) for changes that might affect your usage.
 
 ### Linux system requirements
 
-The library is built and tested on Ubuntu 16.04 LTS Linux, on the amd64
+The library is built and tested on Ubuntu 20.04 LTS Linux, on the amd64
 architecture. The shared object file `libkmsp11.so` is compatible with any Linux
-distribution that contains glibc version 2.17 or greater. You do not need to
+distribution that contains glibc version 2.29 or greater. You do not need to
 compile the library yourself, and it does not require an installation routine.
+
+NOTE: for use on older distributions, versions 1.9 and older of this library
+used to be built on Ubuntu 16.04 LTS Linux, and thus only require glibc 2.17+.
 
 ### Windows system requirements
 
