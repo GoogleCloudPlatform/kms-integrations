@@ -130,6 +130,11 @@ genrule(
           "$(location @wix//:candle) $(location kmscng.wxs) && " +
           "$(location @wix//:light) kmscng.wixobj && " +
           "cp kmscng.msi $@",
+    cmd_bat = "copy $(location :kmscng.dll) . > NUL && " +
+              "copy $(location :install_actions.dll) . > NUL && " +
+              "$(location @wix//:candle) $(location kmscng.wxs) && " +
+              "$(location @wix//:light) kmscng.wixobj && " +
+              "copy kmscng.msi $@",
     target_compatible_with = ["@platforms//os:windows"],
     tools = [
         "@wix//:candle",
@@ -148,6 +153,11 @@ genrule(
           "$(location @wix//:candle) -dVersion=0.0.0 kmscng_v0.wxs && " +
           "$(location @wix//:light) kmscng_v0.wixobj && " +
           "cp kmscng_v0.msi $@",
+    cmd_bat = "copy $(location :kmscng_upgrade_test.wxs) kmscng_v0.wxs > NUL && " +
+              "echo 0.0.0 > kmscng_version.txt && " +
+              "$(location @wix//:candle) -dVersion=0.0.0 kmscng_v0.wxs && " +
+              "$(location @wix//:light) kmscng_v0.wixobj && " +
+              "copy kmscng_v0.msi $@",
     target_compatible_with = ["@platforms//os:windows"],
     tools = [
         "@wix//:candle",
@@ -165,6 +175,11 @@ genrule(
           "$(location @wix//:candle) -dVersion=255.255.65535 kmscng_v255.wxs && " +
           "$(location @wix//:light) kmscng_v255.wixobj && " +
           "cp kmscng_v255.msi $@",
+    cmd_bat = "copy $(location :kmscng_upgrade_test.wxs) kmscng_v255.wxs > NUL && " +
+              "echo 255.255.65535 > kmscng_version.txt && " +
+              "$(location @wix//:candle) -dVersion=255.255.65535 kmscng_v255.wxs && " +
+              "$(location @wix//:light) kmscng_v255.wixobj && " +
+              "copy kmscng_v255.msi $@",
     target_compatible_with = ["@platforms//os:windows"],
     tools = [
         "@wix//:candle",
