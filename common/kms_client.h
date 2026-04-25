@@ -117,6 +117,16 @@ class KmsClient {
       const kms_v1::GenerateRandomBytesRequest& request) const;
 
  private:
+  // Helper to perform an RPC with exponential backoff retries.
+  template <typename Request, typename Response, typename RpcFunc>
+  absl::StatusOr<Response> PerformRpcWithRetries(
+      std::string_view relative_resource, std::string_view resource_name,
+      const Request& request, RpcFunc rpc_method) const;
+
+  // Returns true if the status code indicates a transient error that should be
+  // retried.
+  bool IsRetryable(const absl::Status& status) const;
+
   absl::Status WaitForGeneration(kms_v1::CryptoKeyVersion& ckv,
                                  absl::Time deadline) const;
 

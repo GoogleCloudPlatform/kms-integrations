@@ -30,6 +30,11 @@
 namespace cloud_kms {
 namespace {
 
+// Constants for exponential backoff retries.
+constexpr absl::Duration kRetryMinDelay = absl::Milliseconds(100);
+constexpr absl::Duration kRetryMaxDelay = absl::Seconds(10);
+constexpr int kMaxRetries = 5;
+
 // clang-format off
 // Sample value:
 // `cloud-kms-pkcs11/0.21 (amd64; BoringSSL; Linux/4.15.0-1096-gcp-x86_64; glibc/2.23)`
@@ -117,6 +122,37 @@ KmsClient::KmsClient(const Options& options)
       std::string(options.endpoint_address), options.creds, args);
 
   kms_stub_ = kms_v1::KeyManagementService::NewStub(channel);
+}
+
+bool KmsClient::IsRetryable(const absl::Status& status) const {
+  // Retry UNAVAILABLE and DEADLINE_EXCEEDED errors.
+  return status.code() == absl::StatusCode::kUnavailable ||
+         status.code() == absl::StatusCode::kDeadlineExceeded;
+}
+
+template <typename Request, typename Response, typename RpcFunc>
+absl::StatusOr<Response> KmsClient::PerformRpcWithRetries(
+    std::string_view relative_resource, std::string_view resource_name,
+    const Request& request, RpcFunc rpc_method) const {
+  int tries = 0;
+  while (true) {
+    grpc::ClientContext ctx;
+    // Each attempt gets a fresh deadline based on the configured rpc_timeout.
+    AddContextSettings(&ctx, relative_resource, resource_name,
+                       absl::Now() + rpc_timeout_);
+
+    Response response;
+    absl::Status status = ToStatus(rpc_method(&ctx, request, &response));
+    if (status.ok()) {
+      return response;
+    }
+
+    if (!IsRetryable(status) || tries >= kMaxRetries) {
+      return DecorateStatus(status);
+    }
+
+    absl::SleepFor(ComputeBackoff(kRetryMinDelay, kRetryMaxDelay, tries++));
+  }
 }
 
 absl::StatusOr<kms_v1::AsymmetricDecryptResponse> KmsClient::AsymmetricDecrypt(
@@ -418,44 +454,42 @@ absl::StatusOr<kms_v1::CryptoKeyVersion> KmsClient::DestroyCryptoKeyVersion(
 
 absl::StatusOr<kms_v1::CryptoKey> KmsClient::GetCryptoKey(
     const kms_v1::GetCryptoKeyRequest& request) const {
-  grpc::ClientContext ctx;
-  AddContextSettings(&ctx, "name", request.name());
-
-  kms_v1::CryptoKey response;
-  absl::Status rpc_result =
-      ToStatus(kms_stub_->GetCryptoKey(&ctx, request, &response));
-  if (!rpc_result.ok()) {
-    return DecorateStatus(rpc_result);
-  }
-  return response;
+  absl::StatusOr<kms_v1::CryptoKey> rpc_result =
+      PerformRpcWithRetries<kms_v1::GetCryptoKeyRequest, kms_v1::CryptoKey>(
+          "name", request.name(), request,
+          [this](grpc::ClientContext* ctx,
+                 const kms_v1::GetCryptoKeyRequest& req,
+                 kms_v1::CryptoKey* resp) {
+            return kms_stub_->GetCryptoKey(ctx, req, resp);
+          });
+  return rpc_result;
 }
 
 absl::StatusOr<kms_v1::CryptoKeyVersion> KmsClient::GetCryptoKeyVersion(
     const kms_v1::GetCryptoKeyVersionRequest& request) const {
-  grpc::ClientContext ctx;
-  AddContextSettings(&ctx, "name", request.name());
-
-  kms_v1::CryptoKeyVersion response;
-  absl::Status rpc_result =
-      ToStatus(kms_stub_->GetCryptoKeyVersion(&ctx, request, &response));
-  if (!rpc_result.ok()) {
-    return DecorateStatus(rpc_result);
-  }
-  return response;
+  absl::StatusOr<kms_v1::CryptoKeyVersion> rpc_result =
+      PerformRpcWithRetries<kms_v1::GetCryptoKeyVersionRequest,
+                            kms_v1::CryptoKeyVersion>(
+          "name", request.name(), request,
+          [this](grpc::ClientContext* ctx,
+                 const kms_v1::GetCryptoKeyVersionRequest& req,
+                 kms_v1::CryptoKeyVersion* resp) {
+            return kms_stub_->GetCryptoKeyVersion(ctx, req, resp);
+          });
+  return rpc_result;
 }
 
 absl::StatusOr<kms_v1::PublicKey> KmsClient::GetPublicKey(
     const kms_v1::GetPublicKeyRequest& request) const {
-  grpc::ClientContext ctx;
-  AddContextSettings(&ctx, "name", request.name());
-
-  kms_v1::PublicKey response;
-  absl::Status rpc_result =
-      ToStatus(kms_stub_->GetPublicKey(&ctx, request, &response));
-  if (!rpc_result.ok()) {
-    return DecorateStatus(rpc_result);
-  }
-  return response;
+  absl::StatusOr<kms_v1::PublicKey> rpc_result =
+      PerformRpcWithRetries<kms_v1::GetPublicKeyRequest, kms_v1::PublicKey>(
+          "name", request.name(), request,
+          [this](grpc::ClientContext* ctx,
+                 const kms_v1::GetPublicKeyRequest& req,
+                 kms_v1::PublicKey* resp) {
+            return kms_stub_->GetPublicKey(ctx, req, resp);
+          });
+  return rpc_result;
 }
 
 CryptoKeysRange KmsClient::ListCryptoKeys(
