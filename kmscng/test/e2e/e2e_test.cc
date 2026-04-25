@@ -154,7 +154,7 @@ TEST_F(EndToEndTest, TestEcdsaP256SignSuccess) {
                            kms_v1::CryptoKeyVersion::EC_SIGN_P256_SHA256));
 
   NCRYPT_PROV_HANDLE provider_handle;
-  EXPECT_SUCCESS(
+  ASSERT_SUCCESS(
       NCryptOpenStorageProvider(&provider_handle, kProviderName.data(), 0));
 
   // Set custom property to hit the right KMS endpoint.
@@ -164,9 +164,20 @@ TEST_F(EndToEndTest, TestEcdsaP256SignSuccess) {
       kms_endpoint_.size(), 0));
 
   NCRYPT_KEY_HANDLE key_handle;
-  EXPECT_SUCCESS(NCryptOpenKey(provider_handle, &key_handle,
-                               StringToWide(ckv.name()).data(), AT_SIGNATURE,
-                               0));
+  NTSTATUS open_key_status;
+  // Retry NCryptOpenKey a few times as key material might not be immediately
+  // available after CKV creation.
+  for (int i = 0; i < 5; ++i) {
+    open_key_status = NCryptOpenKey(provider_handle, &key_handle,
+                                    StringToWide(ckv.name()).data(),
+                                    AT_SIGNATURE, 0);
+    if (open_key_status == ERROR_SUCCESS) {
+      break;
+    }
+    absl::SleepFor(absl::Seconds(1));
+  }
+  ASSERT_SUCCESS(open_key_status)
+      << "NCryptOpenKey failed to load the KMS key after multiple retries\n";
 
   std::vector<uint8_t> digest(32, '\1');
   std::vector<uint8_t> signature(64, '\0');
@@ -191,7 +202,7 @@ TEST_F(EndToEndTest, TestRsa2048SignSuccess) {
           kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_2048_SHA256));
 
   NCRYPT_PROV_HANDLE provider_handle;
-  EXPECT_SUCCESS(
+  ASSERT_SUCCESS(
       NCryptOpenStorageProvider(&provider_handle, kProviderName.data(), 0));
 
   // Set custom property to hit the right KMS endpoint.
@@ -201,9 +212,20 @@ TEST_F(EndToEndTest, TestRsa2048SignSuccess) {
       kms_endpoint_.size(), 0));
 
   NCRYPT_KEY_HANDLE key_handle;
-  EXPECT_SUCCESS(NCryptOpenKey(provider_handle, &key_handle,
-                               StringToWide(ckv.name()).data(), AT_SIGNATURE,
-                               0));
+  NTSTATUS open_key_status;
+  // Retry NCryptOpenKey a few times as key material might not be immediately
+  // available after CKV creation.
+  for (int i = 0; i < 5; ++i) {
+    open_key_status = NCryptOpenKey(provider_handle, &key_handle,
+                                    StringToWide(ckv.name()).data(),
+                                    AT_SIGNATURE, 0);
+    if (open_key_status == ERROR_SUCCESS) {
+      break;
+    }
+    absl::SleepFor(absl::Seconds(1));
+  }
+  ASSERT_SUCCESS(open_key_status)
+      << "NCryptOpenKey failed to load the KMS key after multiple retries\n";
 
   std::vector<uint8_t> digest(32, '\1');
   std::vector<uint8_t> signature(256, '\0');
