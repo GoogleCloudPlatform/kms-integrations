@@ -143,21 +143,30 @@ http_file(
     name = "pkcs11_h_v240",  # 2016-05-13
     downloaded_file_path = "pkcs11.h",
     sha256 = "8bb7aa1aeaa328b6a39913070d6f3d2bdeb9f2c92baf27f714fbb4cbefdf4054",
-    urls = ["http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/errata01/os/include/pkcs11-v2.40/pkcs11.h"],
+    urls = [
+        "http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/errata01/os/include/pkcs11-v2.40/pkcs11.h",
+        "https://raw.githubusercontent.com/oasis-tcs/pkcs11/48fa09240cc64ec1cd4c559b6af6642a2cdd13ae/published/2-40-errata-1/pkcs11.h"
+    ],
 )
 
 http_file(
     name = "pkcs11f_h_v240",  # 2016-05-13
     downloaded_file_path = "pkcs11f.h",
     sha256 = "a85adad038bfc9dad9c71377f3ed3b049ba2ac9b3f37198a372f211d210c6057",
-    urls = ["http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/errata01/os/include/pkcs11-v2.40/pkcs11f.h"],
+    urls = [
+        "http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/errata01/os/include/pkcs11-v2.40/pkcs11f.h",
+        "https://raw.githubusercontent.com/oasis-tcs/pkcs11/48fa09240cc64ec1cd4c559b6af6642a2cdd13ae/published/2-40-errata-1/pkcs11f.h"
+    ],
 )
 
 http_file(
     name = "pkcs11t_h_v240",  # 2016-05-13
     downloaded_file_path = "pkcs11t.h",
     sha256 = "5b58736b6d23f12b4d9492cd24b06b9d11056c3153afc4e89b1fe564749e71a2",
-    urls = ["http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/errata01/os/include/pkcs11-v2.40/pkcs11t.h"],
+    urls = [
+        "http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/errata01/os/include/pkcs11-v2.40/pkcs11t.h",
+        "https://raw.githubusercontent.com/oasis-tcs/pkcs11/48fa09240cc64ec1cd4c559b6af6642a2cdd13ae/published/2-40-errata-1/pkcs11t.h"
+    ],
 )
 
 http_archive(
