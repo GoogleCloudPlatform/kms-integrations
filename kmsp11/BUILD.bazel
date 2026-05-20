@@ -98,6 +98,7 @@ genrule(
         "pkcs11t.h",
     ],
     cmd = "cp $(SRCS) $(@D)",
+    cmd_bat = "copy $(location @pkcs11_h_v240//file:pkcs11.h) $(@D)\\pkcs11.h > NUL && copy $(location @pkcs11f_h_v240//file:pkcs11f.h) $(@D)\\pkcs11f.h > NUL && copy $(location @pkcs11t_h_v240//file:pkcs11t.h) $(@D)\\pkcs11t.h > NUL",
 )
 
 cc_library(

@@ -36,7 +36,7 @@ namespace cloud_kms::kmscng {
 namespace {
 
 absl::Status ValidateFlags(uint32_t flags) {
-  if (flags != 0 && flags != NCRYPT_SILENT_FLAG && flags != BCRYPT_PAD_PKCS1) {
+  if (flags != 0 && flags != NCRYPT_SILENT_FLAG && flags != BCRYPT_PAD_PKCS1 && flags != NCRYPT_PERSIST_ONLY_FLAG) {
     return NewInvalidArgumentError(
         absl::StrFormat("unsupported flag specified: %u", flags), NTE_BAD_FLAGS,
         SOURCE_LOCATION);
@@ -181,7 +181,7 @@ absl::Status OpenKey(__inout NCRYPT_PROV_HANDLE hProvider,
     return NewInvalidArgumentError("the key name cannot be null",
                                    NTE_INVALID_PARAMETER, SOURCE_LOCATION);
   }
-  if (dwLegacyKeySpec != AT_KEYEXCHANGE && dwLegacyKeySpec != AT_SIGNATURE) {
+  if (dwLegacyKeySpec != 0 && dwLegacyKeySpec != AT_KEYEXCHANGE && dwLegacyKeySpec != AT_SIGNATURE) {
     return NewInvalidArgumentError(
         absl::StrFormat("unsupported legacy key spec specified: %u",
                         dwLegacyKeySpec),

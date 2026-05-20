@@ -52,6 +52,7 @@ static const auto* const kAlgorithmDetails =
             NCRYPT_ECDSA_ALGORITHM_GROUP,                   // algorithm_group
             BCRYPT_ECDSA_P256_ALGORITHM,  // algorithm_property
             NCRYPT_ALLOW_SIGNING_FLAG,    // key_usage
+            256                          // length in bits
         },
         {
             kms_v1::CryptoKeyVersion::EC_SIGN_P384_SHA384,  // algorithm
@@ -59,6 +60,7 @@ static const auto* const kAlgorithmDetails =
             NCRYPT_ECDSA_ALGORITHM_GROUP,                   // algorithm_group
             BCRYPT_ECDSA_P384_ALGORITHM,  // algorithm_property
             NCRYPT_ALLOW_SIGNING_FLAG,    // key_usage
+            384                             // length in bits
         },
         {
             kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_2048_SHA256,  // algorithm
@@ -66,6 +68,7 @@ static const auto* const kAlgorithmDetails =
             NCRYPT_RSA_ALGORITHM_GROUP,  // algorithm_group
             BCRYPT_RSA_ALGORITHM,        // algorithm_property
             NCRYPT_ALLOW_SIGNING_FLAG,   // key_usage
+            2048                            // length in bits
         },
         {
             kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_3072_SHA256,  // algorithm
@@ -73,6 +76,7 @@ static const auto* const kAlgorithmDetails =
             NCRYPT_RSA_ALGORITHM_GROUP,  // algorithm_group
             BCRYPT_RSA_ALGORITHM,        // algorithm_property
             NCRYPT_ALLOW_SIGNING_FLAG,   // key_usage
+            3072                            // length in bits
         },
         {
             kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA256,  // algorithm
@@ -80,6 +84,7 @@ static const auto* const kAlgorithmDetails =
             NCRYPT_RSA_ALGORITHM_GROUP,  // algorithm_group
             BCRYPT_RSA_ALGORITHM,        // algorithm_property
             NCRYPT_ALLOW_SIGNING_FLAG,   // key_usage
+            4096                            // length in bits
         },
         {
             kms_v1::CryptoKeyVersion::RSA_SIGN_PKCS1_4096_SHA512,  // algorithm
@@ -87,6 +92,7 @@ static const auto* const kAlgorithmDetails =
             NCRYPT_RSA_ALGORITHM_GROUP,  // algorithm_group
             BCRYPT_RSA_ALGORITHM,        // algorithm_property
             NCRYPT_ALLOW_SIGNING_FLAG,   // key_usage
+            4096                         // length in bits
         },
     };
 

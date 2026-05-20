@@ -33,6 +33,7 @@ struct AlgorithmDetails {
   std::wstring algorithm_group;
   std::wstring algorithm_property;
   uint32_t key_usage;
+  uint32_t public_key_length_in_bits;
 };
 
 absl::StatusOr<AlgorithmDetails> GetDetails(
