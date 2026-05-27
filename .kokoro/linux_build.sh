@@ -49,6 +49,15 @@ ${GOROOT}/bin/go install github.com/bazelbuild/bazelisk@v1.25.0
 shopt -s expand_aliases
 alias bazelisk=${GOPATH}/bin/bazelisk
 
+# Get library version
+export P11_VERSION=$(grep kLibraryVersion "${PROJECT_ROOT}/kmsp11/version.h" |\
+    sed -e 's/.*{\(.*\), \(.*\)}.*/\1.\2/')
+# Compute full release name
+export RELEASE_NAME="libkmsp11-${P11_VERSION}-linux-amd64"
+if [ "${BAZEL_EXTRA_ARGS}" == "--config fips" ]; then
+  export RELEASE_NAME="${RELEASE_NAME}-fips"
+fi
+
 # Unwrap our wrapped service account key
 export GOOGLE_APPLICATION_CREDENTIALS=${KOKORO_ARTIFACTS_DIR}/oss-tools-ci-key.json
 gcloud secrets versions access latest --secret=oss-tools-ci-key --project=oss-tools-build --out-file="${GOOGLE_APPLICATION_CREDENTIALS}"
@@ -59,33 +68,10 @@ echo "build --remote_default_exec_properties=cache-silo-key=${KOKORO_JOB_NAME}" 
   >> user.bazelrc
 echo "test --test_env=GOOGLE_APPLICATION_CREDENTIALS" >> user.bazelrc
 
-# Ensure that build outputs and test logs are uploaded even on failure
+# Ensure that test logs are uploaded even on failure
 _upload_artifacts() {
-  if [ -e "${PROJECT_ROOT}/bazel-bin/kmsp11/main/libkmsp11.so" ]; then
-    cp "${PROJECT_ROOT}/bazel-bin/kmsp11/main/libkmsp11.so" \
-      "${RESULTS_DIR}/libkmsp11.so"
-  fi
-  if [ -e "${PROJECT_ROOT}/bazel-bin/kmsp11/test/e2e/e2e_test" ]; then
-    cp "${PROJECT_ROOT}/bazel-bin/kmsp11/test/e2e/e2e_test" \
-      "${RESULTS_DIR}/libkmsp11_e2e_test"
-  fi
-
-  cp "${PROJECT_ROOT}/LICENSE" "${RESULTS_DIR}"
-  cp "${PROJECT_ROOT}/kmsp11/kmsp11.h" "${RESULTS_DIR}"
-
   python3 "${PROJECT_ROOT}/.kokoro/copy_test_outputs.py" \
     "${PROJECT_ROOT}/bazel-testlogs" "${RESULTS_DIR}/testlogs"
-
-  export P11_VERSION=$(grep kLibraryVersion "${PROJECT_ROOT}/kmsp11/version.h" |\
-      sed -e 's/.*{\(.*\), \(.*\)}.*/\1.\2/')
-  export RELEASE_NAME="libkmsp11-${P11_VERSION}-linux-amd64"
-  if [ "${BAZEL_EXTRA_ARGS}" == "--config fips" ]; then
-    export RELEASE_NAME="${RELEASE_NAME}-fips"
-  fi
-  cd ${RESULTS_DIR}
-  mkdir ${RELEASE_NAME}
-  cp LICENSE kmsp11.h libkmsp11.so libkmsp11.so.sig ${RELEASE_NAME}/
-  tar -zcvf ${RELEASE_NAME}.tar.gz ${RELEASE_NAME}/
 }
 trap _upload_artifacts EXIT
 
@@ -104,3 +90,41 @@ bazelisk run ${BAZEL_ARGS} //kmsp11/tools/buildsigner -- \
   -signing_key=${BUILD_SIGNING_KEY} \
   < bazel-bin/kmsp11/main/libkmsp11.so \
   > ${RESULTS_DIR}/libkmsp11.so.sig
+
+# Copy build artifacts
+if [ -e "${PROJECT_ROOT}/bazel-bin/kmsp11/main/libkmsp11.so" ]; then
+  cp "${PROJECT_ROOT}/bazel-bin/kmsp11/main/libkmsp11.so" \
+    "${RESULTS_DIR}/libkmsp11.so"
+fi
+if [ -e "${PROJECT_ROOT}/bazel-bin/kmsp11/test/e2e/e2e_test" ]; then
+  cp "${PROJECT_ROOT}/bazel-bin/kmsp11/test/e2e/e2e_test" \
+    "${RESULTS_DIR}/libkmsp11_e2e_test"
+fi
+cp "${PROJECT_ROOT}/LICENSE" "${RESULTS_DIR}"
+cp "${PROJECT_ROOT}/kmsp11/kmsp11.h" "${RESULTS_DIR}"
+
+# Create release archive
+cd ${RESULTS_DIR}
+mkdir ${RELEASE_NAME}
+cp LICENSE kmsp11.h libkmsp11.so libkmsp11.so.sig ${RELEASE_NAME}/
+tar -zcvf ${RELEASE_NAME}.tar.gz ${RELEASE_NAME}/
+cp ${RELEASE_NAME}.tar.gz ${RELEASE_NAME}/
+
+# Upload to Artifact Registry for OSS Exit Gates (release builds only)
+if [[ "${KOKORO_JOB_NAME}" == *"release"* ]]; then
+  echo "Release build detected. Uploading to Artifact Registry..."
+
+  export PACKAGE_NAME="libkmsp11-linux-amd64"
+  if [ "${BAZEL_EXTRA_ARGS}" == "--config fips" ]; then
+    export PACKAGE_NAME="${PACKAGE_NAME}-fips"
+  fi
+
+  cd "${PROJECT_ROOT}"
+  gcloud artifacts generic upload \
+    --project=oss-exit-gate-prod \
+    --repository=kms-integrations--githubreleases \
+    --location=us \
+    --package=${PACKAGE_NAME} \
+    --version=${P11_VERSION} \
+    --source="${RESULTS_DIR}/${RELEASE_NAME}/${RELEASE_NAME}.tar.gz"
+fi
