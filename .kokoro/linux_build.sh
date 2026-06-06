@@ -51,10 +51,7 @@ alias bazelisk=${GOPATH}/bin/bazelisk
 
 # Unwrap our wrapped service account key
 export GOOGLE_APPLICATION_CREDENTIALS=${KOKORO_ARTIFACTS_DIR}/oss-tools-ci-key.json
-${GOROOT}/bin/go run ./.kokoro/unwrap_key.go \
-  -wrapping_key_file=${KOKORO_KEYSTORE_DIR}/75220_token-wrapping-key \
-  -wrapped_key_file=${KOKORO_GFILE_DIR}/oss-tools-ci-key.json.enc \
-  > ${GOOGLE_APPLICATION_CREDENTIALS}
+gcloud secrets versions access latest --secret=oss-tools-ci-key --project=oss-tools-build --out-file="${GOOGLE_APPLICATION_CREDENTIALS}"
 
 # Configure user.bazelrc with remote build caching options and Google creds
 cp .kokoro/remote_cache.bazelrc user.bazelrc
