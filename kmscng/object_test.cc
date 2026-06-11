@@ -79,5 +79,15 @@ TEST_F(ObjectTest, GetObjectPropertyKeyUsageSuccess) {
               IsOkAndHolds(Uint32ToBytes(NCRYPT_ALLOW_SIGNING_FLAG)));
 }
 
+TEST_F(ObjectTest, GetObjectPropertyLengthSuccess) {
+  EXPECT_THAT(object_->GetProperty(NCRYPT_LENGTH_PROPERTY),
+              IsOkAndHolds(Uint32ToBytes(256)));
+}
+
+TEST_F(ObjectTest, GetObjectPropertyPublicKeyLengthSuccess) {
+  EXPECT_THAT(object_->GetProperty(L"PublicKeyLength"),
+              IsOkAndHolds(Uint32ToBytes(256)));
+}
+
 }  // namespace
 }  // namespace cloud_kms::kmscng

@@ -35,6 +35,8 @@
 namespace cloud_kms::kmscng {
 namespace {
 
+constexpr uint32_t kInvalidFlags = 0xFFFFFFFF;
+
 // TODO(b/270419822): drop these once crypto_utils has been migrated to common.
 using cloud_kms::kmsp11::EcdsaVerifyP1363;
 using cloud_kms::kmsp11::ParseX509PublicKeyDer;
@@ -117,6 +119,15 @@ TEST(BridgeTest, OpenProviderSuccess) {
   EXPECT_OK(FreeProvider(provider_handle));
 }
 
+TEST(BridgeTest, OpenProviderPersistOnlyFlagSuccess) {
+  NCRYPT_PROV_HANDLE provider_handle;
+  EXPECT_OK(OpenProvider(&provider_handle, kProviderName.data(),
+                           NCRYPT_PERSIST_ONLY_FLAG));
+
+  // Clean up memory.
+  EXPECT_OK(FreeProvider(provider_handle));
+}
+
 TEST(BridgeTest, OpenProviderInvalidHandle) {
   EXPECT_THAT(OpenProvider(nullptr, kProviderName.data(), 0),
               StatusSsIs(NTE_INVALID_PARAMETER));
@@ -131,7 +142,7 @@ TEST(BridgeTest, OpenProviderUnexpectedName) {
 TEST(BridgeTest, OpenProviderInvalidFlag) {
   NCRYPT_PROV_HANDLE provider_handle;
   EXPECT_THAT(OpenProvider(&provider_handle, kProviderName.data(),
-                           NCRYPT_PERSIST_ONLY_FLAG),
+                           kInvalidFlags),
               StatusSsIs(NTE_BAD_FLAGS));
 }
 
@@ -237,7 +248,7 @@ TEST(BridgeTest, GetProviderPropertyInvalidFlag) {
   DWORD output_size = 0;
   EXPECT_THAT(GetProviderProperty(provider_handle, NCRYPT_IMPL_TYPE_PROPERTY,
                                   nullptr, sizeof(DWORD), &output_size,
-                                  NCRYPT_PERSIST_ONLY_FLAG),
+                                  kInvalidFlags),
               StatusSsIs(NTE_BAD_FLAGS));
 
   // Clean up memory.
@@ -291,7 +302,7 @@ TEST(BridgeTest, SetProviderPropertyInputNull) {
 
   EXPECT_THAT(
       SetProviderProperty(provider_handle, NCRYPT_IMPL_TYPE_PROPERTY, nullptr,
-                          sizeof(DWORD), NCRYPT_PERSIST_ONLY_FLAG),
+                          sizeof(DWORD), kInvalidFlags),
       StatusSsIs(NTE_INVALID_PARAMETER));
 
   // Clean up memory.
@@ -333,7 +344,7 @@ TEST(BridgeTest, SetProviderPropertyInvalidFlag) {
   DWORD input = NCRYPT_IMPL_SOFTWARE_FLAG;
   EXPECT_THAT(SetProviderProperty(provider_handle, NCRYPT_IMPL_TYPE_PROPERTY,
                                   reinterpret_cast<uint8_t*>(&input),
-                                  sizeof(DWORD), NCRYPT_PERSIST_ONLY_FLAG),
+                                  sizeof(DWORD), kInvalidFlags),
               StatusSsIs(NTE_BAD_FLAGS));
 
   // Clean up memory.
@@ -354,6 +365,27 @@ TEST(BridgeTest, OpenKeySuccess) {
   NCRYPT_KEY_HANDLE key_handle;
   EXPECT_OK(OpenKey(provider_handle, &key_handle,
                     StringToWide(ckv.name()).data(), AT_SIGNATURE, 0));
+  EXPECT_NE(key_handle, 0);
+
+  // Clean up memory.
+  EXPECT_OK(FreeKey(provider_handle, key_handle));
+}
+
+TEST(BridgeTest, OpenKeyPersistOnlyFlagSuccess) {
+  ASSERT_OK_AND_ASSIGN(auto fake_server, fakekms::Server::New());
+  auto client = fake_server->NewClient();
+
+  kms_v1::CryptoKeyVersion ckv = NewCryptoKeyVersion(client.get());
+
+  Provider provider;
+  SetFakeKmsProviderProperties(&provider, fake_server->listen_addr());
+
+  NCRYPT_PROV_HANDLE provider_handle =
+      reinterpret_cast<NCRYPT_PROV_HANDLE>(&provider);
+  NCRYPT_KEY_HANDLE key_handle;
+  EXPECT_OK(OpenKey(provider_handle, &key_handle,
+                    StringToWide(ckv.name()).data(), AT_SIGNATURE,
+                    NCRYPT_PERSIST_ONLY_FLAG));
   EXPECT_NE(key_handle, 0);
 
   // Clean up memory.
@@ -452,7 +484,7 @@ TEST(BridgeTest, OpenKeyInvalidFlag) {
 
   NCRYPT_KEY_HANDLE key_handle;
   EXPECT_THAT(OpenKey(provider_handle, &key_handle, L"some_key_name",
-                      AT_SIGNATURE, NCRYPT_PERSIST_ONLY_FLAG),
+                      AT_SIGNATURE, kInvalidFlags),
               StatusSsIs(NTE_BAD_FLAGS));
 
   // Clean up memory.
@@ -765,7 +797,7 @@ TEST(BridgeTest, ExportKeyInvalidFlag) {
   DWORD output_size;
   EXPECT_THAT(
       ExportKey(provider_handle, key_handle, 0, BCRYPT_ECCPUBLIC_BLOB, nullptr,
-                nullptr, 0, &output_size, NCRYPT_PERSIST_ONLY_FLAG),
+                nullptr, 0, &output_size, kInvalidFlags),
       StatusSsIs(NTE_BAD_FLAGS));
 
   // Clean up memory.
@@ -790,7 +822,7 @@ TEST(BridgeTest, ExportKeyOutputBufferTooShort) {
   DWORD output_size;
   EXPECT_THAT(
       ExportKey(provider_handle, key_handle, 0, BCRYPT_ECCPUBLIC_BLOB, nullptr,
-                &output, 1, &output_size, NCRYPT_PERSIST_ONLY_FLAG),
+                &output, 1, &output_size, kInvalidFlags),
       StatusSsIs(NTE_BAD_FLAGS));
 
   // Clean up memory.
@@ -959,7 +991,7 @@ TEST(BridgeTest, GetKeyPropertyInvalidFlag) {
   DWORD output_size;
   EXPECT_THAT(GetKeyProperty(provider_handle, key_handle,
                              NCRYPT_KEY_USAGE_PROPERTY, &output, sizeof(DWORD),
-                             &output_size, NCRYPT_PERSIST_ONLY_FLAG),
+                             &output_size, kInvalidFlags),
               StatusSsIs(NTE_BAD_FLAGS));
 
   // Clean up memory.
@@ -1192,7 +1224,7 @@ TEST(BridgeTest, EnumKeysInvalidFlag) {
 
   NCryptKeyName* output;
   EXPECT_THAT(EnumKeys(provider_handle, nullptr, &output, nullptr,
-                       NCRYPT_PERSIST_ONLY_FLAG),
+                       kInvalidFlags),
               StatusSsIs(NTE_BAD_FLAGS));
 
   // Clean up memory.
@@ -1406,7 +1438,7 @@ TEST(BridgeTest, SignHashInvalidFlag) {
   std::vector<uint8_t> digest(32, '\1');
   EXPECT_THAT(SignHash(provider_handle, key_handle, nullptr, digest.data(),
                        digest.size(), &output, 0, &output_size,
-                       NCRYPT_PERSIST_ONLY_FLAG),
+                       kInvalidFlags),
               StatusSsIs(NTE_BAD_FLAGS));
 
   // Clean up memory.
@@ -1445,7 +1477,7 @@ TEST(BridgeTest, IsAlgSupportedInvalidFlag) {
 
   DWORD output_size = 0;
   EXPECT_THAT(IsAlgSupported(provider_handle, BCRYPT_ECDSA_P256_ALGORITHM,
-                             NCRYPT_PERSIST_ONLY_FLAG),
+                             kInvalidFlags),
               StatusSsIs(NTE_BAD_FLAGS));
 
   // Clean up memory.
@@ -1537,7 +1569,7 @@ TEST(BridgeTest, EnumAlgorithmsInvalidFlag) {
   NCryptAlgorithmName* alg_pointer;
   EXPECT_THAT(
       EnumAlgorithms(provider_handle, NCRYPT_SIGNATURE_OPERATION, &output_size,
-                     &alg_pointer, NCRYPT_PERSIST_ONLY_FLAG),
+                     &alg_pointer, kInvalidFlags),
       StatusSsIs(NTE_BAD_FLAGS));
 
   // Clean up memory.

@@ -62,7 +62,7 @@ absl::StatusOr<kms_v1::PublicKey> GetPublicKey(const KmsClient& client,
 
 absl::flat_hash_map<std::wstring, std::string> BuildInfo(
     NCRYPT_PROV_HANDLE prov_handle, std::string key_name,
-    AlgorithmDetails details) {
+    AlgorithmDetails details, uint32_t key_size_bits) {
   return {
       {NCRYPT_ALGORITHM_GROUP_PROPERTY, WideToBytes(details.algorithm_group)},
       {NCRYPT_ALGORITHM_PROPERTY, WideToBytes(details.algorithm_property)},
@@ -71,6 +71,8 @@ absl::flat_hash_map<std::wstring, std::string> BuildInfo(
       {NCRYPT_PROVIDER_HANDLE_PROPERTY,
        std::string(reinterpret_cast<char*>(&prov_handle),
                    sizeof(NCRYPT_PROV_HANDLE))},
+      {NCRYPT_LENGTH_PROPERTY, Uint32ToBytes(key_size_bits)},
+      {L"PublicKeyLength", Uint32ToBytes(key_size_bits)},
   };
 }
 
@@ -130,7 +132,8 @@ absl::StatusOr<Object*> Object::New(NCRYPT_PROV_HANDLE prov_handle,
   }
   ASSIGN_OR_RETURN(AlgorithmDetails alg_details,
                    GetDetails(public_key.algorithm()));
-  auto info = BuildInfo(prov_handle, key_name, alg_details);
+  uint32_t key_size_bits = EVP_PKEY_bits(pub->get());
+  auto info = BuildInfo(prov_handle, key_name, alg_details, key_size_bits);
 
   // using `new` to invoke a private constructor
   return new Object(key_name, std::move(client), public_key.algorithm(),
