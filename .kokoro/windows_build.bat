@@ -30,22 +30,21 @@ set GOPATH=%KOKORO_ARTIFACTS_DIR%\gopath
 go install github.com/bazelbuild/bazelisk@v1.25.0
 set PATH=%GOPATH%\bin;%PATH%
 
-:: Unwrap our wrapped service account key
-set GOOGLE_APPLICATION_CREDENTIALS=%KOKORO_ARTIFACTS_DIR%/oss-tools-ci-key.json
-go run ./.kokoro/unwrap_key.go ^
-  -wrapping_key_file=%KOKORO_KEYSTORE_DIR%/75220_token-wrapping-key ^
-  -wrapped_key_file=%KOKORO_GFILE_DIR%/oss-tools-ci-key.json.enc ^
-  > %GOOGLE_APPLICATION_CREDENTIALS%
+echo Updating gcloud components..
+call gcloud components update --quiet
+
+:: Pull in the service account key
+set GOOGLE_APPLICATION_CREDENTIALS=%KOKORO_ARTIFACTS_DIR%\oss-tools-ci-key.json
+call gcloud secrets versions access latest --secret=oss-tools-ci-key --project=oss-tools-build --out-file=%GOOGLE_APPLICATION_CREDENTIALS%
 
 :: Install Microsoft's CNG SDK, stored in GCS for convenience.
 :: Install all features, without displaying the GUI.
 %KOKORO_GFILE_DIR%\cpdksetup.exe /features + /quiet
 
-:: Configure user.bazelrc with remote build caching options and Google creds
+:: Configure user.bazelrc with remote build caching options
 copy .kokoro\remote_cache.bazelrc user.bazelrc
 echo build --remote_default_exec_properties=cache-silo-key=%KOKORO_JOB_NAME% ^
   >> user.bazelrc
-echo test --test_env=GOOGLE_APPLICATION_CREDENTIALS >> user.bazelrc
 
 :: https://docs.bazel.build/versions/master/windows.html#build-c-with-msvc
 set BAZEL_VC=C:\VS\VC\
