@@ -30,13 +30,6 @@ set GOPATH=%KOKORO_ARTIFACTS_DIR%\gopath
 go install github.com/bazelbuild/bazelisk@v1.25.0
 set PATH=%GOPATH%\bin;%PATH%
 
-echo Updating gcloud components..
-call gcloud components update --quiet
-
-:: Pull in the service account key
-set GOOGLE_APPLICATION_CREDENTIALS=%KOKORO_ARTIFACTS_DIR%\oss-tools-ci-key.json
-call gcloud secrets versions access latest --secret=oss-tools-ci-key --project=oss-tools-build --out-file=%GOOGLE_APPLICATION_CREDENTIALS%
-
 :: Install Microsoft's CNG SDK, stored in GCS for convenience.
 :: Install all features, without displaying the GUI.
 %KOKORO_GFILE_DIR%\cpdksetup.exe /features + /quiet

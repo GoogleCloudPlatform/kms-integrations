@@ -58,10 +58,6 @@ if [ "${BAZEL_EXTRA_ARGS}" == "--config fips" ]; then
   export RELEASE_NAME="${RELEASE_NAME}-fips"
 fi
 
-# Unwrap our wrapped service account key
-export GOOGLE_APPLICATION_CREDENTIALS=${KOKORO_ARTIFACTS_DIR}/oss-tools-ci-key.json
-gcloud secrets versions access latest --secret=oss-tools-ci-key --project=oss-tools-build --out-file="${GOOGLE_APPLICATION_CREDENTIALS}"
-
 # Configure user.bazelrc with remote build caching options
 cp .kokoro/remote_cache.bazelrc user.bazelrc
 echo "build --remote_default_exec_properties=cache-silo-key=${KOKORO_JOB_NAME}" \

@@ -49,15 +49,10 @@ ${GOROOT}/bin/go install github.com/bazelbuild/bazelisk@v1.25.0
 shopt -s expand_aliases
 alias bazelisk=${GOPATH}/bin/bazelisk
 
-# Unwrap our wrapped service account key
-export GOOGLE_APPLICATION_CREDENTIALS=${KOKORO_ARTIFACTS_DIR}/oss-tools-ci-key.json
-gcloud secrets versions access latest --secret=oss-tools-ci-key --project=oss-tools-build --out-file="${GOOGLE_APPLICATION_CREDENTIALS}"
-
 # Configure user.bazelrc with remote build caching options and Google creds
 cp .kokoro/remote_cache.bazelrc user.bazelrc
 echo "build --remote_default_exec_properties=cache-silo-key=${KOKORO_JOB_NAME}" \
   >> user.bazelrc
-echo "test --test_env=GOOGLE_APPLICATION_CREDENTIALS" >> user.bazelrc
 
 # Ensure that test logs are uploaded even on failure
 _upload_artifacts() {
