@@ -22,6 +22,7 @@ cd "%PROJECT_ROOT%"
 
 set RESULTS_DIR=%KOKORO_ARTIFACTS_DIR%\results
 mkdir "%RESULTS_DIR%"
+mkdir "%RESULTS_DIR%\outputs"
 
 :: Get Bazelisk
 msiexec /i %KOKORO_GFILE_DIR%\go1.22.0.windows-amd64.msi /qn
@@ -81,19 +82,20 @@ if %RV_E2E% NEQ 0 exit %RV_E2E%
 
 if exist "%PROJECT_ROOT%\bazel-bin\kmsp11\main\libkmsp11.so" copy ^
     "%PROJECT_ROOT%\bazel-bin\kmsp11\main\libkmsp11.so" ^
-    "%RESULTS_DIR%\kmsp11_unsigned.dll"
+    "%RESULTS_DIR%\outputs\kmsp11_unsigned.dll"
 if exist "%PROJECT_ROOT%\bazel-bin\kmsp11\test\e2e\e2e_test.exe" copy ^
     "%PROJECT_ROOT%\bazel-bin\kmsp11\test\e2e\e2e_test.exe" ^
-    "%RESULTS_DIR%\kmsp11_e2e_test.exe"
+    "%RESULTS_DIR%\outputs\kmsp11_e2e_test.exe"
 
 if exist "%PROJECT_ROOT%\bazel-bin\kmscng\main\kmscng.dll" copy ^
     "%PROJECT_ROOT%\bazel-bin\kmscng\main\kmscng.dll" ^
-    "%RESULTS_DIR%\kmscng.dll"
+    "%RESULTS_DIR%\outputs\kmscng.dll"
 if exist "%PROJECT_ROOT%\bazel-bin\kmscng\main\kmscng.msi" copy ^
     "%PROJECT_ROOT%\bazel-bin\kmscng\main\kmscng.msi" ^
-    "%RESULTS_DIR%\kmscng_unsigned.msi"
+    "%RESULTS_DIR%\outputs\kmscng_unsigned.msi"
 if exist "%PROJECT_ROOT%\bazel-bin\kmscng\test\e2e\e2e_test.exe" copy ^
     "%PROJECT_ROOT%\bazel-bin\kmscng\test\e2e\e2e_test.exe" ^
-    "%RESULTS_DIR%\kmscng_e2e_test.exe"
+    "%RESULTS_DIR%\outputs\kmscng_e2e_test.exe"
 
-copy "%PROJECT_ROOT%\LICENSE" "%RESULTS_DIR%\LICENSE"
+copy "%PROJECT_ROOT%\kmsp11\kmsp11.h" "%RESULTS_DIR%\outputs\kmsp11.h"
+copy "%PROJECT_ROOT%\LICENSE" "%RESULTS_DIR%\outputs\LICENSE"

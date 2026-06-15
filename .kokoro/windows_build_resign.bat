@@ -5,7 +5,7 @@ echo "Starting build re-signing job:"
 
 :: The parent job's output artifacts get copied to KOKORO_GFILE_DIR.
 :: go/kokoro-grouping#artifacts-transfer
-cd "%KOKORO_GFILE_DIR%"
+cd "%KOKORO_GFILE_DIR%\signed"
 
 :: Display dir contents for logging.
 dir /s
@@ -41,9 +41,9 @@ set PROJECT_ROOT=%KOKORO_ARTIFACTS_DIR%\git\oss-tools
 cd "%PROJECT_ROOT%"
 
 :: Copy License (and p11 header) for release
-copy .\LICENSE %RESULTS_DIR_P11%\
-copy .\kmsp11\kmsp11.h %RESULTS_DIR_P11%\
-copy .\LICENSE %RESULTS_DIR_CNG%\
+copy LICENSE %RESULTS_DIR_P11%\
+copy kmsp11.h %RESULTS_DIR_P11%\
+copy LICENSE %RESULTS_DIR_CNG%\
 
 :: Get Bazelisk
 msiexec /i %KOKORO_GFILE_DIR%\go1.22.0.windows-amd64.msi /qn
@@ -51,13 +51,6 @@ set GOROOT=C:\Program Files\go
 set GOPATH=%KOKORO_ARTIFACTS_DIR%\gopath
 go install github.com/bazelbuild/bazelisk@v1.25.0
 set PATH=%GOPATH%\bin;%PATH%
-
-echo Updating gcloud components..
-call gcloud components update --quiet
-
-:: Pull in the service account key
-set GOOGLE_APPLICATION_CREDENTIALS=%KOKORO_ARTIFACTS_DIR%\oss-tools-ci-key.json
-call gcloud secrets versions access latest --secret=oss-tools-ci-key --project=oss-tools-build --out-file=%GOOGLE_APPLICATION_CREDENTIALS%
 
 :: Create and configure user.bazelrc
 echo build --google_default_credentials=true > user.bazelrc
