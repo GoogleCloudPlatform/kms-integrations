@@ -3,12 +3,11 @@
 setlocal enabledelayedexpansion
 echo "Starting build re-signing job:"
 
-:: The parent job's output artifacts get copied to KOKORO_GFILE_DIR.
-:: go/kokoro-grouping#artifacts-transfer
-cd "%KOKORO_GFILE_DIR%\signed"
-
-:: Display dir contents for logging.
-dir /s
+:: Code under repo is checked out to %KOKORO_ARTIFACTS_DIR%\git.
+:: The final directory name in this path is determined by the scm name specified
+:: in the job configuration.
+set PROJECT_ROOT=%KOKORO_ARTIFACTS_DIR%\git\oss-tools
+cd "%PROJECT_ROOT%"
 
 :: Parse kmsp11 version from kmsp11/version.h (Format: {major, minor})
 for /f "usebackq tokens=5,6 delims={,; " %%a in (`findstr "kLibraryVersion =" kmsp11\version.h`) do (
@@ -22,28 +21,32 @@ for /f "usebackq tokens=5 delims=; " %%a in (`findstr "kLibraryVersionMajor =" k
 for /f "usebackq tokens=5 delims=; " %%a in (`findstr "kLibraryVersionMinor =" kmscng\version.h`) do set CNG_MINOR=%%a
 set CNG_VERSION=%CNG_MAJOR%.%CNG_MINOR%
 
+:: The parent job's output artifacts get copied to KOKORO_GFILE_DIR.
+:: go/kokoro-grouping#artifacts-transfer
+cd "%KOKORO_GFILE_DIR%\signed"
+
+:: Display dir contents for logging.
+dir /s
+
 :: Create the standard output results directory.
-:: Copy PKCS#11 and CNG artifacts to the output dir to sign them in place.
 set RESULTS_DIR=%KOKORO_ARTIFACTS_DIR%\results
 set RESULTS_DIR_P11=%RESULTS_DIR%\libkmsp11-%P11_VERSION%-windows-amd64
 set RESULTS_DIR_CNG=%RESULTS_DIR%\kmscng-%CNG_VERSION%-windows-amd64
 mkdir "%RESULTS_DIR_P11%"
 mkdir "%RESULTS_DIR_CNG%"
-copy kmsp11_google_signed.dll "%RESULTS_DIR_P11%\kmsp11.dll"
-copy kmscng_google_signed.msi "%RESULTS_DIR_CNG%\kmscng.msi"
-
-echo "Now re-sign both artifacts using our buildsigner tool:"
-
-:: Code under repo is checked out to %KOKORO_ARTIFACTS_DIR%\git.
-:: The final directory name in this path is determined by the scm name specified
-:: in the job configuration.
-set PROJECT_ROOT=%KOKORO_ARTIFACTS_DIR%\git\oss-tools
-cd "%PROJECT_ROOT%"
 
 :: Copy License (and p11 header) for release
 copy LICENSE %RESULTS_DIR_P11%\
 copy kmsp11.h %RESULTS_DIR_P11%\
 copy LICENSE %RESULTS_DIR_CNG%\
+
+:: Copy PKCS#11 and CNG artifacts to the output dir to sign them in place.
+copy kmsp11_google_signed.dll "%RESULTS_DIR_P11%\kmsp11.dll"
+copy kmscng_google_signed.msi "%RESULTS_DIR_CNG%\kmscng.msi"
+
+echo "Now re-sign both artifacts using our buildsigner tool:"
+
+cd "%PROJECT_ROOT%"
 
 :: Get Bazelisk
 msiexec /i %KOKORO_GFILE_DIR%\go1.22.0.windows-amd64.msi /qn
