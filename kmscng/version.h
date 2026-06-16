@@ -19,6 +19,7 @@
 
 namespace cloud_kms::kmscng {
 
+// Builds rely on this specific format for version parsing.
 constexpr uint8_t kLibraryVersionMajor = 1;
 constexpr uint8_t kLibraryVersionMinor = 3;
 

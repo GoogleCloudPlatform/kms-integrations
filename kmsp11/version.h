@@ -21,6 +21,7 @@
 
 namespace cloud_kms::kmsp11 {
 
+// Builds rely on this specific format for version parsing.
 constexpr CK_VERSION kLibraryVersion = {1, 9};
 
 }

@@ -10,15 +10,15 @@ set PROJECT_ROOT=%KOKORO_ARTIFACTS_DIR%\git\oss-tools
 cd "%PROJECT_ROOT%"
 
 :: Parse kmsp11 version from kmsp11/version.h (Format: {major, minor})
-for /f "usebackq tokens=5,6 delims={,; " %%a in (`findstr "kLibraryVersion =" kmsp11\version.h`) do (
+for /f "usebackq tokens=5,6 delims={,;} " %%a in (`findstr /c:"kLibraryVersion =" kmsp11\version.h`) do (
     set P11_MAJOR=%%a
     set P11_MINOR=%%b
 )
 set P11_VERSION=%P11_MAJOR%.%P11_MINOR%
 
 :: Parse kmscng version from kmscng/version.h (Format: kLibraryVersionX = Y;)
-for /f "usebackq tokens=5 delims=; " %%a in (`findstr "kLibraryVersionMajor =" kmscng\version.h`) do set CNG_MAJOR=%%a
-for /f "usebackq tokens=5 delims=; " %%a in (`findstr "kLibraryVersionMinor =" kmscng\version.h`) do set CNG_MINOR=%%a
+for /f "usebackq tokens=5 delims=; " %%a in (`findstr /c:"kLibraryVersionMajor =" kmscng\version.h`) do set CNG_MAJOR=%%a
+for /f "usebackq tokens=5 delims=; " %%a in (`findstr /c:"kLibraryVersionMinor =" kmscng\version.h`) do set CNG_MINOR=%%a
 set CNG_VERSION=%CNG_MAJOR%.%CNG_MINOR%
 
 :: The parent job's output artifacts get copied to KOKORO_GFILE_DIR.
