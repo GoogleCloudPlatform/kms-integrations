@@ -120,6 +120,12 @@ Initial release of the library.
 
 ## CNG Provider for Cloud KMS
 
+### CNG v1.4
+
+The following changes are included in the v1.4 (June 2026) release:
+
+*   Fix .NET runtime compatibility issues.
+
 ### CNG v1.3
 
 The following changes are included in the v1.3 (October 2025) release:

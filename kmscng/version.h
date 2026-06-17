@@ -21,7 +21,7 @@ namespace cloud_kms::kmscng {
 
 // Builds rely on this specific format for version parsing.
 constexpr uint8_t kLibraryVersionMajor = 1;
-constexpr uint8_t kLibraryVersionMinor = 3;
+constexpr uint8_t kLibraryVersionMinor = 4;
 
 // https://learn.microsoft.com/en-us/windows/win32/seccng/key-storage-property-identifiers#ncrypt_version_property
 constexpr uint32_t kLibraryVersionHex =
