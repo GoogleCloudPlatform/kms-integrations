@@ -489,6 +489,15 @@ absl::StatusOr<kms_v1::PublicKey> KmsClient::GetPublicKey(
                  kms_v1::PublicKey* resp) {
             return kms_stub_->GetPublicKey(ctx, req, resp);
           });
+  if (rpc_result.ok() && rpc_result->has_public_key() &&
+      rpc_result->public_key().has_crc32c_checksum() &&
+      !CRC32CMatches(rpc_result->public_key().data(),
+                     rpc_result->public_key().crc32c_checksum().value())) {
+    absl::Status status = absl::InternalError(absl::StrFormat(
+        "at %s: the response crc32c did not match the expected checksum value",
+        SOURCE_LOCATION.ToString()));
+    return DecorateStatus(status);
+  }
   return rpc_result;
 }
 
