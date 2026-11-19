@@ -67,3 +67,21 @@ cc_library(
         "@com_google_absl//absl/strings",
     ],
 )
+
+cc_library(
+    name = "ml_dsa_fake_kms",
+    testonly = 1,
+    srcs = ["ml_dsa_fake_kms.cc"],
+    hdrs = ["ml_dsa_fake_kms.h"],
+    deps = [
+        "//common:kms_v1",
+        "//common:openssl",
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/crc:crc32c",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/synchronization",
+        "@com_google_googleapis//google/cloud/kms/v1:kms_cc_grpc",
+    ],
+)
