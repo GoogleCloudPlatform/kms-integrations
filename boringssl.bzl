@@ -139,10 +139,10 @@ def _crypto_library_impl(repo_ctx):
 
     if library == "boringssl":
         repo_ctx.download_and_extract(
-            # 2023-09-12
-            url = "https://github.com/google/boringssl/archive/48a16fed0bf57f3d04f856a17490b5935458eb99.tar.gz",
-            sha256 = "5e475b54e1f7a7536c66fb777aeac97943d032b46bbff4c646dfcd337828ff87",
-            stripPrefix = "boringssl-48a16fed0bf57f3d04f856a17490b5935458eb99",
+            # 0.20251110.0 / 2025-11-10. Includes ML-DSA-44/65/87 (openssl/mldsa.h).
+            url = "https://github.com/google/boringssl/archive/ec4fb365a92dc0dff7370aae5d68642338b48ff5.tar.gz",
+            sha256 = "56d19ef1feae3362adb5424c47f2a903c8ac3532128271e41f2ddcbe0f323b12",
+            stripPrefix = "boringssl-ec4fb365a92dc0dff7370aae5d68642338b48ff5",
         )
         return
 

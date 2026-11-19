@@ -25,7 +25,6 @@
 namespace cloud_kms::kmsp11 {
 namespace {
 
-using ::testing::AnyOf;
 
 class CertAuthorityTest : public testing::Test {
  protected:
@@ -94,12 +93,10 @@ TEST_F(CertAuthorityTest, StartDateBeforeNow) {
   ASSERT_OK_AND_ASSIGN(bssl::UniquePtr<X509> cert,
                        authority_->GenerateCert(ckv_, test_key_.get()));
 
-  EXPECT_THAT(ASN1_UTCTIME_cmp_time_t(X509_get0_notBefore(cert.get()),
-                                      absl::ToTimeT(absl::Now())),
-              // The cert may have been generated in the same second as now,
-              // or it could be before. Note that -2 indicates an error, so
-              // Le(0) is not sufficient.
-              AnyOf(-1, 0));
+  // The cert may have been generated in the same second as now, or before.
+  ASSERT_OK_AND_ASSIGN(absl::Time not_before,
+                       Asn1TimeToAbsl(X509_get0_notBefore(cert.get())));
+  EXPECT_LE(not_before, absl::Now());
 }
 
 TEST_F(CertAuthorityTest, EndDateMatchesRFC) {
