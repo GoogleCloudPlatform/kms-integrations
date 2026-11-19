@@ -19,6 +19,7 @@
 #include "kmsp11/algorithm_details.h"
 #include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/errors.h"
+#include "kmsp11/util/ml_dsa.h"
 
 namespace cloud_kms::kmsp11 {
 namespace {
@@ -244,6 +245,31 @@ absl::StatusOr<ObjectStoreState> ObjectLoader::BuildState(
       } else {
         kms_v1::GetPublicKeyRequest pub_req;
         pub_req.set_name(ckv.name());
+
+        if (IsMlDsaAlgorithm(ckv.algorithm())) {
+          // Post-quantum public keys are not available in PEM format; they
+          // must be requested in the FIPS 204 encoding.
+          pub_req.set_public_key_format(kms_v1::PublicKey::NIST_PQC);
+          ASSIGN_OR_RETURN(kms_v1::PublicKey pub_resp,
+                           client.GetPublicKey(pub_req));
+          ASSIGN_OR_RETURN(CK_ML_DSA_PARAMETER_SET_TYPE parameter_set,
+                           MlDsaParameterSetForAlgorithm(ckv.algorithm()));
+          ASSIGN_OR_RETURN(
+              std::string public_key_der,
+              MarshalMlDsaPublicKeyDer(parameter_set,
+                                       pub_resp.public_key().data()));
+
+          // Certificates are not generated for ML-DSA keys, since the
+          // certificate authority relies on the crypto library's X.509
+          // support, which does not cover ML-DSA in all supported builds.
+          std::string cert_der;
+          if (auto it = user_certs_.find(public_key_der);
+              it != user_certs_.end()) {
+            cert_der = it->second;
+          }
+          *result.add_keys() = *cache_.Store(ckv, public_key_der, cert_der);
+          continue;
+        }
 
         ASSIGN_OR_RETURN(kms_v1::PublicKey pub_resp,
                          client.GetPublicKey(pub_req));

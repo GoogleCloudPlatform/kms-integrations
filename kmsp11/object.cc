@@ -20,6 +20,7 @@
 #include "kmsp11/kmsp11.h"
 #include "kmsp11/util/crypto_utils.h"
 #include "kmsp11/util/errors.h"
+#include "kmsp11/util/ml_dsa.h"
 #include "kmsp11/util/string_utils.h"
 
 namespace cloud_kms::kmsp11 {
@@ -164,6 +165,23 @@ absl::Status AddRsaPrivateKeyAttributes(AttributeMap* attrs,
   return absl::OkStatus();
 }
 
+absl::Status AddMlDsaPublicKeyAttributes(AttributeMap* attrs,
+                                         const MlDsaPublicKey& public_key) {
+  // PKCS #11 v3.2 section 6.67.2: ML-DSA public key objects
+  attrs->PutULong(CKA_PARAMETER_SET, public_key.parameter_set);
+  attrs->Put(CKA_VALUE, public_key.value);
+  return absl::OkStatus();
+}
+
+absl::Status AddMlDsaPrivateKeyAttributes(AttributeMap* attrs,
+                                          const MlDsaPublicKey& public_key) {
+  // PKCS #11 v3.2 section 6.67.3: ML-DSA private key objects
+  attrs->PutULong(CKA_PARAMETER_SET, public_key.parameter_set);
+  attrs->PutSensitive(CKA_SEED);
+  attrs->PutSensitive(CKA_VALUE);
+  return absl::OkStatus();
+}
+
 absl::Status AddSecretKeyAttributes(AttributeMap* attrs,
                                     const kms_v1::CryptoKeyVersion& ckv) {
   ASSIGN_OR_RETURN(AlgorithmDetails algorithm, GetDetails(ckv.algorithm()));
@@ -251,23 +269,62 @@ absl::Status AddX509CertificateAttributes(AttributeMap* attrs,
   return absl::OkStatus();
 }
 
+absl::Status AddCommonKeyPairAttributes(AttributeMap* pub_attrs,
+                                        AttributeMap* prv_attrs,
+                                        const kms_v1::CryptoKeyVersion& ckv,
+                                        std::string_view pub_der) {
+  pub_attrs->PutULong(CKA_CLASS, CKO_PUBLIC_KEY);
+  RETURN_IF_ERROR(AddStorageAttributes(pub_attrs, ckv));
+  RETURN_IF_ERROR(AddKeyAttributes(pub_attrs, ckv));
+  RETURN_IF_ERROR(AddPublicKeyAttributes(pub_attrs, ckv, pub_der));
+
+  prv_attrs->PutULong(CKA_CLASS, CKO_PRIVATE_KEY);
+  RETURN_IF_ERROR(AddStorageAttributes(prv_attrs, ckv));
+  RETURN_IF_ERROR(AddKeyAttributes(prv_attrs, ckv));
+  RETURN_IF_ERROR(AddPrivateKeyAttributes(prv_attrs, ckv, pub_der));
+  return absl::OkStatus();
+}
+
 }  // namespace
+
+absl::StatusOr<KeyPair> Object::NewKeyPair(const kms_v1::CryptoKeyVersion& ckv,
+                                           std::string_view public_key_der) {
+  if (!IsMlDsaAlgorithm(ckv.algorithm())) {
+    ASSIGN_OR_RETURN(bssl::UniquePtr<EVP_PKEY> public_key,
+                     ParseX509PublicKeyDer(public_key_der));
+    return NewKeyPair(ckv, public_key.get());
+  }
+
+  ASSIGN_OR_RETURN(MlDsaPublicKey public_key,
+                   ParseMlDsaPublicKeyDer(public_key_der));
+  ASSIGN_OR_RETURN(CK_ML_DSA_PARAMETER_SET_TYPE want_parameter_set,
+                   MlDsaParameterSetForAlgorithm(ckv.algorithm()));
+  if (public_key.parameter_set != want_parameter_set) {
+    return NewInternalError(
+        absl::StrFormat("ML-DSA parameter set %#x of public key for %s does "
+                        "not match algorithm %d",
+                        public_key.parameter_set, ckv.name(), ckv.algorithm()),
+        SOURCE_LOCATION);
+  }
+
+  AttributeMap pub_attrs, prv_attrs;
+  RETURN_IF_ERROR(
+      AddCommonKeyPairAttributes(&pub_attrs, &prv_attrs, ckv, public_key_der));
+  RETURN_IF_ERROR(AddMlDsaPublicKeyAttributes(&pub_attrs, public_key));
+  RETURN_IF_ERROR(AddMlDsaPrivateKeyAttributes(&prv_attrs, public_key));
+
+  ASSIGN_OR_RETURN(AlgorithmDetails algorithm, GetDetails(ckv.algorithm()));
+  return KeyPair{Object(ckv.name(), CKO_PUBLIC_KEY, algorithm, pub_attrs),
+                 Object(ckv.name(), CKO_PRIVATE_KEY, algorithm, prv_attrs)};
+}
 
 absl::StatusOr<KeyPair> Object::NewKeyPair(const kms_v1::CryptoKeyVersion& ckv,
                                            BSSL_CONST EVP_PKEY* public_key) {
   ASSIGN_OR_RETURN(std::string pub_der, MarshalX509PublicKeyDer(public_key));
 
-  AttributeMap pub_attrs;
-  pub_attrs.PutULong(CKA_CLASS, CKO_PUBLIC_KEY);
-  RETURN_IF_ERROR(AddStorageAttributes(&pub_attrs, ckv));
-  RETURN_IF_ERROR(AddKeyAttributes(&pub_attrs, ckv));
-  RETURN_IF_ERROR(AddPublicKeyAttributes(&pub_attrs, ckv, pub_der));
-
-  AttributeMap prv_attrs;
-  prv_attrs.PutULong(CKA_CLASS, CKO_PRIVATE_KEY);
-  RETURN_IF_ERROR(AddStorageAttributes(&prv_attrs, ckv));
-  RETURN_IF_ERROR(AddKeyAttributes(&prv_attrs, ckv));
-  RETURN_IF_ERROR(AddPrivateKeyAttributes(&prv_attrs, ckv, pub_der));
+  AttributeMap pub_attrs, prv_attrs;
+  RETURN_IF_ERROR(
+      AddCommonKeyPairAttributes(&pub_attrs, &prv_attrs, ckv, pub_der));
 
   int pkey_id = EVP_PKEY_id(public_key);
   switch (pkey_id) {

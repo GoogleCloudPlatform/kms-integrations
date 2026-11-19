@@ -38,6 +38,11 @@ class Object {
  public:
   static absl::StatusOr<KeyPair> NewKeyPair(const kms_v1::CryptoKeyVersion& ckv,
                                             BSSL_CONST EVP_PKEY* public_key);
+  // Builds a key pair from a DER-encoded SubjectPublicKeyInfo. Unlike the
+  // EVP_PKEY overload, this supports key types that the crypto library may not
+  // be able to represent as an EVP_PKEY (such as ML-DSA).
+  static absl::StatusOr<KeyPair> NewKeyPair(const kms_v1::CryptoKeyVersion& ckv,
+                                            std::string_view public_key_der);
   static absl::StatusOr<Object> NewSecretKey(
       const kms_v1::CryptoKeyVersion& ckv);
 

@@ -137,6 +137,7 @@ cc_library(
         "//common:kms_v1",
         "//common:status_macros",
         "//kmsp11/util:crypto_utils",
+        "//kmsp11/util:ml_dsa",
         "@com_google_absl//absl/strings",
     ],
 )
@@ -160,6 +161,7 @@ cc_library(
     srcs = ["object_loader.cc"],
     hdrs = ["object_loader.h"],
     deps = [
+        "//kmsp11/util:ml_dsa",
         ":cert_authority",
         ":cryptoki_headers",
         ":object_store_state_cc_proto",
@@ -178,6 +180,23 @@ cc_test(
         ":object_loader",
         "//fakekms/cpp:fakekms",
         "//kmsp11/test",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "object_loader_ml_dsa_test",
+    size = "small",
+    srcs = ["object_loader_ml_dsa_test.cc"],
+    deps = [
+        ":object_loader",
+        ":object_store",
+        "//common:kms_client",
+        "//common/test:test_status_macros",
+        "//kmsp11/test",
+        "//kmsp11/test:ml_dsa_fake_kms",
+        "//kmsp11/util:ml_dsa",
+        "//kmsp11/util:string_utils",
         "@com_google_googletest//:gtest_main",
     ],
 )

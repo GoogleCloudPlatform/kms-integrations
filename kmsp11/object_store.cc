@@ -47,11 +47,9 @@ absl::StatusOr<std::vector<ObjectStoreEntry>> ParseStoreEntries(
                            std::make_shared<Object>(std::move(key)));
       continue;
     }
-    ASSIGN_OR_RETURN(bssl::UniquePtr<EVP_PKEY> public_key,
-                     ParseX509PublicKeyDer(item.public_key_der()));
     ASSIGN_OR_RETURN(
         KeyPair keypair,
-        Object::NewKeyPair(item.crypto_key_version(), public_key.get()));
+        Object::NewKeyPair(item.crypto_key_version(), item.public_key_der()));
 
     if (item.public_key_handle() == 0) {
       return absl::InvalidArgumentError("public_key_handle is unset");

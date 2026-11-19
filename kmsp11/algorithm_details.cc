@@ -57,6 +57,38 @@ static const auto* const kAlgorithmDetails = new absl::btree_set<
         CKM_SHA384,                                     // digest_mechanism
     },
 
+    // PQ_SIGN_ML_DSA_*
+    //
+    // Per PKCS #11 v3.2, the key size of an ML-DSA key is the size of its
+    // public key in bytes. We store bits for consistency with other key types.
+    {
+        kms_v1::CryptoKeyVersion::PQ_SIGN_ML_DSA_44,  // algorithm
+        kms_v1::CryptoKey::ASYMMETRIC_SIGN,           // purpose
+        {CKM_ML_DSA},                                 // allowed_mechanisms
+        CKK_ML_DSA,                                   // key_type
+        1312 * 8,                                     // key_bit_length
+        CKM_ML_DSA_KEY_PAIR_GEN,                      // key_gen_mechanism
+        std::nullopt,                                 // digest_mechanism
+    },
+    {
+        kms_v1::CryptoKeyVersion::PQ_SIGN_ML_DSA_65,  // algorithm
+        kms_v1::CryptoKey::ASYMMETRIC_SIGN,           // purpose
+        {CKM_ML_DSA},                                 // allowed_mechanisms
+        CKK_ML_DSA,                                   // key_type
+        1952 * 8,                                     // key_bit_length
+        CKM_ML_DSA_KEY_PAIR_GEN,                      // key_gen_mechanism
+        std::nullopt,                                 // digest_mechanism
+    },
+    {
+        kms_v1::CryptoKeyVersion::PQ_SIGN_ML_DSA_87,  // algorithm
+        kms_v1::CryptoKey::ASYMMETRIC_SIGN,           // purpose
+        {CKM_ML_DSA},                                 // allowed_mechanisms
+        CKK_ML_DSA,                                   // key_type
+        2592 * 8,                                     // key_bit_length
+        CKM_ML_DSA_KEY_PAIR_GEN,                      // key_gen_mechanism
+        std::nullopt,                                 // digest_mechanism
+    },
+
     // RSA_DECRYPT_OAEP_*
     {
         kms_v1::CryptoKeyVersion::RSA_DECRYPT_OAEP_2048_SHA256,  // algorithm

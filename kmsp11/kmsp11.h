@@ -34,6 +34,13 @@ extern "C" {
 // ECDSA on the NIST P-384 curve with a SHA384 digest.
 #define KMS_ALGORITHM_EC_SIGN_P384_SHA384 13UL
 
+// ML-DSA-44 (FIPS 204), randomized signing over the full message.
+#define KMS_ALGORITHM_PQ_SIGN_ML_DSA_44 68UL
+// ML-DSA-65 (FIPS 204), randomized signing over the full message.
+#define KMS_ALGORITHM_PQ_SIGN_ML_DSA_65 56UL
+// ML-DSA-87 (FIPS 204), randomized signing over the full message.
+#define KMS_ALGORITHM_PQ_SIGN_ML_DSA_87 69UL
+
 // RSAES-OAEP with a 2048 bit key and a SHA256 digest.
 #define KMS_ALGORITHM_RSA_DECRYPT_OAEP_2048_SHA256 8UL
 // RSAES-OAEP with a 3072 bit key and a SHA256 digest.
