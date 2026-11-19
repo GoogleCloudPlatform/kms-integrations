@@ -336,6 +336,58 @@ PKCS #11 Mechanism           | `CKM_RSA_PKCS_PSS_SHA256`, `CKM_RSA_PKCS_PSS_SHA5
 PKCS #11 Mechanism Parameter | [`CK_RSA_PKCS_PSS_PARAMS`][CK_RSA_PKCS_PSS_PARAMS]
 Cloud KMS Algorithm          | [`RSA_SIGN_PSS_2048_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PSS_3072_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PSS_4096_SHA256`][kms-rsa-sign-algorithms], [`RSA_SIGN_PSS_4096_SHA512`][kms-rsa-sign-algorithms]
 
+### ML-DSA Keypair Generation
+
+The library may be used to create new ML-DSA (FIPS 204) keypairs. See the
+[function notes](#functions) for `C_GenerateKeyPair` for invocation
+requirements; the Cloud KMS algorithm is selected with `CKA_KMS_ALGORITHM` (for
+example, `KMS_ALGORITHM_PQ_SIGN_ML_DSA_65` from `kmsp11.h`).
+
+Compatibility                 | Compatible With
+----------------------------- | ---------------
+PKCS #11 Function             | [`C_GenerateKeyPair`][C_GenerateKeyPair]
+PKCS #11 Mechanism            | [`CKM_ML_DSA_KEY_PAIR_GEN`][pkcs11-v3.2-ml-dsa] (PKCS #11 v3.2)
+PKCS #11 Mechanism Parameters | None
+Cloud KMS Algorithm           | [`PQ_SIGN_ML_DSA_44`][kms-pqc-algorithms], [`PQ_SIGN_ML_DSA_65`][kms-pqc-algorithms], [`PQ_SIGN_ML_DSA_87`][kms-pqc-algorithms]
+
+### ML-DSA Signing and Verification
+
+The library may be used for ML-DSA (FIPS 204) single-part or multi-part signing
+and verification. The input is the message itself; ML-DSA does not sign a
+pre-computed digest.
+
+The ML-DSA key type and mechanisms are defined in PKCS #11 v3.2. The library
+continues to expose the v2.40 function list, so applications should use the
+v3.2 constants (`CKK_ML_DSA`, `CKM_ML_DSA`, `CKA_PARAMETER_SET`,
+`CKP_ML_DSA_*`) with the v2.40 functions `C_Sign*` and `C_Verify*`. ML-DSA key
+objects expose `CKA_PARAMETER_SET`, and public keys expose the FIPS 204 encoded
+public key in `CKA_VALUE` and an RFC 9881 SubjectPublicKeyInfo in
+`CKA_PUBLIC_KEY_INFO`.
+
+Signing is performed by Cloud KMS, which produces hedged (randomized)
+signatures over an empty context string. Consequently:
+
+*   A `CK_SIGN_ADDITIONAL_CONTEXT` parameter is optional. When signing,
+    `hedgeVariant` must be `CKH_HEDGE_PREFERRED` or `CKH_HEDGE_REQUIRED`, and
+    `ulContextLen` must be zero.
+*   Messages may not exceed 64 KiB, including the total of all
+    `C_SignUpdate` parts.
+
+Verification is performed locally, and requires the library to be built with
+the default BoringSSL. Builds that use FIPS BoringSSL or OpenSSL support ML-DSA
+signing but not verification, and `C_GetMechanismInfo` for `CKM_ML_DSA` omits
+`CKF_VERIFY` in those builds.
+
+Certificates are not generated for ML-DSA keys when `generate_certs` is
+enabled.
+
+Compatibility                | Compatible With
+---------------------------- | ---------------
+PKCS #11 Functions           | [`C_Sign`][C_Sign], [`C_Verify`][C_Verify], [`C_SignUpdate`][C_SignUpdate], [`C_SignFinal`][C_SignFinal], [`C_VerifyUpdate`][C_VerifyUpdate], [`C_VerifyFinal`][C_VerifyFinal]
+PKCS #11 Mechanism           | [`CKM_ML_DSA`][pkcs11-v3.2-ml-dsa] (PKCS #11 v3.2)
+PKCS #11 Mechanism Parameter | Optional `CK_SIGN_ADDITIONAL_CONTEXT`
+Cloud KMS Algorithm          | [`PQ_SIGN_ML_DSA_44`][kms-pqc-algorithms], [`PQ_SIGN_ML_DSA_65`][kms-pqc-algorithms], [`PQ_SIGN_ML_DSA_87`][kms-pqc-algorithms]
+
 ### Generic Secret Key Generation
 
 The library may be used to create new generic secret keys (symmetric keys). See
@@ -542,6 +594,8 @@ operations to fit in the current APIs exposed by Cloud KMS.
 [CKM_EC_KEY_PAIR_GEN]: http://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/errata01/os/pkcs11-curr-v2.40-errata01-os-complete.html#_Toc228894664
 [CKM_ECDSA]: http://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/errata01/os/pkcs11-curr-v2.40-errata01-os-complete.html#_Toc441850452
 [CKM_GENERIC_SECRET_KEY_GEN]: http://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/cs01/pkcs11-curr-v2.40-cs01.html#_Toc228894689
+[pkcs11-v3.2-ml-dsa]: https://github.com/oasis-tcs/pkcs11/blob/master/working/doc/spec/ml_dsa.md
+[kms-pqc-algorithms]: https://cloud.google.com/kms/docs/algorithms#pqc_algorithms
 [CKM_RSA_PKCS]: http://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/errata01/os/pkcs11-curr-v2.40-errata01-os-complete.html#_Toc228894635
 [CKM_RSA_PKCS_KEY_PAIR_GEN]: http://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/errata01/os/pkcs11-curr-v2.40-errata01-os-complete.html#_Toc228894633
 [CKM_RSA_PKCS_OAEP]: http://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/errata01/os/pkcs11-curr-v2.40-errata01-os-complete.html#_Toc228894637

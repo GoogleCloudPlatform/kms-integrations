@@ -7,6 +7,18 @@
 
 ## PKCS #11 Cloud KMS Library
 
+### PKCS#11 Unreleased
+
+*   Add support for ML-DSA (FIPS 204) signing keys with Cloud KMS algorithms
+    `PQ_SIGN_ML_DSA_44`, `PQ_SIGN_ML_DSA_65` and `PQ_SIGN_ML_DSA_87`, using the
+    PKCS #11 v3.2 key type `CKK_ML_DSA` and mechanisms `CKM_ML_DSA` and
+    `CKM_ML_DSA_KEY_PAIR_GEN`. Signing is performed by Cloud KMS; verification
+    is local and requires a BoringSSL (non-FIPS) build. See the
+    [user guide][user-guide] to learn more.
+*   Updated deps:
+    *   BoringSSL => 0.20251110.0
+    *   googleapis => 984d83793d5b3461ffdefe4fc81e0112cb6c94fb
+
 ### PKCS#11 v1.9
 
 The following changes are included in the v1.9 (December 2025) release:
