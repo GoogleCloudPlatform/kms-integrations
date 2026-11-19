@@ -37,6 +37,35 @@ cc_test(
 )
 
 cc_library(
+    name = "ml_dsa",
+    srcs = ["ml_dsa.cc"],
+    hdrs = ["ml_dsa.h"],
+    deps = [
+        ":errors",
+        "//common:kms_v1",
+        "//common:openssl",
+        "//common:status_macros",
+        "//kmsp11:cryptoki_headers",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/types:span",
+    ],
+)
+
+cc_test(
+    name = "ml_dsa_test",
+    size = "small",
+    srcs = ["ml_dsa_test.cc"],
+    deps = [
+        ":ml_dsa",
+        "//common:openssl",
+        "//common/test:test_status_macros",
+        "//kmsp11/test",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
     name = "errors",
     srcs = ["errors.cc"],
     hdrs = ["errors.h"],

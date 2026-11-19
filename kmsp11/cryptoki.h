@@ -41,6 +41,38 @@
 
 #include "pkcs11.h"
 
+// ML-DSA (FIPS 204) definitions from PKCS #11 v3.2.
+//
+// The library is built against the v2.40 headers and exposes the v2.40
+// function list, but supports the v3.2 ML-DSA key type and mechanisms. The
+// values below are copied verbatim from the OASIS v3.2 pkcs11t.h:
+// https://github.com/oasis-tcs/pkcs11/blob/master/published/3-02/pkcs11t.h
+#ifndef CKK_ML_DSA
+#define CKK_ML_DSA 0x0000004aUL
+
+#define CKA_PARAMETER_SET 0x0000061dUL
+#define CKA_SEED 0x00000637UL
+
+#define CKM_ML_DSA_KEY_PAIR_GEN 0x0000001cUL
+#define CKM_ML_DSA 0x0000001dUL
+
+typedef CK_ULONG CK_HEDGE_TYPE;
+#define CKH_HEDGE_PREFERRED 0x00000000UL
+#define CKH_HEDGE_REQUIRED 0x00000001UL
+#define CKH_DETERMINISTIC_REQUIRED 0x00000002UL
+
+typedef struct CK_SIGN_ADDITIONAL_CONTEXT {
+  CK_HEDGE_TYPE hedgeVariant;
+  CK_BYTE_PTR pContext;
+  CK_ULONG ulContextLen;
+} CK_SIGN_ADDITIONAL_CONTEXT;
+
+typedef CK_ULONG CK_ML_DSA_PARAMETER_SET_TYPE;
+#define CKP_ML_DSA_44 0x00000001UL
+#define CKP_ML_DSA_65 0x00000002UL
+#define CKP_ML_DSA_87 0x00000003UL
+#endif  // CKK_ML_DSA
+
 #ifdef _WIN32
 #pragma pack(pop, cryptoki)
 #endif
