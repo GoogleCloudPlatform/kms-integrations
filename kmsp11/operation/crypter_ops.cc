@@ -20,6 +20,7 @@
 #include "kmsp11/operation/aes_gcm.h"
 #include "kmsp11/operation/ecdsa.h"
 #include "kmsp11/operation/hmac.h"
+#include "kmsp11/operation/ml_dsa.h"
 #include "kmsp11/operation/rsaes_oaep.h"
 #include "kmsp11/operation/rsassa_pkcs1.h"
 #include "kmsp11/operation/rsassa_pss.h"
@@ -98,6 +99,8 @@ absl::StatusOr<SignOp> NewSignOp(std::shared_ptr<Object> key,
     case CKM_SHA256_RSA_PKCS_PSS:
     case CKM_SHA512_RSA_PKCS_PSS:
       return NewRsaPssSigner(key, mechanism);
+    case CKM_ML_DSA:
+      return NewMlDsaSigner(key, mechanism);
     case CKM_SHA_1_HMAC:
     case CKM_SHA224_HMAC:
     case CKM_SHA256_HMAC:
@@ -128,6 +131,8 @@ absl::StatusOr<VerifyOp> NewVerifyOp(std::shared_ptr<Object> key,
     case CKM_SHA256_RSA_PKCS_PSS:
     case CKM_SHA512_RSA_PKCS_PSS:
       return NewRsaPssVerifier(key, mechanism);
+    case CKM_ML_DSA:
+      return NewMlDsaVerifier(key, mechanism);
     case CKM_SHA_1_HMAC:
     case CKM_SHA224_HMAC:
     case CKM_SHA256_HMAC:

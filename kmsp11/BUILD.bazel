@@ -121,6 +121,7 @@ cc_library(
     hdrs = ["mechanism.h"],
     deps = [
         ":cryptoki_headers",
+        "//kmsp11/util:ml_dsa",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/container:flat_hash_set",
     ],

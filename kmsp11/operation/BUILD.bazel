@@ -119,6 +119,7 @@ cc_library(
         ":hmac",
         ":rsaes_oaep",
         ":rsassa_pkcs1",
+        ":ml_dsa",
         ":rsassa_pss",
         ":rsassa_raw_pkcs1",
         "//kmsp11:cryptoki_headers",
@@ -366,6 +367,41 @@ cc_test(
         ":rsassa_pkcs1",
         "//fakekms/cpp:fakekms",
         "//kmsp11/test",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "ml_dsa",
+    srcs = ["ml_dsa.cc"],
+    hdrs = ["ml_dsa.h"],
+    deps = [
+        ":crypter_interfaces",
+        ":preconditions",
+        "//common:kms_client",
+        "//common:status_macros",
+        "//kmsp11:cryptoki_headers",
+        "//kmsp11:object",
+        "//kmsp11/util:errors",
+        "//kmsp11/util:ml_dsa",
+        "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_test(
+    name = "ml_dsa_test",
+    size = "small",
+    srcs = ["ml_dsa_test.cc"],
+    deps = [
+        ":ml_dsa",
+        "//common:kms_client",
+        "//common:openssl",
+        "//common/test:test_status_macros",
+        "//kmsp11:object",
+        "//kmsp11/test",
+        "//kmsp11/test:ml_dsa_fake_kms",
+        "//kmsp11/util:ml_dsa",
+        "//kmsp11/util:string_utils",
         "@com_google_googletest//:gtest_main",
     ],
 )

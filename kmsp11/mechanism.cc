@@ -16,6 +16,7 @@
 
 #include "absl/container/flat_hash_map.h"
 #include "kmsp11/kmsp11.h"
+#include "kmsp11/util/ml_dsa.h"
 
 namespace cloud_kms::kmsp11 {
 namespace {
@@ -62,6 +63,27 @@ AllMechanisms() {
                   256,                                       // ulMinKeySize
                   384,                                       // ulMaxKeySize
                   CKF_HW | CKF_GENERATE_KEY_PAIR | kEcFlags  // flags
+              },
+          },
+          // min/max key size of ML-DSA mechanisms is the public key length in
+          // bytes, per PKCS #11 v3.2 section 6.67.
+          {
+              CKM_ML_DSA_KEY_PAIR_GEN,
+              {
+                  1312,                           // ulMinKeySize
+                  2592,                           // ulMaxKeySize
+                  CKF_HW | CKF_GENERATE_KEY_PAIR  // flags
+              },
+          },
+          {
+              CKM_ML_DSA,
+              {
+                  1312,  // ulMinKeySize
+                  2592,  // ulMaxKeySize
+                  // Signing is performed by Cloud KMS. Verification is local,
+                  // and requires a crypto library with ML-DSA support.
+                  CKF_SIGN |
+                      (MlDsaVerificationSupported() ? CKF_VERIFY : 0)  // flags
               },
           },
           // min/max key size of PKCS #1 RSA mechanisms should be in bits, per

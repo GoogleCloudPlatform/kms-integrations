@@ -812,7 +812,8 @@ TEST(BridgeTest, GetMechanismListSucceeds) {
   EXPECT_EQ(types.size(), count);
   EXPECT_THAT(types,
               IsSupersetOf({CKM_RSA_PKCS, CKM_RSA_PKCS_PSS, CKM_RSA_PKCS_OAEP,
-                            CKM_ECDSA, CKM_SHA_1_HMAC, CKM_CLOUDKMS_AES_GCM}));
+                            CKM_ECDSA, CKM_SHA_1_HMAC, CKM_CLOUDKMS_AES_GCM,
+                            CKM_ML_DSA, CKM_ML_DSA_KEY_PAIR_GEN}));
 }
 
 TEST(BridgeTest, GetMechanismListFailsInvalidSize) {
@@ -869,6 +870,27 @@ TEST(BridgeTest, GetMechanismInfo) {
   EXPECT_EQ(info.ulMinKeySize, 2048);
   EXPECT_EQ(info.ulMaxKeySize, 4096);
   EXPECT_EQ(info.flags, CKF_SIGN | CKF_VERIFY);
+}
+
+TEST(BridgeTest, GetMechanismInfoMlDsa) {
+  ASSERT_OK_AND_ASSIGN(std::unique_ptr<fakekms::Server> fake_server,
+                       fakekms::Server::New());
+  ASSERT_OK_AND_ASSIGN(std::string config_file,
+                       InitializeBridgeForOneKmsKeyRing(fake_server.get()));
+  absl::Cleanup c = [config_file] {
+    std::remove(config_file.c_str());
+    EXPECT_OK(Finalize(nullptr));
+  };
+
+  // Per PKCS #11 v3.2, ML-DSA key sizes are public key lengths in bytes.
+  CK_MECHANISM_INFO info;
+  EXPECT_OK(GetMechanismInfo(0, CKM_ML_DSA, &info));
+  EXPECT_EQ(info.ulMinKeySize, 1312);
+  EXPECT_EQ(info.ulMaxKeySize, 2592);
+  EXPECT_TRUE(info.flags & CKF_SIGN);
+
+  EXPECT_OK(GetMechanismInfo(0, CKM_ML_DSA_KEY_PAIR_GEN, &info));
+  EXPECT_EQ(info.flags, CKF_HW | CKF_GENERATE_KEY_PAIR);
 }
 
 TEST(BridgeTest, GetMechanismInfoFailsInvalidMechanism) {

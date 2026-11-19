@@ -540,6 +540,7 @@ absl::StatusOr<AsymmetricHandleSet> Session::GenerateKeyPair(
   switch (mechanism.mechanism) {
     case CKM_RSA_PKCS_KEY_PAIR_GEN:
     case CKM_EC_KEY_PAIR_GEN:
+    case CKM_ML_DSA_KEY_PAIR_GEN:
       break;
     default:
       return InvalidMechanismError(mechanism.mechanism, "GenerateKeyPair",
